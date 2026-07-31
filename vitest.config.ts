@@ -4,8 +4,8 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     exclude: ['tests/live/**'],
-  },
-  coverage: {
-    provider: 'v8',
+    coverage: {
+      provider: 'v8',
+    },
   },
 });
