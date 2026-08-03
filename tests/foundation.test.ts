@@ -7,13 +7,13 @@ import { describe, expect, it } from 'vitest';
 import { createProgram } from '../src/cli.js';
 
 describe('CLI foundation', () => {
-  it('exposes help metadata without product commands', () => {
+  it('exposes help metadata with the documented commands', () => {
     const program = createProgram();
     const help = program.helpInformation();
 
     expect(help).toContain('Usage: jobhunter');
     expect(help).toContain('Local job discovery pipeline');
-    expect(program.commands).toHaveLength(0);
+    expect(program.commands.map((c) => c.name())).toEqual(['paths', 'config']);
   });
 
   it('does not create runtime files while constructing help', () => {

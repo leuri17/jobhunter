@@ -1,8 +1,8 @@
 # JobHunter MVP Task Index
 
-**Status:** Planning decomposition approved for review
+**Status:** Planning decomposition approved for review; TASK-001 and TASK-002 implemented
 **Source of truth:** `SPEC.md`
-**Implementation status:** No application code, dependencies, migrations, or generated output may be created as part of this decomposition.
+**Implementation status:** TASK-001 and TASK-002 are implemented (8 commits on branch `feat/task-002-paths-config-validation-logging`). The remaining tasks (TASK-003 through TASK-018) are planned; no application code, dependencies, migrations, or generated output may be created for them until each task's own plan is approved.
 
 ## Purpose
 
@@ -25,7 +25,7 @@ This ledger divides the complete JobHunter MVP into ordered macro tasks. Each ta
 | ID | Task | Depends on | Primary deliverable |
 |---|---|---|---|
 | [TASK-001](./TASK-001-repository-typescript-foundation.md) | Repository and TypeScript foundation | — | Pinned Node/pnpm project, strict native-ESM TypeScript build and test harness |
-| [TASK-002](./TASK-002-paths-configuration-validation-logging.md) | OS paths, configuration, validation, logging, and typed errors | 001 | Safe runtime paths, validated atomic configuration, structured logging/error primitives |
+| [TASK-002](./TASK-002-paths-configuration-validation-logging.md) | OS paths, configuration, validation, logging, and typed errors | 001 | ✅ Implemented — Safe runtime paths, validated atomic configuration, structured logging/error primitives |
 | [TASK-003](./TASK-003-database-schema-migrations.md) | SQLite connection, Drizzle schema, migrations, and initialization | 001, 002 | Foreign-key-enforced database and reviewed migrations for MVP entities |
 | [TASK-004](./TASK-004-persistence-repositories-identifiers.md) | Repositories, transactions, lifecycle rules, and CLI identifiers | 003 | Storage interfaces and repositories with stable user-facing identifiers |
 | [TASK-005](./TASK-005-diagnostics-artifacts.md) | Diagnostics and artifact management | 002, 003, 004 | Safe, associated diagnostic artifact persistence and capture services |
