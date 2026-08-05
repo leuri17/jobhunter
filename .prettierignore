@@ -18,3 +18,7 @@ test-results/
 .slim/
 
 docs/
+
+# Generated artifacts
+drizzle/meta/
+pnpm-lock.yaml
