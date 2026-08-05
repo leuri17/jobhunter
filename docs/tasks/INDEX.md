@@ -1,8 +1,8 @@
 # JobHunter MVP Task Index
 
-**Status:** Planning decomposition approved for review; TASK-001 and TASK-002 implemented
+**Status:** Planning decomposition approved for review; TASK-001, TASK-002, and TASK-003 implemented
 **Source of truth:** `SPEC.md`
-**Implementation status:** TASK-001 and TASK-002 are implemented (8 commits on branch `feat/task-002-paths-config-validation-logging`). The remaining tasks (TASK-003 through TASK-018) are planned; no application code, dependencies, migrations, or generated output may be created for them until each task's own plan is approved.
+**Implementation status:** TASK-001, TASK-002, and TASK-003 are implemented (TASK-003 lives on branch `feat/task-003-database-schema-migrations`, 7 commits). The remaining tasks (TASK-004 through TASK-018) are planned; no application code, dependencies, migrations, or generated output may be created for them until each task's own plan is approved.
 
 ## Purpose
 
@@ -26,7 +26,7 @@ This ledger divides the complete JobHunter MVP into ordered macro tasks. Each ta
 |---|---|---|---|
 | [TASK-001](./TASK-001-repository-typescript-foundation.md) | Repository and TypeScript foundation | — | Pinned Node/pnpm project, strict native-ESM TypeScript build and test harness |
 | [TASK-002](./TASK-002-paths-configuration-validation-logging.md) | OS paths, configuration, validation, logging, and typed errors | 001 | ✅ Implemented — Safe runtime paths, validated atomic configuration, structured logging/error primitives |
-| [TASK-003](./TASK-003-database-schema-migrations.md) | SQLite connection, Drizzle schema, migrations, and initialization | 001, 002 | Foreign-key-enforced database and reviewed migrations for MVP entities |
+| [TASK-003](./TASK-003-database-schema-migrations.md) | SQLite connection, Drizzle schema, migrations, and initialization | 001, 002 | ✅ Implemented — Foreign-key-enforced DB, Drizzle schema for 18 MVP entities, committed migration, transactional init lifecycle |
 | [TASK-004](./TASK-004-persistence-repositories-identifiers.md) | Repositories, transactions, lifecycle rules, and CLI identifiers | 003 | Storage interfaces and repositories with stable user-facing identifiers |
 | [TASK-005](./TASK-005-diagnostics-artifacts.md) | Diagnostics and artifact management | 002, 003, 004 | Safe, associated diagnostic artifact persistence and capture services |
 | [TASK-006](./TASK-006-search-configuration-url-generation.md) | Search configuration workflow and LinkedIn URL generation | 002, 004 | Interactive search settings, URL parsing, Cartesian search matrix and URL builder |

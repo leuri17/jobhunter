@@ -15,9 +15,14 @@ describe('persistence errors', () => {
 
   it('maps DatabaseError to the Fatal exit code by default', () => {
     const cause = new Error('disk full');
-    const error = new DatabaseError('disk_write_failed', 'Cannot write to database.', {
-      path: '/tmp/jobhunter.sqlite',
-    }, cause);
+    const error = new DatabaseError(
+      'disk_write_failed',
+      'Cannot write to database.',
+      {
+        path: '/tmp/jobhunter.sqlite',
+      },
+      cause,
+    );
     expect(error.exitCode).toBe(ExitCode.Fatal);
     expect(error.code).toBe('disk_write_failed');
     expect(error.metadata).toEqual({ path: '/tmp/jobhunter.sqlite' });

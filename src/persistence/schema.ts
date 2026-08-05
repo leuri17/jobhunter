@@ -1,12 +1,5 @@
 import { sql } from 'drizzle-orm';
-import {
-  index,
-  integer,
-  real,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from 'drizzle-orm/sqlite-core';
+import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // 1. application_metadata ----------------------------------------------------
 // Stores singleton key/value rows (e.g. current schema version, install timestamp).
@@ -171,9 +164,10 @@ export const derivedOverrides = sqliteTable(
     overriddenAt: text('overridden_at'),
   },
   (t) => ({
-    profileVersionFieldUnique: uniqueIndex(
-      'derived_overrides_profile_version_field_idx',
-    ).on(t.profileVersionId, t.derivedField),
+    profileVersionFieldUnique: uniqueIndex('derived_overrides_profile_version_field_idx').on(
+      t.profileVersionId,
+      t.derivedField,
+    ),
   }),
 );
 
@@ -204,14 +198,7 @@ export const pipelineRuns = sqliteTable(
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     status: text('status', {
-      enum: [
-        'running',
-        'cancelling',
-        'completed',
-        'completed_with_errors',
-        'failed',
-        'cancelled',
-      ],
+      enum: ['running', 'cancelling', 'completed', 'completed_with_errors', 'failed', 'cancelled'],
     }).notNull(),
     startTimestamp: text('start_timestamp').notNull(),
     endTimestamp: text('end_timestamp'),
@@ -331,10 +318,7 @@ export const discoveryEvents = sqliteTable(
     skipReason: text('skip_reason'),
   },
   (t) => ({
-    runSearchIdx: index('discovery_events_run_search_idx').on(
-      t.pipelineRunId,
-      t.searchExecutionId,
-    ),
+    runSearchIdx: index('discovery_events_run_search_idx').on(t.pipelineRunId, t.searchExecutionId),
   }),
 );
 
@@ -359,10 +343,7 @@ export const discoveryErrors = sqliteTable(
     artifactRefsJson: text('artifact_refs_json'),
   },
   (t) => ({
-    runSearchIdx: index('discovery_errors_run_search_idx').on(
-      t.pipelineRunId,
-      t.searchExecutionId,
-    ),
+    runSearchIdx: index('discovery_errors_run_search_idx').on(t.pipelineRunId, t.searchExecutionId),
   }),
 );
 
@@ -520,9 +501,7 @@ export const diagnosticArtifacts = sqliteTable(
     searchExecutionId: integer('search_execution_id').references(() => searchExecutions.id),
     jobId: integer('job_id').references(() => jobs.id),
     discoveryErrorId: integer('discovery_error_id').references(() => discoveryErrors.id),
-    extractionAttemptId: integer('extraction_attempt_id').references(
-      () => extractionAttempts.id,
-    ),
+    extractionAttemptId: integer('extraction_attempt_id').references(() => extractionAttempts.id),
     artifactType: text('artifact_type', {
       enum: [
         'screenshot',
