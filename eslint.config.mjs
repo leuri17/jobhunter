@@ -13,6 +13,7 @@ export default defineConfig([
     '.gitnexus/**',
     '.superpowers/**',
     'docs/**',
+    'drizzle/**',
   ]),
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],
