@@ -1,9 +1,8 @@
 import { z } from 'zod';
 
 const positiveInt = z.number().int().positive();
-const nonNegativeInt = z.number().int().nonnegative();
 
-const datePostedSchema = nonNegativeInt;
+const datePostedSchema = z.union([z.literal(86400), z.literal(604800), z.literal(2592000)]);
 
 const locationSchema = z
   .object({

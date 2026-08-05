@@ -68,6 +68,23 @@ describe('OperationalConfigSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  it('accepts only the three LinkedIn datePosted values (86400, 604800, 2592000)', () => {
+    for (const value of [86400, 604800, 2592000]) {
+      const result = OperationalConfigSchema.safeParse({
+        ...DEFAULT_OPERATIONAL_CONFIG,
+        search: { ...DEFAULT_OPERATIONAL_CONFIG.search, datePosted: value },
+      });
+      expect(result.success).toBe(true);
+    }
+    for (const value of [0, 1, 86401, -1, 86400.5]) {
+      const result = OperationalConfigSchema.safeParse({
+        ...DEFAULT_OPERATIONAL_CONFIG,
+        search: { ...DEFAULT_OPERATIONAL_CONFIG.search, datePosted: value },
+      });
+      expect(result.success).toBe(false);
+    }
+  });
+
   it('round-trips through JSON to the same SHA-256-relevant shape', () => {
     const parsed: OperationalConfig = OperationalConfigSchema.parse(DEFAULT_OPERATIONAL_CONFIG);
     const round = OperationalConfigSchema.parse(JSON.parse(JSON.stringify(parsed)));
