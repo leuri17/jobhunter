@@ -69,7 +69,7 @@ export const profileVersions = sqliteTable(
     contentHashIdx: index('profile_versions_content_hash_idx').on(t.contentHash),
     statusIdx: index('profile_versions_status_idx').on(t.status),
     activeApprovedUnique: uniqueIndex('profile_versions_active_approved_idx')
-      .on(t.id)
+      .on(sql`(1)`)
       .where(sql`status = 'approved' AND active = 1`),
   }),
 );
@@ -186,7 +186,7 @@ export const filterConfigurationVersions = sqliteTable(
   (t) => ({
     contentHashIdx: index('filter_configuration_versions_content_hash_idx').on(t.contentHash),
     activeUnique: uniqueIndex('filter_configuration_versions_active_idx')
-      .on(t.id)
+      .on(sql`(1)`)
       .where(sql`active = 1`),
   }),
 );
