@@ -24,6 +24,13 @@ import {
   ValidationError,
 } from './errors/application-error.js';
 import type { FileSystem } from './config/file-system.js';
+import {
+  runConfigureSearch,
+  defaultInquirerPrompts,
+  normalizePersistedSearchConfig,
+  type SearchConfiguration,
+  type SearchPrompts,
+} from './search/index.js';
 
 const cliFileSystem: FileSystem = {
   async readFile(path) {
@@ -105,7 +112,10 @@ async function configUpdateCommand(patch: ConfigPatch): Promise<void> {
   process.stdout.write(`${JSON.stringify(result.config, null, 2)}\n`);
 }
 
-export function createProgram(): Command {
+export function createProgram(
+  options: { prompts?: SearchPrompts } = {},
+): Command {
+  const prompts: SearchPrompts = options.prompts ?? defaultInquirerPrompts;
   const program = new Command()
     .name('jobhunter')
     .description('Local job discovery pipeline')
@@ -162,6 +172,43 @@ export function createProgram(): Command {
       }
     });
 
+  const configure = program
+    .command('configure')
+    .description('Interactive configuration commands (search settings, etc.).');
+
+  configure
+    .command('search')
+    .description('Interactively configure LinkedIn search settings.')
+    .option('--json', 'emit JSON to stdout', false)
+    .action(async (options: { json: boolean }) => {
+      try {
+        const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
+        const loaded = await loadConfig(paths, cliFileSystem);
+        const existing = normalizePersistedSearchConfig(loaded.config.search);
+        const configuration: SearchConfiguration = await runConfigureSearch({
+          prompts,
+          existing,
+        });
+        const patch: ConfigPatch = {
+          search: {
+            searchQueries: [...configuration.searchQueries],
+            locations: configuration.locations.map((l) => ({ name: l.name, geoId: l.geoId })),
+            datePosted: configuration.datePosted,
+            workplaceTypes: [...configuration.workplaceTypes],
+          },
+        };
+        const updateOptions: UpdateOptions = { confirm: async () => true };
+        const result = await updateConfig(paths, patch, updateOptions, cliFileSystem);
+        if (options.json) {
+          process.stdout.write(`${JSON.stringify(result.config, null, 2)}\n`);
+        } else {
+          process.stdout.write('search configuration updated\n');
+        }
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
   return program;
 }
 
@@ -179,3 +226,13 @@ if (entrypoint !== undefined && import.meta.url === pathToFileURL(entrypoint).hr
 export { resolvePlatformPaths, loadConfig, updateConfig, OperationalConfigSchema };
 export type { OperationalConfig, ConfigPatch, ConfigPreview, UpdateOptions };
 export { ApplicationError, ConfigError, PathError, UnknownConfigError, ValidationError };
+export {
+  SearchConfigError,
+  SearchCancelledError,
+  LinkedInURLParseError,
+} from './search/errors.js';
+export {
+  runConfigureSearch,
+  defaultInquirerPrompts,
+  type SearchConfiguration,
+} from './search/index.js';

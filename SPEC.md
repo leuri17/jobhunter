@@ -803,10 +803,13 @@ The command must:
 8. Extract a human-readable location name when possible.
 9. Ask for a label when it cannot be extracted reliably.
 10. Deduplicate by `geoId`.
-11. Show normalized configuration.
-12. Show the number of generated searches.
-13. Ask for confirmation.
-14. Write atomically.
+11. When a pasted URL yields a `geoId` already in the current set, prompt the user
+    to confirm whether to rename the existing label for that `geoId` (default: keep).
+    If confirmed, ask for the new label and update the set.
+12. Show normalized configuration.
+13. Show the number of generated searches.
+14. Ask for confirmation.
+15. Write atomically.
 
 ### 10.9 Location URL parsing
 
