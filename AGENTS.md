@@ -247,3 +247,14 @@ Before reporting a task complete:
 5. Confirm no future-task work was added.
 6. Report failures and limitations honestly.
 7. Stop before committing or starting another task unless the user approves it.
+
+## 16. Git workflow reminders
+
+The selected task's coding work follows `GIT.md`. In particular:
+
+- Open one feature branch per non-trivial task (`<type>/task-<nnn>-<scope>`, see `GIT.md` §1) before editing tracked files.
+- Do not edit tracked files directly on `main`.
+- Commit, push, merge, rebase, or create/destroy branches or worktrees only after the user explicitly approves (see `GIT.md` §4).
+- When integrating the task into `main`, use a squash merge with a Conventional Commits message (see `GIT.md` §6).
+
+If `GIT.md` and this file ever disagree about Git workflow, `GIT.md` is authoritative.
