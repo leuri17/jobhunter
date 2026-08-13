@@ -19,11 +19,7 @@ describe('normalizeLocationName', () => {
 describe('dedupeLocationsByGeoId / normalizeLocations', () => {
   it('drops later occurrences with the same geoId', () => {
     expect(
-      normalizeLocations([
-        rotterdam,
-        amsterdam,
-        { name: 'Rotterdam Area', geoId: '100467493' },
-      ]),
+      normalizeLocations([rotterdam, amsterdam, { name: 'Rotterdam Area', geoId: '100467493' }]),
     ).toEqual([rotterdam, amsterdam]);
   });
 
@@ -51,12 +47,7 @@ describe('dedupeLocationsByGeoId / normalizeLocations', () => {
   });
 
   it('skips entries with empty geoId', () => {
-    expect(
-      normalizeLocations([
-        { name: 'Rotterdam', geoId: '' },
-        amsterdam,
-      ]),
-    ).toEqual([amsterdam]);
+    expect(normalizeLocations([{ name: 'Rotterdam', geoId: '' }, amsterdam])).toEqual([amsterdam]);
   });
 
   it('returns an empty array when nothing valid is provided', () => {

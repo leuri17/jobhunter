@@ -33,9 +33,7 @@ describe('dedupeQueries / normalizeQueries', () => {
   });
 
   it('keeps deterministic insertion order', () => {
-    expect(
-      normalizeQueries(['B', 'A', 'C', 'a', 'b']),
-    ).toEqual(['B', 'A', 'C']);
+    expect(normalizeQueries(['B', 'A', 'C', 'a', 'b'])).toEqual(['B', 'A', 'C']);
   });
 
   it('skips empty or whitespace-only values without throwing', () => {

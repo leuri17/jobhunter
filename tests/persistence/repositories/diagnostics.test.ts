@@ -4,14 +4,19 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runMigrations } from '../../../src/persistence/migrations.js';
-import { createDatabaseConnection, type DatabaseConnection } from '../../../src/persistence/connection.js';
+import {
+  createDatabaseConnection,
+  type DatabaseConnection,
+} from '../../../src/persistence/connection.js';
 import { PipelineRunRepository } from '../../../src/persistence/repositories/pipeline-runs.js';
 import { DiagnosticArtifactRepository } from '../../../src/persistence/repositories/diagnostics.js';
 import { JobRepository } from '../../../src/persistence/repositories/jobs.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..');
 
-function ctxFrom(c: DatabaseConnection) { return { db: c.db }; }
+function ctxFrom(c: DatabaseConnection) {
+  return { db: c.db };
+}
 
 describe('DiagnosticArtifactRepository', () => {
   let directory: string;
@@ -30,13 +35,21 @@ describe('DiagnosticArtifactRepository', () => {
     const created = await runRepo.createRunWithSearches(
       {
         startTimestamp: '2026-08-05T10:00:00.000Z',
-        configSnapshotJson: {}, configSchemaVersion: 1, configHash: 'h', applicationVersion: '0.1.0',
+        configSnapshotJson: {},
+        configSchemaVersion: 1,
+        configHash: 'h',
+        applicationVersion: '0.1.0',
       },
-      [{
-        pipelineRunId: 0, searchQuery: 'q', locationName: 'L', geoId: '1',
-        generatedUrl: 'https://www.linkedin.com/jobs/search/?q=q',
-        startTimestamp: '2026-08-05T10:00:00.000Z',
-      }],
+      [
+        {
+          pipelineRunId: 0,
+          searchQuery: 'q',
+          locationName: 'L',
+          geoId: '1',
+          generatedUrl: 'https://www.linkedin.com/jobs/search/?q=q',
+          startTimestamp: '2026-08-05T10:00:00.000Z',
+        },
+      ],
     );
     runId = created.runId;
     searchId = created.searchIds[0]!;
@@ -70,26 +83,39 @@ describe('DiagnosticArtifactRepository', () => {
         extractionStatus: 'complete',
         firstDiscoveryTimestamp: '2026-08-05T10:00:00.000Z',
         lastRediscoveryTimestamp: '2026-08-05T10:00:00.000Z',
-        title: 'Engineer', company: 'Acme', location: 'Rotterdam', description: 'desc',
+        title: 'Engineer',
+        company: 'Acme',
+        location: 'Rotterdam',
+        description: 'desc',
         successfulMethod: 'search_detail_panel',
         createdTimestamp: '2026-08-05T10:00:00.000Z',
         updatedTimestamp: '2026-08-05T10:00:00.000Z',
       },
       discoveryEvent: {
-        jobId: 0, pipelineRunId: runId, searchExecutionId: searchId,
+        jobId: 0,
+        pipelineRunId: runId,
+        searchExecutionId: searchId,
         timestamp: '2026-08-05T10:00:00.000Z',
-        isNew: true, currentExtractionState: 'complete', extractionAttempted: true,
+        isNew: true,
+        currentExtractionState: 'complete',
+        extractionAttempted: true,
         skipReason: null,
       },
     });
     await diagRepo.insert({
-      pipelineRunId: runId, searchExecutionId: searchId,
-      artifactType: 'screenshot', storedPath: '/a', relativePath: 'a',
+      pipelineRunId: runId,
+      searchExecutionId: searchId,
+      artifactType: 'screenshot',
+      storedPath: '/a',
+      relativePath: 'a',
       createdAt: '2026-08-05T10:00:00.000Z',
     });
     await diagRepo.insert({
-      pipelineRunId: runId, jobId,
-      artifactType: 'stack_trace', storedPath: '/b', relativePath: 'b',
+      pipelineRunId: runId,
+      jobId,
+      artifactType: 'stack_trace',
+      storedPath: '/b',
+      relativePath: 'b',
       createdAt: '2026-08-05T10:01:00.000Z',
     });
     expect(await diagRepo.listByRun(runId)).toHaveLength(2);

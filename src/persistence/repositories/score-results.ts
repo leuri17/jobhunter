@@ -75,7 +75,8 @@ function rowFromRecord(record: typeof scoreResults.$inferSelect): ScoreResultRow
     explanation: record.explanation,
     keyMatches: unknownJson.decode(record.keyMatchesJson) as readonly unknown[] | null,
     importantGaps: unknownJson.decode(record.importantGapsJson) as readonly unknown[] | null,
-    importantConcerns: unknownJson.decode(record.importantConcernsJson) as readonly unknown[] | null,
+    importantConcerns: unknownJson.decode(record.importantConcernsJson) as
+      readonly unknown[] | null,
     inferredSeniority: record.inferredSeniority,
     recommendationSummary: record.recommendationSummary,
     success: record.success,
@@ -110,9 +111,18 @@ export class ScoreResultRepository {
           categoryScoresJson: unknownJson.encode(input.categoryScores),
           overallScore: input.overallScore,
           explanation: input.explanation ?? null,
-          keyMatchesJson: input.keyMatches === undefined || input.keyMatches === null ? null : unknownJson.encode(input.keyMatches),
-          importantGapsJson: input.importantGaps === undefined || input.importantGaps === null ? null : unknownJson.encode(input.importantGaps),
-          importantConcernsJson: input.importantConcerns === undefined || input.importantConcerns === null ? null : unknownJson.encode(input.importantConcerns),
+          keyMatchesJson:
+            input.keyMatches === undefined || input.keyMatches === null
+              ? null
+              : unknownJson.encode(input.keyMatches),
+          importantGapsJson:
+            input.importantGaps === undefined || input.importantGaps === null
+              ? null
+              : unknownJson.encode(input.importantGaps),
+          importantConcernsJson:
+            input.importantConcerns === undefined || input.importantConcerns === null
+              ? null
+              : unknownJson.encode(input.importantConcerns),
           inferredSeniority: input.inferredSeniority ?? null,
           recommendationSummary: input.recommendationSummary ?? null,
           success: input.success,
@@ -132,7 +142,13 @@ export class ScoreResultRepository {
     const rows = this.ctx.db
       .select()
       .from(scoreResults)
-      .where(and(eq(scoreResults.jobId, jobId), eq(scoreResults.active, true), eq(scoreResults.fingerprint, fingerprint)))
+      .where(
+        and(
+          eq(scoreResults.jobId, jobId),
+          eq(scoreResults.active, true),
+          eq(scoreResults.fingerprint, fingerprint),
+        ),
+      )
       .all();
     const row = rows[0];
     return row === undefined ? null : rowFromRecord(row);
@@ -150,7 +166,11 @@ export class ScoreResultRepository {
   }
 
   async listByRun(pipelineRunId: number): Promise<readonly ScoreResultRow[]> {
-    const rows = this.ctx.db.select().from(scoreResults).where(eq(scoreResults.pipelineRunId, pipelineRunId)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(scoreResults)
+      .where(eq(scoreResults.pipelineRunId, pipelineRunId))
+      .all();
     return rows.map(rowFromRecord);
   }
 
@@ -158,7 +178,13 @@ export class ScoreResultRepository {
     const rows = this.ctx.db
       .select()
       .from(scoreResults)
-      .where(and(eq(scoreResults.pipelineRunId, pipelineRunId), eq(scoreResults.active, true), eq(scoreResults.success, true)))
+      .where(
+        and(
+          eq(scoreResults.pipelineRunId, pipelineRunId),
+          eq(scoreResults.active, true),
+          eq(scoreResults.success, true),
+        ),
+      )
       .orderBy(desc(scoreResults.overallScore))
       .limit(limit)
       .all();

@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  parseLinkedInJobsSearchURL,
-} from '../../src/search/url-parser.js';
+import { parseLinkedInJobsSearchURL } from '../../src/search/url-parser.js';
 import { LinkedInURLParseError } from '../../src/search/errors.js';
 
 const VALID_URL =
@@ -63,9 +61,9 @@ describe('parseLinkedInJobsSearchURL', () => {
   });
 
   it('rejects empty geoId', () => {
-    expect(() => parseLinkedInJobsSearchURL('https://www.linkedin.com/jobs/search/?geoId=')).toThrow(
-      LinkedInURLParseError,
-    );
+    expect(() =>
+      parseLinkedInJobsSearchURL('https://www.linkedin.com/jobs/search/?geoId='),
+    ).toThrow(LinkedInURLParseError);
   });
 
   it('rejects malformed URLs', () => {
@@ -85,4 +83,3 @@ describe('parseLinkedInJobsSearchURL', () => {
     }
   });
 });
-

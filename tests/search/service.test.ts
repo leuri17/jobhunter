@@ -6,10 +6,7 @@ import {
   type SearchConfiguration,
 } from '../../src/search/service.js';
 import type { SearchPrompts } from '../../src/search/prompts.js';
-import {
-  SearchCancelledError,
-  SearchConfigError,
-} from '../../src/search/errors.js';
+import { SearchCancelledError, SearchConfigError } from '../../src/search/errors.js';
 
 const FULL_PROMPT_ANSWERS: SearchConfiguration = {
   searchQueries: ['Software Developer', 'Frontend Developer'],
@@ -49,7 +46,9 @@ function fakePrompts(answers: {
 
 describe('ConfigureSearchService', () => {
   it('collects, normalizes, dedupes, and returns a valid configuration', async () => {
-    const service = new ConfigureSearchService({ prompts: fakePrompts({ configuration: FULL_PROMPT_ANSWERS }) });
+    const service = new ConfigureSearchService({
+      prompts: fakePrompts({ configuration: FULL_PROMPT_ANSWERS }),
+    });
     const result = await service.run();
     expect(result).toEqual(FULL_PROMPT_ANSWERS);
   });
@@ -193,7 +192,9 @@ describe('normalizePersistedSearchConfig', () => {
 
 describe('runConfigureSearch helper', () => {
   it('is a one-call wrapper around ConfigureSearchService', async () => {
-    const result = await runConfigureSearch({ prompts: fakePrompts({ configuration: FULL_PROMPT_ANSWERS }) });
+    const result = await runConfigureSearch({
+      prompts: fakePrompts({ configuration: FULL_PROMPT_ANSWERS }),
+    });
     expect(result).toEqual(FULL_PROMPT_ANSWERS);
   });
 });

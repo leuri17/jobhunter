@@ -13,7 +13,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
-import { build, logTable } from './pdf-encoder.js';
+import { build } from './pdf-encoder.js';
 
 const OUT_DIR = dirname(new URL(import.meta.url).pathname);
 
@@ -47,7 +47,7 @@ function main(): void {
   writeTextPdf();
   writeImageOnlyPdf();
   writeMalformedPdf();
-  logTable('Generated PDF fixtures in', OUT_DIR);
+  console.log(`Generated PDF fixtures in ${OUT_DIR}`);
 }
 
 main();

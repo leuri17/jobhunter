@@ -1,9 +1,6 @@
 import { dedupeQueries } from './queries.js';
 import { dedupeLocationsByGeoId } from './locations.js';
-import {
-  SearchCancelledError,
-  SearchConfigError,
-} from './errors.js';
+import { SearchCancelledError, SearchConfigError } from './errors.js';
 import {
   DEFAULT_DATE_POSTED,
   DEFAULT_WORKPLACE_TYPES,
@@ -41,17 +38,15 @@ function toPreview(config: SearchConfiguration): SearchConfigurationPreview {
   };
 }
 
-export function normalizePersistedSearchConfig(
-  raw: {
-    searchQueries: readonly string[];
-    locations: readonly { readonly name: string; readonly geoId: string }[];
-    datePosted: number;
-    workplaceTypes: readonly string[];
-  },
-): SearchConfiguration {
-  const datePosted: DatePostedSeconds = (
-    [86400, 604800, 2592000] as readonly number[]
-  ).includes(raw.datePosted)
+export function normalizePersistedSearchConfig(raw: {
+  searchQueries: readonly string[];
+  locations: readonly { readonly name: string; readonly geoId: string }[];
+  datePosted: number;
+  workplaceTypes: readonly string[];
+}): SearchConfiguration {
+  const datePosted: DatePostedSeconds = ([86400, 604800, 2592000] as readonly number[]).includes(
+    raw.datePosted,
+  )
     ? (raw.datePosted as DatePostedSeconds)
     : DEFAULT_DATE_POSTED;
   const workplace: WorkplaceTypeValue[] = raw.workplaceTypes.filter(
@@ -90,7 +85,10 @@ export class ConfigureSearchService {
     const rawWorkplaceTypes = await this.prompts.askWorkplaceTypes(ex?.workplaceTypes ?? []);
     const workplaceTypes = sortWorkplaceTypes(rawWorkplaceTypes);
     if (workplaceTypes.length === 0) {
-      throw new SearchConfigError('empty_workplace_types', 'At least one workplace type is required.');
+      throw new SearchConfigError(
+        'empty_workplace_types',
+        'At least one workplace type is required.',
+      );
     }
 
     const datePosted = await this.prompts.askDatePosted(ex?.datePosted ?? null);

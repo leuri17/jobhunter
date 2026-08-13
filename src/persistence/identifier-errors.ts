@@ -12,4 +12,3 @@ export class InvalidIdentifierError extends ApplicationError {
 }
 
 export { ApplicationError, ExitCode };
-

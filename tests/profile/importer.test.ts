@@ -185,4 +185,36 @@ describe('ProfileImportService', () => {
     const stored = await repositories.profileSources.findById(imported.id);
     expect(stored?.sha256).toBe(imported.sha256);
   });
+
+  it('persists markdown external-image warnings to the source row', async () => {
+    const sourcePath = join(tempHome, 'cv.md');
+    writeFileSync(
+      sourcePath,
+      '# Title\n\n![profile photo](https://example.com/photo.png)\n',
+      'utf8',
+    );
+
+    const result = await service.importSources([sourcePath]);
+    expect(result.status).toBe('success');
+    const imported = result.sources[0]!;
+    expect(imported.warnings).toEqual(['markdown_contains_external_image_references']);
+    const stored = await repositories.profileSources.findById(imported.id);
+    expect(stored?.warnings).toEqual(['markdown_contains_external_image_references']);
+  });
+
+  it('returns the persisted warnings array on a re-import (reuse path)', async () => {
+    const sourcePath = join(tempHome, 'cv.md');
+    writeFileSync(
+      sourcePath,
+      '# Title\n\n![profile photo](https://example.com/photo.png)\n',
+      'utf8',
+    );
+
+    const first = await service.importSources([sourcePath]);
+    expect(first.sources[0]?.warnings).toEqual(['markdown_contains_external_image_references']);
+
+    const second = await service.importSources([sourcePath]);
+    expect(second.sources[0]?.reused).toBe(true);
+    expect(second.sources[0]?.warnings).toEqual(['markdown_contains_external_image_references']);
+  });
 });

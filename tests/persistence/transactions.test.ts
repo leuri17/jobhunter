@@ -4,7 +4,10 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runMigrations } from '../../src/persistence/migrations.js';
-import { createDatabaseConnection, type DatabaseConnection } from '../../src/persistence/connection.js';
+import {
+  createDatabaseConnection,
+  type DatabaseConnection,
+} from '../../src/persistence/connection.js';
 import { applicationMetadata, pipelineRuns, profileSources } from '../../src/persistence/schema.js';
 import { Repositories } from '../../src/persistence/repositories/index.js';
 import { withTransaction } from '../../src/persistence/transactions.js';
@@ -120,9 +123,11 @@ describe('Repositories.transact', () => {
         .run();
       return runRow.id;
     });
-    return expect(repos.applicationMetadata.get('lastRunId')).resolves.not.toBeNull().then(() => {
-      expect(typeof runId).toBe('number');
-    });
+    return expect(repos.applicationMetadata.get('lastRunId'))
+      .resolves.not.toBeNull()
+      .then(() => {
+        expect(typeof runId).toBe('number');
+      });
   });
 
   it('rolls back all writes when the block throws', () => {

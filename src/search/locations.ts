@@ -18,7 +18,9 @@ export function isValidLocation(value: RawLocationInput): boolean {
   );
 }
 
-export function dedupeLocationsByGeoId(values: readonly RawLocationInput[]): readonly RawLocationInput[] {
+export function dedupeLocationsByGeoId(
+  values: readonly RawLocationInput[],
+): readonly RawLocationInput[] {
   const seen = new Set<string>();
   const out: RawLocationInput[] = [];
   for (const raw of values) {
@@ -32,6 +34,8 @@ export function dedupeLocationsByGeoId(values: readonly RawLocationInput[]): rea
   return out;
 }
 
-export function normalizeLocations(values: readonly RawLocationInput[]): readonly RawLocationInput[] {
+export function normalizeLocations(
+  values: readonly RawLocationInput[],
+): readonly RawLocationInput[] {
   return dedupeLocationsByGeoId(values);
 }

@@ -145,7 +145,11 @@ describe('defaultInquirerPrompts.askLocationURLs — keep/add/replace', () => {
     expect(result).toEqual([
       { name: 'Rotterdam', geoId: '100467493', originalUrl: '' },
       { name: 'Amsterdam', geoId: '101889610', originalUrl: '' },
-      { name: 'Utrecht', geoId: '999999999', originalUrl: 'https://www.linkedin.com/jobs/search/?geoId=999999999' },
+      {
+        name: 'Utrecht',
+        geoId: '999999999',
+        originalUrl: 'https://www.linkedin.com/jobs/search/?geoId=999999999',
+      },
     ]);
   });
 
@@ -167,7 +171,11 @@ describe('defaultInquirerPrompts.askLocationURLs — keep/add/replace', () => {
     const result = await defaultInquirerPrompts.askLocationURLs(EXISTING);
 
     expect(result).toEqual([
-      { name: 'Berlin', geoId: '12345', originalUrl: 'https://www.linkedin.com/jobs/search/?geoId=12345' },
+      {
+        name: 'Berlin',
+        geoId: '12345',
+        originalUrl: 'https://www.linkedin.com/jobs/search/?geoId=12345',
+      },
     ]);
   });
 });

@@ -94,9 +94,10 @@ export class FilterResultRepository {
           rulesEvaluatedJson: unknownJson.encode(input.rulesEvaluated),
           rulesPassedJson: unknownJson.encode(input.rulesPassed),
           rulesFailedJson: unknownJson.encode(input.rulesFailed),
-          rejectionReasonsJson: input.rejectionReasons === undefined || input.rejectionReasons === null
-            ? null
-            : unknownJson.encode(input.rejectionReasons),
+          rejectionReasonsJson:
+            input.rejectionReasons === undefined || input.rejectionReasons === null
+              ? null
+              : unknownJson.encode(input.rejectionReasons),
           active: true,
         })
         .returning({ id: filterResults.id })
@@ -111,7 +112,13 @@ export class FilterResultRepository {
     const rows = this.ctx.db
       .select()
       .from(filterResults)
-      .where(and(eq(filterResults.jobId, jobId), eq(filterResults.active, true), eq(filterResults.fingerprint, fingerprint)))
+      .where(
+        and(
+          eq(filterResults.jobId, jobId),
+          eq(filterResults.active, true),
+          eq(filterResults.fingerprint, fingerprint),
+        ),
+      )
       .all();
     const row = rows[0];
     return row === undefined ? null : rowFromRecord(row);
@@ -124,12 +131,20 @@ export class FilterResultRepository {
   }
 
   async listByJob(jobId: number): Promise<readonly FilterResultRow[]> {
-    const rows = this.ctx.db.select().from(filterResults).where(eq(filterResults.jobId, jobId)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(filterResults)
+      .where(eq(filterResults.jobId, jobId))
+      .all();
     return rows.map(rowFromRecord);
   }
 
   async listByRun(pipelineRunId: number): Promise<readonly FilterResultRow[]> {
-    const rows = this.ctx.db.select().from(filterResults).where(eq(filterResults.pipelineRunId, pipelineRunId)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(filterResults)
+      .where(eq(filterResults.pipelineRunId, pipelineRunId))
+      .all();
     return rows.map(rowFromRecord);
   }
 }

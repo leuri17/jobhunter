@@ -39,7 +39,9 @@ export function jsonColumn<T>(schema: ZodType<T>): JsonColumnCodec<T> {
     decodeRequired(raw: string | null): T {
       const decoded = this.decode(raw);
       if (decoded === null) {
-        throw new DatabaseError('persisted_json_missing', 'Required JSON column was null.', { raw: null });
+        throw new DatabaseError('persisted_json_missing', 'Required JSON column was null.', {
+          raw: null,
+        });
       }
       return decoded;
     },

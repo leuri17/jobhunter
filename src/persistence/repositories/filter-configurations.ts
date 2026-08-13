@@ -24,7 +24,9 @@ export interface FilterConfigurationInsert {
   readonly active?: boolean;
 }
 
-function rowFromRecord(record: typeof filterConfigurationVersions.$inferSelect): FilterConfigurationRow {
+function rowFromRecord(
+  record: typeof filterConfigurationVersions.$inferSelect,
+): FilterConfigurationRow {
   return {
     id: record.id,
     schemaVersion: record.schemaVersion,
@@ -56,19 +58,31 @@ export class FilterConfigurationRepository {
   }
 
   async findById(id: number): Promise<FilterConfigurationRow | null> {
-    const rows = this.ctx.db.select().from(filterConfigurationVersions).where(eq(filterConfigurationVersions.id, id)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(filterConfigurationVersions)
+      .where(eq(filterConfigurationVersions.id, id))
+      .all();
     const row = rows[0];
     return row === undefined ? null : rowFromRecord(row);
   }
 
   async findActive(): Promise<FilterConfigurationRow | null> {
-    const rows = this.ctx.db.select().from(filterConfigurationVersions).where(eq(filterConfigurationVersions.active, true)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(filterConfigurationVersions)
+      .where(eq(filterConfigurationVersions.active, true))
+      .all();
     const row = rows[0];
     return row === undefined ? null : rowFromRecord(row);
   }
 
   async findByContentHash(hash: string): Promise<FilterConfigurationRow | null> {
-    const rows = this.ctx.db.select().from(filterConfigurationVersions).where(eq(filterConfigurationVersions.contentHash, hash)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(filterConfigurationVersions)
+      .where(eq(filterConfigurationVersions.contentHash, hash))
+      .all();
     const row = rows[0];
     return row === undefined ? null : rowFromRecord(row);
   }
@@ -79,8 +93,14 @@ export class FilterConfigurationRepository {
 
   async activate(id: number): Promise<void> {
     this.ctx.db.transaction((tx) => {
-      tx.update(filterConfigurationVersions).set({ active: false }).where(eq(filterConfigurationVersions.active, true)).run();
-      tx.update(filterConfigurationVersions).set({ active: true }).where(eq(filterConfigurationVersions.id, id)).run();
+      tx.update(filterConfigurationVersions)
+        .set({ active: false })
+        .where(eq(filterConfigurationVersions.active, true))
+        .run();
+      tx.update(filterConfigurationVersions)
+        .set({ active: true })
+        .where(eq(filterConfigurationVersions.id, id))
+        .run();
     });
   }
 }

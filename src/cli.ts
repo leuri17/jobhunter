@@ -31,7 +31,7 @@ import {
   type SearchConfiguration,
   type SearchPrompts,
 } from './search/index.js';
-import { createRepositories, Repositories } from './persistence/repositories/index.js';
+import { createRepositories } from './persistence/repositories/index.js';
 import { initializeDatabase } from './persistence/database.js';
 import { resolveRepoRootForMigrations } from './persistence/resolve-migrations.js';
 import { ProfileImportService, type ProfileImportResult } from './profile/importer.js';
@@ -104,11 +104,10 @@ async function pathsCommand(): Promise<void> {
 async function configShowCommand(json: boolean): Promise<void> {
   const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
   const loaded = await loadConfig(paths, cliFileSystem);
-  if (json) {
-    process.stdout.write(`${JSON.stringify(loaded.config, null, 2)}\n`);
-  } else {
-    process.stdout.write(`${JSON.stringify(loaded.config, null, 2)}\n`);
-  }
+  // Both branches serialise identically; the parameter is kept so the
+  // command signature matches the documented --json flag behaviour.
+  void json;
+  process.stdout.write(`${JSON.stringify(loaded.config, null, 2)}\n`);
 }
 
 async function configValidateCommand(): Promise<void> {
@@ -130,16 +129,15 @@ async function configUpdateCommand(patch: ConfigPatch): Promise<void> {
   process.stdout.write(`${JSON.stringify(result.config, null, 2)}\n`);
 }
 
-function summaryLine(result: ProfileImportResult): string {
+function formatSummary(result: ProfileImportResult): string {
   const lines = result.sources.map((source) => {
     const action = source.reused
       ? `reused-${source.textExtractionStatus}`
       : source.textExtractionStatus;
     const filename = source.path.split(/[\\/]/).pop() ?? source.path;
     const id = `source_${source.id}`;
-    const message =
-      source.textExtractionMessage === null ? '' : ` (${source.textExtractionMessage})`;
-    return `  ${id}  ${action}  ${filename}${message}`;
+    const annotation = formatSourceAnnotation(source);
+    return `  ${id}  ${action}  ${filename}${annotation}`;
   });
   return [
     `status: ${result.status}`,
@@ -150,7 +148,7 @@ function summaryLine(result: ProfileImportResult): string {
   ].join('\n');
 }
 
-function cliJson(result: ProfileImportResult): unknown {
+function formatSummaryJson(result: ProfileImportResult): unknown {
   return {
     schemaVersion: 1,
     status: result.status,
@@ -173,6 +171,19 @@ function cliJson(result: ProfileImportResult): unknown {
   };
 }
 
+function formatSourceAnnotation(source: ProfileImportResult['sources'][number]): string {
+  const parts: string[] = [];
+  if (source.textExtractionMessage !== null) {
+    parts.push(source.textExtractionMessage);
+  }
+  if (source.warnings.length > 0) {
+    const noun = source.warnings.length === 1 ? 'warning' : 'warnings';
+    const codes = source.warnings.join(', ');
+    parts.push(`${source.warnings.length} ${noun}: ${codes}`);
+  }
+  return parts.length === 0 ? '' : ` (${parts.join(', ')})`;
+}
+
 async function profileImportCommand(
   rawPaths: readonly string[],
   options: { json: boolean },
@@ -181,22 +192,20 @@ async function profileImportCommand(
   const handle = await initializeDatabase(platformPaths, {
     migrationsFolder: resolveRepoRootForMigrations(),
   });
-  let repositories: Repositories | null = null;
   try {
-    repositories = createRepositories(handle);
+    const repositories = createRepositories(handle);
     const service = new ProfileImportService({
       paths: platformPaths,
       repositories,
     });
     const result = await service.importSources(rawPaths);
     if (options.json) {
-      process.stdout.write(`${JSON.stringify(cliJson(result), null, 2)}\n`);
+      process.stdout.write(`${JSON.stringify(formatSummaryJson(result), null, 2)}\n`);
     } else {
-      process.stdout.write(`${summaryLine(result)}\n`);
+      process.stdout.write(`${formatSummary(result)}\n`);
     }
   } finally {
     handle.close();
-    void repositories;
   }
 }
 

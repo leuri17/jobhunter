@@ -4,12 +4,17 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runMigrations } from '../../../src/persistence/migrations.js';
-import { createDatabaseConnection, type DatabaseConnection } from '../../../src/persistence/connection.js';
+import {
+  createDatabaseConnection,
+  type DatabaseConnection,
+} from '../../../src/persistence/connection.js';
 import { PipelineRunRepository } from '../../../src/persistence/repositories/pipeline-runs.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..');
 
-function ctxFrom(c: DatabaseConnection) { return { db: c.db }; }
+function ctxFrom(c: DatabaseConnection) {
+  return { db: c.db };
+}
 
 describe('PipelineRunRepository', () => {
   let directory: string;

@@ -18,10 +18,7 @@ export interface GenerateMatrixInput {
   readonly startTimestamp: string;
 }
 
-export function countSearches(
-  queries: readonly unknown[],
-  locations: readonly unknown[],
-): number {
+export function countSearches(queries: readonly unknown[], locations: readonly unknown[]): number {
   return queries.length * locations.length;
 }
 

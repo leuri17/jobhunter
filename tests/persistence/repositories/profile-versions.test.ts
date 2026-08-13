@@ -4,7 +4,10 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runMigrations } from '../../../src/persistence/migrations.js';
-import { createDatabaseConnection, type DatabaseConnection } from '../../../src/persistence/connection.js';
+import {
+  createDatabaseConnection,
+  type DatabaseConnection,
+} from '../../../src/persistence/connection.js';
 import { profileVersions as profileVersionsTableForTest } from '../../../src/persistence/schema.js';
 import { ProfileSourceRepository } from '../../../src/persistence/repositories/profile-sources.js';
 import { ProfileVersionRepository } from '../../../src/persistence/repositories/profile-versions.js';
@@ -74,18 +77,34 @@ describe('ProfileVersionRepository', () => {
   it('approves a draft and marks the previously active row superseded', async () => {
     const sourceId = await seedSource(sourceRepo, 'b'.repeat(64));
     const first = await versionRepo.insert({
-      status: 'draft', schemaVersion: 1, contentHash: 'h1', extractionFingerprint: 'fp1',
-      sourceIds: [sourceId], profileJson: {},
-      createdAt: '2026-08-05T10:00:00.000Z', updatedAt: '2026-08-05T10:00:00.000Z',
+      status: 'draft',
+      schemaVersion: 1,
+      contentHash: 'h1',
+      extractionFingerprint: 'fp1',
+      sourceIds: [sourceId],
+      profileJson: {},
+      createdAt: '2026-08-05T10:00:00.000Z',
+      updatedAt: '2026-08-05T10:00:00.000Z',
     });
-    await versionRepo.approve(first, { approvedAt: '2026-08-05T10:01:00.000Z', supersededAt: '2026-08-05T10:01:00.000Z' });
+    await versionRepo.approve(first, {
+      approvedAt: '2026-08-05T10:01:00.000Z',
+      supersededAt: '2026-08-05T10:01:00.000Z',
+    });
 
     const second = await versionRepo.insert({
-      status: 'draft', schemaVersion: 1, contentHash: 'h2', extractionFingerprint: 'fp2',
-      sourceIds: [sourceId], profileJson: {},
-      createdAt: '2026-08-05T11:00:00.000Z', updatedAt: '2026-08-05T11:00:00.000Z',
+      status: 'draft',
+      schemaVersion: 1,
+      contentHash: 'h2',
+      extractionFingerprint: 'fp2',
+      sourceIds: [sourceId],
+      profileJson: {},
+      createdAt: '2026-08-05T11:00:00.000Z',
+      updatedAt: '2026-08-05T11:00:00.000Z',
     });
-    await versionRepo.approve(second, { approvedAt: '2026-08-05T11:01:00.000Z', supersededAt: '2026-08-05T11:01:00.000Z' });
+    await versionRepo.approve(second, {
+      approvedAt: '2026-08-05T11:01:00.000Z',
+      supersededAt: '2026-08-05T11:01:00.000Z',
+    });
 
     const active = await versionRepo.findActiveApproved();
     expect(active?.id).toBe(second);
@@ -100,16 +119,29 @@ describe('ProfileVersionRepository', () => {
   it('rejects a draft without disturbing the currently active profile', async () => {
     const sourceId = await seedSource(sourceRepo, 'c'.repeat(64));
     const first = await versionRepo.insert({
-      status: 'draft', schemaVersion: 1, contentHash: 'h1', extractionFingerprint: 'fp1',
-      sourceIds: [sourceId], profileJson: {},
-      createdAt: '2026-08-05T10:00:00.000Z', updatedAt: '2026-08-05T10:00:00.000Z',
+      status: 'draft',
+      schemaVersion: 1,
+      contentHash: 'h1',
+      extractionFingerprint: 'fp1',
+      sourceIds: [sourceId],
+      profileJson: {},
+      createdAt: '2026-08-05T10:00:00.000Z',
+      updatedAt: '2026-08-05T10:00:00.000Z',
     });
-    await versionRepo.approve(first, { approvedAt: '2026-08-05T10:01:00.000Z', supersededAt: '2026-08-05T10:01:00.000Z' });
+    await versionRepo.approve(first, {
+      approvedAt: '2026-08-05T10:01:00.000Z',
+      supersededAt: '2026-08-05T10:01:00.000Z',
+    });
 
     const second = await versionRepo.insert({
-      status: 'draft', schemaVersion: 1, contentHash: 'h2', extractionFingerprint: 'fp2',
-      sourceIds: [sourceId], profileJson: {},
-      createdAt: '2026-08-05T11:00:00.000Z', updatedAt: '2026-08-05T11:00:00.000Z',
+      status: 'draft',
+      schemaVersion: 1,
+      contentHash: 'h2',
+      extractionFingerprint: 'fp2',
+      sourceIds: [sourceId],
+      profileJson: {},
+      createdAt: '2026-08-05T11:00:00.000Z',
+      updatedAt: '2026-08-05T11:00:00.000Z',
     });
     await versionRepo.reject(second, { now: '2026-08-05T12:00:00.000Z' });
 
@@ -122,11 +154,19 @@ describe('ProfileVersionRepository', () => {
   it('only one row can be active+approved (partial unique index enforced)', async () => {
     const sourceId = await seedSource(sourceRepo, 'd'.repeat(64));
     const first = await versionRepo.insert({
-      status: 'draft', schemaVersion: 1, contentHash: 'h1', extractionFingerprint: 'fp1',
-      sourceIds: [sourceId], profileJson: {},
-      createdAt: '2026-08-05T10:00:00.000Z', updatedAt: '2026-08-05T10:00:00.000Z',
+      status: 'draft',
+      schemaVersion: 1,
+      contentHash: 'h1',
+      extractionFingerprint: 'fp1',
+      sourceIds: [sourceId],
+      profileJson: {},
+      createdAt: '2026-08-05T10:00:00.000Z',
+      updatedAt: '2026-08-05T10:00:00.000Z',
     });
-    await versionRepo.approve(first, { approvedAt: '2026-08-05T10:01:00.000Z', supersededAt: '2026-08-05T10:01:00.000Z' });
+    await versionRepo.approve(first, {
+      approvedAt: '2026-08-05T10:01:00.000Z',
+      supersededAt: '2026-08-05T10:01:00.000Z',
+    });
 
     // Cannot manually insert a second active+approved row directly.
     await expect(
@@ -147,9 +187,14 @@ describe('ProfileVersionRepository', () => {
   it('inserts and lists revisions, conflicts, warnings, and overrides', async () => {
     const sourceId = await seedSource(sourceRepo, 'e'.repeat(64));
     const versionId = await versionRepo.insert({
-      status: 'draft', schemaVersion: 1, contentHash: 'h1', extractionFingerprint: 'fp1',
-      sourceIds: [sourceId], profileJson: {},
-      createdAt: '2026-08-05T10:00:00.000Z', updatedAt: '2026-08-05T10:00:00.000Z',
+      status: 'draft',
+      schemaVersion: 1,
+      contentHash: 'h1',
+      extractionFingerprint: 'fp1',
+      sourceIds: [sourceId],
+      profileJson: {},
+      createdAt: '2026-08-05T10:00:00.000Z',
+      updatedAt: '2026-08-05T10:00:00.000Z',
     });
 
     await versionRepo.insertRevision({
@@ -201,9 +246,14 @@ describe('ProfileVersionRepository', () => {
   it('resolveConflict flips resolutionStatus and stores resolvedValue', async () => {
     const sourceId = await seedSource(sourceRepo, 'f'.repeat(64));
     const versionId = await versionRepo.insert({
-      status: 'draft', schemaVersion: 1, contentHash: 'h1', extractionFingerprint: 'fp1',
-      sourceIds: [sourceId], profileJson: {},
-      createdAt: '2026-08-05T10:00:00.000Z', updatedAt: '2026-08-05T10:00:00.000Z',
+      status: 'draft',
+      schemaVersion: 1,
+      contentHash: 'h1',
+      extractionFingerprint: 'fp1',
+      sourceIds: [sourceId],
+      profileJson: {},
+      createdAt: '2026-08-05T10:00:00.000Z',
+      updatedAt: '2026-08-05T10:00:00.000Z',
     });
     const conflictId = await versionRepo.insertConflict({
       profileVersionId: versionId,

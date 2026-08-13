@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { ApplicationError, ExitCode, RecordNotFoundError } from '../../src/persistence/repository-errors.js';
+import {
+  ApplicationError,
+  ExitCode,
+  RecordNotFoundError,
+} from '../../src/persistence/repository-errors.js';
 
 describe('RecordNotFoundError', () => {
   it('extends ApplicationError', () => {

@@ -16,12 +16,7 @@ export {
   type WorkplaceTypeValue,
 } from './labels.js';
 
-export {
-  dedupeQueries,
-  isNonEmptyQuery,
-  normalizeQueries,
-  normalizeQuery,
-} from './queries.js';
+export { dedupeQueries, isNonEmptyQuery, normalizeQueries, normalizeQuery } from './queries.js';
 
 export {
   dedupeLocationsByGeoId,
@@ -31,10 +26,7 @@ export {
   type RawLocationInput,
 } from './locations.js';
 
-export {
-  parseLinkedInJobsSearchURL,
-  type ParsedLinkedInSearchURL,
-} from './url-parser.js';
+export { parseLinkedInJobsSearchURL, type ParsedLinkedInSearchURL } from './url-parser.js';
 
 export {
   buildLinkedInSearchParamMap,

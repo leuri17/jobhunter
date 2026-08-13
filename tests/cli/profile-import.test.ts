@@ -12,11 +12,24 @@ describe('CLI: jobhunter profile import', () => {
   let stderr: string[] = [];
   let originalHome: string | undefined;
   let exitCode: number | null = null;
-  let originalExit: typeof process.exit;
-  let originalOut: typeof process.stdout.write;
-  let originalErr: typeof process.stderr.write;
+  // Capture the real process.exit's stdout/stderr once at module load so that
+  // a thrown beforeEach (e.g. mkdtemp failing) does not leave the patches
+  // installed or — worse — restore them to `undefined`. The `let` defaults
+  // are populated by captureOriginals() on the first beforeEach.
+  let originalExit: typeof process.exit | undefined;
+  let originalOut: typeof process.stdout.write | undefined;
+  let originalErr: typeof process.stderr.write | undefined;
+
+  function captureOriginals(): void {
+    if (originalExit === undefined) {
+      originalExit = process.exit;
+      originalOut = process.stdout.write;
+      originalErr = process.stderr.write;
+    }
+  }
 
   beforeEach(() => {
+    captureOriginals();
     tempHome = mkdtempSync(join(tmpdir(), 'jobhunter-cli-profile-'));
     originalHome = process.env.HOME;
     process.env.HOME = tempHome;
@@ -24,9 +37,6 @@ describe('CLI: jobhunter profile import', () => {
     stdout = [];
     stderr = [];
     exitCode = null;
-    originalExit = process.exit;
-    originalOut = process.stdout.write;
-    originalErr = process.stderr.write;
     process.exit = ((code: number) => {
       if (exitCode === null) exitCode = code;
       throw new Error(`__exit__:${code}`);
@@ -42,15 +52,23 @@ describe('CLI: jobhunter profile import', () => {
   });
 
   afterEach(() => {
-    rmSync(tempHome, { recursive: true, force: true });
+    if (tempHome !== undefined) {
+      rmSync(tempHome, { recursive: true, force: true });
+    }
     if (originalHome === undefined) {
       delete process.env.HOME;
     } else {
       process.env.HOME = originalHome;
     }
-    process.exit = originalExit;
-    process.stdout.write = originalOut;
-    process.stderr.write = originalErr;
+    if (originalExit !== undefined) {
+      process.exit = originalExit;
+    }
+    if (originalOut !== undefined) {
+      process.stdout.write = originalOut;
+    }
+    if (originalErr !== undefined) {
+      process.stderr.write = originalErr;
+    }
   });
 
   function isCommanderError(error: unknown): error is { code: string; message: string } {
@@ -184,5 +202,24 @@ describe('CLI: jobhunter profile import', () => {
     expect(second.stdout).toMatch(/reused: 1/);
     expect(second.stdout).toContain('reused-failed');
     expect(second.stdout).toContain('(ocr_required)');
+  });
+
+  it('appends (N warning: code) to the summary line for a markdown file with external images', async () => {
+    const sourcePath = join(tempHome, 'cv.md');
+    writeFileSync(sourcePath, '# Title\n\n![photo](https://example.com/photo.png)\n', 'utf8');
+    const result = await run(['profile', 'import', sourcePath]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('source_1');
+    expect(result.stdout).toContain('(1 warning: markdown_contains_external_image_references)');
+  });
+
+  it('includes the warnings array in the JSON output for a markdown file with external images', async () => {
+    const sourcePath = join(tempHome, 'cv.md');
+    writeFileSync(sourcePath, '# Title\n\n![photo](https://example.com/photo.png)\n', 'utf8');
+    const result = await run(['profile', 'import', '--json', sourcePath]);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.sources).toHaveLength(1);
+    expect(parsed.sources[0].warnings).toEqual(['markdown_contains_external_image_references']);
   });
 });

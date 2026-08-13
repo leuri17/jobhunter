@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { PdfExtractor } from '../../../src/profile/extractors/pdf.js';
 
@@ -49,5 +49,40 @@ describe('PdfExtractor', () => {
     if (result.status === 'failed') {
       expect(result.message).toBe('empty_pdf');
     }
+  });
+
+  it('calls pdf-parse with pageJoiner: "" so the image-only detection works', async () => {
+    // The default pageJoiner in pdf-parse injects '-- N of M --' between pages,
+    // which would defeat the EMPTY_TEXT_FALLBACK_PATTERN check for image-only
+    // PDFs. This test pins the call so the dependency is not silently lost.
+    vi.resetModules();
+    const getText = vi.fn(async (_options: { pageJoiner?: string }) => ({
+      text: 'Extracted text',
+    }));
+    vi.doMock('pdf-parse', () => ({
+      PDFParse: class {
+        constructor(_options: unknown) {
+          // no-op
+        }
+        async getText(options: { pageJoiner?: string }): Promise<{ text: string }> {
+          return getText(options);
+        }
+        async destroy(): Promise<void> {
+          // no-op
+        }
+      },
+    }));
+
+    const { PdfExtractor: MockedPdfExtractor } =
+      await import('../../../src/profile/extractors/pdf.js');
+    const extractor = new MockedPdfExtractor();
+    const result = await extractor.extract(
+      new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]),
+    );
+    expect(getText).toHaveBeenCalledTimes(1);
+    expect(getText).toHaveBeenCalledWith({ pageJoiner: '' });
+    expect(result.status).toBe('success');
+    vi.doUnmock('pdf-parse');
+    vi.resetModules();
   });
 });

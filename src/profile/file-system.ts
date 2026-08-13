@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 
 export interface BinaryFileSystem {
   readBytes(path: string): Promise<Uint8Array>;
@@ -37,7 +37,6 @@ export function createDefaultBinaryFileSystem(): BinaryFileSystem {
       await rename(from, to);
     },
     async removeFile(path) {
-      const { rm } = await import('node:fs/promises');
       await rm(path, { force: true });
     },
   };

@@ -3,7 +3,11 @@ import path from 'node:path';
 import type { PlatformPaths } from '../platform/paths.js';
 import type { SourceType } from './source-types.js';
 
-import { SourceUnreadableError, ProfileSourceStorageError } from './errors.js';
+import {
+  UnsupportedSourceFormatError,
+  SourceUnreadableError,
+  ProfileSourceStorageError,
+} from './errors.js';
 import type { BinaryFileSystem } from './file-system.js';
 
 export function resolveSourceStoragePath(
@@ -23,20 +27,44 @@ export function resolveSourceStoragePath(
       { sourceId },
     );
   }
-  return path.join(paths.profileSources.directory, String(sourceId), originalFilename);
+  const baseDir = path.join(paths.profileSources.directory, String(sourceId));
+  const resolved = path.join(baseDir, originalFilename);
+  // Defense-in-depth: reject any resolved path that escapes the expected
+  // per-source directory. The calling layer (defaultFilenameFor) already
+  // rejects `.`, `..`, and NUL bytes in the basename, but this guards
+  // against future callers that bypass that validation.
+  const expectedPrefix = `${baseDir}${path.sep}`;
+  if (!(resolved === baseDir || resolved.startsWith(expectedPrefix))) {
+    throw new ProfileSourceStorageError(
+      `Resolved storage path "${resolved}" is outside the expected directory "${baseDir}".`,
+      { sourceId, originalFilename, resolved, baseDir },
+    );
+  }
+  return resolved;
 }
 
 export function defaultFilenameFor(sourceType: SourceType, originalPath: string): string {
   const base = path.basename(originalPath).trim();
-  if (base !== '') return base;
-  switch (sourceType) {
-    case 'pdf':
-      return 'cv.pdf';
-    case 'markdown':
-      return 'cv.md';
-    case 'plain_text':
-      return 'cv.txt';
+  if (base === '') {
+    throw new UnsupportedSourceFormatError('Cannot derive a filename from an empty path.', {
+      path: originalPath,
+    });
   }
+  if (base === '.' || base === '..') {
+    throw new UnsupportedSourceFormatError(
+      `Refusing to use reserved basename "${base}" as a stored filename.`,
+      { path: originalPath, basename: base },
+    );
+  }
+  if (base.includes('\0')) {
+    throw new UnsupportedSourceFormatError('Stored filename contains a NUL byte.', {
+      path: originalPath,
+    });
+  }
+  // The switch is kept so the function remains exhaustive over SourceType even
+  // though it no longer returns a fallback basename.
+  void sourceType;
+  return base;
 }
 
 export interface CopySourceFileOptions {

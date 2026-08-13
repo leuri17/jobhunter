@@ -21,16 +21,27 @@ export class ApplicationMetadataRepository {
   constructor(private readonly ctx: RepositoryContext) {}
 
   async get(key: string): Promise<ApplicationMetadataRow | null> {
-    const rows = this.ctx.db.select().from(applicationMetadata).where(eq(applicationMetadata.key, key)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(applicationMetadata)
+      .where(eq(applicationMetadata.key, key))
+      .all();
     const row = rows[0];
     return row === undefined ? null : rowFromRecord(row);
   }
 
   async set(key: string, value: string, updatedAt: string): Promise<void> {
     this.ctx.db.transaction((tx) => {
-      const existing = tx.select().from(applicationMetadata).where(eq(applicationMetadata.key, key)).all();
+      const existing = tx
+        .select()
+        .from(applicationMetadata)
+        .where(eq(applicationMetadata.key, key))
+        .all();
       if (existing.length > 0) {
-        tx.update(applicationMetadata).set({ value, updatedAt }).where(eq(applicationMetadata.key, key)).run();
+        tx.update(applicationMetadata)
+          .set({ value, updatedAt })
+          .where(eq(applicationMetadata.key, key))
+          .run();
         return;
       }
       tx.insert(applicationMetadata).values({ key, value, updatedAt }).run();

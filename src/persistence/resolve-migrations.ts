@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
  *
  * In both cases the migrations folder lives at <repoRoot>/drizzle.
  */
-export function resolveRepoRoot(): string {
+function resolveRepoRoot(): string {
   const here = dirname(fileURLToPath(import.meta.url));
   // here is .../<repo>/dist/cli.js (production) or .../<repo>/src/cli.ts (dev).
   const repoRoot = resolve(here, '..', '..');

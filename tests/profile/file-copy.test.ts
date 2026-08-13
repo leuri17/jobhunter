@@ -8,7 +8,11 @@ import {
   createDefaultBinaryFileSystem,
   type BinaryFileSystem,
 } from '../../src/profile/file-system.js';
-import { ProfileSourceStorageError, SourceUnreadableError } from '../../src/profile/errors.js';
+import {
+  ProfileSourceStorageError,
+  SourceUnreadableError,
+  UnsupportedSourceFormatError,
+} from '../../src/profile/errors.js';
 import {
   copySourceFileToStorage,
   defaultFilenameFor,
@@ -39,6 +43,16 @@ describe('resolveSourceStoragePath', () => {
     expect(() => resolveSourceStoragePath(paths, 1, '')).toThrow(ProfileSourceStorageError);
     expect(() => resolveSourceStoragePath(paths, 1, '   ')).toThrow(ProfileSourceStorageError);
   });
+
+  it('refuses to resolve a path that escapes the per-source directory', () => {
+    const paths = resolvePlatformPaths(adapter('/home/tester'));
+    // The caller-side check in defaultFilenameFor blocks "..", but resolveSourceStoragePath
+    // performs a defense-in-depth check on the joined path.
+    expect(() => resolveSourceStoragePath(paths, 1, '..')).toThrow(ProfileSourceStorageError);
+    expect(() => resolveSourceStoragePath(paths, 1, '../escape.pdf')).toThrow(
+      ProfileSourceStorageError,
+    );
+  });
 });
 
 describe('defaultFilenameFor', () => {
@@ -47,10 +61,29 @@ describe('defaultFilenameFor', () => {
     expect(defaultFilenameFor('markdown', '/Users/x/Documents/profile.md')).toBe('profile.md');
   });
 
-  it('returns a sensible default when the basename is empty', () => {
-    expect(defaultFilenameFor('pdf', '/')).toBe('cv.pdf');
-    expect(defaultFilenameFor('markdown', '')).toBe('cv.md');
-    expect(defaultFilenameFor('plain_text', '   ')).toBe('cv.txt');
+  it('rejects an empty basename with UnsupportedSourceFormatError', () => {
+    expect(() => defaultFilenameFor('pdf', '/')).toThrow(UnsupportedSourceFormatError);
+    expect(() => defaultFilenameFor('markdown', '')).toThrow(UnsupportedSourceFormatError);
+    expect(() => defaultFilenameFor('plain_text', '   ')).toThrow(UnsupportedSourceFormatError);
+  });
+
+  it('rejects the reserved basename "."', () => {
+    expect(() => defaultFilenameFor('pdf', '/tmp/.')).toThrow(UnsupportedSourceFormatError);
+    expect(() => defaultFilenameFor('pdf', '.')).toThrow(UnsupportedSourceFormatError);
+  });
+
+  it('rejects the reserved basename ".."', () => {
+    expect(() => defaultFilenameFor('pdf', '/tmp/..')).toThrow(UnsupportedSourceFormatError);
+    expect(() => defaultFilenameFor('pdf', '..')).toThrow(UnsupportedSourceFormatError);
+  });
+
+  it('rejects basenames containing a NUL byte', () => {
+    expect(() => defaultFilenameFor('pdf', '/tmp/cv\0.pdf')).toThrow(UnsupportedSourceFormatError);
+  });
+
+  it('preserves spaces and unicode in the basename', () => {
+    expect(defaultFilenameFor('pdf', '/tmp/my cv.pdf')).toBe('my cv.pdf');
+    expect(defaultFilenameFor('pdf', '/tmp/currículo.pdf')).toBe('currículo.pdf');
   });
 });
 

@@ -11,10 +11,7 @@ const MALFORMED_PDF_NAMES: ReadonlySet<string> = new Set([
   'UnexpectedResponseException',
 ]);
 
-const ENCRYPTED_PDF_NAMES: ReadonlySet<string> = new Set([
-  'PasswordException',
-  'EncryptedPDFException',
-]);
+const ENCRYPTED_PDF_NAMES: ReadonlySet<string> = new Set(['PasswordException']);
 
 function isMalformedPdfError(cause: unknown): boolean {
   if (!(cause instanceof Error)) return false;
@@ -59,6 +56,11 @@ export class PdfExtractor implements Extractor {
     let rawText: string;
     try {
       parser = new PDFParse({ data: buffer });
+      // The empty pageJoiner is required for the EMPTY_TEXT_FALLBACK_PATTERN
+      // below to detect image-only PDFs. The default pageJoiner is '-- N of M --'
+      // which would make a whitespace-only PDF produce a non-empty string,
+      // defeating the image-only detection. If you change this, update the
+      // matching assertion in tests/profile/extractors/pdf.test.ts.
       const result = await parser.getText({ pageJoiner: '' });
       rawText = result.text ?? '';
     } catch (cause) {

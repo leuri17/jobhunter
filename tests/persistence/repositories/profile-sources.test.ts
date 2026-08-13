@@ -8,6 +8,7 @@ import {
   createDatabaseConnection,
   type DatabaseConnection,
 } from '../../../src/persistence/connection.js';
+import { DuplicateSha256Error } from '../../../src/persistence/repository-errors.js';
 import { ProfileSourceRepository } from '../../../src/persistence/repositories/profile-sources.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..');
@@ -51,7 +52,7 @@ describe('ProfileSourceRepository', () => {
     expect(row?.textExtractionStatus).toBe('pending');
   });
 
-  it('is idempotent on sha256 conflict and returns the existing id', async () => {
+  it('throws DuplicateSha256Error on sha256 collision (insert is strict INSERT-OR-ERROR)', async () => {
     const first = await repo.insert({
       sourceType: 'pdf',
       originalFilename: 'cv.pdf',
@@ -62,19 +63,19 @@ describe('ProfileSourceRepository', () => {
       sha256: 'b'.repeat(64),
       importTimestamp: '2026-08-05T10:00:00.000Z',
     });
-    const second = await repo.insert({
-      sourceType: 'pdf',
-      originalFilename: 'cv-renamed.pdf',
-      originalAbsolutePath: '/tmp/cv-renamed.pdf',
-      storedPath: '/opt/jobhunter/profile-sources/cv.sha256.pdf',
-      mimeType: 'application/pdf',
-      fileSize: 12345,
-      sha256: 'b'.repeat(64),
-      importTimestamp: '2026-08-05T10:01:00.000Z',
-    });
-    expect(second).toBe(first);
-    const found = await repo.findBySha256('b'.repeat(64));
-    expect(found?.id).toBe(first);
+    expect(first).toBeGreaterThan(0);
+    await expect(
+      repo.insert({
+        sourceType: 'pdf',
+        originalFilename: 'cv-renamed.pdf',
+        originalAbsolutePath: '/tmp/cv-renamed.pdf',
+        storedPath: '/opt/jobhunter/profile-sources/cv.sha256.pdf',
+        mimeType: 'application/pdf',
+        fileSize: 12345,
+        sha256: 'b'.repeat(64),
+        importTimestamp: '2026-08-05T10:01:00.000Z',
+      }),
+    ).rejects.toBeInstanceOf(DuplicateSha256Error);
   });
 
   it('updateExtraction patches only the extraction fields', async () => {
@@ -140,5 +141,69 @@ describe('ProfileSourceRepository', () => {
     });
     const rows = await repo.list();
     expect(rows).toHaveLength(2);
+  });
+
+  it('defaults warnings to an empty array on insert', async () => {
+    const id = await repo.insert({
+      sourceType: 'plain_text',
+      originalFilename: 'no-warnings.txt',
+      originalAbsolutePath: '/tmp/no-warnings.txt',
+      storedPath: '/opt/no-warnings.txt',
+      mimeType: 'text/plain',
+      fileSize: 10,
+      sha256: '1'.repeat(64),
+      importTimestamp: '2026-08-05T10:00:00.000Z',
+    });
+    const row = await repo.findById(id);
+    expect(row?.warnings).toEqual([]);
+  });
+
+  it('persists warnings provided to insert and round-trips them through updateExtraction', async () => {
+    const id = await repo.insert({
+      sourceType: 'markdown',
+      originalFilename: 'cv.md',
+      originalAbsolutePath: '/tmp/cv.md',
+      storedPath: '/opt/cv.md',
+      mimeType: 'text/markdown',
+      fileSize: 100,
+      sha256: '2'.repeat(64),
+      importTimestamp: '2026-08-05T10:00:00.000Z',
+      warnings: ['markdown_contains_external_image_references'],
+    });
+    const row = await repo.findById(id);
+    expect(row?.warnings).toEqual(['markdown_contains_external_image_references']);
+
+    // updateExtraction with a new warnings array should overwrite.
+    await repo.updateExtraction(id, {
+      extractedTextHash: 'h'.repeat(64),
+      status: 'success',
+      message: null,
+      warnings: ['markdown_contains_external_image_references', 'another_warning'],
+    });
+    const updated = await repo.findById(id);
+    expect(updated?.warnings).toEqual([
+      'markdown_contains_external_image_references',
+      'another_warning',
+    ]);
+  });
+
+  it('leaves warnings as the default [] when updateExtraction omits warnings', async () => {
+    const id = await repo.insert({
+      sourceType: 'pdf',
+      originalFilename: 'cv.pdf',
+      originalAbsolutePath: '/tmp/cv.pdf',
+      storedPath: '/opt/cv.pdf',
+      mimeType: 'application/pdf',
+      fileSize: 100,
+      sha256: '3'.repeat(64),
+      importTimestamp: '2026-08-05T10:00:00.000Z',
+    });
+    await repo.updateExtraction(id, {
+      extractedTextHash: 'h'.repeat(64),
+      status: 'failed',
+      message: 'ocr_required',
+    });
+    const row = await repo.findById(id);
+    expect(row?.warnings).toEqual([]);
   });
 });

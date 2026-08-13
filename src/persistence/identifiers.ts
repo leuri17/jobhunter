@@ -30,7 +30,11 @@ export const NUMERIC_JOB_PATTERN = /^[0-9]+$/;
 
 const SAFE_INTEGER_MAX = Number.MAX_SAFE_INTEGER;
 
-function throwInvalid(code: string, message: string, metadata: Record<string, unknown> = {}): never {
+function throwInvalid(
+  code: string,
+  message: string,
+  metadata: Record<string, unknown> = {},
+): never {
   throw new InvalidIdentifierError(code, message, metadata);
 }
 
@@ -50,7 +54,9 @@ export function formatId(kind: IdentifierKind, id: number): string {
 }
 
 function parsePrefixed(raw: string): { kind: IdentifierKind; id: number } | null {
-  for (const [kind, prefix] of Object.entries(IDENTIFIER_PREFIXES) as Array<[IdentifierKind, string]>) {
+  for (const [kind, prefix] of Object.entries(IDENTIFIER_PREFIXES) as Array<
+    [IdentifierKind, string]
+  >) {
     if (raw.startsWith(prefix)) {
       const tail = raw.slice(prefix.length);
       if (!/^[0-9]+$/.test(tail)) return null;
@@ -64,31 +70,34 @@ function parsePrefixed(raw: string): { kind: IdentifierKind; id: number } | null
 
 export function resolveId(kind: IdentifierKind, raw: string): number {
   if (typeof raw !== 'string' || raw.trim() === '') {
-    throwInvalid('invalid_identifier', 'Identifier must be a non-empty string.', { kind, input: raw });
+    throwInvalid('invalid_identifier', 'Identifier must be a non-empty string.', {
+      kind,
+      input: raw,
+    });
   }
   const prefix = IDENTIFIER_PREFIXES[kind];
   if (!raw.startsWith(prefix)) {
-    throwInvalid(
-      'invalid_identifier',
-      `Identifier "${raw}" must start with "${prefix}".`,
-      { kind, input: raw, expectedPrefix: prefix },
-    );
+    throwInvalid('invalid_identifier', `Identifier "${raw}" must start with "${prefix}".`, {
+      kind,
+      input: raw,
+      expectedPrefix: prefix,
+    });
   }
   const tail = raw.slice(prefix.length);
   if (!/^[0-9]+$/.test(tail)) {
-    throwInvalid(
-      'invalid_identifier',
-      `Identifier "${raw}" must end with a positive integer.`,
-      { kind, input: raw, tail },
-    );
+    throwInvalid('invalid_identifier', `Identifier "${raw}" must end with a positive integer.`, {
+      kind,
+      input: raw,
+      tail,
+    });
   }
   const id = Number(tail);
   if (!isFinitePositiveInteger(id)) {
-    throwInvalid(
-      'invalid_identifier',
-      `Identifier "${raw}" resolves to an out-of-range integer.`,
-      { kind, input: raw, id },
-    );
+    throwInvalid('invalid_identifier', `Identifier "${raw}" resolves to an out-of-range integer.`, {
+      kind,
+      input: raw,
+      id,
+    });
   }
   return id;
 }
@@ -102,11 +111,10 @@ export function parsePrefixedId(raw: string, expectedKind: IdentifierKind): numb
   }
   const parsed = parsePrefixed(raw);
   if (parsed === null) {
-    throwInvalid(
-      'invalid_identifier',
-      `Identifier "${raw}" does not match any known prefix.`,
-      { expectedKind, input: raw },
-    );
+    throwInvalid('invalid_identifier', `Identifier "${raw}" does not match any known prefix.`, {
+      expectedKind,
+      input: raw,
+    });
   }
   if (parsed.kind !== expectedKind) {
     throwInvalid(
@@ -125,7 +133,9 @@ export interface JobIdentifierResolution {
 
 export function resolveJobIdentifier(raw: string): JobIdentifierResolution {
   if (typeof raw !== 'string' || raw.trim() === '') {
-    throwInvalid('invalid_identifier', 'Job identifier must be a non-empty string.', { input: raw });
+    throwInvalid('invalid_identifier', 'Job identifier must be a non-empty string.', {
+      input: raw,
+    });
   }
   if (raw.startsWith(JOB_PREFIX)) {
     const id = resolveId('job', raw);

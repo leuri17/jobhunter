@@ -2,6 +2,22 @@ import { hashString } from './hashing.js';
 
 const BOM = '\uFEFF';
 
+/**
+ * Normalize extracted CV text into a deterministic canonical form.
+ *
+ * Transformations applied, in order:
+ *  1. Strip a leading UTF-8 BOM if present.
+ *  2. Canonicalize line endings (`\r\n` and `\r` → `\n`).
+ *  3. Trim trailing whitespace from every line.
+ *  4. Collapse runs of 3+ consecutive blank lines down to 2.
+ *  5. Strip trailing blank lines from the end of the document.
+ *
+ * Note on rule 4: 3+ blank lines collapse to 2. This is intentional
+ * (a markdown file with 3 blank lines between sections is normalized to
+ * 2) but is not documented in SPEC.md. Callers that need to preserve
+ * arbitrary blank-line counts should call the underlying helpers
+ * instead of this top-level normalizer.
+ */
 export function normalizeExtractedText(input: string): string {
   if (typeof input !== 'string') return '';
   let text = input;

@@ -17,6 +17,15 @@ import { hashFileContents, hashString } from './hashing.js';
 import { normalizeExtractedText } from './text-normalize.js';
 import { detectSourceTypeFromPath, mimeTypeFor } from './source-types.js';
 
+/**
+ * One imported source as returned by `ProfileImportService.importSources`.
+ *
+ * `path` is the OS-native absolute path produced by `path.resolve(rawPath)`:
+ * forward slashes on POSIX, backslashes on Windows. The CLI summary
+ * renders only the basename by splitting on both separators, but `path`
+ * itself is preserved verbatim. Downstream extraction operates on the
+ * stored copy (`storedPath`) rather than this original path.
+ */
 export interface ImportedSource {
   readonly id: number;
   readonly path: string;
@@ -31,6 +40,19 @@ export interface ImportedSource {
   readonly warnings: readonly string[];
 }
 
+/**
+ * Counts of sources processed by a single `profile import` invocation.
+ *
+ * `reused` counts sources whose SHA-256 already existed in the database. A
+ * reused source is also counted in `extracted` or `failed` when its stored
+ * `textExtractionStatus` is `success` or `failed` respectively. The `total`
+ * field is the sum of all sources processed (including reused ones).
+ *
+ * Example: importing two files where one is a fresh PDF and the other is
+ * a duplicate of an existing markdown receipt may produce
+ * `{ total: 2, extracted: 1, failed: 0, reused: 1 }` — the reused source
+ * still contributes to `extracted` because its stored status is `success`.
+ */
 export interface ProfileImportCounts {
   readonly total: number;
   readonly extracted: number;
@@ -61,7 +83,7 @@ export interface ProfileImportServiceOptions {
   readonly logger?: ProfileImportLogger;
 }
 
-const noopLogger: ProfileImportLogger = {
+export const noopLogger: ProfileImportLogger = {
   info: () => undefined,
   warn: () => undefined,
   error: () => undefined,
@@ -156,7 +178,7 @@ export class ProfileImportService {
         textExtractionMessage: existing.textExtractionMessage,
         extractedTextHash: existing.extractedTextHash,
         reused: true,
-        warnings: [],
+        warnings: existing.warnings,
       };
     }
 
@@ -219,6 +241,7 @@ export class ProfileImportService {
         extractedTextHash: textHash,
         status: 'success',
         message: null,
+        warnings: extraction.warnings,
       });
       this.logger.info(
         { event: 'profile_source_extracted', sourceId: insertedId, path: absolutePath },

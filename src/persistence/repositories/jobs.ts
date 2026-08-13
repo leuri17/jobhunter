@@ -108,7 +108,9 @@ function jobRowFromRecord(record: typeof jobs.$inferSelect): JobRow {
   };
 }
 
-function discoveryEventRowFromRecord(record: typeof discoveryEvents.$inferSelect): DiscoveryEventRow {
+function discoveryEventRowFromRecord(
+  record: typeof discoveryEvents.$inferSelect,
+): DiscoveryEventRow {
   return {
     id: record.id,
     jobId: record.jobId,
@@ -122,7 +124,9 @@ function discoveryEventRowFromRecord(record: typeof discoveryEvents.$inferSelect
   };
 }
 
-function discoveryErrorRowFromRecord(record: typeof discoveryErrors.$inferSelect): DiscoveryErrorRow {
+function discoveryErrorRowFromRecord(
+  record: typeof discoveryErrors.$inferSelect,
+): DiscoveryErrorRow {
   return {
     id: record.id,
     pipelineRunId: record.pipelineRunId,
@@ -137,7 +141,9 @@ function discoveryErrorRowFromRecord(record: typeof discoveryErrors.$inferSelect
   };
 }
 
-function extractionAttemptRowFromRecord(record: typeof extractionAttempts.$inferSelect): ExtractionAttemptRow {
+function extractionAttemptRowFromRecord(
+  record: typeof extractionAttempts.$inferSelect,
+): ExtractionAttemptRow {
   return {
     id: record.id,
     jobId: record.jobId,
@@ -204,7 +210,8 @@ export class JobRepository {
         .returning({ id: discoveryEvents.id })
         .all();
       const eventRow = eventResult[0];
-      if (eventRow === undefined) throw new Error('recordNewJob: discovery event insert returned no rows');
+      if (eventRow === undefined)
+        throw new Error('recordNewJob: discovery event insert returned no rows');
 
       let extractionAttemptId: number | undefined;
       if (input.extractionAttempt !== undefined) {
@@ -224,7 +231,8 @@ export class JobRepository {
           .returning({ id: extractionAttempts.id })
           .all();
         const attemptRow = attemptResult[0];
-        if (attemptRow === undefined) throw new Error('recordNewJob: extraction attempt insert returned no rows');
+        if (attemptRow === undefined)
+          throw new Error('recordNewJob: extraction attempt insert returned no rows');
         extractionAttemptId = attemptRow.id;
       }
 
@@ -253,80 +261,116 @@ export class JobRepository {
       if (patch.description !== undefined) update.description = patch.description;
       if (patch.extractionStatus !== undefined) update.extractionStatus = patch.extractionStatus;
       if (patch.successfulMethod !== undefined) update.successfulMethod = patch.successfulMethod;
-      if (patch.lastRediscoveryTimestamp !== undefined) update.lastRediscoveryTimestamp = patch.lastRediscoveryTimestamp;
-      if (patch.lastExtractionAttemptTimestamp !== undefined) update.lastExtractionAttemptTimestamp = patch.lastExtractionAttemptTimestamp;
+      if (patch.lastRediscoveryTimestamp !== undefined)
+        update.lastRediscoveryTimestamp = patch.lastRediscoveryTimestamp;
+      if (patch.lastExtractionAttemptTimestamp !== undefined)
+        update.lastExtractionAttemptTimestamp = patch.lastExtractionAttemptTimestamp;
       if (patch.updatedTimestamp !== undefined) update.updatedTimestamp = patch.updatedTimestamp;
       tx.update(jobs).set(update).where(eq(jobs.id, id)).run();
     });
   }
 
   async recordDiscoveryEvent(input: Omit<DiscoveryEventRow, 'id'>): Promise<number> {
-    const result = this.ctx.db.insert(discoveryEvents).values({
-      jobId: input.jobId,
-      pipelineRunId: input.pipelineRunId,
-      searchExecutionId: input.searchExecutionId,
-      timestamp: input.timestamp,
-      isNew: input.isNew,
-      currentExtractionState: input.currentExtractionState,
-      extractionAttempted: input.extractionAttempted,
-      skipReason: input.skipReason,
-    }).returning({ id: discoveryEvents.id }).all();
+    const result = this.ctx.db
+      .insert(discoveryEvents)
+      .values({
+        jobId: input.jobId,
+        pipelineRunId: input.pipelineRunId,
+        searchExecutionId: input.searchExecutionId,
+        timestamp: input.timestamp,
+        isNew: input.isNew,
+        currentExtractionState: input.currentExtractionState,
+        extractionAttempted: input.extractionAttempted,
+        skipReason: input.skipReason,
+      })
+      .returning({ id: discoveryEvents.id })
+      .all();
     const row = result[0];
     if (row === undefined) throw new Error('recordDiscoveryEvent returned no rows');
     return row.id;
   }
 
   async listDiscoveryEventsByJob(jobId: number): Promise<readonly DiscoveryEventRow[]> {
-    const rows = this.ctx.db.select().from(discoveryEvents).where(eq(discoveryEvents.jobId, jobId)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(discoveryEvents)
+      .where(eq(discoveryEvents.jobId, jobId))
+      .all();
     return rows.map(discoveryEventRowFromRecord);
   }
 
   async listDiscoveryEventsByRun(pipelineRunId: number): Promise<readonly DiscoveryEventRow[]> {
-    const rows = this.ctx.db.select().from(discoveryEvents).where(eq(discoveryEvents.pipelineRunId, pipelineRunId)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(discoveryEvents)
+      .where(eq(discoveryEvents.pipelineRunId, pipelineRunId))
+      .all();
     return rows.map(discoveryEventRowFromRecord);
   }
 
   async recordDiscoveryError(input: Omit<DiscoveryErrorRow, 'id'>): Promise<number> {
-    const result = this.ctx.db.insert(discoveryErrors).values({
-      pipelineRunId: input.pipelineRunId,
-      searchExecutionId: input.searchExecutionId,
-      cardPosition: input.cardPosition,
-      cardIndex: input.cardIndex,
-      availableMetadataJson: input.availableMetadata === undefined || input.availableMetadata === null ? null : unknownJson.encode(input.availableMetadata),
-      errorCode: input.errorCode,
-      diagnosticMessage: input.diagnosticMessage,
-      timestamp: input.timestamp,
-      artifactRefsJson: input.artifactRefs === undefined || input.artifactRefs === null ? null : unknownJson.encode(input.artifactRefs),
-    }).returning({ id: discoveryErrors.id }).all();
+    const result = this.ctx.db
+      .insert(discoveryErrors)
+      .values({
+        pipelineRunId: input.pipelineRunId,
+        searchExecutionId: input.searchExecutionId,
+        cardPosition: input.cardPosition,
+        cardIndex: input.cardIndex,
+        availableMetadataJson:
+          input.availableMetadata === undefined || input.availableMetadata === null
+            ? null
+            : unknownJson.encode(input.availableMetadata),
+        errorCode: input.errorCode,
+        diagnosticMessage: input.diagnosticMessage,
+        timestamp: input.timestamp,
+        artifactRefsJson:
+          input.artifactRefs === undefined || input.artifactRefs === null
+            ? null
+            : unknownJson.encode(input.artifactRefs),
+      })
+      .returning({ id: discoveryErrors.id })
+      .all();
     const row = result[0];
     if (row === undefined) throw new Error('recordDiscoveryError returned no rows');
     return row.id;
   }
 
   async listDiscoveryErrorsByRun(pipelineRunId: number): Promise<readonly DiscoveryErrorRow[]> {
-    const rows = this.ctx.db.select().from(discoveryErrors).where(eq(discoveryErrors.pipelineRunId, pipelineRunId)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(discoveryErrors)
+      .where(eq(discoveryErrors.pipelineRunId, pipelineRunId))
+      .all();
     return rows.map(discoveryErrorRowFromRecord);
   }
 
   async recordExtractionAttempt(input: Omit<ExtractionAttemptRow, 'id'>): Promise<number> {
-    const result = this.ctx.db.insert(extractionAttempts).values({
-      jobId: input.jobId,
-      pipelineRunId: input.pipelineRunId,
-      searchExecutionId: input.searchExecutionId,
-      attemptTimestamp: input.attemptTimestamp,
-      method: input.method,
-      attemptNumber: input.attemptNumber,
-      success: input.success,
-      errorCode: input.errorCode,
-      errorMessage: input.errorMessage,
-    }).returning({ id: extractionAttempts.id }).all();
+    const result = this.ctx.db
+      .insert(extractionAttempts)
+      .values({
+        jobId: input.jobId,
+        pipelineRunId: input.pipelineRunId,
+        searchExecutionId: input.searchExecutionId,
+        attemptTimestamp: input.attemptTimestamp,
+        method: input.method,
+        attemptNumber: input.attemptNumber,
+        success: input.success,
+        errorCode: input.errorCode,
+        errorMessage: input.errorMessage,
+      })
+      .returning({ id: extractionAttempts.id })
+      .all();
     const row = result[0];
     if (row === undefined) throw new Error('recordExtractionAttempt returned no rows');
     return row.id;
   }
 
   async listExtractionAttemptsByJob(jobId: number): Promise<readonly ExtractionAttemptRow[]> {
-    const rows = this.ctx.db.select().from(extractionAttempts).where(eq(extractionAttempts.jobId, jobId)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(extractionAttempts)
+      .where(eq(extractionAttempts.jobId, jobId))
+      .all();
     return rows.map(extractionAttemptRowFromRecord);
   }
 }

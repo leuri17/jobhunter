@@ -1,0 +1,1 @@
+ALTER TABLE `profile_sources` ADD `warnings` text DEFAULT '[]' NOT NULL;

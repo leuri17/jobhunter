@@ -4,12 +4,17 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runMigrations } from '../../../src/persistence/migrations.js';
-import { createDatabaseConnection, type DatabaseConnection } from '../../../src/persistence/connection.js';
+import {
+  createDatabaseConnection,
+  type DatabaseConnection,
+} from '../../../src/persistence/connection.js';
 import { OpenAIRequestMetadataRepository } from '../../../src/persistence/repositories/openai-metadata.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..');
 
-function ctxFrom(c: DatabaseConnection) { return { db: c.db }; }
+function ctxFrom(c: DatabaseConnection) {
+  return { db: c.db };
+}
 
 describe('OpenAIRequestMetadataRepository', () => {
   let directory: string;
@@ -56,18 +61,26 @@ describe('OpenAIRequestMetadataRepository', () => {
     await repo.insert({
       operationType: 'profile_extraction',
       inputHashes: [],
-      promptVersion: 'p1', structuredOutputSchemaVersion: 1,
-      model: 'gpt-5.6-sol', reasoningEffort: 'medium',
-      configJson: {}, attemptCount: 1,
-      startTimestamp: '2026-08-05T10:00:00.000Z', success: true,
+      promptVersion: 'p1',
+      structuredOutputSchemaVersion: 1,
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'medium',
+      configJson: {},
+      attemptCount: 1,
+      startTimestamp: '2026-08-05T10:00:00.000Z',
+      success: true,
     });
     const scoreId = await repo.insert({
       operationType: 'job_scoring',
       inputHashes: [],
-      promptVersion: 'p1', structuredOutputSchemaVersion: 1,
-      model: 'gpt-5.6-sol', reasoningEffort: 'medium',
-      configJson: {}, attemptCount: 1,
-      startTimestamp: '2026-08-05T10:01:00.000Z', success: true,
+      promptVersion: 'p1',
+      structuredOutputSchemaVersion: 1,
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'medium',
+      configJson: {},
+      attemptCount: 1,
+      startTimestamp: '2026-08-05T10:01:00.000Z',
+      success: true,
     });
     const scoreRows = await repo.listByOperation('job_scoring');
     expect(scoreRows.map((r) => r.id)).toContain(scoreId);
@@ -78,19 +91,31 @@ describe('OpenAIRequestMetadataRepository', () => {
   it('listByRelatedEntity returns rows for a given entity', async () => {
     await repo.insert({
       operationType: 'job_scoring',
-      relatedEntityType: 'score_result', relatedEntityId: 100,
-      inputHashes: [], promptVersion: 'p1', structuredOutputSchemaVersion: 1,
-      model: 'gpt-5.6-sol', reasoningEffort: 'medium',
-      configJson: {}, attemptCount: 1,
-      startTimestamp: '2026-08-05T10:00:00.000Z', success: true,
+      relatedEntityType: 'score_result',
+      relatedEntityId: 100,
+      inputHashes: [],
+      promptVersion: 'p1',
+      structuredOutputSchemaVersion: 1,
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'medium',
+      configJson: {},
+      attemptCount: 1,
+      startTimestamp: '2026-08-05T10:00:00.000Z',
+      success: true,
     });
     await repo.insert({
       operationType: 'job_scoring',
-      relatedEntityType: 'score_result', relatedEntityId: 200,
-      inputHashes: [], promptVersion: 'p1', structuredOutputSchemaVersion: 1,
-      model: 'gpt-5.6-sol', reasoningEffort: 'medium',
-      configJson: {}, attemptCount: 1,
-      startTimestamp: '2026-08-05T10:01:00.000Z', success: true,
+      relatedEntityType: 'score_result',
+      relatedEntityId: 200,
+      inputHashes: [],
+      promptVersion: 'p1',
+      structuredOutputSchemaVersion: 1,
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'medium',
+      configJson: {},
+      attemptCount: 1,
+      startTimestamp: '2026-08-05T10:01:00.000Z',
+      success: true,
     });
     const rows = await repo.listByRelatedEntity('score_result', 100);
     expect(rows).toHaveLength(1);

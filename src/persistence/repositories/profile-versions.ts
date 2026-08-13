@@ -122,8 +122,10 @@ function versionRowFromRecord(record: typeof profileVersions.$inferSelect): Prof
     promptVersion: record.promptVersion,
     structuredOutputSchemaVersion: record.structuredOutputSchemaVersion,
     extractorImplementationVersion: record.extractorImplementationVersion,
-    validationWarnings: unknownJson.decode(record.validationWarningsJson) as readonly unknown[] | null,
-    unresolvedConflicts: unknownJson.decode(record.unresolvedConflictsJson) as readonly unknown[] | null,
+    validationWarnings: unknownJson.decode(record.validationWarningsJson) as
+      readonly unknown[] | null,
+    unresolvedConflicts: unknownJson.decode(record.unresolvedConflictsJson) as
+      readonly unknown[] | null,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     approvedAt: record.approvedAt,
@@ -150,12 +152,14 @@ export class ProfileVersionRepository {
         promptVersion: input.promptVersion ?? null,
         structuredOutputSchemaVersion: input.structuredOutputSchemaVersion ?? null,
         extractorImplementationVersion: input.extractorImplementationVersion ?? null,
-        validationWarningsJson: input.validationWarnings === undefined
-          ? null
-          : unknownJson.encode(input.validationWarnings),
-        unresolvedConflictsJson: input.unresolvedConflicts === undefined
-          ? null
-          : unknownJson.encode(input.unresolvedConflicts),
+        validationWarningsJson:
+          input.validationWarnings === undefined
+            ? null
+            : unknownJson.encode(input.validationWarnings),
+        unresolvedConflictsJson:
+          input.unresolvedConflicts === undefined
+            ? null
+            : unknownJson.encode(input.unresolvedConflicts),
         createdAt: input.createdAt,
         updatedAt: input.updatedAt,
         approvedAt: null,
@@ -211,7 +215,8 @@ export class ProfileVersionRepository {
 
   async list(opts?: { status?: ProfileStatus }): Promise<readonly ProfileVersionRow[]> {
     const base = this.ctx.db.select().from(profileVersions);
-    const filtered = opts?.status === undefined ? base : base.where(eq(profileVersions.status, opts.status));
+    const filtered =
+      opts?.status === undefined ? base : base.where(eq(profileVersions.status, opts.status));
     return filtered.all().map(versionRowFromRecord);
   }
 
@@ -246,8 +251,14 @@ export class ProfileVersionRepository {
         revisionTimestamp: input.revisionTimestamp,
         source: input.source,
         fieldPath: input.fieldPath,
-        previousValueJson: input.previousValue === undefined || input.previousValue === null ? null : unknownJson.encode(input.previousValue),
-        newValueJson: input.newValue === undefined || input.newValue === null ? null : unknownJson.encode(input.newValue),
+        previousValueJson:
+          input.previousValue === undefined || input.previousValue === null
+            ? null
+            : unknownJson.encode(input.previousValue),
+        newValueJson:
+          input.newValue === undefined || input.newValue === null
+            ? null
+            : unknownJson.encode(input.newValue),
         note: input.note,
       })
       .returning({ id: profileRevisions.id })
@@ -282,14 +293,26 @@ export class ProfileVersionRepository {
         profileVersionId: input.profileVersionId,
         conflictType: input.conflictType,
         affectedField: input.affectedField,
-        valueSourceAJson: input.valueSourceA === undefined || input.valueSourceA === null ? null : unknownJson.encode(input.valueSourceA),
-        valueSourceBJson: input.valueSourceB === undefined || input.valueSourceB === null ? null : unknownJson.encode(input.valueSourceB),
+        valueSourceAJson:
+          input.valueSourceA === undefined || input.valueSourceA === null
+            ? null
+            : unknownJson.encode(input.valueSourceA),
+        valueSourceBJson:
+          input.valueSourceB === undefined || input.valueSourceB === null
+            ? null
+            : unknownJson.encode(input.valueSourceB),
         sourceReferencesJson: unknownJson.encode(input.sourceReferences),
-        provisionalValueJson: input.provisionalValue === undefined || input.provisionalValue === null ? null : unknownJson.encode(input.provisionalValue),
+        provisionalValueJson:
+          input.provisionalValue === undefined || input.provisionalValue === null
+            ? null
+            : unknownJson.encode(input.provisionalValue),
         explanation: input.explanation,
         resolutionStatus: input.resolutionStatus,
         resolvedAt: input.resolvedAt,
-        resolvedValueJson: input.resolvedValue === undefined || input.resolvedValue === null ? null : unknownJson.encode(input.resolvedValue),
+        resolvedValueJson:
+          input.resolvedValue === undefined || input.resolvedValue === null
+            ? null
+            : unknownJson.encode(input.resolvedValue),
       })
       .returning({ id: profileConflicts.id })
       .all();
@@ -320,13 +343,17 @@ export class ProfileVersionRepository {
     }));
   }
 
-  async resolveConflict(id: number, options: { resolvedAt: string; resolvedValue: unknown | null }): Promise<void> {
+  async resolveConflict(
+    id: number,
+    options: { resolvedAt: string; resolvedValue: unknown | null },
+  ): Promise<void> {
     this.ctx.db
       .update(profileConflicts)
       .set({
         resolutionStatus: 'resolved',
         resolvedAt: options.resolvedAt,
-        resolvedValueJson: options.resolvedValue === null ? null : unknownJson.encode(options.resolvedValue),
+        resolvedValueJson:
+          options.resolvedValue === null ? null : unknownJson.encode(options.resolvedValue),
       })
       .where(eq(profileConflicts.id, id))
       .run();
@@ -374,8 +401,10 @@ export class ProfileVersionRepository {
         tx.update(derivedOverrides)
           .set({
             overrideActive: input.overrideActive,
-            overrideValueJson: input.overrideValue === null ? null : unknownJson.encode(input.overrideValue),
-            generatedValueJson: input.generatedValue === null ? null : unknownJson.encode(input.generatedValue),
+            overrideValueJson:
+              input.overrideValue === null ? null : unknownJson.encode(input.overrideValue),
+            generatedValueJson:
+              input.generatedValue === null ? null : unknownJson.encode(input.generatedValue),
             generatedAt: input.generatedAt,
             overriddenAt: input.overriddenAt,
           })
@@ -393,8 +422,10 @@ export class ProfileVersionRepository {
           profileVersionId: input.profileVersionId,
           derivedField: input.derivedField,
           overrideActive: input.overrideActive,
-          overrideValueJson: input.overrideValue === null ? null : unknownJson.encode(input.overrideValue),
-          generatedValueJson: input.generatedValue === null ? null : unknownJson.encode(input.generatedValue),
+          overrideValueJson:
+            input.overrideValue === null ? null : unknownJson.encode(input.overrideValue),
+          generatedValueJson:
+            input.generatedValue === null ? null : unknownJson.encode(input.generatedValue),
           generatedAt: input.generatedAt,
           overriddenAt: input.overriddenAt,
         })

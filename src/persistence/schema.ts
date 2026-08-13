@@ -28,6 +28,11 @@ export const profileSources = sqliteTable(
       enum: ['pending', 'success', 'failed'],
     }).notNull(),
     textExtractionMessage: text('text_extraction_message'),
+    // JSON-serialized string[] of text-extraction warnings. SPEC §13.4 requires
+    // extraction warnings to be persisted alongside the source record. The
+    // `textExtractionMessage` column keeps the single most important message
+    // for backwards compatibility; this column preserves the full multiset.
+    warnings: text('warnings').notNull().default('[]'),
   },
   (t) => ({
     sha256Unique: uniqueIndex('profile_sources_sha256_idx').on(t.sha256),

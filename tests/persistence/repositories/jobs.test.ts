@@ -4,13 +4,18 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runMigrations } from '../../../src/persistence/migrations.js';
-import { createDatabaseConnection, type DatabaseConnection } from '../../../src/persistence/connection.js';
+import {
+  createDatabaseConnection,
+  type DatabaseConnection,
+} from '../../../src/persistence/connection.js';
 import { PipelineRunRepository } from '../../../src/persistence/repositories/pipeline-runs.js';
 import { JobRepository } from '../../../src/persistence/repositories/jobs.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..');
 
-function ctxFrom(c: DatabaseConnection) { return { db: c.db }; }
+function ctxFrom(c: DatabaseConnection) {
+  return { db: c.db };
+}
 
 describe('JobRepository', () => {
   let directory: string;
@@ -28,13 +33,21 @@ describe('JobRepository', () => {
     const { searchIds } = await runRepo.createRunWithSearches(
       {
         startTimestamp: '2026-08-05T10:00:00.000Z',
-        configSnapshotJson: {}, configSchemaVersion: 1, configHash: 'h', applicationVersion: '0.1.0',
+        configSnapshotJson: {},
+        configSchemaVersion: 1,
+        configHash: 'h',
+        applicationVersion: '0.1.0',
       },
-      [{
-        pipelineRunId: 0, searchQuery: 'q', locationName: 'L', geoId: '1',
-        generatedUrl: 'https://www.linkedin.com/jobs/search/?q=q',
-        startTimestamp: '2026-08-05T10:00:00.000Z',
-      }],
+      [
+        {
+          pipelineRunId: 0,
+          searchQuery: 'q',
+          locationName: 'L',
+          geoId: '1',
+          generatedUrl: 'https://www.linkedin.com/jobs/search/?q=q',
+          startTimestamp: '2026-08-05T10:00:00.000Z',
+        },
+      ],
     );
     searchId = searchIds[0]!;
   });
@@ -51,22 +64,34 @@ describe('JobRepository', () => {
         extractionStatus: 'complete',
         firstDiscoveryTimestamp: '2026-08-05T10:00:00.000Z',
         lastRediscoveryTimestamp: '2026-08-05T10:00:00.000Z',
-        title: 'Engineer', company: 'Acme', location: 'Rotterdam', description: 'desc',
+        title: 'Engineer',
+        company: 'Acme',
+        location: 'Rotterdam',
+        description: 'desc',
         successfulMethod: 'search_detail_panel',
         createdTimestamp: '2026-08-05T10:00:00.000Z',
         updatedTimestamp: '2026-08-05T10:00:00.000Z',
       },
       discoveryEvent: {
-        jobId: 0, pipelineRunId: 1, searchExecutionId: searchId,
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
         timestamp: '2026-08-05T10:00:00.000Z',
-        isNew: true, currentExtractionState: 'complete', extractionAttempted: true,
+        isNew: true,
+        currentExtractionState: 'complete',
+        extractionAttempted: true,
         skipReason: null,
       },
       extractionAttempt: {
-        jobId: 0, pipelineRunId: 1, searchExecutionId: searchId,
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
         attemptTimestamp: '2026-08-05T10:00:00.000Z',
-        method: 'search_detail_panel', attemptNumber: 1, success: true,
-        errorCode: null, errorMessage: null,
+        method: 'search_detail_panel',
+        attemptNumber: 1,
+        success: true,
+        errorCode: null,
+        errorMessage: null,
       },
     });
     expect(result.jobId).toBeGreaterThan(0);
@@ -75,8 +100,8 @@ describe('JobRepository', () => {
 
     const job = await jobRepo.findBySourceJobId('123');
     expect(job?.title).toBe('Engineer');
-    expect((await jobRepo.listDiscoveryEventsByJob(result.jobId))).toHaveLength(1);
-    expect((await jobRepo.listExtractionAttemptsByJob(result.jobId))).toHaveLength(1);
+    expect(await jobRepo.listDiscoveryEventsByJob(result.jobId)).toHaveLength(1);
+    expect(await jobRepo.listExtractionAttemptsByJob(result.jobId)).toHaveLength(1);
   });
 
   it('recordNewJob rolls back when the discovery event fails (FK violation)', async () => {
@@ -91,9 +116,13 @@ describe('JobRepository', () => {
           updatedTimestamp: '2026-08-05T10:00:00.000Z',
         },
         discoveryEvent: {
-          jobId: 0, pipelineRunId: 999999, searchExecutionId: searchId,
+          jobId: 0,
+          pipelineRunId: 999999,
+          searchExecutionId: searchId,
           timestamp: '2026-08-05T10:00:00.000Z',
-          isNew: true, currentExtractionState: 'complete', extractionAttempted: false,
+          isNew: true,
+          currentExtractionState: 'complete',
+          extractionAttempted: false,
           skipReason: null,
         },
       }),
@@ -112,9 +141,13 @@ describe('JobRepository', () => {
         updatedTimestamp: '2026-08-05T10:00:00.000Z',
       },
       discoveryEvent: {
-        jobId: 0, pipelineRunId: 1, searchExecutionId: searchId,
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
         timestamp: '2026-08-05T10:00:00.000Z',
-        isNew: true, currentExtractionState: 'partial', extractionAttempted: true,
+        isNew: true,
+        currentExtractionState: 'partial',
+        extractionAttempted: true,
         skipReason: null,
       },
     });
@@ -134,10 +167,15 @@ describe('JobRepository', () => {
 
   it('records discovery errors and extraction attempts independently', async () => {
     const errorId = await jobRepo.recordDiscoveryError({
-      pipelineRunId: 1, searchExecutionId: searchId,
-      cardPosition: 1, cardIndex: 0, availableMetadata: null,
-      errorCode: 'card_unparseable', diagnosticMessage: 'No source job id',
-      timestamp: '2026-08-05T10:00:00.000Z', artifactRefs: null,
+      pipelineRunId: 1,
+      searchExecutionId: searchId,
+      cardPosition: 1,
+      cardIndex: 0,
+      availableMetadata: null,
+      errorCode: 'card_unparseable',
+      diagnosticMessage: 'No source job id',
+      timestamp: '2026-08-05T10:00:00.000Z',
+      artifactRefs: null,
     });
     expect(errorId).toBeGreaterThan(0);
     expect(await jobRepo.listDiscoveryErrorsByRun(1)).toHaveLength(1);

@@ -33,6 +33,7 @@ export {
 
 export {
   ProfileImportService,
+  noopLogger,
   type ImportedSource,
   type ProfileImportResult,
   type ProfileImportCounts,

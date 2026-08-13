@@ -21,7 +21,7 @@ export {
   type IdentifierKind,
   type JobIdentifierResolution,
 } from './identifiers.js';
-export { RecordNotFoundError } from './repository-errors.js';
+export { RecordNotFoundError, DuplicateSha256Error } from './repository-errors.js';
 export {
   Repositories,
   createRepositories,

@@ -1,5 +1,13 @@
 // Minimal PDF builder used by the fixture generator. Produces tiny, valid PDFs
 // that pdf-parse can read. Not intended for production use.
+//
+// The encoder builds the PDF byte stream as strings and then converts them to
+// Buffers with the 'latin1' encoding. `latin1` is byte-preserving in Node.js
+// (one Unicode code point in the Basic Multilingual Plane maps to exactly one
+// byte), so PDF stream bodies that contain only ASCII characters round-trip
+// unchanged. Stream bodies that contain non-ASCII characters (UTF-8 multi-byte
+// sequences) would be silently corrupted by this encoder; the current
+// fixtures keep `pageContent` ASCII-only so this is acceptable.
 
 const HEADER = '%PDF-1.4\n';
 const FOOTER = '%%EOF\n';
@@ -43,14 +51,10 @@ export function build(options: BuildOptions): Buffer {
   const xref = buildXref(offsets, objects.length);
   chunks.push(Buffer.from(xref, 'latin1'));
 
-  const trailerStart = Buffer.concat(chunks).byteLength;
   const trailer = `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n${FOOTER}`;
   chunks.push(Buffer.from(trailer, 'latin1'));
 
-  const final = Buffer.concat(chunks);
-  // Silence unused-trailer-start warning for tooling that inspects the var.
-  void trailerStart;
-  return final;
+  return Buffer.concat(chunks);
 }
 
 function buildXref(offsets: readonly number[], objectCount: number): string {
@@ -61,8 +65,4 @@ function buildXref(offsets: readonly number[], objectCount: number): string {
     lines.push(`${offset.toString().padStart(10, '0')} 00000 n `);
   }
   return lines.join('\n') + '\n';
-}
-
-export function logTable(label: string, value: string): void {
-  console.log(`${label} ${value}`);
 }

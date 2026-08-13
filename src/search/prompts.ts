@@ -22,10 +22,14 @@ export interface SearchConfigurationPreview {
 export interface SearchPrompts {
   askSearchQueries(existing: readonly string[]): Promise<readonly string[]>;
   askDatePosted(existing: DatePostedSeconds | null): Promise<DatePostedSeconds>;
-  askWorkplaceTypes(existing: readonly WorkplaceTypeValue[]): Promise<readonly WorkplaceTypeValue[]>;
+  askWorkplaceTypes(
+    existing: readonly WorkplaceTypeValue[],
+  ): Promise<readonly WorkplaceTypeValue[]>;
   askLocationURLs(
     existing: readonly { readonly name: string; readonly geoId: string }[],
-  ): Promise<readonly { readonly name: string; readonly geoId: string; readonly originalUrl: string }[]>;
+  ): Promise<
+    readonly { readonly name: string; readonly geoId: string; readonly originalUrl: string }[]
+  >;
   askLocationName(geoId: string): Promise<string>;
   askRenameLabel(geoId: string, existingLabel: string, originalUrl: string): Promise<boolean>;
   showPreview(preview: SearchConfigurationPreview, matrixSize: number): Promise<void>;
@@ -66,9 +70,7 @@ function formatPreview(preview: SearchConfigurationPreview, matrixSize: number):
   const datePosted =
     DATE_POSTED_CHOICES.find((c) => c.value === preview.datePosted)?.label ??
     String(preview.datePosted);
-  const workplaceTypes = preview.workplaceTypes
-    .map((v) => WORKPLACE_TYPE_LABELS[v])
-    .join(', ');
+  const workplaceTypes = preview.workplaceTypes.map((v) => WORKPLACE_TYPE_LABELS[v]).join(', ');
   return [
     'Search configuration preview:',
     `  Queries: ${queries}`,

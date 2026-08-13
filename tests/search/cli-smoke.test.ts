@@ -9,10 +9,7 @@ import type { PlatformAdapter } from '../../src/platform/platform.js';
 import { createProgram } from '../../src/cli.js';
 import { DEFAULT_OPERATIONAL_CONFIG } from '../../src/config/schema.js';
 import { loadConfig } from '../../src/config/loader.js';
-import {
-  SearchCancelledError,
-  SearchConfigError,
-} from '../../src/search/errors.js';
+import { SearchCancelledError, SearchConfigError } from '../../src/search/errors.js';
 import type { SearchConfiguration } from '../../src/search/service.js';
 import type { SearchPrompts } from '../../src/search/prompts.js';
 
@@ -75,7 +72,9 @@ describe('CLI: jobhunter configure search', () => {
     }
   });
 
-  async function run(args: readonly string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  async function run(
+    args: readonly string[],
+  ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
     const program = createProgram({ prompts: fakePrompts() });
     const origExit = process.exit;
     const origOut = process.stdout.write;

@@ -51,7 +51,9 @@ export interface OpenAIRequestMetadataInsert {
   readonly errorMessage?: string | null;
 }
 
-function rowFromRecord(record: typeof openaiRequestMetadata.$inferSelect): OpenAIRequestMetadataRow {
+function rowFromRecord(
+  record: typeof openaiRequestMetadata.$inferSelect,
+): OpenAIRequestMetadataRow {
   return {
     id: record.id,
     operationType: record.operationType,
@@ -90,8 +92,14 @@ export class OpenAIRequestMetadataRepository {
         model: input.model,
         reasoningEffort: input.reasoningEffort,
         configJson: unknownJson.encode(input.configJson),
-        tokenUsageJson: input.tokenUsage === undefined || input.tokenUsage === null ? null : unknownJson.encode(input.tokenUsage),
-        validatedOutputJson: input.validatedOutput === undefined || input.validatedOutput === null ? null : unknownJson.encode(input.validatedOutput),
+        tokenUsageJson:
+          input.tokenUsage === undefined || input.tokenUsage === null
+            ? null
+            : unknownJson.encode(input.tokenUsage),
+        validatedOutputJson:
+          input.validatedOutput === undefined || input.validatedOutput === null
+            ? null
+            : unknownJson.encode(input.validatedOutput),
         attemptCount: input.attemptCount,
         startTimestamp: input.startTimestamp,
         endTimestamp: input.endTimestamp ?? null,
@@ -107,7 +115,11 @@ export class OpenAIRequestMetadataRepository {
   }
 
   async findById(id: number): Promise<OpenAIRequestMetadataRow | null> {
-    const rows = this.ctx.db.select().from(openaiRequestMetadata).where(eq(openaiRequestMetadata.id, id)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(openaiRequestMetadata)
+      .where(eq(openaiRequestMetadata.id, id))
+      .all();
     const row = rows[0];
     return row === undefined ? null : rowFromRecord(row);
   }
@@ -117,9 +129,15 @@ export class OpenAIRequestMetadataRepository {
     opts?: { sinceTimestamp?: string; limit?: number },
   ): Promise<readonly OpenAIRequestMetadataRow[]> {
     const base = this.ctx.db.select().from(openaiRequestMetadata);
-    const filtered = opts?.sinceTimestamp === undefined
-      ? base.where(eq(openaiRequestMetadata.operationType, operationType))
-      : base.where(and(eq(openaiRequestMetadata.operationType, operationType), gte(openaiRequestMetadata.startTimestamp, opts.sinceTimestamp)));
+    const filtered =
+      opts?.sinceTimestamp === undefined
+        ? base.where(eq(openaiRequestMetadata.operationType, operationType))
+        : base.where(
+            and(
+              eq(openaiRequestMetadata.operationType, operationType),
+              gte(openaiRequestMetadata.startTimestamp, opts.sinceTimestamp),
+            ),
+          );
     const ordered = filtered.orderBy(desc(openaiRequestMetadata.startTimestamp));
     const limited = opts?.limit === undefined ? ordered : ordered.limit(opts.limit);
     const rows = limited.all();
@@ -133,7 +151,12 @@ export class OpenAIRequestMetadataRepository {
     const rows = this.ctx.db
       .select()
       .from(openaiRequestMetadata)
-      .where(and(eq(openaiRequestMetadata.relatedEntityType, entityType), eq(openaiRequestMetadata.relatedEntityId, entityId)))
+      .where(
+        and(
+          eq(openaiRequestMetadata.relatedEntityType, entityType),
+          eq(openaiRequestMetadata.relatedEntityId, entityId),
+        ),
+      )
       .orderBy(desc(openaiRequestMetadata.startTimestamp))
       .all();
     return rows.map(rowFromRecord);

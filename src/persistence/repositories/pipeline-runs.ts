@@ -8,7 +8,7 @@ import type { RepositoryContext } from './types.js';
 const unknownJson = jsonColumn<unknown>(z.unknown());
 
 export type PipelineRunStatus =
-  | 'running' | 'cancelling' | 'completed' | 'completed_with_errors' | 'failed' | 'cancelled';
+  'running' | 'cancelling' | 'completed' | 'completed_with_errors' | 'failed' | 'cancelled';
 export type SearchExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
 export interface PipelineRunRow {
@@ -189,7 +189,8 @@ export class PipelineRunRepository {
         .returning({ id: pipelineRuns.id })
         .all();
       const runRow = runResult[0];
-      if (runRow === undefined) throw new Error('createRunWithSearches: run insert returned no rows');
+      if (runRow === undefined)
+        throw new Error('createRunWithSearches: run insert returned no rows');
       const runId = runRow.id;
 
       const searchIds: number[] = [];
@@ -214,7 +215,8 @@ export class PipelineRunRepository {
           .returning({ id: searchExecutions.id })
           .all();
         const sRow = sResult[0];
-        if (sRow === undefined) throw new Error('createRunWithSearches: search insert returned no rows');
+        if (sRow === undefined)
+          throw new Error('createRunWithSearches: search insert returned no rows');
         searchIds.push(sRow.id);
       }
 
@@ -230,7 +232,8 @@ export class PipelineRunRepository {
 
   async listRuns(opts?: { status?: PipelineRunStatus }): Promise<readonly PipelineRunRow[]> {
     const base = this.ctx.db.select().from(pipelineRuns);
-    const filtered = opts?.status === undefined ? base : base.where(eq(pipelineRuns.status, opts.status));
+    const filtered =
+      opts?.status === undefined ? base : base.where(eq(pipelineRuns.status, opts.status));
     return filtered.all().map(runRowFromRecord);
   }
 
@@ -244,8 +247,10 @@ export class PipelineRunRepository {
       if (stats.searchesCompleted !== undefined) patch.searchesCompleted = stats.searchesCompleted;
       if (stats.jobsDiscovered !== undefined) patch.jobsDiscovered = stats.jobsDiscovered;
       if (stats.newCompleteJobs !== undefined) patch.newCompleteJobs = stats.newCompleteJobs;
-      if (stats.existingCompleteJobsSkipped !== undefined) patch.existingCompleteJobsSkipped = stats.existingCompleteJobsSkipped;
-      if (stats.existingPartialJobsSkipped !== undefined) patch.existingPartialJobsSkipped = stats.existingPartialJobsSkipped;
+      if (stats.existingCompleteJobsSkipped !== undefined)
+        patch.existingCompleteJobsSkipped = stats.existingCompleteJobsSkipped;
+      if (stats.existingPartialJobsSkipped !== undefined)
+        patch.existingPartialJobsSkipped = stats.existingPartialJobsSkipped;
       if (stats.newPartialJobs !== undefined) patch.newPartialJobs = stats.newPartialJobs;
       if (stats.failedExtractions !== undefined) patch.failedExtractions = stats.failedExtractions;
       if (stats.jobsAccepted !== undefined) patch.jobsAccepted = stats.jobsAccepted;
@@ -254,23 +259,34 @@ export class PipelineRunRepository {
       if (stats.jobsScored !== undefined) patch.jobsScored = stats.jobsScored;
       if (stats.scoresReused !== undefined) patch.scoresReused = stats.scoresReused;
       if (stats.scoringErrors !== undefined) patch.scoringErrors = stats.scoringErrors;
-      if (stats.scoringDeclinedByUser !== undefined) patch.scoringDeclinedByUser = stats.scoringDeclinedByUser;
-      if (stats.cancellationReason !== undefined) patch.cancellationReason = stats.cancellationReason;
+      if (stats.scoringDeclinedByUser !== undefined)
+        patch.scoringDeclinedByUser = stats.scoringDeclinedByUser;
+      if (stats.cancellationReason !== undefined)
+        patch.cancellationReason = stats.cancellationReason;
       if (stats.searchErrors !== undefined) {
-        patch.searchErrorsJson = stats.searchErrors === null ? null : unknownJson.encode(stats.searchErrors);
+        patch.searchErrorsJson =
+          stats.searchErrors === null ? null : unknownJson.encode(stats.searchErrors);
       }
       tx.update(pipelineRuns).set(patch).where(eq(pipelineRuns.id, id)).run();
     });
   }
 
   async findSearchById(id: number): Promise<SearchExecutionRow | null> {
-    const rows = this.ctx.db.select().from(searchExecutions).where(eq(searchExecutions.id, id)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(searchExecutions)
+      .where(eq(searchExecutions.id, id))
+      .all();
     const row = rows[0];
     return row === undefined ? null : searchRowFromRecord(row);
   }
 
   async listSearchesByRun(pipelineRunId: number): Promise<readonly SearchExecutionRow[]> {
-    const rows = this.ctx.db.select().from(searchExecutions).where(eq(searchExecutions.pipelineRunId, pipelineRunId)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(searchExecutions)
+      .where(eq(searchExecutions.pipelineRunId, pipelineRunId))
+      .all();
     return rows.map(searchRowFromRecord);
   }
 
@@ -282,8 +298,11 @@ export class PipelineRunRepository {
       if (patch.jobsDiscovered !== undefined) update.jobsDiscovered = patch.jobsDiscovered;
       if (patch.newJobs !== undefined) update.newJobs = patch.newJobs;
       if (patch.existingJobs !== undefined) update.existingJobs = patch.existingJobs;
-      if (patch.errors !== undefined) update.errorsJson = patch.errors === null ? null : unknownJson.encode(patch.errors);
-      if (patch.diagnosticRefs !== undefined) update.diagnosticRefsJson = patch.diagnosticRefs === null ? null : unknownJson.encode(patch.diagnosticRefs);
+      if (patch.errors !== undefined)
+        update.errorsJson = patch.errors === null ? null : unknownJson.encode(patch.errors);
+      if (patch.diagnosticRefs !== undefined)
+        update.diagnosticRefsJson =
+          patch.diagnosticRefs === null ? null : unknownJson.encode(patch.diagnosticRefs);
       tx.update(searchExecutions).set(update).where(eq(searchExecutions.id, id)).run();
     });
   }
