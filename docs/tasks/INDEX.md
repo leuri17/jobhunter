@@ -1,8 +1,8 @@
 # JobHunter MVP Task Index
 
-**Status:** Planning decomposition approved for review; TASK-001 through TASK-006 implemented
+**Status:** Planning decomposition approved for review; TASK-001 through TASK-007 implemented
 **Source of truth:** `SPEC.md`
-**Implementation status:** TASK-001 through TASK-006 are implemented (TASK-006 was squash-merged from `feat/task-006-search-configuration-url-generation`, 19 commits). The remaining tasks (TASK-007 through TASK-018) are planned; no application code, dependencies, migrations, or generated output may be created for them until each task's own plan is approved.
+**Implementation status:** TASK-001 through TASK-007 are implemented (TASK-007 was squash-merged from `feat/task-007-cv-import`, 1 commit after post-review revisions). The remaining tasks (TASK-008 through TASK-018) are planned; no application code, dependencies, migrations, or generated output may be created for them until each task's own plan is approved.
 
 ## Purpose
 
