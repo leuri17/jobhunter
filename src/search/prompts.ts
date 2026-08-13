@@ -26,7 +26,7 @@ export interface SearchPrompts {
   askLocationURLs(
     existing: readonly { readonly name: string; readonly geoId: string }[],
   ): Promise<readonly { readonly name: string; readonly geoId: string; readonly originalUrl: string }[]>;
-  askLocationName(geoId: string, originalUrl: string): Promise<string>;
+  askLocationName(geoId: string): Promise<string>;
   askRenameLabel(geoId: string, existingLabel: string, originalUrl: string): Promise<boolean>;
   showPreview(preview: SearchConfigurationPreview, matrixSize: number): Promise<void>;
   askConfirmation(preview: SearchConfigurationPreview, matrixSize: number): Promise<boolean>;
@@ -82,6 +82,53 @@ function formatPreview(preview: SearchConfigurationPreview, matrixSize: number):
 const LOCATION_URL_PROMPT_MESSAGE =
   'LinkedIn jobs-search URL (geoId will be extracted; empty line to finish):';
 
+const askSearchQueriesImpl: SearchPrompts['askSearchQueries'] = async (existing) => {
+  if (existing.length > 0) {
+    console.error(`Current queries: ${existing.join(', ')}`);
+    const mode = await select<'keep' | 'add' | 'replace'>({
+      message: 'Keep current queries, add more, or replace all?',
+      choices: [
+        { name: 'Keep current queries', value: 'keep' },
+        { name: 'Add more queries', value: 'add' },
+        { name: 'Replace all queries', value: 'replace' },
+      ],
+      default: 'keep',
+    });
+    if (mode === 'keep') return [...existing];
+    if (mode === 'add') {
+      const lines = [...existing];
+      const first = await input({ message: 'Search query (empty line to keep current):' });
+      const trimmed = first.trim();
+      if (trimmed === '') return lines;
+      lines.push(trimmed);
+      while (true) {
+        const next = await input({ message: 'Search query (empty line to finish):' });
+        const t = next.trim();
+        if (t === '') break;
+        lines.push(t);
+      }
+      return lines;
+    }
+    // mode === 'replace': fall through to the at-least-one prompt loop.
+  }
+  const lines: string[] = [];
+  while (lines.length === 0) {
+    const first = await input({ message: 'Search query (one per line; empty line to finish):' });
+    const trimmed = first.trim();
+    if (trimmed === '') continue;
+    lines.push(trimmed);
+    while (true) {
+      const next = await input({
+        message: 'Search query (empty line to finish):',
+      });
+      const t = next.trim();
+      if (t === '') break;
+      lines.push(t);
+    }
+  }
+  return lines;
+};
+
 const askRenameLabelImpl: SearchPrompts['askRenameLabel'] = async (geoId, existingLabel) => {
   return confirm({
     message: `geoId ${geoId} already exists as "${existingLabel}". Rename the label?`,
@@ -89,10 +136,10 @@ const askRenameLabelImpl: SearchPrompts['askRenameLabel'] = async (geoId, existi
   });
 };
 
-const askLocationNameImpl: SearchPrompts['askLocationName'] = async (geoId, originalUrl) => {
+const askLocationNameImpl: SearchPrompts['askLocationName'] = async (geoId) => {
   while (true) {
     const name = await input({
-      message: `Human-readable label for geoId ${geoId} (from ${originalUrl}):`,
+      message: `Human-readable label for geoId ${geoId}:`,
     });
     const trimmed = name.trim();
     if (trimmed !== '') return trimmed;
@@ -101,6 +148,25 @@ const askLocationNameImpl: SearchPrompts['askLocationName'] = async (geoId, orig
 };
 
 const askLocationURLsImpl: SearchPrompts['askLocationURLs'] = async (existing) => {
+  if (existing.length > 0) {
+    console.error(`Current locations: ${existing.map((l) => `${l.name} (${l.geoId})`).join(', ')}`);
+    const mode = await select<'keep' | 'add' | 'replace'>({
+      message: 'Keep current locations, add more, or replace all?',
+      choices: [
+        { name: 'Keep current locations', value: 'keep' },
+        { name: 'Add more locations', value: 'add' },
+        { name: 'Replace all locations', value: 'replace' },
+      ],
+      default: 'keep',
+    });
+    if (mode === 'keep') {
+      return existing.map((l) => ({ name: l.name, geoId: l.geoId, originalUrl: '' }));
+    }
+    if (mode === 'replace') {
+      existing = [];
+    }
+    // mode === 'add': seed the dedup set from existing.
+  }
   const map = new Map<string, { name: string; originalUrl: string }>();
   for (const loc of existing) {
     map.set(loc.geoId, { name: loc.name, originalUrl: '' });
@@ -124,7 +190,7 @@ const askLocationURLsImpl: SearchPrompts['askLocationURLs'] = async (existing) =
       const rename = await askRenameLabelImpl(parsed.geoId, previous.name, trimmed);
       if (!rename) continue;
     }
-    const name = await askLocationNameImpl(parsed.geoId, trimmed);
+    const name = await askLocationNameImpl(parsed.geoId);
     map.set(parsed.geoId, { name, originalUrl: trimmed });
   }
   return Array.from(map, ([geoId, value]) => ({
@@ -135,32 +201,7 @@ const askLocationURLsImpl: SearchPrompts['askLocationURLs'] = async (existing) =
 };
 
 export const defaultInquirerPrompts: SearchPrompts = {
-  async askSearchQueries(existing) {
-    if (existing.length > 0) {
-      console.error(`Current queries: ${existing.join(', ')}`);
-      const keep = await confirm({
-        message: 'Keep current queries?',
-        default: true,
-      });
-      if (keep) return [...existing];
-    }
-    const lines: string[] = [];
-    while (lines.length === 0) {
-      const first = await input({ message: 'Search query (one per line; empty line to finish):' });
-      const trimmed = first.trim();
-      if (trimmed === '') continue;
-      lines.push(trimmed);
-      while (true) {
-        const next = await input({
-          message: 'Search query (empty line to finish):',
-        });
-        const t = next.trim();
-        if (t === '') break;
-        lines.push(t);
-      }
-    }
-    return lines;
-  },
+  askSearchQueries: askSearchQueriesImpl,
 
   async askDatePosted(existing) {
     const def = datePostedDefault(existing);
