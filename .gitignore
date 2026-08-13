@@ -8,7 +8,7 @@ coverage/
 *.log
 
 data/
-diagnostics/
+/diagnostics/
 logs/
 cache/
 profile-sources/
