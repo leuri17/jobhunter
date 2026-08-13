@@ -2,7 +2,7 @@
 
 **Status:** Planning decomposition approved for review; TASK-001 through TASK-007 implemented
 **Source of truth:** `SPEC.md`
-**Implementation status:** TASK-001 through TASK-007 are implemented (TASK-007 was squash-merged from `feat/task-007-cv-import`, 1 commit after post-review revisions). The remaining tasks (TASK-008 through TASK-018) are planned; no application code, dependencies, migrations, or generated output may be created for them until each task's own plan is approved.
+**Implementation status:** TASK-001 through TASK-007 are implemented (TASK-007 was squash-merged from `feat/task-007-cv-import`, 1 commit after post-review revisions). A post-merge audit of TASK-007 is tracked at `docs/tasks/AUDIT-TASK-007-2026-08-13.md`. The remaining tasks (TASK-008 through TASK-018) are planned; no application code, dependencies, migrations, or generated output may be created for them until each task's own plan is approved.
 
 ## Purpose
 
@@ -31,6 +31,7 @@ This ledger divides the complete JobHunter MVP into ordered macro tasks. Each ta
 | [TASK-005](./TASK-005-diagnostics-artifacts.md) | Diagnostics and artifact management | 002, 003, 004 | Safe, associated diagnostic artifact persistence and capture services |
 | [TASK-006](./TASK-006-search-configuration-url-generation.md) | Search configuration workflow and LinkedIn URL generation | 002, 004 | Interactive search settings, URL parsing, Cartesian search matrix and URL builder |
 | [TASK-007](./TASK-007-cv-import-local-text-extraction.md) | CV import, immutable source persistence, and local text extraction | 002, 004, 005 | ✅ Implemented (squash-merged from `feat/task-007-cv-import`, 1 commit) — `profile import` subcommand, immutable storage, SHA-256 dedup, text/OCR/malformed/encrypted handling, no OpenAI |
+| [AUDIT-TASK-007](./AUDIT-TASK-007-2026-08-13.md) | Code audit of TASK-007 | — | Post-merge audit: 3 Critical, 9 Important, 10 Minor, 5 Verification; use as fix-up checklist |
 | [TASK-008](./TASK-008-openai-profile-extraction.md) | OpenAI profile extraction and structured validation | 002, 004, 007 | Versioned, fingerprinted, validated profile drafts from imported source text |
 | [TASK-009](./TASK-009-profile-review-approval-overrides.md) | Profile review, editing, conflicts, approval, versioning, and overrides | 004, 008 | Explicitly reviewed profile lifecycle with conflict resolution and derived overrides |
 | [TASK-010](./TASK-010-deterministic-filters.md) | Global deterministic filters and filter fingerprints | 004, 009 | Auditable filter configuration/evaluation with abstention and invalidation |
