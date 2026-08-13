@@ -31,6 +31,10 @@ import {
   type SearchConfiguration,
   type SearchPrompts,
 } from './search/index.js';
+import { createRepositories, Repositories } from './persistence/repositories/index.js';
+import { initializeDatabase } from './persistence/database.js';
+import { resolveRepoRootForMigrations } from './persistence/resolve-migrations.js';
+import { ProfileImportService, type ProfileImportResult } from './profile/importer.js';
 
 const cliFileSystem: FileSystem = {
   async readFile(path) {
@@ -58,9 +62,23 @@ const cliFileSystem: FileSystem = {
   },
 };
 
+function isCommanderError(error: unknown): error is { code: string; message: string } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof (error as { code: unknown }).code === 'string' &&
+    (error as { code: string }).code.startsWith('commander.')
+  );
+}
+
 function exitWithError(error: unknown): never {
+  if (isCommanderError(error)) {
+    process.stderr.write(`${error.message}\n`);
+    process.exit(2);
+  }
   if (error instanceof ApplicationError) {
-    process.stderr.write(`${error.name}: ${error.message}\n`);
+    process.stderr.write(`${error.code}: ${error.message}\n`);
     process.exit(error.exitCode);
   }
   const message = error instanceof Error ? error.message : String(error);
@@ -112,14 +130,86 @@ async function configUpdateCommand(patch: ConfigPatch): Promise<void> {
   process.stdout.write(`${JSON.stringify(result.config, null, 2)}\n`);
 }
 
-export function createProgram(
-  options: { prompts?: SearchPrompts } = {},
-): Command {
+function summaryLine(result: ProfileImportResult): string {
+  const lines = result.sources.map((source) => {
+    const action = source.reused
+      ? `reused-${source.textExtractionStatus}`
+      : source.textExtractionStatus;
+    const filename = source.path.split(/[\\/]/).pop() ?? source.path;
+    const id = `source_${source.id}`;
+    const message =
+      source.textExtractionMessage === null ? '' : ` (${source.textExtractionMessage})`;
+    return `  ${id}  ${action}  ${filename}${message}`;
+  });
+  return [
+    `status: ${result.status}`,
+    `  extracted: ${result.counts.extracted}`,
+    `  failed: ${result.counts.failed}`,
+    `  reused: ${result.counts.reused}`,
+    ...lines,
+  ].join('\n');
+}
+
+function cliJson(result: ProfileImportResult): unknown {
+  return {
+    schemaVersion: 1,
+    status: result.status,
+    counts: result.counts,
+    sources: result.sources.map((s) => ({
+      id: `source_${s.id}`,
+      internalId: s.id,
+      path: s.path,
+      sourceType: s.sourceType,
+      sha256: s.sha256,
+      fileSize: s.fileSize,
+      storedPath: s.storedPath,
+      textExtractionStatus: s.textExtractionStatus,
+      textExtractionMessage: s.textExtractionMessage,
+      extractedTextHash: s.extractedTextHash,
+      reused: s.reused,
+      warnings: s.warnings,
+    })),
+    failedSourcePaths: result.failedSourcePaths,
+  };
+}
+
+async function profileImportCommand(
+  rawPaths: readonly string[],
+  options: { json: boolean },
+): Promise<void> {
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  let repositories: Repositories | null = null;
+  try {
+    repositories = createRepositories(handle);
+    const service = new ProfileImportService({
+      paths: platformPaths,
+      repositories,
+    });
+    const result = await service.importSources(rawPaths);
+    if (options.json) {
+      process.stdout.write(`${JSON.stringify(cliJson(result), null, 2)}\n`);
+    } else {
+      process.stdout.write(`${summaryLine(result)}\n`);
+    }
+  } finally {
+    handle.close();
+    void repositories;
+  }
+}
+
+export function createProgram(options: { prompts?: SearchPrompts } = {}): Command {
   const prompts: SearchPrompts = options.prompts ?? defaultInquirerPrompts;
   const program = new Command()
     .name('jobhunter')
     .description('Local job discovery pipeline')
-    .showHelpAfterError(true);
+    .showHelpAfterError(true)
+    .exitOverride()
+    .configureOutput({
+      writeErr: () => undefined,
+    });
 
   program
     .command('paths')
@@ -209,6 +299,25 @@ export function createProgram(
       }
     });
 
+  const profile = program
+    .command('profile')
+    .description('Profile source import, extraction, and review commands.');
+
+  profile
+    .command('import')
+    .description('Import one or two CV source files (PDF, Markdown, or plain text).')
+    .option('--json', 'emit JSON to stdout', false)
+    .argument('<path>', 'first source path')
+    .argument('[path]', 'optional second source path')
+    .action(async (path1: string, path2: string | undefined, options: { json: boolean }) => {
+      try {
+        const paths = [path1, path2].filter((value): value is string => typeof value === 'string');
+        await profileImportCommand(paths, options);
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
   return program;
 }
 
@@ -226,13 +335,10 @@ if (entrypoint !== undefined && import.meta.url === pathToFileURL(entrypoint).hr
 export { resolvePlatformPaths, loadConfig, updateConfig, OperationalConfigSchema };
 export type { OperationalConfig, ConfigPatch, ConfigPreview, UpdateOptions };
 export { ApplicationError, ConfigError, PathError, UnknownConfigError, ValidationError };
-export {
-  SearchConfigError,
-  SearchCancelledError,
-  LinkedInURLParseError,
-} from './search/errors.js';
+export { SearchConfigError, SearchCancelledError, LinkedInURLParseError } from './search/errors.js';
 export {
   runConfigureSearch,
   defaultInquirerPrompts,
   type SearchConfiguration,
 } from './search/index.js';
+export { ProfileImportService } from './profile/importer.js';

@@ -4,7 +4,10 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runMigrations } from '../../../src/persistence/migrations.js';
-import { createDatabaseConnection, type DatabaseConnection } from '../../../src/persistence/connection.js';
+import {
+  createDatabaseConnection,
+  type DatabaseConnection,
+} from '../../../src/persistence/connection.js';
 import { ProfileSourceRepository } from '../../../src/persistence/repositories/profile-sources.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..');
@@ -98,15 +101,41 @@ describe('ProfileSourceRepository', () => {
     expect(row?.fileSize).toBe(500); // immutable
   });
 
+  it('updateStoredPath changes the stored path', async () => {
+    const id = await repo.insert({
+      sourceType: 'pdf',
+      originalFilename: 'cv.pdf',
+      originalAbsolutePath: '/tmp/cv.pdf',
+      mimeType: 'application/pdf',
+      fileSize: 12345,
+      sha256: 'g'.repeat(64),
+      importTimestamp: '2026-08-05T10:00:00.000Z',
+    });
+    await repo.updateStoredPath(id, '/opt/jobhunter/profile-sources/1/cv.pdf');
+    const row = await repo.findById(id);
+    expect(row?.storedPath).toBe('/opt/jobhunter/profile-sources/1/cv.pdf');
+    expect(row?.sha256).toBe('g'.repeat(64));
+  });
+
   it('list returns all sources', async () => {
     await repo.insert({
-      sourceType: 'pdf', originalFilename: 'a.pdf', originalAbsolutePath: '/tmp/a.pdf',
-      storedPath: '/opt/a.pdf', mimeType: 'application/pdf', fileSize: 1, sha256: 'e'.repeat(64),
+      sourceType: 'pdf',
+      originalFilename: 'a.pdf',
+      originalAbsolutePath: '/tmp/a.pdf',
+      storedPath: '/opt/a.pdf',
+      mimeType: 'application/pdf',
+      fileSize: 1,
+      sha256: 'e'.repeat(64),
       importTimestamp: '2026-08-05T10:00:00.000Z',
     });
     await repo.insert({
-      sourceType: 'markdown', originalFilename: 'b.md', originalAbsolutePath: '/tmp/b.md',
-      storedPath: '/opt/b.md', mimeType: 'text/markdown', fileSize: 2, sha256: 'f'.repeat(64),
+      sourceType: 'markdown',
+      originalFilename: 'b.md',
+      originalAbsolutePath: '/tmp/b.md',
+      storedPath: '/opt/b.md',
+      mimeType: 'text/markdown',
+      fileSize: 2,
+      sha256: 'f'.repeat(64),
       importTimestamp: '2026-08-05T10:00:00.000Z',
     });
     const rows = await repo.list();

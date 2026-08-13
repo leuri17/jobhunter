@@ -13,7 +13,12 @@ describe('CLI foundation', () => {
 
     expect(help).toContain('Usage: jobhunter');
     expect(help).toContain('Local job discovery pipeline');
-    expect(program.commands.map((c) => c.name())).toEqual(['paths', 'config', 'configure']);
+    expect(program.commands.map((c) => c.name())).toEqual([
+      'paths',
+      'config',
+      'configure',
+      'profile',
+    ]);
   });
 
   it('does not create runtime files while constructing help', () => {

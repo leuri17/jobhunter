@@ -22,7 +22,7 @@ export interface ProfileSourceInsert {
   readonly sourceType: 'pdf' | 'markdown' | 'plain_text';
   readonly originalFilename: string;
   readonly originalAbsolutePath: string;
-  readonly storedPath: string;
+  readonly storedPath?: string;
   readonly mimeType: string;
   readonly fileSize: number;
   readonly sha256: string;
@@ -54,20 +54,21 @@ export class ProfileSourceRepository {
   async insert(input: ProfileSourceInsert): Promise<number> {
     const existing = await this.findBySha256(input.sha256);
     if (existing !== null) return existing.id;
+    const values: typeof profileSources.$inferInsert = {
+      sourceType: input.sourceType,
+      originalFilename: input.originalFilename,
+      originalAbsolutePath: input.originalAbsolutePath,
+      storedPath: input.storedPath ?? '',
+      mimeType: input.mimeType,
+      fileSize: input.fileSize,
+      sha256: input.sha256,
+      importTimestamp: input.importTimestamp,
+      textExtractionStatus: input.textExtractionStatus ?? 'pending',
+      textExtractionMessage: input.textExtractionMessage ?? null,
+    };
     const result = this.ctx.db
       .insert(profileSources)
-      .values({
-        sourceType: input.sourceType,
-        originalFilename: input.originalFilename,
-        originalAbsolutePath: input.originalAbsolutePath,
-        storedPath: input.storedPath,
-        mimeType: input.mimeType,
-        fileSize: input.fileSize,
-        sha256: input.sha256,
-        importTimestamp: input.importTimestamp,
-        textExtractionStatus: input.textExtractionStatus ?? 'pending',
-        textExtractionMessage: input.textExtractionMessage ?? null,
-      })
+      .values(values)
       .returning({ id: profileSources.id })
       .all();
     const row = result[0];
@@ -84,7 +85,11 @@ export class ProfileSourceRepository {
   }
 
   async findBySha256(sha256: string): Promise<ProfileSourceRow | null> {
-    const rows = this.ctx.db.select().from(profileSources).where(eq(profileSources.sha256, sha256)).all();
+    const rows = this.ctx.db
+      .select()
+      .from(profileSources)
+      .where(eq(profileSources.sha256, sha256))
+      .all();
     const row = rows[0];
     return row === undefined ? null : rowFromRecord(row);
   }
@@ -102,6 +107,10 @@ export class ProfileSourceRepository {
       })
       .where(eq(profileSources.id, id))
       .run();
+  }
+
+  async updateStoredPath(id: number, storedPath: string): Promise<void> {
+    this.ctx.db.update(profileSources).set({ storedPath }).where(eq(profileSources.id, id)).run();
   }
 
   async list(): Promise<readonly ProfileSourceRow[]> {
