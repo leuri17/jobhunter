@@ -35,6 +35,14 @@ import { createRepositories } from './persistence/repositories/index.js';
 import { initializeDatabase } from './persistence/database.js';
 import { resolveRepoRootForMigrations } from './persistence/resolve-migrations.js';
 import { ProfileImportService, type ProfileImportResult } from './profile/importer.js';
+import {
+  ProfileExtractionService,
+  type ProfileExtractionStatus,
+} from './profile/extraction-service.js';
+import { ProfileExtractionError } from './profile/openai/errors.js';
+import { createDefaultOpenAIClient } from './profile/openai/client.js';
+import type { OpenAIClient } from './profile/openai/types.js';
+import type { Repositories } from './persistence/repositories/index.js';
 
 const cliFileSystem: FileSystem = {
   async readFile(path) {
@@ -209,8 +217,179 @@ async function profileImportCommand(
   }
 }
 
-export function createProgram(options: { prompts?: SearchPrompts } = {}): Command {
+/**
+ * Resolve the human-friendly `profile_id` for a persisted version. The
+ * service returns only the integer primary key and the content hash, so
+ * the CLI does a single `findById` round-trip to read the `id` field
+ * off the persisted `ProfessionalProfile` (e.g. `profile_a1b2...`).
+ *
+ * If the row somehow disappears between the extraction and this lookup
+ * we fall back to `profile_<id>` (matching the documented public form)
+ * and emit no diagnostic — the CLI should never fail a successful
+ * extraction because of a UI-side bookkeeping read.
+ */
+async function resolveProfileId(
+  repositories: Repositories,
+  profileVersionId: number,
+): Promise<string> {
+  const row = await repositories.profileVersions.findById(profileVersionId);
+  if (row !== null) {
+    const profileJson = row.profileJson as { id?: unknown } | null;
+    if (
+      profileJson !== null &&
+      typeof profileJson === 'object' &&
+      typeof profileJson.id === 'string'
+    ) {
+      return profileJson.id;
+    }
+  }
+  return `profile_${profileVersionId}`;
+}
+
+function formatExtractSummary(status: ProfileExtractionStatus, profileId: string | null): string[] {
+  const lines = [`status: ${status.kind}`];
+  if (status.kind === 'failed') {
+    lines.push(`error_code: ${status.errorCode}`);
+    lines.push(`message: ${status.message}`);
+    lines.push(`attempts: ${status.attemptCount}`);
+    return lines;
+  }
+  lines.push(`profile_version_id: ${status.profileVersionId}`);
+  lines.push(`profile_id: ${profileId}`);
+  lines.push(`content_hash: ${status.contentHash}`);
+  if (status.kind === 'created') {
+    lines.push(`conflicts: ${status.conflicts}`);
+    lines.push(`warnings: ${status.warnings.length}`);
+  }
+  return lines;
+}
+
+function formatExtractSummaryJson(
+  status: ProfileExtractionStatus,
+  profileId: string | null,
+): Record<string, unknown> {
+  const base = { schemaVersion: 1 };
+  if (status.kind === 'failed') {
+    return {
+      ...base,
+      status: status.kind,
+      error_code: status.errorCode,
+      message: status.message,
+      attempts: status.attemptCount,
+    };
+  }
+  const common = {
+    status: status.kind,
+    profile_version_id: status.profileVersionId,
+    profile_id: profileId,
+    content_hash: status.contentHash,
+  };
+  if (status.kind === 'created') {
+    return {
+      ...base,
+      ...common,
+      conflicts: status.conflicts,
+      warnings: [...status.warnings],
+    };
+  }
+  return { ...base, ...common };
+}
+
+async function profileExtractCommand(
+  options: { json: boolean },
+  testHooks: { openaiClient?: OpenAIClient } = {},
+): Promise<void> {
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  try {
+    const repositories = createRepositories(handle);
+
+    // 1. Resolve the set of usable source IDs (extraction only operates
+    //    on sources whose stored text is recoverable).
+    const allSources = await repositories.profileSources.list();
+    const usableSourceIds = allSources
+      .filter((source) => source.textExtractionStatus === 'success')
+      .map((source) => source.id);
+    if (usableSourceIds.length === 0) {
+      throw new ValidationError(
+        'profile_extraction_no_sources',
+        'No imported sources with successful text extraction are available. Run "jobhunter profile import" before "profile extract".',
+      );
+    }
+
+    // 2. Load the operational configuration.
+    const loaded = await loadConfig(platformPaths, cliFileSystem);
+    const profileExtractionConfig = {
+      model: loaded.config.openai.profileExtraction.model,
+      reasoningEffort: loaded.config.openai.profileExtraction.reasoningEffort,
+    };
+
+    // 3. Resolve the OpenAI client. Tests inject a fake via `testHooks`;
+    //    production code reads `OPENAI_API_KEY` from the environment. The
+    //    key is used once and discarded by `createDefaultOpenAIClient` —
+    //    it is never logged or persisted (it is on the redact list).
+    let openaiClient: OpenAIClient;
+    if (testHooks.openaiClient !== undefined) {
+      openaiClient = testHooks.openaiClient;
+    } else {
+      const apiKey = process.env['OPENAI_API_KEY'];
+      if (typeof apiKey !== 'string' || apiKey.length === 0) {
+        throw new ValidationError(
+          'openai_api_key_missing',
+          'OPENAI_API_KEY environment variable is required to run "profile extract". Set OPENAI_API_KEY before invoking this command.',
+        );
+      }
+      openaiClient = createDefaultOpenAIClient({ apiKey });
+    }
+
+    // 4. Run the orchestrator.
+    const service = new ProfileExtractionService({
+      repositories,
+      openaiClient,
+      config: profileExtractionConfig,
+    });
+    const status = await service.extract(usableSourceIds);
+
+    // 5. Render the result. Failures are surfaced as typed errors so the
+    //    action handler's `exitWithError` writes `<code>: <message>` to
+    //    stderr and exits with the documented exit code (5 for the
+    //    OpenAI failure family per SPEC §25). For `--json` we emit the
+    //    structured failure document to stdout FIRST so the JSON stream
+    //    is a single valid document, then throw the typed error so the
+    //    CLI exits with code 5.
+    if (status.kind === 'failed') {
+      if (options.json) {
+        const payload = formatExtractSummaryJson(status, null);
+        process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      } else {
+        // Surface the failure to stdout too so the attempt count is
+        // observable to the operator (stderr still receives the typed
+        // error code via exitWithError below).
+        process.stdout.write(`${formatExtractSummary(status, null).join('\n')}\n`);
+      }
+      throw new ProfileExtractionError(status.errorCode, status.message);
+    }
+
+    const profileId = await resolveProfileId(repositories, status.profileVersionId);
+    if (options.json) {
+      const payload = formatExtractSummaryJson(status, profileId);
+      process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      return;
+    }
+    process.stdout.write(`${formatExtractSummary(status, profileId).join('\n')}\n`);
+  } finally {
+    handle.close();
+  }
+}
+
+export function createProgram(
+  options: { prompts?: SearchPrompts; openaiClient?: OpenAIClient } = {},
+): Command {
   const prompts: SearchPrompts = options.prompts ?? defaultInquirerPrompts;
+  const testHooks: { openaiClient?: OpenAIClient } =
+    options.openaiClient !== undefined ? { openaiClient: options.openaiClient } : {};
   const program = new Command()
     .name('jobhunter')
     .description('Local job discovery pipeline')
@@ -327,6 +506,22 @@ export function createProgram(options: { prompts?: SearchPrompts } = {}): Comman
       }
     });
 
+  profile
+    .command('extract')
+    .description(
+      'Extract a structured profile from the previously imported sources via OpenAI. ' +
+        'Reads OPENAI_API_KEY from the environment. Operates on every imported source ' +
+        'with textExtractionStatus === "success".',
+    )
+    .option('--json', 'emit JSON to stdout', false)
+    .action(async (options: { json: boolean }) => {
+      try {
+        await profileExtractCommand(options, testHooks);
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
   return program;
 }
 
@@ -351,3 +546,7 @@ export {
   type SearchConfiguration,
 } from './search/index.js';
 export { ProfileImportService } from './profile/importer.js';
+// TASK-008 re-exports were removed by Task 9 — the full extraction surface
+// (services, fake, retry policy, prompt builder, errors, types, structured
+// output) is now reachable through `src/profile/index.js`. Re-exports here
+// would duplicate the canonical barrel.

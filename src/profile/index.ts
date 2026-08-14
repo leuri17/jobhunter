@@ -1,3 +1,5 @@
+// Existing TASK-007 surface (CV import flow).
+
 export {
   SUPPORTED_SOURCE_TYPES,
   SourceTypeSchema,
@@ -49,3 +51,72 @@ export {
   defaultFilenameFor,
   resolveSourceStoragePath,
 } from './file-copy.js';
+
+// TASK-008 surface (OpenAI profile extraction).
+
+export {
+  PROFILE_SCHEMA_VERSION,
+  ProfessionalProfileSchema,
+  YearMonthSchema,
+  SkillCategorySchema,
+  SkillProficiencySchema,
+  LanguageLevelSchema,
+  SeniorityLevelSchema,
+  SkillEvidenceSourceTypeSchema,
+  SourceReferenceSchema,
+  WorkExperienceSchema,
+  SkillEvidenceSchema,
+  SkillSchema,
+  LanguageSchema,
+  EducationSchema,
+  CertificationSchema,
+  ProjectSchema,
+  ProfileBasicsSchema,
+  ProfileDerivedSchema,
+  DerivedValueSchema,
+  SKILL_CATEGORIES,
+  SKILL_PROFICIENCIES,
+  LANGUAGE_LEVELS,
+  SENIORITY_LEVELS,
+  SKILL_EVIDENCE_SOURCE_TYPES,
+  type ProfessionalProfile,
+  type ProfileBasics,
+  type ProfileDerived,
+  type SkillCategory,
+  type SkillProficiency,
+  type LanguageLevel,
+  type SeniorityLevel,
+  type SkillEvidenceSourceType,
+  type SourceReference,
+  type WorkExperience,
+  type SkillEvidence,
+  type Skill,
+  type Language,
+  type Education,
+  type Certification,
+  type Project,
+} from './schema.js';
+
+export { normalizeSkillName, normalizeLanguageName } from './name-normalize.js';
+export { parseYearMonth, isValidYearMonth, calculateDurationMonths } from './dates.js';
+export { detectProfileConflicts, type DetectedConflict } from './conflicts.js';
+export { calculateProfileContentHash } from './content-hash.js';
+export {
+  postProcessExtractionResponse,
+  type PostProcessInputs,
+  type PostProcessResult,
+} from './post-process.js';
+export {
+  ProfileExtractionService,
+  noopProfileExtractionLogger,
+  type ProfileExtractionLogger,
+  type ProfileExtractionSourceInput,
+  type ProfileExtractionConfig,
+  type ProfileExtractionStatus,
+  type ProfileExtractionServiceOptions,
+} from './extraction-service.js';
+
+// Re-export the entire OpenAI surface so consumers can pull the full
+// extraction API from `src/profile/index.js` without reaching into the
+// `openai/` submodule.
+export * from './openai/index.js';
