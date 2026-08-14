@@ -5,6 +5,7 @@ import { access } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
 import { Command } from 'commander';
+import { confirm as inquirerConfirm } from '@inquirer/prompts';
 
 import { resolvePlatformPaths } from './platform/paths.js';
 import { createDefaultPlatformAdapter } from './platform/paths-default.js';
@@ -43,6 +44,12 @@ import { ProfileExtractionError } from './profile/openai/errors.js';
 import { createDefaultOpenAIClient } from './profile/openai/client.js';
 import type { OpenAIClient } from './profile/openai/types.js';
 import type { Repositories } from './persistence/repositories/index.js';
+import { ProfileReviewService } from './profile/review-service.js';
+import { ProfileApprovalService } from './profile/approval-service.js';
+import { ProfileRejectionService } from './profile/rejection-service.js';
+import { ProfileEditingService } from './profile/editing-service.js';
+import { renderReviewSummary } from './profile/review/index.js';
+import { defaultInquirerEditorPrompts } from './profile/editing/index.js';
 
 const cliFileSystem: FileSystem = {
   async readFile(path) {
@@ -384,6 +391,172 @@ async function profileExtractCommand(
   }
 }
 
+async function profileListCommand(options: {
+  json: boolean;
+  status?: string | undefined;
+}): Promise<void> {
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  try {
+    const repositories = createRepositories(handle);
+    const service = new ProfileReviewService(repositories);
+    const status =
+      options.status === undefined
+        ? undefined
+        : (options.status as 'draft' | 'approved' | 'rejected' | 'superseded');
+    const entries = await service.list(status === undefined ? undefined : { status });
+    if (options.json) {
+      process.stdout.write(`${JSON.stringify({ schemaVersion: 1, profiles: entries }, null, 2)}\n`);
+      return;
+    }
+    if (entries.length === 0) {
+      process.stdout.write('(no profile versions)\n');
+      return;
+    }
+    const lines: string[] = [];
+    lines.push(
+      'ID                            STATUS       ACTIVE  CONTENT_HASH                          APPROVED',
+    );
+    for (const entry of entries) {
+      const id = `profile_${entry.profileVersionId}`.padEnd(30);
+      const status = entry.status.padEnd(11);
+      const active = (entry.active ? 'yes' : 'no').padEnd(6);
+      const hash = entry.contentHash.slice(0, 32).padEnd(34);
+      const approved = entry.approvedAt ?? '—';
+      lines.push(`${id}${status}${active}${hash}${approved}`);
+    }
+    process.stdout.write(`${lines.join('\n')}\n`);
+  } finally {
+    handle.close();
+  }
+}
+
+async function profileShowCommand(
+  rawId: string | undefined,
+  options: { json: boolean },
+): Promise<void> {
+  if (typeof rawId !== 'string' || rawId.trim() === '') {
+    throw new ValidationError(
+      'profile_show_missing_id',
+      'profile show requires a profile id argument.',
+    );
+  }
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  try {
+    const repositories = createRepositories(handle);
+    const service = new ProfileReviewService(repositories);
+    const payload = await service.show(rawId);
+    if (options.json) {
+      process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      return;
+    }
+    process.stdout.write(
+      `${renderReviewSummary({
+        profile: payload.profile,
+        warnings: payload.warnings,
+        conflicts: payload.conflicts,
+        overrides: payload.overrides,
+      })}\n`,
+    );
+  } finally {
+    handle.close();
+  }
+}
+
+async function profileApproveCommand(rawId: string): Promise<void> {
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  try {
+    const repositories = createRepositories(handle);
+    const service = new ProfileApprovalService({
+      repositories,
+      prompts: {
+        confirmApprovalWithWarnings: async (input) => {
+          process.stderr.write(
+            `Approving profile ${input.profileVersionId} with ${input.remainingWarnings.length} warning(s):\n`,
+          );
+          for (const warning of input.remainingWarnings) {
+            process.stderr.write(`  - ${warning}\n`);
+          }
+          return inquirerConfirm({
+            message: 'Proceed with approval?',
+            default: false,
+          });
+        },
+      },
+    });
+    const summary = await service.approve(rawId);
+    process.stdout.write(`approved: profile_${summary.approvedProfileVersionId}\n`);
+    if (summary.supersededProfileVersionId !== null) {
+      process.stdout.write(`superseded: profile_${summary.supersededProfileVersionId}\n`);
+    }
+    process.stdout.write(`invalidated filter results: ${summary.invalidatedFilterResults}\n`);
+  } finally {
+    handle.close();
+  }
+}
+
+async function profileRejectCommand(rawId: string): Promise<void> {
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  try {
+    const repositories = createRepositories(handle);
+    const service = new ProfileRejectionService({
+      repositories,
+      prompts: {
+        confirmRejection: async (input) => {
+          return inquirerConfirm({
+            message: `Reject profile ${input.profileVersionId}? (prior approved profile stays active)`,
+            default: false,
+          });
+        },
+      },
+    });
+    const result = await service.reject(rawId);
+    process.stdout.write(`rejected: profile_${result.rejectedProfileVersionId}\n`);
+  } finally {
+    handle.close();
+  }
+}
+
+async function profileEditCommand(rawId: string): Promise<void> {
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  try {
+    const repositories = createRepositories(handle);
+    const service = new ProfileEditingService({
+      repositories,
+      prompts: defaultInquirerEditorPrompts,
+    });
+    const outcome = await service.startEdit(rawId);
+    switch (outcome.kind) {
+      case 'derived_draft':
+        process.stdout.write(
+          `derived draft: profile_${outcome.draftProfileVersionId} from profile_${outcome.priorProfileVersionId}\n`,
+        );
+        process.stdout.write(
+          `${outcome.outcome.kind}: profile_${outcome.outcome.profileVersionId}\n`,
+        );
+        break;
+      default:
+        process.stdout.write(`${outcome.kind}: profile_${outcome.profileVersionId}\n`);
+    }
+  } finally {
+    handle.close();
+  }
+}
+
 export function createProgram(
   options: { prompts?: SearchPrompts; openaiClient?: OpenAIClient } = {},
 ): Command {
@@ -517,6 +690,72 @@ export function createProgram(
     .action(async (options: { json: boolean }) => {
       try {
         await profileExtractCommand(options, testHooks);
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  profile
+    .command('list')
+    .description('List every persisted profile version (most-recent-first).')
+    .option('--json', 'emit JSON to stdout', false)
+    .option('--status <status>', 'filter by status: draft, approved, rejected, or superseded')
+    .action(async (options: { json: boolean; status?: string }) => {
+      try {
+        await profileListCommand(options);
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  profile
+    .command('show')
+    .description('Print the review summary for a profile version.')
+    .argument('[id]', 'profile id (profile_<int> or profile_<json-id>)')
+    .option('--json', 'emit JSON to stdout', false)
+    .action(async (id: string | undefined, options: { json: boolean }) => {
+      try {
+        await profileShowCommand(id, options);
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  profile
+    .command('approve')
+    .description(
+      'Approve a draft profile version. Marks it active and supersedes any prior approved version.',
+    )
+    .argument('<id>', 'profile id (profile_<int> or profile_<json-id>)')
+    .action(async (id: string) => {
+      try {
+        await profileApproveCommand(id);
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  profile
+    .command('reject')
+    .description('Reject a draft profile version. Leaves the prior approved profile active.')
+    .argument('<id>', 'profile id (profile_<int> or profile_<json-id>)')
+    .action(async (id: string) => {
+      try {
+        await profileRejectCommand(id);
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  profile
+    .command('edit')
+    .description(
+      'Interactively edit a draft profile version. Editing an approved profile derives a new draft.',
+    )
+    .argument('<id>', 'profile id (profile_<int> or profile_<json-id>)')
+    .action(async (id: string) => {
+      try {
+        await profileEditCommand(id);
       } catch (error) {
         exitWithError(error);
       }

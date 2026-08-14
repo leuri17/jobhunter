@@ -50,3 +50,61 @@ export class ProfileSourceStorageError extends ProfileImportError {
     super('profile_source_storage_error', message, metadata, cause);
   }
 }
+
+/**
+ * Base class for errors raised by the profile review / editing / approval /
+ * rejection lifecycle (TASK-009, SPEC §16.1–§16.7). Accepts an explicit exit
+ * code so subclasses can pick the documented failure-class mapping.
+ *
+ * The subclass hierarchy mirrors the four failure surfaces the CLI can hit:
+ *   - invalid identifier / payload / state         → InvalidUsage (2)
+ *   - unresolved blocking conflicts               → InvalidUsage (2)
+ *   - user-cancelled approval / rejection         → UserCancellation (130)
+ */
+export class ProfileLifecycleError extends ApplicationError {
+  constructor(
+    code: string,
+    message: string,
+    exitCode: ApplicationError['exitCode'],
+    metadata: ApplicationErrorMetadata = {},
+    cause?: Error,
+  ) {
+    super(code, message, exitCode, metadata, cause);
+  }
+}
+
+export class InvalidProfileIdentifierError extends ProfileLifecycleError {
+  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
+    super(code, message, ExitCode.InvalidUsage, metadata);
+  }
+}
+
+export class InvalidProfilePayloadError extends ProfileLifecycleError {
+  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
+    super(code, message, ExitCode.InvalidUsage, metadata);
+  }
+}
+
+export class InvalidProfileStateError extends ProfileLifecycleError {
+  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
+    super(code, message, ExitCode.InvalidUsage, metadata);
+  }
+}
+
+export class BlockingConflictsUnresolvedError extends ProfileLifecycleError {
+  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
+    super(code, message, ExitCode.InvalidUsage, metadata);
+  }
+}
+
+export class UserCancelledApprovalError extends ProfileLifecycleError {
+  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
+    super(code, message, ExitCode.UserCancellation, metadata);
+  }
+}
+
+export class UserCancelledRejectionError extends ProfileLifecycleError {
+  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
+    super(code, message, ExitCode.UserCancellation, metadata);
+  }
+}

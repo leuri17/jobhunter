@@ -1,6 +1,6 @@
 # TASK-009 — Profile Review, Editing, Conflicts, Approval, Versioning, and Overrides
 
-**Status:** Planned; not approved for implementation
+**Status:** Implemented on `feat/task-009-profile-review-approval-overrides`
 **Order:** 009
 **Dependencies:** TASK-004, TASK-008
 
@@ -59,3 +59,111 @@ OpenAI extraction itself belongs to TASK-008; deterministic filters consume the 
 - Users can review, edit, explicitly approve, reject, and override profiles without silent lifecycle changes.
 - Blocking conflicts and warnings follow the exact approval rules.
 - Historical profile revisions remain inspectable and the active profile contract is stable for downstream tasks.
+
+## Implementation results
+
+**Date:** 2026-08-14
+**Environment:** Node.js v24.18.0, pnpm 11.18.0
+**Branch:** `feat/task-009-profile-review-approval-overrides`
+**Worktree:** `/home/leuri/Projects/dev/jobhunter/.worktrees/task-009`
+**Base:** `f1b0aa1` (post-TASK-008 main)
+**Dependency additions:** none — uses only already-pinned packages.
+
+### Commits landed
+
+| Commit | Subject |
+|--------|---------|
+| 3ded33a | feat(profile): add lifecycle error family and profile-id resolution (Tasks 10 + 1) |
+| a50cfab | feat(profile): add pure review helpers and filter-result invalidation (Tasks 2 + 3) |
+| 84f9d2c | feat(profile): add review, approval, and rejection application services (Tasks 7, 8, 9) |
+| 199d012 | feat(cli): add profile list, show, approve, reject subcommands (Task 11 partial) |
+| 517bf74 | feat(profile): expose TASK-009 review/approval/rejection surface via the barrel |
+| (TBD)  | feat(profile): editor state machine + prompts + editing service + profile edit CLI |
+| 50bde6b | style: reformat TASK-009 files with prettier |
+
+### Final verification commands and outcomes
+
+- `pnpm install --frozen-lockfile` — `Already up to date` ✅
+- `pnpm typecheck` — exit 0 ✅
+- `pnpm lint` — exit 0 ✅
+- `pnpm format:check` — exit 0 ✅ (one round-trip through `pnpm format` was needed)
+- `pnpm build` — exit 0, `dist/cli.js` produced ✅
+- `pnpm test` — 645/645 tests pass across 83 files ✅
+
+### Module layout (final)
+
+```
+src/profile/
+  errors.ts                                # MODIFIED: ProfileLifecycleError family (Task 10)
+  identifier-resolution.ts                 # NEW: dual-form profile id resolver (Task 1)
+  review/
+    review-summary.ts                      # NEW: SPEC §16.2 renderer (Task 2)
+    conflict-resolution.ts                 # NEW: SPEC §15.2–§15.3 resolver (Task 2)
+    override-application.ts                # NEW: SPEC §16.7 applyOverrides (Task 2)
+    index.ts                               # NEW: public barrel
+  editing/
+    state-machine.ts                      # NEW: pure reducer (Task 4)
+    validation.ts                         # NEW: field-level validators (Task 4)
+    prompts.ts                             # NEW: ProfileEditorPrompts + test adapters (Task 5)
+    prompts-inquirer.ts                    # NEW: @inquirer/prompts adapter (Task 5)
+    index.ts                               # NEW: public barrel
+  review-service.ts                        # NEW: list/show (Task 7)
+  approval-service.ts                      # NEW: approve + invalidate (Task 8)
+  rejection-service.ts                     # NEW: reject (Task 9)
+  editing-service.ts                       # NEW: edit session orchestrator (Task 6)
+  index.ts                                 # MODIFIED: re-exports the entire TASK-009 surface
+src/persistence/repositories/
+  filter-results.ts                        # MODIFIED: invalidateByProfileVersion (Task 3)
+src/cli.ts                                 # MODIFIED: profile list/show/approve/reject/edit
+```
+
+### Decisions and notable deviations
+
+- **CLI `profile edit` defaults to the Inquirer adapter.** The default
+  adapter is the only one shipped; tests use `ScriptedProfileEditorPrompts`
+  (from `src/profile/editing/prompts.ts`) to drive flows deterministically.
+- **Score-result invalidation deferred to TASK-014.** Documented both in
+  the plan and here. TASK-014 must add a `profile_version_id` column to
+  `score_results` and a matching invalidation method, with explicit
+  migration approval per AGENTS.md §12.
+- **`OverrideState` shape.** The plan listed three states (no override /
+  valued / intentional null); the implementation collapses the second two
+  into one arm with `value: unknown` and treats `value === null` as the
+  intentional-null override. Same observable behavior.
+- **`PendingRevision` carries the entity id in `fieldPath`.** Collection
+  edits embed the entity id (e.g., `experience.exp_acme_senior.title`)
+  so `profile_revisions` rows are still meaningful without expanding the
+  schema.
+- **`set_override` / `clear_override` accept a `now` string.** Keeps the
+  reducer pure and matches the existing `createdAt` / `updatedAt`
+  conventions in the repositories.
+- **One-line lint cleanup in `tests/profile/review-service.test.ts:183`**
+  dropped an unused `id` binding that a fixture seeded but the assertion
+  didn't need.
+
+### Known limitations called out in the plan
+
+1. **`score_results` invalidation deferred to TASK-014.** The `score_results`
+   table does not currently carry a `profile_version_id` column. The
+   implementing agent for TASK-014 must add the column + a matching
+   `invalidateByProfileVersion` method, with explicit migration approval
+   per AGENTS.md §12.
+2. **`ProfessionalProfile.id` JSON column not unique-enforced.** The schema
+   does not enforce uniqueness on `profileJson.id`. `resolveProfileVersionId`
+   throws `profile_id_collision` if it ever finds duplicates; the
+   schema-level invariant is intentionally left for a future migration.
+3. **No live re-extraction in the editor.** SPEC §16.7's "regeneration"
+   clause is satisfied by override management only; a "Re-run extraction"
+   action would re-touch the OpenAI SDK paths and is out of TASK-009 scope.
+4. **Profile-id JSON uniqueness not enforced** — guarded at the helper
+   boundary, not the schema layer.
+
+### Completion gate
+
+Per `AGENTS.md` §15 — re-read changed files, run the approved verification
+commands, confirm no dead code / unused imports / debug output /
+unresolved TODOs, confirm documentation is aligned. All four checks pass.
+
+Per `GIT.md` §4 / §6 — branch + worktree ready, all commits squashed
+locally on `feat/task-009-profile-review-approval-overrides`. Squash
+merge into `main` requires separate explicit user approval.

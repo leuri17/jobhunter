@@ -120,3 +120,50 @@ export {
 // extraction API from `src/profile/index.js` without reaching into the
 // `openai/` submodule.
 export * from './openai/index.js';
+
+// TASK-009 surface (review / approval / rejection lifecycle).
+
+// Typed lifecycle errors (TASK-009 Task 10).
+export {
+  ProfileLifecycleError,
+  InvalidProfileIdentifierError,
+  InvalidProfilePayloadError,
+  InvalidProfileStateError,
+  BlockingConflictsUnresolvedError,
+  UserCancelledApprovalError,
+  UserCancelledRejectionError,
+} from './errors.js';
+
+// Profile CLI identifier resolution (TASK-009 Task 1).
+export { resolveProfileVersionId } from './identifier-resolution.js';
+
+// Pure review helpers (TASK-009 Task 2).
+export * from './review/index.js';
+
+// Application services (TASK-009 Tasks 6, 7, 8, 9).
+export {
+  ProfileReviewService,
+  type ProfileListEntry,
+  type ProfileShowPayload,
+} from './review-service.js';
+export {
+  ProfileApprovalService,
+  type ProfileApprovalPrompts,
+  type ProfileApprovalServiceOptions,
+  type ProfileApprovalSummary,
+} from './approval-service.js';
+export {
+  ProfileRejectionService,
+  type ProfileRejectionPrompts,
+  type ProfileRejectionServiceOptions,
+  type ProfileRejectionResult,
+} from './rejection-service.js';
+export {
+  ProfileEditingService,
+  type EditOutcome,
+  type DerivedDraftResult,
+  type ProfileEditingServiceOptions,
+} from './editing-service.js';
+
+// Editor surface (TASK-009 Tasks 4 + 5).
+export * from './editing/index.js';

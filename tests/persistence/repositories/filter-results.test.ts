@@ -12,11 +12,54 @@ import { PipelineRunRepository } from '../../../src/persistence/repositories/pip
 import { JobRepository } from '../../../src/persistence/repositories/jobs.js';
 import { FilterConfigurationRepository } from '../../../src/persistence/repositories/filter-configurations.js';
 import { FilterResultRepository } from '../../../src/persistence/repositories/filter-results.js';
+import { ProfileVersionRepository } from '../../../src/persistence/repositories/profile-versions.js';
+import { ProfileSourceRepository } from '../../../src/persistence/repositories/profile-sources.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..');
 
 function ctxFrom(c: DatabaseConnection) {
   return { db: c.db };
+}
+
+async function seedProfileSource(
+  sourceRepo: ProfileSourceRepository,
+  sha256: string,
+): Promise<number> {
+  return sourceRepo.insert({
+    sourceType: 'pdf',
+    originalFilename: `${sha256}.pdf`,
+    originalAbsolutePath: `/tmp/${sha256}.pdf`,
+    storedPath: `/opt/${sha256}.pdf`,
+    mimeType: 'application/pdf',
+    fileSize: 100,
+    sha256,
+    importTimestamp: '2026-08-05T10:00:00.000Z',
+    textExtractionStatus: 'success',
+  });
+}
+
+async function seedProfileVersion(
+  versionRepo: ProfileVersionRepository,
+  sourceRepo: ProfileSourceRepository,
+  fingerprint: string,
+): Promise<number> {
+  const sourceId = await seedProfileSource(sourceRepo, sha256For(fingerprint));
+  return versionRepo.insert({
+    status: 'draft',
+    schemaVersion: 1,
+    contentHash: `hash-${fingerprint}`,
+    extractionFingerprint: fingerprint,
+    sourceIds: [sourceId],
+    profileJson: { id: `prf_${fingerprint}` },
+    createdAt: '2026-08-05T10:00:00.000Z',
+    updatedAt: '2026-08-05T10:00:00.000Z',
+  });
+}
+
+function sha256For(fingerprint: string): string {
+  // 64 hex chars; pad the fingerprint deterministically.
+  const padded = (fingerprint + '0'.repeat(64)).slice(0, 64);
+  return padded;
 }
 
 describe('FilterResultRepository', () => {
@@ -26,6 +69,8 @@ describe('FilterResultRepository', () => {
   let jobRepo: JobRepository;
   let configRepo: FilterConfigurationRepository;
   let resultRepo: FilterResultRepository;
+  let versionRepo: ProfileVersionRepository;
+  let sourceRepo: ProfileSourceRepository;
   let runId: number;
   let searchId: number;
   let filterConfigId: number;
@@ -40,6 +85,8 @@ describe('FilterResultRepository', () => {
     jobRepo = new JobRepository(ctxFrom(connection));
     configRepo = new FilterConfigurationRepository(ctxFrom(connection));
     resultRepo = new FilterResultRepository(ctxFrom(connection));
+    versionRepo = new ProfileVersionRepository(ctxFrom(connection));
+    sourceRepo = new ProfileSourceRepository(ctxFrom(connection));
     const { runId: rid, searchIds } = await runRepo.createRunWithSearches(
       {
         startTimestamp: '2026-08-05T10:00:00.000Z',
@@ -206,5 +253,76 @@ describe('FilterResultRepository', () => {
     });
     const rows = await resultRepo.listByRun(runId);
     expect(rows).toHaveLength(2);
+  });
+
+  describe('invalidateByProfileVersion', () => {
+    async function seedActiveForProfile(fingerprint: string): Promise<number> {
+      const profileVersionId = await seedProfileVersion(versionRepo, sourceRepo, fingerprint);
+      await resultRepo.activateResult({
+        jobId: jobId1,
+        pipelineRunId: runId,
+        filterConfigVersionId: filterConfigId,
+        filterConfigHash: 'cfg-hash',
+        profileVersionId,
+        profileHash: 'h',
+        filterImplementationVersion: 'filter-impl-1',
+        fingerprint: `fp-${fingerprint}-${jobId1}`,
+        timestamp: '2026-08-05T10:00:00.000Z',
+        overallOutcome: 'accepted',
+        rulesEvaluated: [],
+        rulesPassed: [],
+        rulesFailed: [],
+      });
+      await resultRepo.activateResult({
+        jobId: jobId2,
+        pipelineRunId: runId,
+        filterConfigVersionId: filterConfigId,
+        filterConfigHash: 'cfg-hash',
+        profileVersionId,
+        profileHash: 'h',
+        filterImplementationVersion: 'filter-impl-1',
+        fingerprint: `fp-${fingerprint}-${jobId2}`,
+        timestamp: '2026-08-05T10:00:00.000Z',
+        overallOutcome: 'accepted',
+        rulesEvaluated: [],
+        rulesPassed: [],
+        rulesFailed: [],
+      });
+      return profileVersionId;
+    }
+
+    it('flips active to false on every active row tied to the profile version', async () => {
+      const profileVersionId = await seedActiveForProfile('fp_7');
+      const flipped = await resultRepo.invalidateByProfileVersion(profileVersionId);
+      expect(flipped).toBe(2);
+      const remaining = await resultRepo.listByJob(jobId1);
+      expect(remaining.find((r) => r.active)).toBeUndefined();
+    });
+
+    it('is idempotent — re-running with no active rows returns 0', async () => {
+      const profileVersionId = await seedActiveForProfile('fp_idem');
+      await resultRepo.invalidateByProfileVersion(profileVersionId);
+      const again = await resultRepo.invalidateByProfileVersion(profileVersionId);
+      expect(again).toBe(0);
+    });
+
+    it('does not touch rows tied to a different profile version', async () => {
+      const idA = await seedActiveForProfile('fp_a');
+      const idB = await seedActiveForProfile('fp_b');
+      await resultRepo.invalidateByProfileVersion(idA);
+      const other = await resultRepo.listByJob(jobId2);
+      const stillActive = other.find((r) => r.active);
+      expect(stillActive?.profileVersionId).toBe(idB);
+    });
+
+    it('returns 0 when no rows exist for the profile version', async () => {
+      const idA = await seedActiveForProfile('fp_one');
+      const fakeId = 99_999; // not seeded
+      const flipped = await resultRepo.invalidateByProfileVersion(fakeId);
+      expect(flipped).toBe(0);
+      // Original rows still active.
+      const rows = await resultRepo.listByJob(jobId1);
+      expect(rows.find((r) => r.active)?.profileVersionId).toBe(idA);
+    });
   });
 });

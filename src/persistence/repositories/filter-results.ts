@@ -147,4 +147,39 @@ export class FilterResultRepository {
       .all();
     return rows.map(rowFromRecord);
   }
+
+  /**
+   * Mark every active `filter_results` row tied to the supplied profile
+   * version as inactive. Used by `ProfileApprovalService` after a profile
+   * is approved (SPEC §16.3 step 9): filter outcomes computed against the
+   * prior profile become stale and must not be used as the current result.
+   *
+   * Idempotent — re-running with no active rows returns 0. The method
+   * returns the count of rows actually flipped so the caller can include
+   * the invalidation number in its audit output.
+   *
+   * Score-result invalidation lives behind a separate path: `score_results`
+   * does not currently carry a `profile_version_id` column (TASK-014 will
+   * resolve that with its own migration). For now only filter outcomes are
+   * invalidated.
+   */
+  async invalidateByProfileVersion(profileVersionId: number): Promise<number> {
+    return this.ctx.db.transaction((tx) => {
+      const before = tx
+        .select({ id: filterResults.id })
+        .from(filterResults)
+        .where(
+          and(eq(filterResults.profileVersionId, profileVersionId), eq(filterResults.active, true)),
+        )
+        .all();
+      if (before.length === 0) return 0;
+      tx.update(filterResults)
+        .set({ active: false })
+        .where(
+          and(eq(filterResults.profileVersionId, profileVersionId), eq(filterResults.active, true)),
+        )
+        .run();
+      return before.length;
+    });
+  }
 }
