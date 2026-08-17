@@ -21,6 +21,9 @@ test-results/
 .superpowers/
 .slim/
 
+# OpenCode read-allowlist (per-user, not tracked)
+.ignore
+
 .DS_Store
 Thumbs.db
 .idea/
