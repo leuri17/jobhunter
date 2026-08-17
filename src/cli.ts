@@ -50,6 +50,9 @@ import { ProfileRejectionService } from './profile/rejection-service.js';
 import { ProfileEditingService } from './profile/editing-service.js';
 import { renderReviewSummary } from './profile/review/index.js';
 import { defaultInquirerEditorPrompts } from './profile/editing/index.js';
+import { ConfigureFiltersService } from './filter/configure-service.js';
+import { type FilterPrompts } from './filter/prompts.js';
+import { defaultInquirerFilterPrompts } from './filter/prompts-inquirer.js';
 
 const cliFileSystem: FileSystem = {
   async readFile(path) {
@@ -558,9 +561,14 @@ async function profileEditCommand(rawId: string): Promise<void> {
 }
 
 export function createProgram(
-  options: { prompts?: SearchPrompts; openaiClient?: OpenAIClient } = {},
+  options: {
+    prompts?: SearchPrompts;
+    openaiClient?: OpenAIClient;
+    filterPrompts?: FilterPrompts;
+  } = {},
 ): Command {
   const prompts: SearchPrompts = options.prompts ?? defaultInquirerPrompts;
+  const filterPrompts: FilterPrompts | undefined = options.filterPrompts;
   const testHooks: { openaiClient?: OpenAIClient } =
     options.openaiClient !== undefined ? { openaiClient: options.openaiClient } : {};
   const program = new Command()
@@ -654,6 +662,43 @@ export function createProgram(
           process.stdout.write(`${JSON.stringify(result.config, null, 2)}\n`);
         } else {
           process.stdout.write('search configuration updated\n');
+        }
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  configure
+    .command('filters')
+    .description('Interactively configure the global deterministic filter set.')
+    .action(async () => {
+      try {
+        const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
+        const handle = await initializeDatabase(paths, {
+          migrationsFolder: resolveRepoRootForMigrations(),
+        });
+        try {
+          const repositories = createRepositories(handle);
+          const service = new ConfigureFiltersService({
+            repositories,
+            prompts: filterPrompts ?? defaultInquirerFilterPrompts,
+          });
+          const outcome = await service.run();
+          switch (outcome.kind) {
+            case 'saved':
+              process.stdout.write(
+                `filter config saved: filters_${outcome.filterConfigVersionId}\n`,
+              );
+              process.stdout.write(
+                `invalidated filter results: ${outcome.invalidatedFilterResults}\n`,
+              );
+              break;
+            case 'discarded':
+              process.stdout.write('filter config discarded\n');
+              break;
+          }
+        } finally {
+          handle.close();
         }
       } catch (error) {
         exitWithError(error);

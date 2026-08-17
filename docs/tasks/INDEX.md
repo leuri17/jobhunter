@@ -1,8 +1,8 @@
 # JobHunter MVP Task Index
 
-**Status:** Planning decomposition approved for review; TASK-001 through TASK-007 implemented
+**Status:** Planning decomposition approved for review; TASK-001 through TASK-010 implemented
 **Source of truth:** `SPEC.md`
-**Implementation status:** TASK-001 through TASK-007 are implemented (TASK-007 was squash-merged from `feat/task-007-cv-import`, 1 commit after post-review revisions). A post-merge audit of TASK-007 is tracked at `docs/tasks/AUDIT-TASK-007-2026-08-13.md`. The remaining tasks (TASK-008 through TASK-018) are planned; no application code, dependencies, migrations, or generated output may be created for them until each task's own plan is approved.
+**Implementation status:** TASK-001 through TASK-010 are implemented (TASK-007 was squash-merged from `feat/task-007-cv-import`, 1 commit after post-review revisions; TASK-010 was implemented across 14 commits on `feat/task-010-deterministic-filters`). A post-merge audit of TASK-007 is tracked at `docs/tasks/AUDIT-TASK-007-2026-08-13.md`. The remaining tasks (TASK-011 through TASK-018) are planned; no application code, dependencies, migrations, or generated output may be created for them until each task's own plan is approved.
 
 ## Purpose
 
@@ -34,7 +34,7 @@ This ledger divides the complete JobHunter MVP into ordered macro tasks. Each ta
 | [AUDIT-TASK-007](./AUDIT-TASK-007-2026-08-13.md) | Code audit of TASK-007 | — | Post-merge audit: 3 Critical, 9 Important, 10 Minor, 5 Verification; use as fix-up checklist |
 | [TASK-008](./TASK-008-openai-profile-extraction.md) | OpenAI profile extraction and structured validation | 002, 004, 007 | Versioned, fingerprinted, validated profile drafts from imported source text |
 | [TASK-009](./TASK-009-profile-review-approval-overrides.md) | Profile review, editing, conflicts, approval, versioning, and overrides | 004, 008 | Explicitly reviewed profile lifecycle with conflict resolution and derived overrides |
-| [TASK-010](./TASK-010-deterministic-filters.md) | Global deterministic filters and filter fingerprints | 004, 009 | Auditable filter configuration/evaluation with abstention and invalidation |
+| [TASK-010](./TASK-010-deterministic-filters.md) | Global deterministic filters and filter fingerprints | 004, 009 | ✅ Implemented (14 commits on `feat/task-010-deterministic-filters`) — Versioned `JobFilterConfig` schema, keyword/seniority/language evaluators, fingerprint composer, `FilterApplyService` cache ledger, `ConfigureFiltersService` interactive flow, `jobhunter configure filters` CLI subcommand; never calls OpenAI |
 | [TASK-011](./TASK-011-guided-initialization.md) | Guided initialization and resumable setup orchestration | 006, 007, 008, 009, 010 | Idempotent `jobhunter init` state machine and setup summary |
 | [TASK-012](./TASK-012-linkedin-discovery-result-loading.md) | LinkedIn result discovery, load-more behavior, and access handling | 002, 004, 005, 006 | Sequential public LinkedIn search execution and discovery persistence |
 | [TASK-013](./TASK-013-job-detail-extraction-persistence.md) | Job-detail extraction, embedded panel fallback, and persistence | 004, 005, 012 | Complete/partial/failed job outcomes with panel-first extraction |

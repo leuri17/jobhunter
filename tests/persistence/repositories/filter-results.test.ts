@@ -325,4 +325,173 @@ describe('FilterResultRepository', () => {
       expect(rows.find((r) => r.active)?.profileVersionId).toBe(idA);
     });
   });
+
+  describe('invalidateByFilterConfigVersion', () => {
+    let jobId3: number;
+
+    beforeEach(async () => {
+      // A third job is required to seed three concurrent active rows tied
+      // to a single filter config version (the partial unique index
+      // `filter_results_active_idx` allows only one active row per job).
+      const { jobId } = await jobRepo.recordNewJob({
+        job: {
+          sourceJobId: '333',
+          extractionStatus: 'complete',
+          firstDiscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+          lastRediscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+          createdTimestamp: '2026-08-05T10:00:00.000Z',
+          updatedTimestamp: '2026-08-05T10:00:00.000Z',
+        },
+        discoveryEvent: {
+          jobId: 0,
+          pipelineRunId: runId,
+          searchExecutionId: searchId,
+          timestamp: '2026-08-05T10:00:00.000Z',
+          isNew: true,
+          currentExtractionState: 'complete',
+          extractionAttempted: true,
+          skipReason: null,
+        },
+      });
+      jobId3 = jobId;
+    });
+
+    async function seedConfigVersion(contentHash: string): Promise<number> {
+      // Insert as inactive: the partial unique index
+      // `filter_configuration_versions_active_idx` allows at most one
+      // active row in this table, and the outer fixture already claims
+      // that slot. The invalidation method keys on `filterConfigVersionId`
+      // only, so the `active` flag on the config version is irrelevant
+      // for these tests.
+      return configRepo.insert({
+        schemaVersion: 1,
+        contentHash,
+        configJson: {},
+        createdAt: '2026-08-05T10:00:00.000Z',
+        active: false,
+      });
+    }
+
+    async function seedActiveRow(opts: {
+      jobId: number;
+      filterConfigVersionId: number;
+      fingerprint: string;
+    }): Promise<number> {
+      return resultRepo.activateResult({
+        jobId: opts.jobId,
+        pipelineRunId: runId,
+        filterConfigVersionId: opts.filterConfigVersionId,
+        filterConfigHash: 'cfg-hash',
+        profileVersionId: null,
+        profileHash: null,
+        filterImplementationVersion: 'filter-impl-1',
+        fingerprint: opts.fingerprint,
+        timestamp: '2026-08-05T10:00:00.000Z',
+        overallOutcome: 'accepted',
+        rulesEvaluated: [],
+        rulesPassed: [],
+        rulesFailed: [],
+      });
+    }
+
+    it('flips active to false on every active row tied to the filter config version', async () => {
+      const cfgA = await seedConfigVersion('cfg-A');
+      await seedActiveRow({ jobId: jobId1, filterConfigVersionId: cfgA, fingerprint: 'fp-A1' });
+      await seedActiveRow({ jobId: jobId2, filterConfigVersionId: cfgA, fingerprint: 'fp-A2' });
+      await seedActiveRow({ jobId: jobId3, filterConfigVersionId: cfgA, fingerprint: 'fp-A3' });
+
+      const flipped = await resultRepo.invalidateByFilterConfigVersion(cfgA);
+      expect(flipped).toBe(3);
+
+      // Every previously-active row for cfgA is now inactive; the rows
+      // themselves are still present (SPEC §27.4 "kept but inactive").
+      const remainingA1 = await resultRepo.listByJob(jobId1);
+      const remainingA2 = await resultRepo.listByJob(jobId2);
+      const remainingA3 = await resultRepo.listByJob(jobId3);
+      expect(remainingA1.find((r) => r.active)).toBeUndefined();
+      expect(remainingA2.find((r) => r.active)).toBeUndefined();
+      expect(remainingA3.find((r) => r.active)).toBeUndefined();
+      expect(remainingA1).toHaveLength(1);
+      expect(remainingA2).toHaveLength(1);
+      expect(remainingA3).toHaveLength(1);
+    });
+
+    it('is idempotent — re-running with no active rows returns 0', async () => {
+      const cfgA = await seedConfigVersion('cfg-idem');
+      await seedActiveRow({ jobId: jobId1, filterConfigVersionId: cfgA, fingerprint: 'fp-1' });
+      await seedActiveRow({ jobId: jobId2, filterConfigVersionId: cfgA, fingerprint: 'fp-2' });
+      await seedActiveRow({ jobId: jobId3, filterConfigVersionId: cfgA, fingerprint: 'fp-3' });
+
+      const first = await resultRepo.invalidateByFilterConfigVersion(cfgA);
+      expect(first).toBe(3);
+
+      const again = await resultRepo.invalidateByFilterConfigVersion(cfgA);
+      expect(again).toBe(0);
+    });
+
+    it('does not touch rows tied to a different filter config version', async () => {
+      const cfgA = await seedConfigVersion('cfg-A2');
+      const cfgB = await seedConfigVersion('cfg-B2');
+      await seedActiveRow({ jobId: jobId1, filterConfigVersionId: cfgA, fingerprint: 'fp-A1' });
+      await seedActiveRow({ jobId: jobId2, filterConfigVersionId: cfgB, fingerprint: 'fp-B1' });
+      await seedActiveRow({ jobId: jobId3, filterConfigVersionId: cfgB, fingerprint: 'fp-B2' });
+
+      const flipped = await resultRepo.invalidateByFilterConfigVersion(cfgA);
+      // Only the single row tied to cfgA is flipped.
+      expect(flipped).toBe(1);
+
+      // Rows tied to cfgB remain active.
+      const remainingB1 = await resultRepo.listByJob(jobId2);
+      const remainingB2 = await resultRepo.listByJob(jobId3);
+      const activeB1 = remainingB1.find((r) => r.active);
+      const activeB2 = remainingB2.find((r) => r.active);
+      expect(activeB1?.filterConfigVersionId).toBe(cfgB);
+      expect(activeB2?.filterConfigVersionId).toBe(cfgB);
+      expect(activeB1?.active).toBe(true);
+      expect(activeB2?.active).toBe(true);
+    });
+
+    it('does not touch rows with active = false tied to the filter config version', async () => {
+      const cfgA = await seedConfigVersion('cfg-A3');
+      const cfgB = await seedConfigVersion('cfg-B3');
+      // Insert an active row for cfgA on jobId1, then a new active row for
+      // cfgB on the SAME job — this deactivates the cfgA row (the partial
+      // unique index allows only one active row per job).
+      await seedActiveRow({ jobId: jobId1, filterConfigVersionId: cfgA, fingerprint: 'fp-A1' });
+      await seedActiveRow({ jobId: jobId1, filterConfigVersionId: cfgB, fingerprint: 'fp-B1' });
+      // jobId1 now has: rowA (inactive, cfgA), rowB (active, cfgB).
+      // Seed an active row for cfgA on a different job so the call has
+      // at least one match to flip.
+      await seedActiveRow({ jobId: jobId2, filterConfigVersionId: cfgA, fingerprint: 'fp-A2' });
+
+      const flipped = await resultRepo.invalidateByFilterConfigVersion(cfgA);
+      // Only the active row for cfgA (on jobId2) is flipped; the inactive
+      // row for cfgA on jobId1 does NOT count (WHERE active = true).
+      expect(flipped).toBe(1);
+
+      // The inactive row for cfgA on jobId1 is left untouched: it must
+      // still be inactive and still tied to cfgA. The new active row for
+      // cfgB on the same job remains active.
+      const remainingJ1 = await resultRepo.listByJob(jobId1);
+      expect(remainingJ1).toHaveLength(2);
+      const inactive = remainingJ1.filter((r) => !r.active);
+      const active = remainingJ1.filter((r) => r.active);
+      expect(inactive).toHaveLength(1);
+      expect(inactive[0]?.filterConfigVersionId).toBe(cfgA);
+      expect(inactive[0]?.active).toBe(false);
+      expect(active).toHaveLength(1);
+      expect(active[0]?.filterConfigVersionId).toBe(cfgB);
+      expect(active[0]?.active).toBe(true);
+
+      // jobId2 row (was active, cfgA) is now inactive.
+      const remainingJ2 = await resultRepo.listByJob(jobId2);
+      expect(remainingJ2.find((r) => r.active)).toBeUndefined();
+    });
+
+    it('returns 0 when no rows exist for the filter config version', async () => {
+      const cfgA = await seedConfigVersion('cfg-orphan');
+      const flipped = await resultRepo.invalidateByFilterConfigVersion(cfgA);
+      expect(flipped).toBe(0);
+    });
+  });
 });

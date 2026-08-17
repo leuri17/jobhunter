@@ -182,4 +182,57 @@ export class FilterResultRepository {
       return before.length;
     });
   }
+
+  /**
+   * Mark every active `filter_results` row tied to the supplied filter
+   * configuration version as inactive (Decision 8, SPEC §27.1).
+   *
+   * The composition analogue of `invalidateByProfileVersion`: when the
+   * active global filter configuration changes (SPEC §16.3 step 9 analog),
+   * filter outcomes computed against the prior configuration become
+   * stale and must not be reused as the current result. The invalidation
+   * also fires whenever any fingerprint input changes (config content
+   * hash, profile slice, filter implementation version) — the call site
+   * decides when to run this; the repository only owns the flip.
+   *
+   * History is preserved per SPEC §27.4 ("kept but inactive"): rows are
+   * flipped to `active = false` rather than deleted, so the audit trail
+   * remains queryable via `listByJob` / `listByRun`.
+   *
+   * The method is independent of `invalidateByProfileVersion` — each
+   * carries its own `where` clause (one keyed on `profileVersionId`, this
+   * one keyed on `filterConfigVersionId`) and can be called in either
+   * order. A row tied to a specific profile version AND a specific
+   * filter config version can be flipped inactive by calling either
+   * method alone (the first call wins; the second call is a no-op).
+   *
+   * Idempotent — re-running with no matching active rows returns 0. The
+   * return value is the count of rows actually flipped so the caller can
+   * include the invalidation number in its audit output.
+   */
+  async invalidateByFilterConfigVersion(filterConfigVersionId: number): Promise<number> {
+    return this.ctx.db.transaction((tx) => {
+      const before = tx
+        .select({ id: filterResults.id })
+        .from(filterResults)
+        .where(
+          and(
+            eq(filterResults.filterConfigVersionId, filterConfigVersionId),
+            eq(filterResults.active, true),
+          ),
+        )
+        .all();
+      if (before.length === 0) return 0;
+      tx.update(filterResults)
+        .set({ active: false })
+        .where(
+          and(
+            eq(filterResults.filterConfigVersionId, filterConfigVersionId),
+            eq(filterResults.active, true),
+          ),
+        )
+        .run();
+      return before.length;
+    });
+  }
 }
