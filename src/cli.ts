@@ -53,6 +53,24 @@ import { defaultInquirerEditorPrompts } from './profile/editing/index.js';
 import { ConfigureFiltersService } from './filter/configure-service.js';
 import { type FilterPrompts } from './filter/prompts.js';
 import { defaultInquirerFilterPrompts } from './filter/prompts-inquirer.js';
+import {
+  InitOrchestrator,
+  defaultInquirerInitPrompts,
+  type InitPrompts,
+  type InitOrchestratorOptions,
+} from './init/index.js';
+import {
+  configureFiltersPromptAdapter,
+  configureSearchPromptAdapter,
+  profileApprovalPromptAdapter,
+  profileRejectionPromptAdapter,
+} from './init/cli-adapters.js';
+import type { ProfileApprovalPrompts } from './profile/approval-service.js';
+import type { ProfileRejectionPrompts } from './profile/rejection-service.js';
+import { resolveOpenAiClientOrNull } from './init/openai-resolve.js';
+import { formatInitSummary } from './init/format.js';
+import { pinoInitLogger } from './init/log.js';
+import { createLogger } from './logging/logger.js';
 
 const cliFileSystem: FileSystem = {
   async readFile(path) {
@@ -79,6 +97,29 @@ const cliFileSystem: FileSystem = {
     await rm(path, { force: true });
   },
 };
+
+/**
+ * Root structured logger used by the CLI subcommands. The default
+ * configuration reads the LOG_LEVEL environment variable (falling back
+ * to `info`) and writes to stdout.
+ */
+const rootLogger = createLogger({
+  level: ((): 'info' | 'warn' | 'error' | 'debug' | 'trace' | 'fatal' | 'silent' => {
+    const raw = process.env['LOG_LEVEL'];
+    if (
+      raw === 'debug' ||
+      raw === 'trace' ||
+      raw === 'warn' ||
+      raw === 'error' ||
+      raw === 'fatal' ||
+      raw === 'silent'
+    ) {
+      return raw;
+    }
+    return 'info';
+  })(),
+  prettyTerminal: false,
+});
 
 function isCommanderError(error: unknown): error is { code: string; message: string } {
   return (
@@ -565,10 +606,21 @@ export function createProgram(
     prompts?: SearchPrompts;
     openaiClient?: OpenAIClient;
     filterPrompts?: FilterPrompts;
+    initPrompts?: InitPrompts;
+    /** Optional scripted search prompts for the `init` subcommand. */
+    initSearchPrompts?: SearchPrompts;
+    /** Optional scripted approval prompts for the `init` subcommand. */
+    initApprovalPrompts?: ProfileApprovalPrompts;
+    /** Optional scripted rejection prompts for the `init` subcommand. */
+    initRejectionPrompts?: ProfileRejectionPrompts;
   } = {},
 ): Command {
   const prompts: SearchPrompts = options.prompts ?? defaultInquirerPrompts;
   const filterPrompts: FilterPrompts | undefined = options.filterPrompts;
+  const initPrompts: InitPrompts | undefined = options.initPrompts;
+  const initSearchPrompts: SearchPrompts | undefined = options.initSearchPrompts;
+  const initApprovalPrompts: ProfileApprovalPrompts | undefined = options.initApprovalPrompts;
+  const initRejectionPrompts: ProfileRejectionPrompts | undefined = options.initRejectionPrompts;
   const testHooks: { openaiClient?: OpenAIClient } =
     options.openaiClient !== undefined ? { openaiClient: options.openaiClient } : {};
   const program = new Command()
@@ -697,6 +749,42 @@ export function createProgram(
               process.stdout.write('filter config discarded\n');
               break;
           }
+        } finally {
+          handle.close();
+        }
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  program
+    .command('init')
+    .description('Interactively initialize JobHunter (paths, config, profile, filters). Resumable.')
+    .action(async () => {
+      try {
+        const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+        const handle = await initializeDatabase(platformPaths, {
+          migrationsFolder: resolveRepoRootForMigrations(),
+        });
+        try {
+          const repositories = createRepositories(handle);
+          // OpenAI key gate (Decision 4): null when absent.
+          const openaiClient = testHooks.openaiClient ?? resolveOpenAiClientOrNull();
+          const orchestratorOptions: InitOrchestratorOptions = {
+            paths: platformPaths,
+            repositories,
+            fileSystem: cliFileSystem,
+            prompts: initPrompts ?? defaultInquirerInitPrompts,
+            openaiClient,
+            searchPrompts: initSearchPrompts ?? configureSearchPromptAdapter(),
+            filterPrompts: filterPrompts ?? configureFiltersPromptAdapter(),
+            approvalPrompts: initApprovalPrompts ?? profileApprovalPromptAdapter(),
+            rejectionPrompts: initRejectionPrompts ?? profileRejectionPromptAdapter(),
+            logger: pinoInitLogger(rootLogger),
+          };
+          const orchestrator = new InitOrchestrator(orchestratorOptions);
+          const summary = await orchestrator.run(process.env);
+          process.stdout.write(`${formatInitSummary(summary)}\n`);
         } finally {
           handle.close();
         }

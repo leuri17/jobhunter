@@ -17,6 +17,7 @@ describe('CLI foundation', () => {
       'paths',
       'config',
       'configure',
+      'init',
       'profile',
     ]);
   });
