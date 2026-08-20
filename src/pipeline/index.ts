@@ -24,3 +24,10 @@ export { ScriptedPipelinePrompts, FailingPipelinePrompts } from './prompts.js';
 export { InquirerPipelinePrompts } from './prompts-inquirer.js';
 
 export { getApplicationVersion } from './version.js';
+
+export { PipelineOrchestrator } from './orchestrator.js';
+export type {
+  PipelineOrchestratorOptions,
+  PipelineRunInput,
+  PipelineRunResult,
+} from './orchestrator.js';

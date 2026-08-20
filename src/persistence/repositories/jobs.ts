@@ -396,6 +396,19 @@ export class JobRepository {
     return rows.map(discoveryEventRowFromRecord);
   }
 
+  /**
+   * Read-only: fetch every discovery event for a given pipeline run
+   * (TASK-015 Decision 13 + Task 13). Used by the pipeline
+   * orchestrator to enumerate the jobs discovered during the run.
+   *
+   * Functionally equivalent to `listDiscoveryEventsByRun`. Kept as
+   * a distinct method to preserve the discoverability + matching
+   * unit-test contract documented in the TASK-015 plan.
+   */
+  async findEventsByRun(pipelineRunId: number): Promise<readonly DiscoveryEventRow[]> {
+    return this.listDiscoveryEventsByRun(pipelineRunId);
+  }
+
   async recordDiscoveryError(input: Omit<DiscoveryErrorRow, 'id'>): Promise<number> {
     const result = this.ctx.db
       .insert(discoveryErrors)
