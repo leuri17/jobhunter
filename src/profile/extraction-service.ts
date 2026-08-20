@@ -34,6 +34,7 @@ import {
   calculateExtractionFingerprint,
 } from './openai/fingerprint.js';
 import { runWithRetry, type RetryOptions } from './openai/retry.js';
+import { buildProfileExtractionPrompt } from './openai/prompt.js';
 import {
   STRUCTURED_OUTPUT_SCHEMA_VERSION,
   createExtractedProfileSchema,
@@ -130,8 +131,11 @@ export interface ProfileExtractionServiceOptions {
 
 // ---------- Internals ----------
 
-/** OpenAI structured-output schema name. Matches the projected JSON Schema in `prompt.ts`. */
-const RESPONSE_SCHEMA_NAME = 'professional_profile_extraction_v1';
+/** OpenAI structured-output schema name. Must match an entry in
+ *  `RESPONSE_SCHEMA_REGISTRY` (see `src/profile/openai/response-schemas.ts`).
+ *  The client looks the name up at request time to find the matching
+ *  JSON Schema + version. */
+const RESPONSE_SCHEMA_NAME = 'ExtractedProfile';
 
 /**
  * Default upper bound on the total UTF-8 size of all source `extractedText`
@@ -289,18 +293,30 @@ export class ProfileExtractionService {
       });
     }
 
-    // 5. Build the OpenAI extraction request.
+    // 5. Build the OpenAI extraction request. The `OpenAIClient` is a pure
+    //    transport — it does not build messages internally. We call
+    //    `buildProfileExtractionPrompt` here to produce the system + user
+    //    chat payload, then attach the messages to the request.
+    const sourcesForPrompt: OpenAIExtractionSource[] = sources.map((source) => ({
+      sourceId: source.sourceId,
+      originalFilename: source.originalFilename,
+      extractedText: source.extractedText,
+    }));
+    const { systemMessage, userMessage } = buildProfileExtractionPrompt({
+      promptVersion: PROFILE_EXTRACTION_PROMPT_VERSION,
+      sources: sourcesForPrompt,
+    });
     const request: OpenAIExtractionRequest = {
       promptVersion: PROFILE_EXTRACTION_PROMPT_VERSION,
       model: this.config.model,
       reasoningEffort: this.config.reasoningEffort,
-      sources: sources.map<OpenAIExtractionSource>((source) => ({
-        sourceId: source.sourceId,
-        originalFilename: source.originalFilename,
-        extractedText: source.extractedText,
-      })),
+      sources: sourcesForPrompt,
       responseSchemaName: RESPONSE_SCHEMA_NAME,
       structuredOutputSchemaVersion: STRUCTURED_OUTPUT_SCHEMA_VERSION,
+      messages: [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: userMessage },
+      ],
     };
 
     // 6-7. Call OpenAI with the SPEC §25.3 retry policy. Parse and Zod-validate

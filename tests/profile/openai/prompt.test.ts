@@ -4,16 +4,14 @@ import { PROFILE_EXTRACTION_PROMPT_VERSION } from '../../../src/profile/openai/f
 import {
   STRUCTURED_OUTPUT_SCHEMA,
   buildProfileExtractionPrompt,
+  type ProfileExtractionPromptInput,
 } from '../../../src/profile/openai/prompt.js';
-import type { OpenAIExtractionRequest } from '../../../src/profile/openai/types.js';
 
-function request(overrides: Partial<OpenAIExtractionRequest> = {}): OpenAIExtractionRequest {
+function request(
+  overrides: Partial<ProfileExtractionPromptInput> = {},
+): ProfileExtractionPromptInput {
   return {
     promptVersion: PROFILE_EXTRACTION_PROMPT_VERSION,
-    model: 'gpt-5.6-sol',
-    reasoningEffort: 'medium',
-    responseSchemaName: 'professional_profile_extraction_v1',
-    structuredOutputSchemaVersion: 1,
     sources: [
       { sourceId: 'source_1', originalFilename: 'cv.md', extractedText: 'Senior engineer at Acme' },
       {

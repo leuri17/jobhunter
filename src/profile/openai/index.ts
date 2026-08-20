@@ -35,11 +35,25 @@ export {
 
 // Operation types.
 export type {
+  OpenAIChatMessage,
   OpenAIExtractionSource,
   OpenAIExtractionRequest,
   OpenAIExtractionRawResponse,
   OpenAIClient,
 } from './types.js';
+
+// Response schema registry — looks up the JSON Schema the OpenAI SDK
+// sends in `response_format.json_schema.schema`. The scoring schema
+// (`ScoringStructuredOutput`) is registered here so the same client
+// surface serves both profile extraction and job scoring.
+export {
+  getResponseSchema,
+  RESPONSE_SCHEMA_REGISTRY,
+  RESPONSE_SCHEMA_NAMES,
+  UnknownResponseSchemaError,
+  ResponseSchemaVersionMismatchError,
+  type ResponseSchemaEntry,
+} from './response-schemas.js';
 
 // Production client (the only module that imports the `openai` SDK).
 export { createDefaultOpenAIClient } from './client.js';

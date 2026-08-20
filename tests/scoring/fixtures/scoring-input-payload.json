@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "systemPrompt": "You are a job-matching scorer. Return a JSON object matching the schema.",
+  "userPrompt": "Score the following job against the candidate's profile and the 7-category rubric. Return the JSON object with categoryScores (7 categories, each with score/explanation/evidence), keyMatches, importantGaps, importantConcerns, inferredSeniority, and recommendationSummary.\n\n## Candidate profile\n\nName: Jane Doe\nHeadline: Senior Full-Stack Engineer\nSkills: TypeScript, Python, Node.js, PostgreSQL, AWS, Docker, Kubernetes\nYears of experience: 7\nSpoken languages: English (native), Spanish (conversational)\nPreferred role: Senior IC, distributed systems, platform engineering\nLocation preference: Remote (US)\nDomain experience: Healthcare (2y), Fintech (3y), AdTech (2y)\n\n## Job\n\nTitle: Senior Full-Stack Engineer\nCompany: Acme Corp\nLocation: Remote (US)\nDescription: We are looking for a Senior Full-Stack Engineer to join our platform team. You will design and build distributed services in TypeScript and Python, lead architectural reviews, and mentor a team of 4-6 engineers. Requirements: 5+ years of experience with Node.js or Python, strong SQL skills, experience with AWS or GCP, excellent communication skills.\n\n## Rubric (7 categories, weights in parens)\n\n1. technicalSkills (0.30) — Match between job requirements and the candidate's technical skills.\n2. relevantExperience (0.25) — Years and relevance of experience in similar roles or domains.\n3. roleResponsibilityFit (0.20) — Alignment between the job's responsibilities and the candidate's preferred role.\n4. seniorityFit (0.10) — Match between the job's seniority level and the candidate's experience.\n5. domainIndustryFit (0.05) — Match between the job's industry and the candidate's domain experience.\n6. spokenLanguageCompatibility (0.05) — Match between the job's required languages and the candidate's spoken languages.\n7. locationWorkplaceCompatibility (0.05) — Match between the job's location/workplace and the candidate's preferences.",
+  "rubric": {
+    "technicalSkills": {
+      "weight": 0.3,
+      "description": "Match between job requirements and the candidate's technical skills."
+    },
+    "relevantExperience": {
+      "weight": 0.25,
+      "description": "Years and relevance of experience in similar roles or domains."
+    },
+    "roleResponsibilityFit": {
+      "weight": 0.2,
+      "description": "Alignment between the job's responsibilities and the candidate's preferred role."
+    },
+    "seniorityFit": {
+      "weight": 0.1,
+      "description": "Match between the job's seniority level and the candidate's experience."
+    },
+    "domainIndustryFit": {
+      "weight": 0.05,
+      "description": "Match between the job's industry and the candidate's domain experience."
+    },
+    "spokenLanguageCompatibility": {
+      "weight": 0.05,
+      "description": "Match between the job's required languages and the candidate's spoken languages."
+    },
+    "locationWorkplaceCompatibility": {
+      "weight": 0.05,
+      "description": "Match between the job's location/workplace and the candidate's preferences."
+    }
+  }
+}

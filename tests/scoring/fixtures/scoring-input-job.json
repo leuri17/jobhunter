@@ -1,0 +1,21 @@
+{
+  "id": 1,
+  "sourceJobId": "linkedin-job-1",
+  "searchExecutionId": 1,
+  "filterResultId": 1,
+  "title": "Senior Full-Stack Engineer",
+  "company": "Acme Corp",
+  "location": "Remote (US)",
+  "description": "We are looking for a Senior Full-Stack Engineer to join our platform team. You will design and build distributed services in TypeScript and Python, lead architectural reviews, and mentor a team of 4-6 engineers. Requirements: 5+ years of experience with Node.js or Python, strong SQL skills, experience with AWS or GCP, excellent communication skills.",
+  "normalizedTitle": "Senior Full-Stack Engineer",
+  "normalizedCompany": "Acme Corp",
+  "normalizedLocation": "Remote (US)",
+  "normalizedDescription": "We are looking for a Senior Full-Stack Engineer to join our platform team. You will design and build distributed services in TypeScript and Python, lead architectural reviews, and mentor a team of 4-6 engineers. Requirements: 5+ years of experience with Node.js or Python, strong SQL skills, experience with AWS or GCP, excellent communication skills.",
+  "language": "en",
+  "workplaceType": "remote",
+  "employmentType": "full_time",
+  "postedAt": "2026-08-15T10:00:00.000Z",
+  "extractionStatus": "complete",
+  "createdAt": "2026-08-15T10:00:00.000Z",
+  "updatedAt": "2026-08-15T10:00:00.000Z"
+}

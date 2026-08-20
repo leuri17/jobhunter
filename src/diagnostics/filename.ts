@@ -6,6 +6,13 @@ export interface DiagnosticScope {
   readonly jobId?: number | null;
   readonly extractionAttemptId?: number | null;
   readonly discoveryErrorId?: number | null;
+  /**
+   * TASK-014: the auto-increment primary key of the `openai_request_metadata`
+   * row that captured the failing OpenAI request. Optional because
+   * diagnostics written before the OpenAI metadata row is committed
+   * (or for non-OpenAI failures) do not yet have this id.
+   */
+  readonly openaiRequestId?: number | null;
 }
 
 export interface SafeFilenameOptions {
@@ -61,6 +68,7 @@ export function resolveScopeDirectory(scope: DiagnosticScope): string {
   if (isPositiveId(scope.jobId)) segments.push(`job-${scope.jobId}`);
   if (isPositiveId(scope.extractionAttemptId)) segments.push(`extraction-${scope.extractionAttemptId}`);
   if (isPositiveId(scope.discoveryErrorId)) segments.push(`discovery-error-${scope.discoveryErrorId}`);
+  if (isPositiveId(scope.openaiRequestId)) segments.push(`openai-${scope.openaiRequestId}`);
   return segments.length === 0 ? 'unscoped' : segments.join('/');
 }
 
@@ -78,6 +86,7 @@ export function buildSafeFilename(opts: SafeFilenameOptions): SafeFilenameResult
   if (isPositiveId(opts.scope.jobId)) parts.push(`job-${opts.scope.jobId}`);
   if (isPositiveId(opts.scope.extractionAttemptId)) parts.push(`extraction-${opts.scope.extractionAttemptId}`);
   if (isPositiveId(opts.scope.discoveryErrorId)) parts.push(`discovery-error-${opts.scope.discoveryErrorId}`);
+  if (isPositiveId(opts.scope.openaiRequestId)) parts.push(`openai-${opts.scope.openaiRequestId}`);
   parts.push(ts);
   if (opts.suffix !== undefined && opts.suffix !== '') {
     const normalizedSuffix = opts.suffix.replace(/^-+/, '');

@@ -10,9 +10,13 @@ const REQUEST: OpenAIExtractionRequest = {
   promptVersion: 'profile-extraction-prompt@v1',
   model: 'gpt-5.6-sol',
   reasoningEffort: 'medium',
-  responseSchemaName: 'professional_profile_extraction_v1',
+  responseSchemaName: 'ExtractedProfile',
   structuredOutputSchemaVersion: 1,
   sources: [{ sourceId: 'source_1', originalFilename: 'cv.md', extractedText: 'Hello' }],
+  messages: [
+    { role: 'system', content: 'system prompt' },
+    { role: 'user', content: 'user prompt' },
+  ],
 };
 
 function response(rawJsonText: string): OpenAIExtractionRawResponse {

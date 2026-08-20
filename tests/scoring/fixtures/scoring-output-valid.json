@@ -1,0 +1,44 @@
+{
+  "categoryScores": {
+    "technicalSkills": {
+      "score": 85,
+      "explanation": "Strong TypeScript + Python + AWS match. The job's stack is a near-perfect fit for the candidate's skills.",
+      "evidence": ["5+ years TypeScript", "3+ years Python", "AWS certified"]
+    },
+    "relevantExperience": {
+      "score": 78,
+      "explanation": "5+ years in similar platform engineering roles. Slightly under the 7+ year soft expectation for the senior+ bracket.",
+      "evidence": ["Led platform team at Acme", "Built distributed services at scale"]
+    },
+    "roleResponsibilityFit": {
+      "score": 82,
+      "explanation": "Senior IC + platform engineering is a strong match for the candidate's preferred role.",
+      "evidence": ["Preferred role: Senior IC, distributed systems, platform engineering"]
+    },
+    "seniorityFit": {
+      "score": 75,
+      "explanation": "7 years experience vs the 5+ requirement; candidate meets the bar but the job's responsibilities suggest a senior+ IC.",
+      "evidence": ["7y experience", "5+ year requirement"]
+    },
+    "domainIndustryFit": {
+      "score": 90,
+      "explanation": "Healthcare + Fintech background overlaps with the platform's regulated-industry customers.",
+      "evidence": ["2y healthcare ML", "3y fintech platform"]
+    },
+    "spokenLanguageCompatibility": {
+      "score": 100,
+      "explanation": "Native English speaker; the job description is in English.",
+      "evidence": ["English (native)"]
+    },
+    "locationWorkplaceCompatibility": {
+      "score": 100,
+      "explanation": "Remote (US) matches the candidate's remote (US) preference exactly.",
+      "evidence": ["Preferred: Remote (US)", "Job: Remote (US)"]
+    }
+  },
+  "keyMatches": ["TypeScript", "Python", "AWS", "Platform engineering", "Senior IC"],
+  "importantGaps": ["7+ years experience expected (candidate has 7y, meets the floor)"],
+  "importantConcerns": [],
+  "inferredSeniority": "senior",
+  "recommendationSummary": "Strong match. The candidate's TypeScript + Python + AWS skills and 7 years of platform engineering experience align well with the job's requirements. The job's remote (US) location and senior IC role are a strong fit for the candidate's preferences."
+}

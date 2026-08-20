@@ -1,0 +1,20 @@
+{
+  "categoryScores": {
+    "technicalSkills": {
+      "score": 87.5,
+      "explanation": "Intentionally a decimal — violates .int() at parse time.",
+      "evidence": []
+    },
+    "relevantExperience": { "score": 50, "explanation": "x", "evidence": [] },
+    "roleResponsibilityFit": { "score": 50, "explanation": "x", "evidence": [] },
+    "seniorityFit": { "score": 50, "explanation": "x", "evidence": [] },
+    "domainIndustryFit": { "score": 50, "explanation": "x", "evidence": [] },
+    "spokenLanguageCompatibility": { "score": 50, "explanation": "x", "evidence": [] },
+    "locationWorkplaceCompatibility": { "score": 50, "explanation": "x", "evidence": [] }
+  },
+  "keyMatches": [],
+  "importantGaps": [],
+  "importantConcerns": [],
+  "inferredSeniority": "senior",
+  "recommendationSummary": "x"
+}

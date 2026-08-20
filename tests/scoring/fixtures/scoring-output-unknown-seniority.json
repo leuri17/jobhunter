@@ -1,0 +1,16 @@
+{
+  "categoryScores": {
+    "technicalSkills": { "score": 50, "explanation": "x", "evidence": [] },
+    "relevantExperience": { "score": 50, "explanation": "x", "evidence": [] },
+    "roleResponsibilityFit": { "score": 50, "explanation": "x", "evidence": [] },
+    "seniorityFit": { "score": 50, "explanation": "x", "evidence": [] },
+    "domainIndustryFit": { "score": 50, "explanation": "x", "evidence": [] },
+    "spokenLanguageCompatibility": { "score": 50, "explanation": "x", "evidence": [] },
+    "locationWorkplaceCompatibility": { "score": 50, "explanation": "x", "evidence": [] }
+  },
+  "keyMatches": [],
+  "importantGaps": [],
+  "importantConcerns": [],
+  "inferredSeniority": "intern",
+  "recommendationSummary": "x"
+}

@@ -22,7 +22,7 @@ import {
   OpenAIUnsupportedModelError,
   ProfileExtractionError,
 } from './errors.js';
-import { buildProfileExtractionPrompt, STRUCTURED_OUTPUT_SCHEMA } from './prompt.js';
+import { getResponseSchema } from './response-schemas.js';
 import type {
   OpenAIExtractionRawResponse,
   OpenAIClient,
@@ -52,6 +52,13 @@ const QUOTA_ERROR_CODES: ReadonlySet<string> = new Set([
  * SDK. The SDK is imported only inside this module — every other file
  * in `src/profile/` (and all tests) sees the `OpenAIClient` interface
  * only, so the dependency boundary stays clean.
+ *
+ * The client is a pure transport: it forwards the pre-built `messages`
+ * from the request, looks up the response schema in
+ * `RESPONSE_SCHEMA_REGISTRY`, and forwards an optional
+ * `maxCompletionTokens` cap to the SDK. Prompt building is the
+ * caller's responsibility (see `buildProfileExtractionPrompt` for
+ * profile extraction; `buildScoringPrompt` will land in Wave A).
  */
 export function createDefaultOpenAIClient(options: {
   readonly apiKey: string;
@@ -62,23 +69,26 @@ export function createDefaultOpenAIClient(options: {
 
   return {
     async extract(request: OpenAIExtractionRequest): Promise<OpenAIExtractionRawResponse> {
-      const { systemMessage, userMessage } = buildProfileExtractionPrompt(request);
+      const responseSchema = getResponseSchema(
+        request.responseSchemaName,
+        request.structuredOutputSchemaVersion,
+      );
       try {
         const completion = await sdk.chat.completions.create({
           model: request.model,
           reasoning_effort: request.reasoningEffort,
-          messages: [
-            { role: 'system', content: systemMessage },
-            { role: 'user', content: userMessage },
-          ],
+          messages: [...request.messages],
           response_format: {
             type: 'json_schema',
             json_schema: {
               name: request.responseSchemaName,
-              schema: STRUCTURED_OUTPUT_SCHEMA,
+              schema: responseSchema.schema,
               strict: true,
             },
           },
+          ...(request.maxCompletionTokens !== undefined && {
+            max_completion_tokens: request.maxCompletionTokens,
+          }),
         });
 
         const choice = completion.choices[0];

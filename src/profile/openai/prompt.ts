@@ -1,6 +1,6 @@
 import { PROFILE_EXTRACTION_PROMPT_VERSION } from './fingerprint.js';
 import { ExtractedProfileSchema, STRUCTURED_OUTPUT_SCHEMA_VERSION } from './structured-output.js';
-import type { OpenAIExtractionRequest } from './types.js';
+import type { OpenAIExtractionSource } from './types.js';
 
 /**
  * JSON Schema sent to OpenAI in `response_format.json_schema.schema`.
@@ -94,6 +94,21 @@ function makeNullableStringWithNullEnum(field: Record<string, unknown>): void {
 }
 
 /**
+ * Inputs the profile-extraction prompt builder actually reads.
+ *
+ * The full `OpenAIExtractionRequest` includes the pre-built `messages`
+ * field, but the prompt builder runs BEFORE the caller knows the
+ * messages. Declaring a narrow input type here keeps the request
+ * contract (`messages` is required) and the prompt builder contract
+ * (only the two fields it needs) honest. The full request is still
+ * accepted at runtime because every other field is ignored.
+ */
+export interface ProfileExtractionPromptInput {
+  readonly promptVersion: string;
+  readonly sources: readonly OpenAIExtractionSource[];
+}
+
+/**
  * Versioned profile-extraction prompt (SPEC §14.2, prompt version
  * `profile-extraction-prompt@v1`).
  *
@@ -106,7 +121,7 @@ function makeNullableStringWithNullEnum(field: Record<string, unknown>): void {
  * and each source's normalized text, delimited by a banner line that
  * uses the convention `--- sourceId: source_<int> (<originalFilename>) ---`.
  */
-export function buildProfileExtractionPrompt(request: OpenAIExtractionRequest): {
+export function buildProfileExtractionPrompt(request: ProfileExtractionPromptInput): {
   systemMessage: string;
   userMessage: string;
 } {

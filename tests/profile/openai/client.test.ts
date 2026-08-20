@@ -17,9 +17,13 @@ const REQUEST: OpenAIExtractionRequest = {
   promptVersion: 'profile-extraction-prompt@v1',
   model: 'gpt-5.6-sol',
   reasoningEffort: 'medium',
-  responseSchemaName: 'professional_profile_extraction_v1',
+  responseSchemaName: 'ExtractedProfile',
   structuredOutputSchemaVersion: 1,
   sources: [{ sourceId: 'source_1', originalFilename: 'cv.md', extractedText: 'Hello' }],
+  messages: [
+    { role: 'system', content: 'system prompt' },
+    { role: 'user', content: 'user prompt' },
+  ],
 };
 
 // Hoisted so the `openai` mock below can close over it.
@@ -119,7 +123,7 @@ describe('createDefaultOpenAIClient', () => {
     expect(fakeConstructor).toHaveBeenCalledWith({ apiKey: 'sk-test', timeout: 12_345 });
   });
 
-  it('sends the system + user messages produced by buildProfileExtractionPrompt', async () => {
+  it('passes request.messages through to the OpenAI SDK unchanged', async () => {
     fakeCreate.mockResolvedValueOnce({
       choices: [{ message: { content: '{}' }, finish_reason: 'stop', index: 0 }],
       usage: null,
@@ -132,12 +136,75 @@ describe('createDefaultOpenAIClient', () => {
     const call = fakeCreate.mock.calls[0]?.[0] as {
       messages: { role: string; content: string }[];
     };
-    expect(call.messages).toHaveLength(2);
-    expect(call.messages[0]?.role).toBe('system');
-    expect(call.messages[0]?.content).toContain('JSON');
-    expect(call.messages[1]?.role).toBe('user');
-    expect(call.messages[1]?.content).toContain('source_1');
-    expect(call.messages[1]?.content).toContain('Hello');
+    // The client is a pure transport — it must forward the caller's
+    // pre-built messages exactly. Prompt construction is the caller's
+    // job (see `buildProfileExtractionPrompt` for profile extraction
+    // and `buildScoringPrompt` for scoring, Wave A).
+    expect(call.messages).toEqual(REQUEST.messages);
+  });
+
+  it('passes max_completion_tokens to the SDK when the request sets it', async () => {
+    fakeCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{}' }, finish_reason: 'stop', index: 0 }],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    await client.extract({ ...REQUEST, maxCompletionTokens: 2000 });
+
+    const call = fakeCreate.mock.calls[0]?.[0] as { max_completion_tokens?: number };
+    expect(call.max_completion_tokens).toBe(2000);
+  });
+
+  it('omits max_completion_tokens from the SDK call when the request does not set it', async () => {
+    fakeCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{}' }, finish_reason: 'stop', index: 0 }],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    await client.extract(REQUEST);
+
+    const call = fakeCreate.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect('max_completion_tokens' in call).toBe(false);
+  });
+
+  it('looks up the response schema in RESPONSE_SCHEMA_REGISTRY and sends it to the SDK', async () => {
+    fakeCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{}' }, finish_reason: 'stop', index: 0 }],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    await client.extract(REQUEST);
+
+    const call = fakeCreate.mock.calls[0]?.[0] as {
+      response_format: {
+        type: string;
+        json_schema: { name: string; schema: Record<string, unknown>; strict: boolean };
+      };
+    };
+    expect(call.response_format.type).toBe('json_schema');
+    expect(call.response_format.json_schema.name).toBe('ExtractedProfile');
+    expect(call.response_format.json_schema.strict).toBe(true);
+    // The schema sent to the SDK is the JSON Schema projection of
+    // `ExtractedProfileSchema`, not the Zod source.
+    expect(call.response_format.json_schema.schema['type']).toBe('object');
+    expect(call.response_format.json_schema.schema['properties']).toBeDefined();
+  });
+
+  it('throws UnknownResponseSchemaError when the request uses an unregistered name', async () => {
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    await expect(
+      client.extract({ ...REQUEST, responseSchemaName: 'NoSuchSchema' }),
+    ).rejects.toThrow(/Unknown response schema name/);
+  });
+
+  it('throws ResponseSchemaVersionMismatchError when the request version does not match', async () => {
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    await expect(
+      client.extract({ ...REQUEST, structuredOutputSchemaVersion: 999 }),
+    ).rejects.toThrow(/version mismatch/);
   });
 
   it('translates 401 / AuthenticationError to OpenAIAuthenticationError', async () => {
