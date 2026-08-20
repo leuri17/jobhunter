@@ -71,6 +71,24 @@ import { resolveOpenAiClientOrNull } from './init/openai-resolve.js';
 import { formatInitSummary } from './init/format.js';
 import { pinoInitLogger } from './init/log.js';
 import { createLogger } from './logging/logger.js';
+import {
+  PipelineOrchestrator,
+  PipelineOpenAIKeyMissingError,
+  formatRunSummary,
+  formatScoringPlan,
+  formatTopNTable,
+  InquirerPipelinePrompts,
+  pinoPipelineLogger,
+  getApplicationVersion,
+  type PipelinePrompts,
+  type PipelineRunResult,
+} from './pipeline/index.js';
+import { LinkedInDiscoveryService } from './linkedin/discovery-service.js';
+import { LinkedInExtractionService } from './linkedin/extraction/service.js';
+import { FilterApplyService } from './filter/service.js';
+import { ScoringService } from './scoring/service.js';
+import { createDefaultBrowserSession } from './linkedin/browser-default.js';
+import { createDefaultDiagnosticManager } from './diagnostics/manager-default.js';
 
 const cliFileSystem: FileSystem = {
   async readFile(path) {
@@ -601,6 +619,135 @@ async function profileEditCommand(rawId: string): Promise<void> {
   }
 }
 
+async function runCommand(
+  yes: boolean,
+  jsonOutput: boolean,
+  pipelinePrompts: PipelinePrompts,
+): Promise<void> {
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+
+  // OpenAI key gate (Decision 11). The CLI validates the env
+  // variable here (mirrors the `profile extract` pre-validation),
+  // BEFORE the orchestrator's prerequisite check runs.
+  const apiKey = process.env['OPENAI_API_KEY'];
+  if (typeof apiKey !== 'string' || apiKey.length === 0) {
+    handle.close();
+    throw new PipelineOpenAIKeyMissingError(
+      'openai_api_key_missing',
+      'OPENAI_API_KEY environment variable is required to run "jobhunter run". Set OPENAI_API_KEY before invoking this command.',
+    );
+  }
+
+  // SIGINT handling (Decision 5 + SPEC §40): the first SIGINT
+  // triggers graceful cancellation; the second SIGINT force-exits.
+  // The listener is removed in the finally block to keep the
+  // process state clean for any subsequent invocations.
+  const controller = new AbortController();
+  let sigIntCount = 0;
+  const onSigInt = (): void => {
+    sigIntCount += 1;
+    if (sigIntCount === 1) {
+      process.stderr.write('cancellation requested; finishing current operations...\n');
+      controller.abort();
+    } else {
+      process.stderr.write('force exit (second SIGINT)\n');
+      process.exit(1);
+    }
+  };
+  process.once('SIGINT', onSigInt);
+
+  try {
+    const repositories = createRepositories(handle);
+    const loaded = await loadConfig(platformPaths, cliFileSystem);
+    const browserSession = createDefaultBrowserSession({
+      navigationMs: loaded.config.scraper.timeouts.navigationMs,
+      initialResultsMs: loaded.config.scraper.timeouts.initialResultsMs,
+      overlayDismissalMs: loaded.config.scraper.timeouts.overlayDismissalMs,
+    });
+    const diagnosticManager = createDefaultDiagnosticManager({
+      config: loaded.config.diagnostics.onScraperError,
+      paths: platformPaths,
+      repositories,
+    });
+    const discoveryService = new LinkedInDiscoveryService({
+      repositories,
+      browserSession,
+      diagnosticManager,
+      config: {
+        navigationMs: loaded.config.scraper.timeouts.navigationMs,
+        initialResultsMs: loaded.config.scraper.timeouts.initialResultsMs,
+        overlayDismissalMs: loaded.config.scraper.timeouts.overlayDismissalMs,
+        maxNoProgressAttempts: loaded.config.scraper.maxNoProgressAttempts,
+        maxIterations: 5,
+      },
+    });
+    const extractionService = new LinkedInExtractionService({
+      repositories,
+      browserSession,
+      diagnosticManager,
+      config: {
+        navigationMs: loaded.config.scraper.timeouts.navigationMs,
+        detailPanelMs: loaded.config.scraper.timeouts.detailPanelMs,
+        dedicatedPageMs: loaded.config.scraper.timeouts.dedicatedPageMs,
+        overlayDismissalMs: loaded.config.scraper.timeouts.overlayDismissalMs,
+      },
+    });
+    const filterApplyService = new FilterApplyService({ repositories });
+    const openaiClient = createDefaultOpenAIClient({ apiKey });
+    const scoringService = new ScoringService({
+      repositories,
+      openaiClient,
+      config: {
+        model: loaded.config.openai.jobScoring.model,
+        reasoningEffort: loaded.config.openai.jobScoring.reasoningEffort,
+        concurrency: loaded.config.openai.jobScoring.concurrency,
+      },
+    });
+    const orchestrator = new PipelineOrchestrator({
+      repositories,
+      browserSession,
+      discoveryService,
+      extractionService,
+      filterApplyService,
+      scoringService,
+      diagnosticManager,
+      config: {
+        rawConfig: loaded.config,
+        hash: loaded.hash,
+        schemaVersion: 1,
+      },
+      prompts: pipelinePrompts,
+      confirmScoring: yes,
+      env: process.env,
+      applicationVersion: getApplicationVersion(),
+      logger: pinoPipelineLogger(rootLogger),
+    });
+    const result: PipelineRunResult = await orchestrator.run({});
+    if (jsonOutput) {
+      const payload = {
+        ...result.summary,
+        scoringPlan: result.scoringPlan,
+        topN: result.topN,
+      };
+      process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    } else {
+      process.stdout.write(`${formatRunSummary(result.summary)}\n`);
+      if (result.scoringPlan !== null) {
+        process.stdout.write(`\n${formatScoringPlan(result.scoringPlan)}\n`);
+      }
+      process.stdout.write(
+        `\n${formatTopNTable(result.topN, process.stdout.columns ?? 120)}\n`,
+      );
+    }
+  } finally {
+    process.removeListener('SIGINT', onSigInt);
+    handle.close();
+  }
+}
+
 export function createProgram(
   options: {
     prompts?: SearchPrompts;
@@ -613,6 +760,8 @@ export function createProgram(
     initApprovalPrompts?: ProfileApprovalPrompts;
     /** Optional scripted rejection prompts for the `init` subcommand. */
     initRejectionPrompts?: ProfileRejectionPrompts;
+    /** Optional scripted pipeline prompts for the `run` subcommand. */
+    pipelinePrompts?: PipelinePrompts;
   } = {},
 ): Command {
   const prompts: SearchPrompts = options.prompts ?? defaultInquirerPrompts;
@@ -621,6 +770,7 @@ export function createProgram(
   const initSearchPrompts: SearchPrompts | undefined = options.initSearchPrompts;
   const initApprovalPrompts: ProfileApprovalPrompts | undefined = options.initApprovalPrompts;
   const initRejectionPrompts: ProfileRejectionPrompts | undefined = options.initRejectionPrompts;
+  const pipelinePrompts: PipelinePrompts | undefined = options.pipelinePrompts;
   const testHooks: { openaiClient?: OpenAIClient } =
     options.openaiClient !== undefined ? { openaiClient: options.openaiClient } : {};
   const program = new Command()
@@ -889,6 +1039,23 @@ export function createProgram(
     .action(async (id: string) => {
       try {
         await profileEditCommand(id);
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  program
+    .command('run')
+    .description(
+      'Run the full discovery + extraction + filtering + scoring pipeline (SPEC §33). ' +
+        'Requires OPENAI_API_KEY in the environment and an active approved profile + ' +
+        'active filter configuration.',
+    )
+    .option('--yes', 'bypass the scoring-plan confirmation', false)
+    .option('--json', 'emit a single JSON document to stdout', false)
+    .action(async (options: { yes: boolean; json: boolean }) => {
+      try {
+        await runCommand(options.yes, options.json, pipelinePrompts ?? new InquirerPipelinePrompts());
       } catch (error) {
         exitWithError(error);
       }
