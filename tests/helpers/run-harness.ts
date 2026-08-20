@@ -9,7 +9,7 @@ import {
 } from '../../src/persistence/connection.js';
 import { createRepositories, Repositories } from '../../src/persistence/repositories/index.js';
 import { DEFAULT_OPERATIONAL_CONFIG } from '../../src/config/schema.js';
-import { FakeBrowserSession } from '../../src/linkedin/fake-session.js';
+import { FakeBrowserSession, type CreateFakePage } from '../../src/linkedin/fake-session.js';
 import { LinkedInDiscoveryService } from '../../src/linkedin/discovery-service.js';
 import { LinkedInExtractionService } from '../../src/linkedin/extraction/service.js';
 import { FilterApplyService } from '../../src/filter/service.js';
@@ -39,6 +39,20 @@ export interface RunHarnessOptions {
   readonly fakeScripts?: readonly FakeOpenAIClientScript[];
   readonly logger?: PipelineLogger;
   readonly openAIClient?: OpenAIClient;
+  /**
+   * Optional `createPage` factory forwarded to `FakeBrowserSession`.
+   * When supplied, every `openPage` / `openFallbackPage` call invokes
+   * this factory instead of the default zero-card `FakePage`. Tests
+   * for the discovery → extraction → filter → scoring pipeline use
+   * this to drive cards through the orchestrator.
+   */
+  readonly createPage?: CreateFakePage;
+  /**
+   * Optional pre-existing `AbortSignal` forwarded to the
+   * `PipelineOrchestrator` (SPEC §29.3). When supplied, the
+   * orchestrator uses this signal instead of creating its own.
+   */
+  readonly cancelSignal?: AbortSignal;
 }
 
 export interface RunHarness {
@@ -66,7 +80,10 @@ export function buildRunHarness(options: RunHarnessOptions = {}): RunHarness {
   void migrationReport;
   const repositories = createRepositories(connection);
 
-  const browserSession = new FakeBrowserSession();
+  const browserSession =
+    options.createPage !== undefined
+      ? new FakeBrowserSession({ createPage: options.createPage })
+      : new FakeBrowserSession();
   const openAIClient: OpenAIClient = (() => {
     if (options.openAIClient !== undefined) return options.openAIClient;
     if (options.fakeScripts !== undefined) return new FakeOpenAIClient(options.fakeScripts);
@@ -152,6 +169,7 @@ export function buildRunHarness(options: RunHarnessOptions = {}): RunHarness {
     applicationVersion: options.applicationVersion ?? '0.1.0',
     ...(options.now !== undefined ? { now: options.now } : {}),
     logger: options.logger ?? noopPipelineLogger(),
+    ...(options.cancelSignal !== undefined ? { cancelSignal: options.cancelSignal } : {}),
   });
 
   return {

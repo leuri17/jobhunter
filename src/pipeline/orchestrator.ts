@@ -55,6 +55,14 @@ export interface PipelineOrchestratorOptions {
   readonly applicationVersion: string;
   readonly now?: () => Date;
   readonly logger?: PipelineLogger;
+  /**
+   * Optional pre-existing abort signal (SPEC §29.3). When supplied,
+   * the orchestrator uses this signal INSTEAD OF creating a new
+   * `AbortController` inside `run()`. The CLI passes its SIGINT-
+   * driven signal here; tests pass `AbortSignal.abort()` to short-
+   * circuit the run to the cancelled state.
+   */
+  readonly cancelSignal?: AbortSignal;
 }
 
 interface MutableRunStats {
@@ -101,6 +109,7 @@ export class PipelineOrchestrator {
   private readonly applicationVersion: string;
   private readonly now: () => Date;
   private readonly logger: PipelineLogger;
+  private readonly cancelSignal: AbortSignal | undefined;
 
   constructor(options: PipelineOrchestratorOptions) {
     this.repositories = options.repositories;
@@ -117,6 +126,7 @@ export class PipelineOrchestrator {
     this.applicationVersion = options.applicationVersion;
     this.now = options.now ?? ((): Date => new Date());
     this.logger = options.logger ?? noopPipelineLogger();
+    this.cancelSignal = options.cancelSignal;
   }
 
   async run(input: PipelineRunInput): Promise<PipelineRunResult> {
@@ -134,9 +144,9 @@ export class PipelineOrchestrator {
     });
     stats.searchesPlanned = matrix.length;
 
-    const controller = new AbortController();
-    let cancelled = false;
-    let cancellationReason: string | null = null;
+    const signal: AbortSignal = this.cancelSignal ?? new AbortController().signal;
+    let cancelled = signal.aborted;
+    let cancellationReason: string | null = cancelled ? 'user_cancelled' : null;
 
     const snapshot = buildConfigSnapshot(this.config.rawConfig);
     const activeProfile = await this.repositories.profileVersions.findActiveApproved();
@@ -166,7 +176,7 @@ export class PipelineOrchestrator {
     try {
       await this.browserSession.launch();
       for (let i = 0; i < matrix.length; i += 1) {
-        if (controller.signal.aborted) {
+        if (signal.aborted) {
           cancelled = true;
           cancellationReason = 'user_cancelled';
           break;
@@ -182,7 +192,7 @@ export class PipelineOrchestrator {
           searchId: searchExecution.id,
           url: searchExecution.generatedUrl,
         });
-        const ok = await this.runOneSearch(runId, searchExecution, controller.signal, perJobs, stats);
+        const ok = await this.runOneSearch(runId, searchExecution, signal, perJobs, stats);
         if (ok) {
           stats.searchesCompleted += 1;
         }
@@ -216,7 +226,7 @@ export class PipelineOrchestrator {
 
     if (!scoringDeclined && !cancelled && plan.newOpenAIRequests > 0) {
       try {
-        await this.runScoring(runId, searchIds, perJobs, controller.signal, stats);
+        await this.runScoring(runId, searchIds, perJobs, signal, stats);
       } catch (cause) {
         if (cause instanceof ScoringHardStopError) {
           stats.status = 'completed_with_errors';
