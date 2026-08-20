@@ -14,12 +14,7 @@ export type PipelineSchemaVersion = typeof PIPELINE_SCHEMA_VERSION;
  * type mirrors the `pipelineRuns.status` DDL.
  */
 export type PipelineRunStatus =
-  | 'running'
-  | 'cancelling'
-  | 'completed'
-  | 'completed_with_errors'
-  | 'failed'
-  | 'cancelled';
+  'running' | 'cancelling' | 'completed' | 'completed_with_errors' | 'failed' | 'cancelled';
 
 /**
  * The 21-count run summary (SPEC §38). The fields are the

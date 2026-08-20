@@ -8,10 +8,7 @@ import {
 } from '../../src/pipeline/errors.js';
 import { DEFAULT_OPERATIONAL_CONFIG } from '../../src/config/schema.js';
 import { FakePage } from '../../src/linkedin/fake-page.js';
-import {
-  insertActiveFilter,
-  insertApprovedProfile,
-} from './helpers/fixtures.js';
+import { insertActiveFilter, insertApprovedProfile } from './helpers/fixtures.js';
 import { fakePageWithCard } from './helpers/fake-page-with-card.js';
 
 /**
@@ -218,14 +215,14 @@ describe('PipelineOrchestrator', () => {
   });
 
   // T9: scoring hard-stop → status 'completed_with_errors'. SKIPPED —
-// requires the scoring batch to actually fire (at least one
-// accepted job), which in turn requires the extraction panel parser
-// to mark a job as 'complete'. The fakePageWithCard helper stubs
-// the panel-parser surface, but the parser's waitFor + href-match
-// logic still needs a working DOM mock that returns a complete
-// field set (title/company/location/description). Wave E can wire
-// a richer fake-page fixture (e.g. with a title anchor and a
-// description container) to enable this test.
+  // requires the scoring batch to actually fire (at least one
+  // accepted job), which in turn requires the extraction panel parser
+  // to mark a job as 'complete'. The fakePageWithCard helper stubs
+  // the panel-parser surface, but the parser's waitFor + href-match
+  // logic still needs a working DOM mock that returns a complete
+  // field set (title/company/location/description). Wave E can wire
+  // a richer fake-page fixture (e.g. with a title anchor and a
+  // description container) to enable this test.
   it.skip('T9: scoring hard-stop → status completed_with_errors', async () => undefined);
 
   // T10: scraper error in one search continues with the next.

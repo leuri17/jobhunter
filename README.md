@@ -18,6 +18,12 @@ pnpm dev -- init
 # Discover jobs from a public LinkedIn search
 pnpm dev -- run --search='engineer' --location='Remote'
 
+# Or pass the full pipeline options (search matrix from configured queries/locations):
+pnpm dev -- run                    # human-readable run summary + top-N
+pnpm dev -- run --yes              # skip the scoring-plan confirmation
+pnpm dev -- run --json             # emit a single JSON document to stdout
+# SIGINT once → graceful cancellation; twice → force exit.
+
 # Print help
 pnpm dev -- --help
 ```

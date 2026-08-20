@@ -724,6 +724,10 @@ async function runCommand(
       env: process.env,
       applicationVersion: getApplicationVersion(),
       logger: pinoPipelineLogger(rootLogger),
+      // Forward the SIGINT-driven signal so the orchestrator can
+      // detect cancellation between every search / job / score
+      // step (SPEC §29.3 + §40).
+      cancelSignal: controller.signal,
     });
     const result: PipelineRunResult = await orchestrator.run({});
     if (jsonOutput) {
@@ -738,9 +742,7 @@ async function runCommand(
       if (result.scoringPlan !== null) {
         process.stdout.write(`\n${formatScoringPlan(result.scoringPlan)}\n`);
       }
-      process.stdout.write(
-        `\n${formatTopNTable(result.topN, process.stdout.columns ?? 120)}\n`,
-      );
+      process.stdout.write(`\n${formatTopNTable(result.topN, process.stdout.columns ?? 120)}\n`);
     }
   } finally {
     process.removeListener('SIGINT', onSigInt);
@@ -1055,7 +1057,11 @@ export function createProgram(
     .option('--json', 'emit a single JSON document to stdout', false)
     .action(async (options: { yes: boolean; json: boolean }) => {
       try {
-        await runCommand(options.yes, options.json, pipelinePrompts ?? new InquirerPipelinePrompts());
+        await runCommand(
+          options.yes,
+          options.json,
+          pipelinePrompts ?? new InquirerPipelinePrompts(),
+        );
       } catch (error) {
         exitWithError(error);
       }

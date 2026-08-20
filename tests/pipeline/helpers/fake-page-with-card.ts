@@ -66,7 +66,10 @@ export function fakePageWithCard(sourceJobIds: readonly string[]): CreateFakePag
 
     return new FakePage({
       url: 'https://www.linkedin.com/jobs/search/?q=engineer',
-      onGoto: async () => ({ status: () => 200, url: () => 'https://www.linkedin.com/jobs/search/?q=engineer' }),
+      onGoto: async () => ({
+        status: () => 200,
+        url: () => 'https://www.linkedin.com/jobs/search/?q=engineer',
+      }),
       onGetAttribute: (): null => null,
       onQuerySelector: (selector): ReturnType<typeof makeAnchorNode> | null => {
         // The panel parser reads `panel-title-anchor` from the page

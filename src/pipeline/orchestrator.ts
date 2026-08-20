@@ -183,9 +183,8 @@ export class PipelineOrchestrator {
         }
         const searchExecutionId = searchIds[i];
         if (searchExecutionId === undefined) break;
-        const searchExecution = await this.repositories.pipelineRuns.findSearchById(
-          searchExecutionId,
-        );
+        const searchExecution =
+          await this.repositories.pipelineRuns.findSearchById(searchExecutionId);
         if (searchExecution === null) continue;
         stats.searchesAttempted += 1;
         this.logger.searchStart({
@@ -306,7 +305,11 @@ export class PipelineOrchestrator {
 
       // Re-fetch the canonical JobRows for the jobs discovered in
       // this search. The discovery events only carry the `jobId`.
-      const jobRows: { id: number; sourceJobId: string; extractionStatus: 'complete' | 'partial' | 'failed' }[] = [];
+      const jobRows: {
+        id: number;
+        sourceJobId: string;
+        extractionStatus: 'complete' | 'partial' | 'failed';
+      }[] = [];
       for (const ev of events.filter((e) => e.searchExecutionId === searchExecution.id)) {
         const row = await this.repositories.jobs.findById(ev.jobId);
         if (row === null) continue;
@@ -354,7 +357,8 @@ export class PipelineOrchestrator {
         }
       }
     } catch (error) {
-      const code = error instanceof LinkedInScraperError ? error.code : 'extraction_unexpected_error';
+      const code =
+        error instanceof LinkedInScraperError ? error.code : 'extraction_unexpected_error';
       const message = error instanceof Error ? error.message : String(error);
       stats.searchErrors.push({ code, message });
       this.logger.searchFail({
@@ -650,5 +654,4 @@ export class PipelineOrchestrator {
       searchErrors: summary.searchErrors,
     };
   }
-
-  }
+}

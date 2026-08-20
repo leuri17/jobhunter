@@ -147,10 +147,7 @@ export function makeFakePageWithCard(sourceJobId: string): FakePage {
   return new FakePage({
     url: 'https://www.linkedin.com/jobs/search/?q=test',
     onLocator: (selector: string) => {
-      if (
-        selector === 'li.jobs-search-results__list-item' ||
-        selector === 'div.job-search-card'
-      ) {
+      if (selector === 'li.jobs-search-results__list-item' || selector === 'div.job-search-card') {
         return cardLocator;
       }
       return null;

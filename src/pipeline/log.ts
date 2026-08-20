@@ -15,11 +15,7 @@ export interface PipelineLogger {
   searchFail(input: { searchId: number; errorCode: string; message: string }): void;
   cancelStart(input: { runId: number }): void;
   cancelComplete(input: { runId: number }): void;
-  scoringPlanDisplayed(input: {
-    runId: number;
-    jobsDiscovered: number;
-    newRequests: number;
-  }): void;
+  scoringPlanDisplayed(input: { runId: number; jobsDiscovered: number; newRequests: number }): void;
   scoringConfirmed(input: { runId: number }): void;
   scoringDeclined(input: { runId: number }): void;
 }

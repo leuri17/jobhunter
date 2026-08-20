@@ -16,7 +16,9 @@ export function deterministicJsonStringify(value: unknown): string {
   const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
     a.localeCompare(b),
   );
-  const body = entries.map(([k, v]) => `${JSON.stringify(k)}:${deterministicJsonStringify(v)}`).join(',');
+  const body = entries
+    .map(([k, v]) => `${JSON.stringify(k)}:${deterministicJsonStringify(v)}`)
+    .join(',');
   return `{${body}}`;
 }
 
