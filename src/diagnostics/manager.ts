@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 
+import type { BrowserContext, Page } from 'playwright';
 import type { Repositories } from '../persistence/repositories/index.js';
 import type { PlatformPaths } from '../platform/paths.js';
 
@@ -36,6 +37,16 @@ export interface DiagnosticInput {
   readonly error: unknown;
   readonly currentUrl?: string;
   readonly timestamp?: string;
+  /**
+   * Wave C extension: optional Playwright handles for the live
+   * capture strategies. The orchestrator passes the active page +
+   * context; the manager forwards them to the capture context.
+   * When both are absent, the new strategies throw
+   * `MissingBrowserImplementationError` (handled by the manager's
+   * try/catch as a `capture_failed` failure).
+   */
+  readonly page?: Page;
+  readonly browserContext?: BrowserContext;
 }
 
 export interface DiagnosticFailure {
@@ -122,6 +133,8 @@ export class DiagnosticManager {
           timestamp,
           error: input.error,
           ...(redactedUrl !== undefined ? { currentUrl: redactedUrl } : {}),
+          ...(input.page !== undefined ? { page: input.page } : {}),
+          ...(input.browserContext !== undefined ? { browserContext: input.browserContext } : {}),
         };
         const result = await strategy.capture(ctx);
         const persisted = await this.persist(result, input.scope, timestamp, description);

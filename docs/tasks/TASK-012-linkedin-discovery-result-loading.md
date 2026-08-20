@@ -62,3 +62,34 @@ Job-detail field extraction and canonical job persistence belong to TASK-013.
 - Canonical IDs and discovery errors are persisted with run/search context.
 - Access-blocked errors are typed and existing data remains intact.
 - All browser resources close on every tested exit path.
+
+## Implementation results
+
+**Status:** Implemented (5 wave commits on `feat/task-012-linkedin-discovery-result-loading`)
+**Commits:**
+- `e15b7db feat(scraper): add linkedin discovery pure helpers (TASK-012 W1)`
+- `cb48eb9 feat(scraper): add linkedin browser session seam (TASK-012 W2)`
+- `b095038 feat(diagnostics): replace linkedin capture strategy stubs (TASK-012 W3)`
+- `dd880cf feat(scraper): add linkedin discovery orchestrator and helpers (TASK-012 W4)`
+- `6bc8dbb chore(tasks): add linkedin discovery fixtures and live placeholder (TASK-012 W5)`
+
+**Files added:** 16 source files (`src/linkedin/`) + 13 test files (`tests/linkedin/`) + 3 HTML fixtures + 1 `loadFixture` helper + 1 smoke test + 1 live test placeholder.
+**Files modified:** `src/diagnostics/capture/{index,playwright-trace,screenshot,types}.ts` + `src/diagnostics/manager.ts` + `package.json` + `pnpm-lock.yaml` + `src/linkedin/state.ts` + `src/linkedin/load-more.ts` + `src/linkedin/fake-page.ts` + `tests/linkedin/boundaries.test.ts` + `docs/tasks/{TASK-012,INDEX,TASK-013}.md` + `README.md`.
+**New direct dependency:** `playwright` (per user approval; AGENTS.md §12). Chromium binary install: `pnpm exec playwright install chromium`.
+**New dev dependency:** `linkedom` (for unit-level HTML parser tests).
+
+**Verification:** `pnpm typecheck` exit 0; `pnpm lint` exit 0; `pnpm format:check` clean; `pnpm test` 1146/1149 tests pass (3 skipped: 2 Playwright smoke + 1 live); `pnpm exec playwright --version` shows 1.62.x; `PLAYWRIGHT_SMOKE=1 pnpm test tests/linkedin/playwright-session.smoke.test.ts tests/linkedin/helpers/playwright-route-session.smoke.test.ts` passes 3/3; `pnpm test:live:list` lists `tests/live/linkedin.test.ts` (gated by `LINKEDIN_LIVE=1`).
+
+**Deviations from the plan:** see `.slim/deepwork/task-012-linkedin-discovery-result-loading.md` for the full reconciliation. The most material:
+1. `playwright` was added in Wave A (not Task 14) — `overlay.ts` + `load-more.ts` need `import type { Page, Locator } from 'playwright'` for typecheck.
+2. `LinkedInDiscoveryService` never calls `browserSession.launch()` or `browserSession.close()` — TASK-015 owns the run-level lifecycle (Oracle Required Finding #1).
+3. `truncateAvailableMetadata` shipped in Wave D (not Wave A) with `Redactor` integration (Wave A's placeholder was too narrow).
+4. `BrowserSession.withRoute` operates at the context level (not per-page) — matches real Playwright's `context.route()`.
+5. `playwright_trace` artifact is written twice in the capture flow (temp + final) — acceptable for now.
+
+**Known limitations:**
+- `currentExtractionState: 'failed'` placeholder for new jobs — TASK-013 must promote via `Repositories.jobs.updateExtraction`.
+- `HtmlSnapshotCapture` stub still in place (TASK-013's responsibility).
+- HTML fixtures will go stale when LinkedIn changes its DOM — refresh policy documented in `README.md`.
+- Live tests are opt-in only (`pnpm test:live` with `LINKEDIN_LIVE=1`).
+- `pnpm exec playwright install chromium` is a one-shot setup step.

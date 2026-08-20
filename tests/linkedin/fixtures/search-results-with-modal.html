@@ -1,0 +1,54 @@
+<!doctype html>
+<!--
+  Saved HTML fixture — LinkedIn public search results page (with modal).
+  3 cards + a recoverable login modal overlay that the
+  `dismissRecoverableOverlays` helper can dismiss via the
+  `button[aria-label="Dismiss"]` close button. Wave E (TASK-012).
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Senior Engineer Jobs | LinkedIn (Fixture, with modal)</title>
+  </head>
+  <body class="jobs-search-results-page artdeco-modal-is-open">
+    <header class="global-nav">
+      <div class="search-bar"><input type="text" placeholder="Search jobs" /></div>
+    </header>
+    <main>
+      <section class="results">
+        <ol class="jobs-search-results__list">
+          <li class="jobs-search-results__list-item" data-occludable-job-id="4000101">
+            <a class="base-card__full-link" href="https://www.linkedin.com/jobs/view/4000101/">
+              <h3 class="base-search-card__title">Senior Backend Engineer</h3>
+              <h4 class="base-search-card__subtitle">Acme Corp</h4>
+              <span class="job-search-card__location">Remote, US</span>
+            </a>
+          </li>
+          <li class="jobs-search-results__list-item" data-occludable-job-id="4000102">
+            <a class="base-card__full-link" href="https://www.linkedin.com/jobs/view/4000102/">
+              <h3 class="base-search-card__title">Staff Platform Engineer</h3>
+              <h4 class="base-search-card__subtitle">Beta Inc</h4>
+              <span class="job-search-card__location">San Francisco, CA</span>
+            </a>
+          </li>
+          <li class="jobs-search-results__list-item" data-occludable-job-id="4000103">
+            <a class="base-card__full-link" href="https://www.linkedin.com/jobs/view/4000103/">
+              <h3 class="base-search-card__title">Senior Frontend Engineer</h3>
+              <h4 class="base-search-card__subtitle">Gamma Co</h4>
+              <span class="job-search-card__location">New York, NY</span>
+            </a>
+          </li>
+        </ol>
+      </section>
+    </main>
+    <div data-modal="login" class="artdeco-modal" role="dialog" aria-modal="true">
+      <div class="artdeco-modal__header">
+        <h2 class="artdeco-modal__title">Sign in to LinkedIn</h2>
+        <button class="artdeco-modal__dismiss" aria-label="Dismiss" type="button">&times;</button>
+      </div>
+      <div class="artdeco-modal__content">
+        <p>You must sign in to view this result.</p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,27 @@
+<!doctype html>
+<!--
+  Saved HTML fixture — LinkedIn public search results page (no results).
+  Empty result list with the "no matching jobs found" sentinel element.
+  Wave E (TASK-012).
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Senior Engineer Jobs | LinkedIn (Fixture, no results)</title>
+  </head>
+  <body class="jobs-search-results-page">
+    <header class="global-nav">
+      <div class="search-bar"><input type="text" placeholder="Search jobs" /></div>
+    </header>
+    <main>
+      <section class="results">
+        <ol class="jobs-search-results__list">
+          <!-- Empty result list. The orchestrator's load-more loop
+               hits the no-results sentinel and exits with kind: 'complete',
+               jobsDiscovered: 0. -->
+        </ol>
+        <p class="artdeco-empty-state__message">No matching jobs found.</p>
+      </section>
+    </main>
+  </body>
+</html>

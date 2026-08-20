@@ -28,6 +28,11 @@ Search-page discovery belongs to TASK-012; filtering/scoring eligibility belongs
 - Consumes ordered discovered IDs/card metadata and browser context from TASK-012.
 - Produces complete job snapshots and diagnostic outcomes for TASK-010, TASK-014, and TASK-015.
 
+**Handoff from TASK-012:**
+- TASK-012 records `discoveryEvents` with `currentExtractionState: 'failed'` as a placeholder for new jobs (extraction status is TASK-013's responsibility).
+- TASK-013 must promote these rows to `'complete'` / `'partial'` via `Repositories.jobs.updateExtraction(id, { extractionStatus, lastExtractionAttemptTimestamp, updatedTimestamp })` after successful extraction. See `src/persistence/repositories/jobs.ts:255`.
+- TASK-013 also owns `src/diagnostics/capture/html-snapshot.ts` (TASK-012 explicitly did NOT touch it).
+
 ## Referenced specification sections
 
 - `SPEC.md` §22.1–22.12 job identity, required fields, normalization, panel-first extraction, fallback, statuses, skip behavior, errors, and failure isolation
