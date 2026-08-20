@@ -43,6 +43,22 @@ const BANNED_IMPORTS = [
 ] as const;
 
 /**
+ * Wave D carve-out: `extraction/service.ts` is the ONLY file under
+ * `src/linkedin/extraction/` that may import `drizzle-orm`. The
+ * orchestrator wraps 3 per-job writes (extractionAttempts insert +
+ * jobs update + discoveryEvents patch) in a single sync
+ * `db.transaction(...)`; the raw Drizzle table references
+ * (`jobs`, `discoveryEvents`, `extractionAttempts`) + the `eq`
+ * helper come from this import. Pure helpers
+ * (`state.ts` / `errors.ts` / `normalize.ts` / `required-fields.ts`
+ * / `status.ts` / `detail-url.ts` / `log.ts`) and the parsers
+ * (`panel-parser.ts` / `dedicated-parser.ts`) MUST remain
+ * Drizzle-free. Wave E's `tests/extraction/boundaries.test.ts` is
+ * the granular mirror of this carve-out.
+ */
+const DRIZZLE_ORM_ALLOW_LIST: ReadonlySet<string> = new Set(['src/linkedin/extraction/service.ts']);
+
+/**
  * Wave B allow-list. The boundary test asserts this set contains
  * EXACTLY these entries, locking the file structure against accidental
  * additions without a corresponding test update.
@@ -134,12 +150,16 @@ function relativeFromCwd(absolute: string): string {
 }
 
 describe('src/linkedin domain-boundary guard (Wave B)', () => {
-  it('exists as a directory with at least the 12 Wave D modules', () => {
+  it('exists as a directory with at least the 26 modules after Wave E', () => {
     const files = listLinkedinSourceFiles(LINKEDIN_DIR);
-    // state, errors, selectors, card-id, overlay, load-more, log, browser-session,
-    // playwright-session, fake-session, fake-page, navigation, truncate-metadata,
-    // discovery-service, index
-    expect(files.length).toBeGreaterThanOrEqual(12);
+    // Final TASK-013 state: 15 TASK-012 files (state, errors, selectors,
+    // card-id, overlay, load-more, log, browser-session,
+    // playwright-session, fake-session, fake-page, navigation,
+    // truncate-metadata, discovery-service, index) + 11 TASK-013
+    // extraction files (state, errors, normalize, required-fields,
+    // status, detail-url, log, panel-parser, dedicated-parser,
+    // service, index) = 26 files.
+    expect(files.length).toBeGreaterThanOrEqual(26);
   });
 
   it('every .ts file under src/linkedin/ avoids the banned imports (with carve-out)', () => {
@@ -149,6 +169,16 @@ describe('src/linkedin domain-boundary guard (Wave B)', () => {
       const rel = relativeFromCwd(absolute);
       const source = readFileSync(absolute, 'utf8');
       for (const banned of BANNED_IMPORTS) {
+        // Wave D carve-out: `drizzle-orm` is allowed inside
+        // `src/linkedin/extraction/service.ts` (per Task 13 sketch
+        // — the orchestrator wraps 3 per-job writes in a single
+        // sync `db.transaction` and the schema-table references
+        // require the import). Wave E's
+        // `tests/extraction/boundaries.test.ts` is the granular
+        // mirror of this carve-out.
+        if (banned === 'drizzle-orm' && DRIZZLE_ORM_ALLOW_LIST.has(rel)) {
+          continue;
+        }
         expect(importMatches(source, banned), `${rel} must not import ${banned}`).toBe(false);
       }
     }

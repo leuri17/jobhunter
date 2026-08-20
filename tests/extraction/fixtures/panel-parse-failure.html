@@ -1,0 +1,48 @@
+<!doctype html>
+<!--
+  Saved HTML fixture — LinkedIn search-detail panel (parse-failure variant).
+
+  Exercises `parsePanel`'s "description not visible" path (SPEC §22.7).
+
+  The description container (.jobs-description__content / its 3
+  alternates) is ABSENT from the DOM. The parser's bounded
+  `waitFor({ state: 'visible' })` on the description selector
+  times out, and the parser throws
+  `PanelExtractionError({ url, reason: 'description_not_visible' })`.
+
+  Realistic BEM class names from `src/linkedin/selectors.ts`.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Partial Panel | LinkedIn (Fixture)</title>
+  </head>
+  <body class="jobs-search-results-page">
+    <main>
+      <section class="jobs-search__results-list">
+        <ol class="jobs-search-results__list">
+          <li class="jobs-search-results__list-item" data-occludable-job-id="1234567890">
+            <a class="base-card__full-link" href="https://www.linkedin.com/jobs/view/1234567890/">
+              Unrendered Job
+            </a>
+          </li>
+        </ol>
+      </section>
+      <aside class="jobs-search__job-details--wrapper">
+        <div class="job-details-jobs-unified-top-card__job-title">
+          <a href="https://www.linkedin.com/jobs/view/1234567890/"> Unrendered Job </a>
+        </div>
+        <div class="job-details-jobs-unified-top-card__company-name">Late Renderer Co</div>
+        <div class="job-details-jobs-unified-top-card__primary-description-container">
+          <span class="job-details-jobs-unified-top-card__bullet">Anywhere</span>
+        </div>
+        <!--
+          Description container is missing entirely — simulates a
+          network stall, a truncated render, or an auth wall that
+          blocked the description fetch. `parsePanel` must throw
+          `PanelExtractionError`.
+        -->
+      </aside>
+    </main>
+  </body>
+</html>

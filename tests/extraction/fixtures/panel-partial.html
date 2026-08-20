@@ -1,0 +1,53 @@
+<!doctype html>
+<!--
+  Saved HTML fixture — LinkedIn search-detail panel (partial variant).
+
+  Exercises `parsePanel`'s "partial" status path (SPEC §22.8):
+    - title + company + truncated description present
+    - location is ABSENT (one of the 4 fields missing → status = 'partial')
+    - description is truncated (LinkedIn panel renders a preview paragraph
+      plus a "Show more" button — Decision 6 addendum, the literal must
+      be stripped by `normalizeText`)
+
+  The brief requires the description to contain a single short
+  paragraph + the "Show more" literal (which `normalizeText` strips).
+  With location absent, all 3 remaining fields are non-empty after
+  normalization → `computeExtractionStatus` returns 'partial'
+  (NOT 'complete' — Decision 4).
+
+  Realistic BEM class names from `src/linkedin/selectors.ts`.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Staff Engineer | Beta Inc | LinkedIn (Fixture)</title>
+  </head>
+  <body class="jobs-search-results-page">
+    <main>
+      <section class="jobs-search__results-list">
+        <ol class="jobs-search-results__list">
+          <li class="jobs-search-results__list-item" data-occludable-job-id="1234567890">
+            <a class="base-card__full-link" href="https://www.linkedin.com/jobs/view/1234567890/">
+              Staff Engineer
+            </a>
+          </li>
+        </ol>
+      </section>
+      <aside class="jobs-search__job-details--wrapper">
+        <div class="job-details-jobs-unified-top-card__job-title">
+          <a href="https://www.linkedin.com/jobs/view/1234567890/"> Staff Engineer </a>
+        </div>
+        <div class="job-details-jobs-unified-top-card__company-name">Beta Inc</div>
+        <!--
+          Location container intentionally absent — the orchestrator
+          will record a `missing: ['location']` validation and the
+          service computes kind = 'partial'.
+        -->
+        <div class="jobs-description__content">
+          <p>Preview of the job description.</p>
+          <button class="show-more-less-html__button--more" type="button">Show more</button>
+        </div>
+      </aside>
+    </main>
+  </body>
+</html>

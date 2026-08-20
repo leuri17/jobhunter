@@ -1,0 +1,52 @@
+<!doctype html>
+<!--
+  Saved HTML fixture — LinkedIn dedicated job-detail page (complete variant).
+
+  Exercises `parseDedicatedPage`'s happy path (SPEC §22.7):
+    - all 4 fields present
+    - title anchor href NOT used (the URL is built from `sourceJobId`
+      directly — no verification step)
+    - description container is visible with 2+ paragraphs
+    - NO "Show more" / "See more" literal (description is untruncated)
+
+  The dedicated page reuses the unified top-card DOM (per librarian
+  research), so the class names match the panel fixture.
+
+  BEM class names from `src/linkedin/selectors.ts`
+  (`LINKEDIN_SELECTORS.dedicated.*`).
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Director of Engineering | Gamma Co | LinkedIn (Fixture)</title>
+  </head>
+  <body>
+    <main>
+      <header class="job-details-jobs-unified-top-card">
+        <div class="job-details-jobs-unified-top-card__job-title">Director of Engineering</div>
+        <div class="job-details-jobs-unified-top-card__company-name">
+          <a href="https://www.linkedin.com/company/gamma-co/">Gamma Co</a>
+        </div>
+        <div class="job-details-jobs-unified-top-card__primary-description-container">
+          <span>New York, NY</span>
+          <span>Hybrid</span>
+        </div>
+      </header>
+      <section class="jobs-description">
+        <div class="jobs-description__content">
+          <p>About the job.</p>
+          <p>
+            Lead Gamma Co's engineering organisation across 4 product lines. Define technical
+            strategy, grow senior leaders, and own cross-org delivery. Director-level role reporting
+            to the VP of Engineering.
+          </p>
+          <p>
+            <strong>Requirements:</strong> 8+ years engineering experience, 3+ years managing
+            managers, strong distributed-systems background, demonstrated track record of
+            organisational growth.
+          </p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

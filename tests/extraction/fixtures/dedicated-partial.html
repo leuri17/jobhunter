@@ -1,0 +1,34 @@
+<!doctype html>
+<!--
+  Saved HTML fixture — LinkedIn dedicated job-detail page (partial variant).
+
+  Exercises `parseDedicatedPage`'s "partial" status path (SPEC §22.7 + §22.8):
+    - title + company present (a + b)
+    - location + description ABSENT — both fields missing means the
+      validator returns `missing: ['location', 'description']` and
+      `computeExtractionStatus` returns 'partial' (per Decision 4)
+
+  Realistic BEM class names from `src/linkedin/selectors.ts`
+  (`LINKEDIN_SELECTORS.dedicated.*`).
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Minimalist Senior Engineer | Delta | LinkedIn (Fixture)</title>
+  </head>
+  <body>
+    <main>
+      <header class="job-details-jobs-unified-top-card">
+        <div class="job-details-jobs-unified-top-card__job-title">Minimalist Senior Engineer</div>
+        <div class="job-details-jobs-unified-top-card__company-name">
+          <a href="https://www.linkedin.com/company/delta-systems/">Delta</a>
+        </div>
+        <!--
+          location + description are intentionally absent — the parser
+          returns 2 valid fields + 2 nulls, and the service computes
+          status = 'partial'.
+        -->
+      </header>
+    </main>
+  </body>
+</html>

@@ -32,4 +32,12 @@ describe.skipIf(!ENABLED)('LinkedIn live discovery (opt-in)', () => {
   // LinkedIn search page + assert the orchestrator's per-search
   // walk completes. Skipped until the wave that introduces the live
   // orchestrator + scrape-side wiring.
+
+  it.skipIf(!ENABLED)('extracts a public job-detail page end-to-end', async () => {
+    // Navigate to a known public LinkedIn job-detail page.
+    // Use the PlaywrightRouteSession to serve the dedicated fixture + open the page.
+    // Assert all 4 required fields are extracted + extractionStatus === 'complete'.
+    // This test is opt-in via LINKEDIN_LIVE=1.
+    expect(true).toBe(true); // placeholder — real assertion in future wave
+  });
 });

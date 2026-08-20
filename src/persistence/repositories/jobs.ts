@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { discoveryErrors, discoveryEvents, extractionAttempts, jobs } from '../schema.js';
@@ -62,6 +62,18 @@ export interface DiscoveryEventRow {
   readonly currentExtractionState: ExtractionStatus;
   readonly extractionAttempted: boolean;
   readonly skipReason: string | null;
+}
+
+/**
+ * Patch shape for `updateDiscoveryEvent` (TASK-013 Plan Task 12).
+ * Every field is optional — the repository only writes the keys
+ * that are defined. `skipReason: null` is honored as an explicit
+ * reset (distinct from `undefined`, which means "leave alone").
+ */
+export interface DiscoveryEventPatch {
+  readonly currentExtractionState?: ExtractionStatus;
+  readonly extractionAttempted?: boolean;
+  readonly skipReason?: string | null;
 }
 
 export interface DiscoveryErrorRow {
@@ -288,6 +300,82 @@ export class JobRepository {
     const row = result[0];
     if (row === undefined) throw new Error('recordDiscoveryEvent returned no rows');
     return row.id;
+  }
+
+  /**
+   * Patch an existing `discoveryEvents` row in place (TASK-013 Plan
+   * Task 12, SPEC §23.2 / §23.3, AGENTS.md §6). Only the fields
+   * present in `patch` are written — the existing row is preserved
+   * otherwise (no cascading delete, no row replacement).
+   *
+   * Mirrors the sync `db.transaction(...)` wrapper used by
+   * `updateExtraction` at `jobs.ts:255-271`. The method signature
+   * is `async` (matches the `JobsRepository` interface contract);
+   * the callback is sync because better-sqlite3 rejects Promise
+   * returns (`src/persistence/repositories/index.ts:54-58`).
+   *
+   * The orchestrator (Wave D's `LinkedInExtractionService`) calls
+   * this method inside its own atomic transaction so the
+   * `extractionAttempts` insert, the `jobs` update, and this row
+   * patch all commit together — see `service.ts`.
+   */
+  async updateDiscoveryEvent(id: number, patch: DiscoveryEventPatch): Promise<void> {
+    this.ctx.db.transaction((tx) => {
+      const update: Record<string, unknown> = {};
+      if (patch.currentExtractionState !== undefined) {
+        update['currentExtractionState'] = patch.currentExtractionState;
+      }
+      if (patch.extractionAttempted !== undefined) {
+        update['extractionAttempted'] = patch.extractionAttempted;
+      }
+      if (patch.skipReason !== undefined) {
+        update['skipReason'] = patch.skipReason;
+      }
+      // Empty patch → no-op (Drizzle rejects `set({})` with
+      // "No values to set"). The orchestrator only calls this
+      // method with a populated patch, but the guard keeps the
+      // method total.
+      if (Object.keys(update).length === 0) {
+        return;
+      }
+      tx.update(discoveryEvents).set(update).where(eq(discoveryEvents.id, id)).run();
+    });
+  }
+
+  /**
+   * Look up the most recent `discoveryEvents` row for the supplied
+   * `(jobId, searchExecutionId)` pair (TASK-013 Plan Task 12).
+   *
+   * Used by `LinkedInExtractionService.extractOne` to resolve the
+   * `discoveryEvents.id` that the per-job atomic update must patch
+   * (via `updateDiscoveryEvent`). Returns `null` when no event
+   * exists — callers (the orchestrator) treat that as a
+   * data-integrity bug because task-012's discovery flow always inserts
+   * an event alongside every job row.
+   *
+   * "Most recent" is defined as the highest `id` (monotonically
+   * increasing via the SQLite auto-increment primary key). The
+   * query is bounded by `LIMIT 1` so it's O(1) on the indexed
+   * `(pipelineRunId, searchExecutionId)` composite + the auto-id.
+   */
+  async findLatestDiscoveryEventByJobAndSearch(
+    jobId: number,
+    searchExecutionId: number,
+  ): Promise<DiscoveryEventRow | null> {
+    const rows = this.ctx.db
+      .select()
+      .from(discoveryEvents)
+      .where(
+        and(
+          eq(discoveryEvents.jobId, jobId),
+          eq(discoveryEvents.searchExecutionId, searchExecutionId),
+        ),
+      )
+      .orderBy(desc(discoveryEvents.id))
+      .limit(1)
+      .all();
+    const row = rows[0];
+    return row === undefined ? null : discoveryEventRowFromRecord(row);
   }
 
   async listDiscoveryEventsByJob(jobId: number): Promise<readonly DiscoveryEventRow[]> {

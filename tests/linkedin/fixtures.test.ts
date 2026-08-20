@@ -23,6 +23,13 @@ const FIXTURES: readonly FixtureName[] = [
   'search-results-basic',
   'search-results-no-results',
   'search-results-with-modal',
+  // Wave C — TASK-013 extraction layer
+  'panel-complete',
+  'panel-partial',
+  'panel-mismatch',
+  'panel-parse-failure',
+  'dedicated-complete',
+  'dedicated-partial',
 ];
 
 function asElement(node: unknown): FakeElement {

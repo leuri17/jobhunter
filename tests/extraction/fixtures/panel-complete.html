@@ -1,0 +1,59 @@
+<!doctype html>
+<!--
+  Saved HTML fixture — LinkedIn search-detail panel (complete variant).
+
+  Exercises `parsePanel`'s happy path (SPEC §22.6):
+    - panel container renders + all 4 fields present
+    - title anchor `href` matches the `sourceJobId` (the verification
+      loop's success path, Decision 7)
+    - description container is visible with 2+ paragraphs
+    - NO "Show more" / "See more" literal (description is untruncated)
+
+  Realistic BEM class names from `src/linkedin/selectors.ts`
+  (`LINKEDIN_SELECTORS.panel.*`).
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Senior Software Engineer | Acme Corp | LinkedIn (Fixture)</title>
+  </head>
+  <body class="jobs-search-results-page">
+    <main>
+      <section class="jobs-search__results-list">
+        <ol class="jobs-search-results__list">
+          <li class="jobs-search-results__list-item" data-occludable-job-id="1234567890">
+            <a class="base-card__full-link" href="https://www.linkedin.com/jobs/view/1234567890/">
+              Senior Software Engineer
+            </a>
+          </li>
+        </ol>
+      </section>
+      <aside class="jobs-search__job-details--wrapper">
+        <div class="job-details-jobs-unified-top-card__job-title">
+          <a href="https://www.linkedin.com/jobs/view/1234567890/"> Senior Software Engineer </a>
+        </div>
+        <div class="job-details-jobs-unified-top-card__company-name">Acme Corp</div>
+        <div class="job-details-jobs-unified-top-card__primary-description-container">
+          <span class="job-details-jobs-unified-top-card__bullet">San Francisco, CA</span>
+          <span class="job-details-jobs-unified-top-card__bullet">$180,000/yr</span>
+        </div>
+        <div class="jobs-description__content">
+          <p>About the job.</p>
+          <p>
+            We are looking for a Senior Software Engineer to design, build, and ship distributed
+            services at Acme Corp. You will own systems end-to-end and partner with product, design,
+            and infra to deliver high-leverage outcomes.
+          </p>
+          <p>
+            <strong>Responsibilities:</strong> design APIs, build features, ship production code,
+            review pull requests, mentor junior engineers.
+          </p>
+          <p>
+            <strong>Qualifications:</strong> 5+ years of experience with a modern backend language,
+            strong distributed-systems fundamentals, comfort with on-call rotations.
+          </p>
+        </div>
+      </aside>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<!--
+  Saved HTML fixture — LinkedIn search-detail panel (id-mismatch variant).
+
+  Exercises `parsePanel`'s "panelJobIdMismatch" path (Decision 26 +
+  SPEC §22.7 — "The panel shows another job" is one of the fallback
+  conditions).
+
+  The panel title anchor's `href` points to `/jobs/view/999999/`
+  (different from the selected `sourceJobId` of `1234567890`).
+  After the bounded retry loop, the parser throws
+  `PanelJobIdMismatchError({ expectedSourceJobId: '1234567890',
+  actualSourceJobId: '999999', attempts: 3 })`.
+
+  Realistic BEM class names from `src/linkedin/selectors.ts`.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Different Job Title | LinkedIn (Fixture)</title>
+  </head>
+  <body class="jobs-search-results-page">
+    <main>
+      <section class="jobs-search__results-list">
+        <ol class="jobs-search-results__list">
+          <li class="jobs-search-results__list-item" data-occludable-job-id="1234567890">
+            <a class="base-card__full-link" href="https://www.linkedin.com/jobs/view/1234567890/">
+              Selected Job
+            </a>
+          </li>
+        </ol>
+      </section>
+      <aside class="jobs-search__job-details--wrapper">
+        <!--
+          The renderer swapped the panel to a DIFFERENT job (id 999999).
+          The card click resolved to job 1234567890, but the panel
+          content is for job 999999 — the parser must detect this.
+        -->
+        <div class="job-details-jobs-unified-top-card__job-title">
+          <a href="https://www.linkedin.com/jobs/view/999999/"> Different Job Title </a>
+        </div>
+        <div class="job-details-jobs-unified-top-card__company-name">Some Other Company</div>
+        <div class="job-details-jobs-unified-top-card__primary-description-container">
+          <span class="job-details-jobs-unified-top-card__bullet">Anywhere, US</span>
+        </div>
+        <div class="jobs-description__content">
+          <p>This is the description for job 999999, not 1234567890.</p>
+          <p>The panel-renderer swapped jobs after the click resolved.</p>
+        </div>
+      </aside>
+    </main>
+  </body>
+</html>
