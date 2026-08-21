@@ -1,7 +1,14 @@
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { pipelineRuns, searchExecutions } from '../schema.js';
+import {
+  diagnosticArtifacts,
+  discoveryErrors,
+  filterResults,
+  pipelineRuns,
+  scoreResults,
+  searchExecutions,
+} from '../schema.js';
 import { jsonColumn } from './codecs.js';
 import type { RepositoryContext } from './types.js';
 
@@ -237,6 +244,55 @@ export class PipelineRunRepository {
     return filtered.all().map(runRowFromRecord);
   }
 
+  /**
+   * List the `limit` most recent pipeline runs, ordered by id DESC.
+   * Backs `RunsListService.list` (TASK-016 Wave B, SPEC §35.1).
+   *
+   * `limit` is bounded to a positive integer; non-positive values
+   * return an empty list (callers in the service layer validate the
+   * input separately).
+   */
+  async listRecent(limit: number): Promise<readonly PipelineRunRow[]> {
+    if (!Number.isInteger(limit) || limit <= 0) return [];
+    const rows = this.ctx.db
+      .select()
+      .from(pipelineRuns)
+      .orderBy(desc(pipelineRuns.id))
+      .limit(limit)
+      .all();
+    return rows.map(runRowFromRecord);
+  }
+
+  /**
+   * Fetch a pipeline run plus the row-shape details `RunsShowService`
+   * needs to render the multi-line block: searches, plus the four
+   * counts the service assembles into the `RunShowPayload` envelope.
+   *
+   * Returns `null` when the run does not exist. The query is split
+   * across five small SELECTs rather than one mega-JOIN to keep the
+   * per-count cost bounded and to fit the codebase's "no JOIN"
+   * convention (mirrors `JobRepository.findEventsByRun`).
+   */
+  async findWithDetails(id: number): Promise<PipelineRunDetails | null> {
+    const row = await this.findRunById(id);
+    if (row === null) return null;
+
+    const searches = await this.listSearchesByRun(id);
+    const discoveryErrorCount = await this.countDiscoveryErrorsByRun(id);
+    const diagnosticArtifactCount = await this.countDiagnosticArtifactsByRun(id);
+    const activeFilterResultCount = await this.countActiveFilterResultsByRun(id);
+    const activeScoreResultCount = await this.countActiveScoreResultsByRun(id);
+
+    return {
+      row,
+      searches,
+      discoveryErrorCount,
+      diagnosticArtifactCount,
+      activeFilterResultCount,
+      activeScoreResultCount,
+    };
+  }
+
   async finalizeRunStats(id: number, stats: RunStatsPatch): Promise<void> {
     this.ctx.db.transaction((tx) => {
       const patch: Record<string, unknown> = {};
@@ -306,4 +362,66 @@ export class PipelineRunRepository {
       tx.update(searchExecutions).set(update).where(eq(searchExecutions.id, id)).run();
     });
   }
+
+  // -------------------------------------------------------------------------
+  // Private helpers — back `findWithDetails` (TASK-016 Wave B).
+  // Each helper is a single bounded SELECT that counts rows in one
+  // table for the given pipeline run.
+  // -------------------------------------------------------------------------
+
+  private async countDiscoveryErrorsByRun(runId: number): Promise<number> {
+    const rows = this.ctx.db
+      .select({ id: discoveryErrors.id })
+      .from(discoveryErrors)
+      .where(eq(discoveryErrors.pipelineRunId, runId))
+      .all();
+    return rows.length;
+  }
+
+  private async countDiagnosticArtifactsByRun(runId: number): Promise<number> {
+    const rows = this.ctx.db
+      .select({ id: diagnosticArtifacts.id })
+      .from(diagnosticArtifacts)
+      .where(eq(diagnosticArtifacts.pipelineRunId, runId))
+      .all();
+    return rows.length;
+  }
+
+  private async countActiveFilterResultsByRun(runId: number): Promise<number> {
+    const rows = this.ctx.db
+      .select({ id: filterResults.id })
+      .from(filterResults)
+      .where(and(eq(filterResults.pipelineRunId, runId), eq(filterResults.active, true)))
+      .all();
+    return rows.length;
+  }
+
+  private async countActiveScoreResultsByRun(runId: number): Promise<number> {
+    const rows = this.ctx.db
+      .select({ id: scoreResults.id })
+      .from(scoreResults)
+      .where(and(eq(scoreResults.pipelineRunId, runId), eq(scoreResults.active, true)))
+      .all();
+    return rows.length;
+  }
+}
+
+/**
+ * Composite row shape returned by `PipelineRunRepository.findWithDetails`
+ * (TASK-016 Wave B). The service layer (`RunsShowService.show`)
+ * projects this into the public `RunShowPayload` envelope.
+ *
+ * - `searches`                       — every search execution in the run.
+ * - `discoveryErrorCount`            — number of `discoveryErrors` rows.
+ * - `diagnosticArtifactCount`        — number of `diagnosticArtifacts` rows.
+ * - `activeFilterResultCount`        — number of active `filterResults` rows.
+ * - `activeScoreResultCount`         — number of active `scoreResults` rows.
+ */
+export interface PipelineRunDetails {
+  readonly row: PipelineRunRow;
+  readonly searches: readonly SearchExecutionRow[];
+  readonly discoveryErrorCount: number;
+  readonly diagnosticArtifactCount: number;
+  readonly activeFilterResultCount: number;
+  readonly activeScoreResultCount: number;
 }

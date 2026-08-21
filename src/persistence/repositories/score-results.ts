@@ -190,4 +190,25 @@ export class ScoreResultRepository {
       .all();
     return rows.map(rowFromRecord);
   }
+
+  /**
+   * List every active + successful score result for a run (TASK-016
+   * Wave B, SPEC §35.2). Functionally equivalent to `topByRun` minus
+   * the `LIMIT` + `ORDER BY` — the service layer uses this to count
+   * `scored` jobs and to assemble the `RunShowPayload` `scoreCounts`.
+   */
+  async listActiveByRun(pipelineRunId: number): Promise<readonly ScoreResultRow[]> {
+    const rows = this.ctx.db
+      .select()
+      .from(scoreResults)
+      .where(
+        and(
+          eq(scoreResults.pipelineRunId, pipelineRunId),
+          eq(scoreResults.active, true),
+          eq(scoreResults.success, true),
+        ),
+      )
+      .all();
+    return rows.map(rowFromRecord);
+  }
 }

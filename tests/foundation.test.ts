@@ -20,6 +20,8 @@ describe('CLI foundation', () => {
       'init',
       'profile',
       'run',
+      'jobs',
+      'runs',
     ]);
   });
 

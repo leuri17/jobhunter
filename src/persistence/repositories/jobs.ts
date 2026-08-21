@@ -1,9 +1,18 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, like } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { discoveryErrors, discoveryEvents, extractionAttempts, jobs } from '../schema.js';
+import {
+  discoveryErrors,
+  discoveryEvents,
+  extractionAttempts,
+  filterResults,
+  jobs,
+  scoreResults,
+} from '../schema.js';
 import { jsonColumn } from './codecs.js';
 import type { RepositoryContext } from './types.js';
+import { JOB_PREFIX, NUMERIC_JOB_PATTERN } from '../identifiers.js';
+import type { JobListState } from '../../inspection/state.js';
 
 const unknownJson = jsonColumn<unknown>(z.unknown());
 
@@ -474,4 +483,278 @@ export class JobRepository {
       .all();
     return rows.map(extractionAttemptRowFromRecord);
   }
+
+  // -------------------------------------------------------------------------
+  // Inspection queries (TASK-016 Wave B, SPEC §34.1 / §34.5)
+  //
+  // The queries below back `JobsListService.list`. Each `state` selects the
+  // job rows that match the documented per-state semantics; the service
+  // layer applies refinements (limit / minScore / company / location / runId)
+  // on top. The `failed` state does NOT return JobRows (it returns rows from
+  // `discoveryErrors`); the service layer queries that shape directly via
+  // `listDiscoveryErrorsByRun`.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Resolve a `JobListState` to the matching JobRows, applying the
+   * supplied refinements (company / location substring match +
+   * runId scoping).
+   *
+   * `minScore` is applied at the SQL layer only for states backed by
+   * score results (`scored`, plus `all` when supplied). Other states
+   * ignore `minScore` — the service layer guards the same surface.
+   *
+   * For the `failed` state the method returns an empty array; the
+   * service layer queries `discoveryErrors` directly.
+   */
+  async listByState(filter: JobListRowFilter): Promise<readonly JobRow[]> {
+    if (filter.state === 'failed') {
+      // `failed` is sourced from `discoveryErrors`, not `jobs`.
+      return [];
+    }
+
+    const jobIdFilter = await this.jobIdsForState(filter.state, filter);
+    if (jobIdFilter === null) {
+      // No state-specific ID filter; honour `minScore` for `all`.
+      if (filter.state === 'all' && filter.minScore !== undefined) {
+        const scoredIds = this.activeSuccessfulScoreJobIds(filter.minScore);
+        if (scoredIds.length === 0) return [];
+        const conditions = [inArray(jobs.id, scoredIds)];
+        this.pushTextRefinements(conditions, filter);
+        const rows = this.ctx.db
+          .select()
+          .from(jobs)
+          .where(and(...conditions))
+          .orderBy(desc(jobs.firstDiscoveryTimestamp), asc(jobs.sourceJobId))
+          .limit(filter.limit)
+          .all();
+        return rows.map(jobRowFromRecord);
+      }
+      // `all` without minScore: every job is a candidate (subject to
+      // company / location / runId).
+      const conditions: ReturnType<typeof eq>[] = [];
+      this.pushTextRefinements(conditions, filter);
+      const runScope = await this.jobIdsForRun(filter.runId);
+      if (runScope !== null) conditions.push(inArray(jobs.id, runScope));
+      const rows = this.ctx.db
+        .select()
+        .from(jobs)
+        .where(conditions.length === 0 ? undefined : and(...conditions))
+        .orderBy(desc(jobs.firstDiscoveryTimestamp), asc(jobs.sourceJobId))
+        .limit(filter.limit)
+        .all();
+      return rows.map(jobRowFromRecord);
+    }
+
+    if (jobIdFilter.length === 0) {
+      return [];
+    }
+
+    const conditions = [inArray(jobs.id, jobIdFilter)];
+    this.pushTextRefinements(conditions, filter);
+    const rows = this.ctx.db
+      .select()
+      .from(jobs)
+      .where(and(...conditions))
+      .orderBy(desc(jobs.firstDiscoveryTimestamp), asc(jobs.sourceJobId))
+      .limit(filter.limit)
+      .all();
+    return rows.map(jobRowFromRecord);
+  }
+
+  /**
+   * Resolve a job CLI identifier to its JobRow.
+   *
+   * Accepts:
+   *   - `job_<int>`           → looked up via `findById` (canonical).
+   *   - numeric `<digits>`    → looked up via `findBySourceJobId`
+   *                              (the LinkedIn sourceJobId form).
+   *
+   * Anything else returns `null`; the service layer wraps that into
+   * a typed `InspectionNotFoundError` with code
+   * `jobs_show_invalid_identifier`.
+   */
+  async findBySourceJobIdOrId(identifier: string): Promise<JobRow | null> {
+    if (typeof identifier !== 'string' || identifier.trim() === '') {
+      return null;
+    }
+    if (identifier.startsWith(JOB_PREFIX)) {
+      const tail = identifier.slice(JOB_PREFIX.length);
+      if (!/^[0-9]+$/.test(tail)) return null;
+      const id = Number(tail);
+      if (!Number.isInteger(id) || id <= 0) return null;
+      return this.findById(id);
+    }
+    if (NUMERIC_JOB_PATTERN.test(identifier)) {
+      return this.findBySourceJobId(identifier);
+    }
+    return null;
+  }
+
+  /**
+   * Count of `discoveryErrors` rows for a single run. Used by the
+   * `--all` state (with `--run`) to surface a "this run had <n>
+   * discovery errors" hint without materialising every error row.
+   */
+  async discoveryErrorCountByRun(runId: number): Promise<number> {
+    const rows = this.ctx.db
+      .select({ id: discoveryErrors.id })
+      .from(discoveryErrors)
+      .where(eq(discoveryErrors.pipelineRunId, runId))
+      .all();
+    return rows.length;
+  }
+
+  // -------------------------------------------------------------------------
+  // Private helpers — back `listByState`. Kept small + focused so each
+  // per-state case stays one statement.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Push the company / location refinements onto a Drizzle `conditions`
+   * accumulator. SQLite's `LIKE` is ASCII case-insensitive by default
+   * (the runtime configuration enables this); the service layer
+   * normalises the input to lowercase before reaching us.
+   */
+  private pushTextRefinements(
+    conditions: Array<ReturnType<typeof eq>>,
+    filter: JobListRowFilter,
+  ): void {
+    if (filter.company !== undefined && filter.company.length > 0) {
+      conditions.push(like(jobs.company, `%${filter.company}%`));
+    }
+    if (filter.location !== undefined && filter.location.length > 0) {
+      conditions.push(like(jobs.location, `%${filter.location}%`));
+    }
+  }
+
+  /**
+   * Collect the set of job IDs that match the per-state semantics.
+   *
+   * Returns `null` when no ID filter is needed (the `all` state, which
+   * wants every job), `[]` when no job matches the state
+   * (short-circuit), or a concrete list otherwise.
+   */
+  private async jobIdsForState(
+    state: Exclude<JobListState, 'failed'>,
+    filter: JobListRowFilter,
+  ): Promise<readonly number[] | null> {
+    const runScope = await this.jobIdsForRun(filter.runId);
+
+    switch (state) {
+      case 'all':
+        return null;
+      case 'scored':
+        return this.applyRunScope(this.activeSuccessfulScoreJobIds(filter.minScore), runScope);
+      case 'accepted':
+        return this.applyRunScope(this.activeFilterOutcomeJobIds('accepted'), runScope);
+      case 'rejected':
+        return this.applyRunScope(this.activeFilterOutcomeJobIds('rejected'), runScope);
+      case 'unscored': {
+        const acceptedIds = new Set(this.activeFilterOutcomeJobIds('accepted'));
+        const scoredIds = new Set(this.activeSuccessfulScoreJobIds(undefined));
+        const result: number[] = [];
+        for (const id of acceptedIds) {
+          if (!scoredIds.has(id)) result.push(id);
+        }
+        return this.applyRunScope(result, runScope);
+      }
+      case 'partial':
+        return this.applyRunScope(this.jobsByExtractionStatus('partial'), runScope);
+      case 'filter-errors':
+        return this.applyRunScope(this.activeFilterOutcomeJobIds('error'), runScope);
+      case 'scoring-errors':
+        return this.applyRunScope(this.activeFailedScoreJobIds(), runScope);
+      default: {
+        const exhaustive: never = state;
+        void exhaustive;
+        return [];
+      }
+    }
+  }
+
+  /** Job IDs discovered in `runId`, or `null` when no scope is set. */
+  private async jobIdsForRun(runId: number | undefined): Promise<readonly number[] | null> {
+    if (runId === undefined) return null;
+    const rows = this.ctx.db
+      .selectDistinct({ jobId: discoveryEvents.jobId })
+      .from(discoveryEvents)
+      .where(eq(discoveryEvents.pipelineRunId, runId))
+      .all();
+    return rows.map((r) => r.jobId);
+  }
+
+  private applyRunScope(
+    ids: readonly number[],
+    runScope: readonly number[] | null,
+  ): readonly number[] {
+    if (runScope === null) return [...ids];
+    if (ids.length === 0) return [...ids];
+    const scope = new Set(runScope);
+    return ids.filter((id) => scope.has(id));
+  }
+
+  /** Job IDs whose latest active score result succeeded, optionally >= `minScore`. */
+  private activeSuccessfulScoreJobIds(minScore: number | undefined): readonly number[] {
+    const baseConditions = [eq(scoreResults.active, true), eq(scoreResults.success, true)];
+    const where =
+      minScore === undefined
+        ? and(...baseConditions)
+        : and(...baseConditions, gte(scoreResults.overallScore, minScore));
+    const rows = this.ctx.db
+      .select({ jobId: scoreResults.jobId })
+      .from(scoreResults)
+      .where(where)
+      .all();
+    return rows.map((r) => r.jobId);
+  }
+
+  /** Job IDs whose latest active filter result has the supplied outcome. */
+  private activeFilterOutcomeJobIds(outcome: 'accepted' | 'rejected' | 'error'): readonly number[] {
+    const rows = this.ctx.db
+      .select({ jobId: filterResults.jobId })
+      .from(filterResults)
+      .where(and(eq(filterResults.active, true), eq(filterResults.overallOutcome, outcome)))
+      .all();
+    return rows.map((r) => r.jobId);
+  }
+
+  /** Job IDs whose canonical row carries the supplied extraction status. */
+  private jobsByExtractionStatus(status: ExtractionStatus): readonly number[] {
+    const rows = this.ctx.db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(eq(jobs.extractionStatus, status))
+      .all();
+    return rows.map((r) => r.id);
+  }
+
+  /** Job IDs whose latest active score result failed (success=false). */
+  private activeFailedScoreJobIds(): readonly number[] {
+    const rows = this.ctx.db
+      .select({ jobId: scoreResults.jobId })
+      .from(scoreResults)
+      .where(and(eq(scoreResults.active, true), eq(scoreResults.success, false)))
+      .all();
+    return rows.map((r) => r.jobId);
+  }
+}
+
+/**
+ * Filter shape consumed by `JobRepository.listByState` (TASK-016 Wave B,
+ * SPEC §34.3). Lives next to the repository method so the SQL layer
+ * can read + apply refinements without the service layer re-marshalling.
+ *
+ * `company` and `location` are expected to be already lowercased by the
+ * service layer (case-insensitive substring match). `minScore` only
+ * applies to states that filter against the score table (`scored`,
+ * plus `all` when supplied).
+ */
+export interface JobListRowFilter {
+  readonly state: JobListState;
+  readonly limit: number;
+  readonly minScore?: number;
+  readonly company?: string;
+  readonly location?: string;
+  readonly runId?: number;
 }

@@ -89,6 +89,22 @@ import { FilterApplyService } from './filter/service.js';
 import { ScoringService } from './scoring/service.js';
 import { createDefaultBrowserSession } from './linkedin/browser-default.js';
 import { createDefaultDiagnosticManager } from './diagnostics/manager-default.js';
+import {
+  formatJobListTable,
+  formatJobShow,
+  formatRunListTable,
+  formatRunShow,
+  InspectionValidationError,
+  JobsListService,
+  JobsShowService,
+  RunsListService,
+  RunsShowService,
+  type JobListState,
+  type JobShowPayload,
+  type RunListRow,
+  type RunShowPayload,
+} from './inspection/index.js';
+import { parsePrefixedId } from './persistence/identifiers.js';
 
 const cliFileSystem: FileSystem = {
   async readFile(path) {
@@ -163,18 +179,46 @@ function exitWithError(error: unknown): never {
   process.exit(1);
 }
 
-async function pathsCommand(): Promise<void> {
+/**
+ * Path-slot key order is part of the documented JSON contract
+ * (SPEC §36 — `paths --json` emits exactly these 6 keys). The human-
+ * readable output maps each key to a slightly nicer label (e.g.
+ * `profileSources` → `profile-sources`) so the existing UX is
+ * preserved when `--json` is absent.
+ */
+const PATH_SLOT_KEYS = [
+  'config',
+  'data',
+  'logs',
+  'diagnostics',
+  'cache',
+  'profileSources',
+] as const;
+type PathSlotKey = (typeof PATH_SLOT_KEYS)[number];
+
+const PATH_SLOT_LABELS: Readonly<Record<PathSlotKey, string>> = {
+  config: 'config',
+  data: 'data',
+  logs: 'logs',
+  diagnostics: 'diagnostics',
+  cache: 'cache',
+  profileSources: 'profile-sources',
+};
+
+async function pathsCommand(json: boolean): Promise<void> {
   const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
-  const slots = [
-    { key: 'config', label: 'config' },
-    { key: 'data', label: 'data' },
-    { key: 'logs', label: 'logs' },
-    { key: 'diagnostics', label: 'diagnostics' },
-    { key: 'cache', label: 'cache' },
-    { key: 'profileSources', label: 'profile-sources' },
-  ] as const;
-  for (const { key, label } of slots) {
-    process.stdout.write(`${label}: ${paths[key].directory}\n`);
+  if (json) {
+    const payload = {
+      schemaVersion: 1,
+      paths: Object.fromEntries(
+        PATH_SLOT_KEYS.map((key) => [key, paths[key].directory]),
+      ) as Readonly<Record<PathSlotKey, string>>,
+    };
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    return;
+  }
+  for (const key of PATH_SLOT_KEYS) {
+    process.stdout.write(`${PATH_SLOT_LABELS[key]}: ${paths[key].directory}\n`);
   }
 }
 
@@ -750,6 +794,237 @@ async function runCommand(
   }
 }
 
+// ---------------------------------------------------------------------------
+// TASK-016 — Inspection command handlers (`jobs list`, `jobs show`,
+// `runs list`, `runs show`). The handlers own:
+//   - the `--json` flag (Decision 10 + 11),
+//   - the state-flag mutex + default (`--scored` per Decision 4),
+//   - the terminal-width budget for the human-readable tables
+//     (mirrors `formatTopNTable` at src/pipeline/format.ts:60),
+//   - the typed-error → exit-code mapping via the existing
+//     `exitWithError` helper (no new exit codes).
+// The handlers do NOT call `process.exit` directly — that lives in
+// `exitWithError` only.
+// ---------------------------------------------------------------------------
+
+/**
+ * CLI options shape for `jobs list`. Commander parses boolean flags
+ * as `boolean | undefined` and string flags as `string | undefined`;
+ * the handler normalises both into the typed `JobsListInput` shape.
+ */
+interface JobsListCommandOptions {
+  readonly all?: boolean;
+  readonly scored?: boolean;
+  readonly accepted?: boolean;
+  readonly rejected?: boolean;
+  readonly unscored?: boolean;
+  readonly partial?: boolean;
+  readonly failed?: boolean;
+  readonly filterErrors?: boolean;
+  readonly scoringErrors?: boolean;
+  readonly limit?: string;
+  readonly minScore?: string;
+  readonly company?: string;
+  readonly location?: string;
+  readonly run?: string;
+  readonly json: boolean;
+}
+
+const JOB_LIST_STATE_FLAGS: ReadonlyArray<{
+  readonly key: keyof JobsListCommandOptions;
+  readonly value: JobListState;
+}> = [
+  { key: 'all', value: 'all' },
+  { key: 'scored', value: 'scored' },
+  { key: 'accepted', value: 'accepted' },
+  { key: 'rejected', value: 'rejected' },
+  { key: 'unscored', value: 'unscored' },
+  { key: 'partial', value: 'partial' },
+  { key: 'failed', value: 'failed' },
+  { key: 'filterErrors', value: 'filter-errors' },
+  { key: 'scoringErrors', value: 'scoring-errors' },
+];
+
+async function jobsListCommand(options: JobsListCommandOptions): Promise<void> {
+  // 1. State-flag mutex + default. Exactly one of the documented
+  //    `--<state>` flags may be supplied (Decision 5). When none is
+  //    supplied, the default is `scored` per Decision 4.
+  const setFlags = JOB_LIST_STATE_FLAGS.filter((f) => options[f.key] === true);
+  if (setFlags.length > 1) {
+    throw new InspectionValidationError(
+      'jobs_list_state_conflict',
+      'Only one state flag may be supplied.',
+      { flags: setFlags.map((f) => f.key) },
+    );
+  }
+  const state: JobListState = setFlags[0]?.value ?? 'scored';
+
+  // 2. Parse `--run` (run_<int>) into a numeric runId. The service
+  //    validates the other refinements (`limit`, `minScore`); only
+  //    `--run` requires pre-parsing because Commander parses it as
+  //    a string but the service expects a number.
+  let runId: number | undefined;
+  if (options.run !== undefined && options.run.length > 0) {
+    try {
+      runId = parsePrefixedId(options.run, 'run');
+    } catch {
+      throw new InspectionValidationError(
+        'jobs_list_invalid_run_id',
+        `jobs list --run must be a run_<integer> identifier (received "${options.run}").`,
+        { run: options.run },
+      );
+    }
+  }
+
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  try {
+    const repositories = createRepositories(handle);
+    const service = new JobsListService(repositories);
+
+    const result = await service.list({
+      state,
+      ...(options.limit !== undefined ? { limit: Number(options.limit) } : {}),
+      ...(options.minScore !== undefined ? { minScore: Number(options.minScore) } : {}),
+      ...(options.company !== undefined && options.company.length > 0
+        ? { company: options.company }
+        : {}),
+      ...(options.location !== undefined && options.location.length > 0
+        ? { location: options.location }
+        : {}),
+      ...(runId !== undefined ? { runId } : {}),
+    });
+
+    if (options.json) {
+      const payload = {
+        schemaVersion: 1,
+        state: result.state,
+        filters: {
+          minimumScore: options.minScore !== undefined ? Number(options.minScore) : null,
+          company: options.company ?? null,
+          location: options.location ?? null,
+          runId: runId ?? null,
+        },
+        limit: result.limit,
+        returned: result.returned,
+        jobs: result.rows,
+      };
+      process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      return;
+    }
+
+    const terminalWidth = process.stdout.columns ?? 120;
+    process.stdout.write(`${formatJobListTable(state, result.rows, terminalWidth)}\n`);
+  } finally {
+    handle.close();
+  }
+}
+
+interface JobsShowCommandOptions {
+  readonly json: boolean;
+}
+
+async function jobsShowCommand(
+  jobIdArg: string | undefined,
+  options: JobsShowCommandOptions,
+): Promise<void> {
+  if (typeof jobIdArg !== 'string' || jobIdArg.trim() === '') {
+    throw new InspectionValidationError(
+      'jobs_show_missing_id',
+      'jobs show requires a job id argument.',
+      { received: jobIdArg ?? null },
+    );
+  }
+
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  try {
+    const repositories = createRepositories(handle);
+    const service = new JobsShowService(repositories);
+    const payload: JobShowPayload = await service.show(jobIdArg);
+    if (options.json) {
+      const jsonPayload = { schemaVersion: 1, ...payload };
+      process.stdout.write(`${JSON.stringify(jsonPayload, null, 2)}\n`);
+      return;
+    }
+    process.stdout.write(`${formatJobShow(payload, process.stdout.columns ?? 120)}\n`);
+  } finally {
+    handle.close();
+  }
+}
+
+interface RunsListCommandOptions {
+  readonly limit?: string;
+  readonly json: boolean;
+}
+
+async function runsListCommand(options: RunsListCommandOptions): Promise<void> {
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  try {
+    const repositories = createRepositories(handle);
+    const service = new RunsListService(repositories);
+    const rows: readonly RunListRow[] = await service.list({
+      ...(options.limit !== undefined ? { limit: Number(options.limit) } : {}),
+    });
+
+    if (options.json) {
+      const payload = {
+        schemaVersion: 1,
+        limit: options.limit !== undefined ? Number(options.limit) : 20,
+        returned: rows.length,
+        runs: rows,
+      };
+      process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      return;
+    }
+    process.stdout.write(`${formatRunListTable(rows, process.stdout.columns ?? 120)}\n`);
+  } finally {
+    handle.close();
+  }
+}
+
+interface RunsShowCommandOptions {
+  readonly json: boolean;
+}
+
+async function runsShowCommand(
+  runIdArg: string | undefined,
+  options: RunsShowCommandOptions,
+): Promise<void> {
+  if (typeof runIdArg !== 'string' || runIdArg.trim() === '') {
+    throw new InspectionValidationError(
+      'runs_show_missing_id',
+      'runs show requires a run id argument.',
+      { received: runIdArg ?? null },
+    );
+  }
+
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  try {
+    const repositories = createRepositories(handle);
+    const service = new RunsShowService(repositories);
+    const payload: RunShowPayload = await service.show(runIdArg);
+    if (options.json) {
+      const jsonPayload = { schemaVersion: 1, ...payload };
+      process.stdout.write(`${JSON.stringify(jsonPayload, null, 2)}\n`);
+      return;
+    }
+    process.stdout.write(`${formatRunShow(payload, process.stdout.columns ?? 120)}\n`);
+  } finally {
+    handle.close();
+  }
+}
+
 export function createProgram(
   options: {
     prompts?: SearchPrompts;
@@ -787,9 +1062,10 @@ export function createProgram(
   program
     .command('paths')
     .description('Print resolved OS-specific runtime paths without creating directories.')
-    .action(async () => {
+    .option('--json', 'emit a single JSON document to stdout', false)
+    .action(async (options: { json: boolean }) => {
       try {
-        await pathsCommand();
+        await pathsCommand(options.json);
       } catch (error) {
         exitWithError(error);
       }
@@ -1062,6 +1338,84 @@ export function createProgram(
           options.json,
           pipelinePrompts ?? new InquirerPipelinePrompts(),
         );
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  // -------------------------------------------------------------------------
+  // TASK-016 — Inspection subcommands (`jobs list` / `jobs show` /
+  // `runs list` / `runs show`). See SPEC §31 + §34 + §35 + §36 +
+  // §37. All four reuse `exitWithError` for typed-error → exit-code
+  // mapping; none call `process.exit` directly.
+  // -------------------------------------------------------------------------
+
+  const jobs = program.command('jobs').description('Inspect discovered jobs.');
+
+  jobs
+    .command('list')
+    .description(
+      'List jobs filtered by state and refinements. Defaults to --scored when no state flag is supplied.',
+    )
+    .option('--all', 'all canonical jobs and applicable diagnostic records')
+    .option('--scored', 'complete jobs with a current successful score (default)')
+    .option('--accepted', 'complete jobs with current accepted filter result')
+    .option('--rejected', 'complete jobs with current rejected filter result')
+    .option('--unscored', 'complete accepted jobs without a current successful score')
+    .option('--partial', 'partial extraction records')
+    .option('--failed', 'failed extraction or discovery records')
+    .option('--filter-errors', 'complete jobs with current filter error')
+    .option('--scoring-errors', 'eligible jobs with current scoring error')
+    .option('--limit <n>', 'positive integer limit (default 50)')
+    .option('--min-score <n>', 'minimum score 0-100')
+    .option('--company <text>', 'normalized case-insensitive substring match')
+    .option('--location <text>', 'normalized case-insensitive substring match')
+    .option('--run <run-id>', 'limit to jobs discovered in this run (run_<int>)')
+    .option('--json', 'emit a single JSON document to stdout', false)
+    .action(async (options: JobsListCommandOptions) => {
+      try {
+        await jobsListCommand(options);
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  jobs
+    .command('show')
+    .description('Print the full payload for a single job.')
+    .argument('<job-id>', 'local job_<int> or numeric LinkedIn sourceJobId')
+    .option('--json', 'emit a single JSON document to stdout', false)
+    .action(async (jobId: string, options: JobsShowCommandOptions) => {
+      try {
+        await jobsShowCommand(jobId, options);
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  const runs = program.command('runs').description('Inspect pipeline runs.');
+
+  runs
+    .command('list')
+    .description('List recent pipeline runs (most recent first).')
+    .option('--limit <n>', 'positive integer limit (default 20)')
+    .option('--json', 'emit a single JSON document to stdout', false)
+    .action(async (options: RunsListCommandOptions) => {
+      try {
+        await runsListCommand(options);
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
+  runs
+    .command('show')
+    .description('Print the full payload for a single run.')
+    .argument('<run-id>', 'run_<int>')
+    .option('--json', 'emit a single JSON document to stdout', false)
+    .action(async (runId: string, options: RunsShowCommandOptions) => {
+      try {
+        await runsShowCommand(runId, options);
       } catch (error) {
         exitWithError(error);
       }
