@@ -87,6 +87,7 @@ import { LinkedInDiscoveryService } from './linkedin/discovery-service.js';
 import { LinkedInExtractionService } from './linkedin/extraction/service.js';
 import { FilterApplyService } from './filter/service.js';
 import { ScoringService } from './scoring/service.js';
+import type { ScoringServiceOptions } from './scoring/service.js';
 import { createDefaultBrowserSession } from './linkedin/browser-default.js';
 import { createDefaultDiagnosticManager } from './diagnostics/manager-default.js';
 import {
@@ -104,7 +105,14 @@ import {
   type RunListRow,
   type RunShowPayload,
 } from './inspection/index.js';
-import { parsePrefixedId } from './persistence/identifiers.js';
+import { parsePrefixedId, resolveJobIdentifier } from './persistence/identifiers.js';
+import {
+  ReevaluationService,
+  ReevaluationValidationError,
+  formatReevaluationSummary,
+  formatScoringPlanForReevaluation,
+} from './reevaluation/index.js';
+import { pinoReevaluationLogger } from './logging/reevaluation-logger.js';
 
 const cliFileSystem: FileSystem = {
   async readFile(path) {
@@ -957,6 +965,185 @@ async function jobsShowCommand(
   }
 }
 
+// ---------------------------------------------------------------------------
+// TASK-017 — `jobs reevaluate` CLI handler. SPEC §28 + §30 + §36 + §37.
+// The handler owns:
+//   - the documented flag mutex (`--filters-only` XOR `--scores-only`),
+//   - the `--job <id>` identifier resolution + partial-job rejection,
+//   - service composition (FilterApplyService + ScoringService +
+//     ReevaluationService) wired against the active
+//     `Repositories` facade + `pinoReevaluationLogger(rootLogger)`,
+//   - the `--json` / human-readable rendering dispatch (mirrors
+//   `jobs list` / `jobs show`).
+// The handler does NOT call `process.exit` directly — that lives
+// in `exitWithError` only. All typed errors are surfaced via
+// `exitWithError` for the documented exit-code mapping (no new
+// exit codes per Decision 15).
+// ---------------------------------------------------------------------------
+
+interface JobsReevaluateCommandOptions {
+  readonly filtersOnly: boolean;
+  readonly scoresOnly: boolean;
+  readonly job?: string;
+  readonly dryRun: boolean;
+  readonly yes: boolean;
+  readonly json: boolean;
+}
+
+/**
+ * Resolve the CLI-supplied `--job` argument into a row id. Throws
+ * `ReevaluationValidationError` for the documented invalid-input
+ * cases (Decision 7). The `InvalidIdentifierError` thrown by
+ * `resolveJobIdentifier` for malformed input bubbles up to
+ * `exitWithError` (which already maps it to exit code 2 per the
+ * `InvalidIdentifierError` class convention).
+ */
+async function jobsReevaluateLookupJob(
+  repositories: Repositories,
+  rawJob: string,
+): Promise<number> {
+  // Step 1: parse the identifier (`job_<int>` or numeric LinkedIn
+  // `sourceJobId`). Throws `InvalidIdentifierError` on malformed
+  // input — exit code 2 via `exitWithError`.
+  const resolution = resolveJobIdentifier(rawJob);
+
+  // Step 2: look up the canonical row.
+  let row: Awaited<ReturnType<Repositories['jobs']['findById']>> = null;
+  if (resolution.jobId !== undefined) {
+    row = await repositories.jobs.findById(resolution.jobId);
+  } else if (resolution.sourceJobId !== undefined) {
+    row = await repositories.jobs.findBySourceJobId(resolution.sourceJobId);
+  }
+  if (row === null) {
+    throw new ReevaluationValidationError(
+      'job_not_found',
+      `No job found for identifier "${rawJob}".`,
+      {
+        input: rawJob,
+        jobId: resolution.jobId ?? null,
+        sourceJobId: resolution.sourceJobId ?? null,
+      },
+    );
+  }
+
+  // Step 3: enforce complete extraction (Decision 7).
+  if (row.extractionStatus !== 'complete') {
+    throw new ReevaluationValidationError(
+      'job_not_complete',
+      `Job ${row.id} is not complete (extractionStatus=${row.extractionStatus}).`,
+      { jobId: row.id, status: row.extractionStatus },
+    );
+  }
+  return row.id;
+}
+
+async function jobsReevaluateCommand(
+  options: JobsReevaluateCommandOptions,
+  testHooks: { openaiClient?: OpenAIClient } = {},
+  pipelinePrompts: PipelinePrompts = new InquirerPipelinePrompts(),
+): Promise<void> {
+  // (a) Flag validation — `--filters-only` XOR `--scores-only`
+  // (Decision 9). The `--job` flag may combine with either filter
+  // or score scope, or with `--dry-run` — but never both filter and
+  // score scopes together.
+  if (options.filtersOnly && options.scoresOnly) {
+    throw new ReevaluationValidationError(
+      'reevaluate_scope_conflict',
+      'Cannot combine --filters-only with --scores-only.',
+      { scope: 'conflict' },
+    );
+  }
+  const scope = options.filtersOnly
+    ? 'filters-only'
+    : options.scoresOnly
+      ? 'scores-only'
+      : options.job !== undefined
+        ? 'job'
+        : 'default';
+
+  // (b) Identifier resolution (Decision 7). The throw surfaces as
+  // a typed error → `exitWithError` maps to exit code 2.
+  let jobInternalId: number | null = null;
+  if (options.job !== undefined) {
+    // The database handle is needed for the lookup; open it here
+    // (cheaper than opening it twice in case the flag is absent).
+    const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+    const handle = await initializeDatabase(platformPaths, {
+      migrationsFolder: resolveRepoRootForMigrations(),
+    });
+    try {
+      const repositories = createRepositories(handle);
+      jobInternalId = await jobsReevaluateLookupJob(repositories, options.job);
+    } finally {
+      handle.close();
+    }
+  }
+
+  // (c) Service execution.
+  const platformPaths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const handle = await initializeDatabase(platformPaths, {
+    migrationsFolder: resolveRepoRootForMigrations(),
+  });
+  try {
+    const repositories = createRepositories(handle);
+    const filterApplyService = new FilterApplyService({ repositories });
+    // The scoring service is composed even when no OpenAI work is
+    // produced — the reevaluation service relies on
+    // `ScoringService.buildScoringPlan()` for the `--json` envelope
+    // + the scoring confirmation prompt. The MVP scoring config
+    // (model + reasoning effort) is hard-coded inside
+    // `ReevaluationService` to keep the fingerprint byte-for-byte
+    // compatible with the pipeline scorer (see TASK-017 plan
+    // Known Limitations). Tests inject a fake OpenAI client via
+    // `testHooks.openaiClient`; production code reads the API key
+    // from the environment via `createDefaultOpenAIClient`.
+    const openaiClient: OpenAIClient =
+      testHooks.openaiClient ??
+      createDefaultOpenAIClient({ apiKey: process.env['OPENAI_API_KEY'] ?? '' });
+    const scoringOptions: ScoringServiceOptions = {
+      repositories,
+      openaiClient,
+      config: {
+        model: 'gpt-5.6-sol',
+        reasoningEffort: 'medium',
+        concurrency: 1,
+      },
+    };
+    const scoringService = new ScoringService(scoringOptions);
+    const service = new ReevaluationService({
+      repositories,
+      filterApplyService,
+      scoringService,
+      prompts: pipelinePrompts,
+      scoringConcurrency: 1,
+      logger: pinoReevaluationLogger(rootLogger),
+    });
+    const outcome = await service.execute({
+      scope,
+      dryRun: options.dryRun,
+      confirmScoring: !options.yes,
+      env: process.env,
+      ...(jobInternalId !== null ? { jobId: jobInternalId } : {}),
+    });
+
+    // (e) Render. JSON first (single valid document to stdout), then
+    // human-readable summary + optional scoring-plan block.
+    if (options.json) {
+      process.stdout.write(`${JSON.stringify(outcome.plan, null, 2)}\n`);
+      return;
+    }
+    const terminalWidth = process.stdout.columns ?? 120;
+    process.stdout.write(`${formatReevaluationSummary(outcome.plan, terminalWidth)}\n`);
+    if (outcome.plan.scoringPlan !== null && outcome.plan.scoringPlan.newOpenAIRequests > 0) {
+      process.stdout.write(
+        `\n${formatScoringPlanForReevaluation(outcome.plan.scoringPlan, terminalWidth)}\n`,
+      );
+    }
+  } finally {
+    handle.close();
+  }
+}
+
 interface RunsListCommandOptions {
   readonly limit?: string;
   readonly json: boolean;
@@ -1041,6 +1228,11 @@ export function createProgram(
     pipelinePrompts?: PipelinePrompts;
   } = {},
 ): Command {
+  // OpenAI client for the `profile extract` + `jobs reevaluate`
+  // subcommands (Decision 4 + Decision 10). Tests inject a fake via
+  // `options.openaiClient`; production code reads the API key from the
+  // environment.
+  const reevaluationOpenaiClient: OpenAIClient | undefined = options.openaiClient;
   const prompts: SearchPrompts = options.prompts ?? defaultInquirerPrompts;
   const filterPrompts: FilterPrompts | undefined = options.filterPrompts;
   const initPrompts: InitPrompts | undefined = options.initPrompts;
@@ -1393,6 +1585,51 @@ export function createProgram(
       }
     });
 
+  // TASK-017 — `jobs reevaluate`. SPEC §28 + §30 + §36 + §37.
+  jobs
+    .command('reevaluate')
+    .description(
+      'Reevaluate stored jobs. Defaults to all complete jobs with stale or missing filter/score results. Supports --filters-only, --scores-only, --job <job-id>, --dry-run, and --yes.',
+    )
+    .option(
+      '--filters-only',
+      'Reevaluate only stale or missing filters (no OpenAI calls). Mark dependent scores stale.',
+      false,
+    )
+    .option(
+      '--scores-only',
+      'Reevaluate only stale scores; skip jobs whose filter is stale or missing with reason filter_update_required.',
+      false,
+    )
+    .option(
+      '--job <job-id>',
+      'Target a single complete job (job_<int> or numeric LinkedIn sourceJobId). May combine with --filters-only, --scores-only, --dry-run.',
+    )
+    .option(
+      '--dry-run',
+      'Show the would-be plan with filtering count, scoring count, and skipped reasons. No DB writes, no OpenAI calls.',
+      false,
+    )
+    .option(
+      '--yes',
+      'Bypass only the OpenAI scoring confirmation (no effect for --filters-only or --dry-run).',
+      false,
+    )
+    .option('--json', 'emit a single JSON document to stdout', false)
+    .action(async (options: JobsReevaluateCommandOptions) => {
+      try {
+        const reevalHooks =
+          reevaluationOpenaiClient !== undefined ? { openaiClient: reevaluationOpenaiClient } : {};
+        await jobsReevaluateCommand(
+          options,
+          reevalHooks,
+          pipelinePrompts ?? new InquirerPipelinePrompts(),
+        );
+      } catch (error) {
+        exitWithError(error);
+      }
+    });
+
   const runs = program.command('runs').description('Inspect pipeline runs.');
 
   runs
@@ -1436,6 +1673,7 @@ if (entrypoint !== undefined && import.meta.url === pathToFileURL(entrypoint).hr
 
 // Re-exports for tests
 export { resolvePlatformPaths, loadConfig, updateConfig, OperationalConfigSchema };
+export type { JobsReevaluateCommandOptions };
 export type { OperationalConfig, ConfigPatch, ConfigPreview, UpdateOptions };
 export { ApplicationError, ConfigError, PathError, UnknownConfigError, ValidationError };
 export { SearchConfigError, SearchCancelledError, LinkedInURLParseError } from './search/errors.js';

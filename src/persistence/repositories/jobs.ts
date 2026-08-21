@@ -273,6 +273,26 @@ export class JobRepository {
     return row === undefined ? null : jobRowFromRecord(row);
   }
 
+  /**
+   * Read-only: every job row whose `extractionStatus === 'complete'`
+   * (TASK-017 Plan Task 9, SPEC §28). Used by `jobs reevaluate`
+   * selection — partial / failed rows are excluded because their
+   * filter + score state cannot be trusted.
+   *
+   * Order is `id ASC` to match the documented tie-breaker (SPEC
+   * §34.4) and the deterministic selection order documented in
+   * `src/reevaluation/plan.ts`.
+   */
+  async listComplete(): Promise<readonly JobRow[]> {
+    const rows = this.ctx.db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.extractionStatus, 'complete'))
+      .orderBy(asc(jobs.id))
+      .all();
+    return rows.map(jobRowFromRecord);
+  }
+
   async updateExtraction(id: number, patch: JobPatch): Promise<void> {
     this.ctx.db.transaction((tx) => {
       const update: Record<string, unknown> = {};

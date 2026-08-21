@@ -180,4 +180,98 @@ describe('JobRepository', () => {
     expect(errorId).toBeGreaterThan(0);
     expect(await jobRepo.listDiscoveryErrorsByRun(1)).toHaveLength(1);
   });
+
+  it('listComplete returns only rows with extractionStatus=complete, ordered by id ASC', async () => {
+    // Three jobs in mixed extraction states; listComplete must return
+    // only the two complete ones in insertion order (id ASC).
+    const complete1 = await jobRepo.recordNewJob({
+      job: {
+        sourceJobId: 'c-1',
+        extractionStatus: 'complete',
+        firstDiscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+        lastRediscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+        createdTimestamp: '2026-08-05T10:00:00.000Z',
+        updatedTimestamp: '2026-08-05T10:00:00.000Z',
+      },
+      discoveryEvent: {
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
+        timestamp: '2026-08-05T10:00:00.000Z',
+        isNew: true,
+        currentExtractionState: 'complete',
+        extractionAttempted: true,
+        skipReason: null,
+      },
+    });
+    await jobRepo.recordNewJob({
+      job: {
+        sourceJobId: 'p-1',
+        extractionStatus: 'partial',
+        firstDiscoveryTimestamp: '2026-08-05T10:01:00.000Z',
+        lastRediscoveryTimestamp: '2026-08-05T10:01:00.000Z',
+        createdTimestamp: '2026-08-05T10:01:00.000Z',
+        updatedTimestamp: '2026-08-05T10:01:00.000Z',
+      },
+      discoveryEvent: {
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
+        timestamp: '2026-08-05T10:01:00.000Z',
+        isNew: true,
+        currentExtractionState: 'partial',
+        extractionAttempted: true,
+        skipReason: null,
+      },
+    });
+    const complete2 = await jobRepo.recordNewJob({
+      job: {
+        sourceJobId: 'c-2',
+        extractionStatus: 'complete',
+        firstDiscoveryTimestamp: '2026-08-05T10:02:00.000Z',
+        lastRediscoveryTimestamp: '2026-08-05T10:02:00.000Z',
+        createdTimestamp: '2026-08-05T10:02:00.000Z',
+        updatedTimestamp: '2026-08-05T10:02:00.000Z',
+      },
+      discoveryEvent: {
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
+        timestamp: '2026-08-05T10:02:00.000Z',
+        isNew: true,
+        currentExtractionState: 'complete',
+        extractionAttempted: true,
+        skipReason: null,
+      },
+    });
+    await jobRepo.recordNewJob({
+      job: {
+        sourceJobId: 'f-1',
+        extractionStatus: 'failed',
+        firstDiscoveryTimestamp: '2026-08-05T10:03:00.000Z',
+        lastRediscoveryTimestamp: '2026-08-05T10:03:00.000Z',
+        createdTimestamp: '2026-08-05T10:03:00.000Z',
+        updatedTimestamp: '2026-08-05T10:03:00.000Z',
+      },
+      discoveryEvent: {
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
+        timestamp: '2026-08-05T10:03:00.000Z',
+        isNew: true,
+        currentExtractionState: 'failed',
+        extractionAttempted: false,
+        skipReason: 'card_unparseable',
+      },
+    });
+
+    const completeRows = await jobRepo.listComplete();
+    expect(completeRows).toHaveLength(2);
+    expect(completeRows.map((r) => r.id)).toEqual([complete1.jobId, complete2.jobId]);
+    expect(completeRows.every((r) => r.extractionStatus === 'complete')).toBe(true);
+  });
+
+  it('listComplete returns an empty array when no rows exist', async () => {
+    expect(await jobRepo.listComplete()).toEqual([]);
+  });
 });

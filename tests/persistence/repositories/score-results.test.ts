@@ -205,4 +205,125 @@ describe('ScoreResultRepository', () => {
     expect(history).toHaveLength(2);
     expect(history.filter((r) => r.active)).toHaveLength(1);
   });
+
+  it('invalidateActiveByJob flips the 1 active row for the targeted job and returns 1 (schema invariant: at most 1 active row per job)', async () => {
+    // Build history: 3 score_results rows for jobId1. The schema
+    // enforces "at most 1 active row per job" via the partial unique
+    // index `score_results_active_idx (job_id) WHERE active = 1`
+    // (`drizzle/0000_open_white_tiger.sql:319`), so after three
+    // `activateResult` calls jobId1 has 1 active + 2 inactive rows.
+    // `invalidateActiveByJob` must count + flip the 1 active row,
+    // and the resulting history must show all 3 rows inactive.
+    await resultRepo.activateResult({
+      jobId: jobId1,
+      pipelineRunId: runId,
+      fingerprint: 'fp-job1-A',
+      timestamp: '2026-08-05T10:00:00.000Z',
+      promptVersion: 'p1',
+      rubricVersion: 'r1',
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'medium',
+      scorerImplementationVersion: 'scorer-1',
+      categoryScores: [],
+      overallScore: 0.4,
+      success: true,
+    });
+    await resultRepo.activateResult({
+      jobId: jobId1,
+      pipelineRunId: runId,
+      fingerprint: 'fp-job1-B',
+      timestamp: '2026-08-05T10:01:00.000Z',
+      promptVersion: 'p1',
+      rubricVersion: 'r1',
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'medium',
+      scorerImplementationVersion: 'scorer-1',
+      categoryScores: [],
+      overallScore: 0.5,
+      success: true,
+    });
+    await resultRepo.activateResult({
+      jobId: jobId1,
+      pipelineRunId: runId,
+      fingerprint: 'fp-job1-C',
+      timestamp: '2026-08-05T10:02:00.000Z',
+      promptVersion: 'p1',
+      rubricVersion: 'r1',
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'medium',
+      scorerImplementationVersion: 'scorer-1',
+      categoryScores: [],
+      overallScore: 0.6,
+      success: true,
+    });
+
+    // Pre-condition: 3 rows total, 1 active + 2 inactive (history).
+    const job1RowsBefore = await resultRepo.listByJob(jobId1);
+    expect(job1RowsBefore).toHaveLength(3);
+    expect(job1RowsBefore.filter((r) => r.active)).toHaveLength(1);
+
+    const flipped = await resultRepo.invalidateActiveByJob(jobId1);
+    expect(flipped).toBe(1);
+
+    const job1RowsAfter = await resultRepo.listByJob(jobId1);
+    expect(job1RowsAfter).toHaveLength(3);
+    expect(job1RowsAfter.every((r) => r.active === false)).toBe(true);
+  });
+
+  it('invalidateActiveByJob is idempotent and does not touch other jobs', async () => {
+    // First invalidateActiveByJob call flips jobId1's active rows.
+    await resultRepo.activateResult({
+      jobId: jobId1,
+      pipelineRunId: runId,
+      fingerprint: 'fp-job1-A',
+      timestamp: '2026-08-05T10:00:00.000Z',
+      promptVersion: 'p1',
+      rubricVersion: 'r1',
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'medium',
+      scorerImplementationVersion: 'scorer-1',
+      categoryScores: [],
+      overallScore: 0.5,
+      success: true,
+    });
+    expect((await resultRepo.listByJob(jobId1)).filter((r) => r.active)).toHaveLength(1);
+
+    const first = await resultRepo.invalidateActiveByJob(jobId1);
+    expect(first).toBe(1);
+
+    // Second call is a no-op — no active rows remain.
+    const second = await resultRepo.invalidateActiveByJob(jobId1);
+    expect(second).toBe(0);
+
+    // The historical row must remain queryable (AGENTS.md §6).
+    const job1Rows = await resultRepo.listByJob(jobId1);
+    expect(job1Rows).toHaveLength(1);
+    expect(job1Rows[0]?.active).toBe(false);
+
+    // A subsequent insertion of an active row for a DIFFERENT job
+    // must NOT be touched by another `invalidateActiveByJob(jobId1)`.
+    await resultRepo.activateResult({
+      jobId: jobId2,
+      pipelineRunId: runId,
+      fingerprint: 'fp-job2',
+      timestamp: '2026-08-05T10:00:00.000Z',
+      promptVersion: 'p1',
+      rubricVersion: 'r1',
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'medium',
+      scorerImplementationVersion: 'scorer-1',
+      categoryScores: [],
+      overallScore: 0.7,
+      success: true,
+    });
+    expect((await resultRepo.listByJob(jobId2)).filter((r) => r.active)).toHaveLength(1);
+
+    const third = await resultRepo.invalidateActiveByJob(jobId1);
+    expect(third).toBe(0);
+
+    const job2Rows = await resultRepo.listByJob(jobId2);
+    expect(job2Rows).toHaveLength(1);
+    expect(job2Rows[0]?.active).toBe(true);
+    expect(job2Rows[0]?.fingerprint).toBe('fp-job2');
+  });
 });

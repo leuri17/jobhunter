@@ -24,6 +24,15 @@ pnpm dev -- run --yes              # skip the scoring-plan confirmation
 pnpm dev -- run --json             # emit a single JSON document to stdout
 # SIGINT once → graceful cancellation; twice → force exit.
 
+# Reevaluate stored jobs after a config/profile change (SPEC §28).
+pnpm dev -- jobs reevaluate                     # default: complete jobs with stale/missing filter or score
+pnpm dev -- jobs reevaluate --filters-only      # rerun stale filters only, mark dependent scores stale
+pnpm dev -- jobs reevaluate --scores-only       # skip jobs whose filter is stale/missing (filter_update_required)
+pnpm dev -- jobs reevaluate --job job_42        # target a single complete job
+pnpm dev -- jobs reevaluate --dry-run           # plan with no DB writes, no OpenAI calls
+pnpm dev -- jobs reevaluate --dry-run --json    # single JSON document to stdout
+pnpm dev -- jobs reevaluate --yes               # bypass only the OpenAI confirmation
+
 # Print help
 pnpm dev -- --help
 ```

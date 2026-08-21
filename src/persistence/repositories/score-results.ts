@@ -211,4 +211,37 @@ export class ScoreResultRepository {
       .all();
     return rows.map(rowFromRecord);
   }
+
+  /**
+   * Flip every active `scoreResults` row for the supplied `jobId` to
+   * `active = false` (TASK-017 Plan Task 10, SPEC §27.4 + §28.2).
+   * Used by the reevaluation service after a `--filters-only` rerun
+   * produces a fingerprint that differs from the prior active filter
+   * — every dependent score is now stale and must be re-derived.
+   *
+   * History is preserved (AGENTS.md §6): the rows are NOT deleted,
+   * only flipped inactive, so `listByJob` keeps the full audit trail.
+   *
+   * Idempotent — re-running with no active rows returns 0 (no
+   * transaction update issued). The return value is the count of
+   * rows actually flipped so the caller can include the
+   * invalidation number in its audit output. Mirrors
+   * `FilterResultRepository.invalidateByFilterConfigVersion`
+   * (`src/persistence/repositories/filter-results.ts:213-237`).
+   */
+  async invalidateActiveByJob(jobId: number): Promise<number> {
+    return this.ctx.db.transaction((tx) => {
+      const before = tx
+        .select({ id: scoreResults.id })
+        .from(scoreResults)
+        .where(and(eq(scoreResults.jobId, jobId), eq(scoreResults.active, true)))
+        .all();
+      if (before.length === 0) return 0;
+      tx.update(scoreResults)
+        .set({ active: false })
+        .where(and(eq(scoreResults.jobId, jobId), eq(scoreResults.active, true)))
+        .run();
+      return before.length;
+    });
+  }
 }
