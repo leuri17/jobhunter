@@ -21,6 +21,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run --config vitest.config.ts",
     "test:coverage": "vitest run --config vitest.config.ts --coverage",
+    "test:acceptance": "vitest run --config vitest.config.ts tests/acceptance",
     "test:live": "vitest run --config vitest.live.config.ts",
     "test:live:list": "vitest list --config vitest.live.config.ts",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts"

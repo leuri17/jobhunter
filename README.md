@@ -37,6 +37,31 @@ pnpm dev -- jobs reevaluate --yes               # bypass only the OpenAI confirm
 pnpm dev -- --help
 ```
 
+## Commands
+
+Every command registered by `createProgram()` (see `src/cli.ts`):
+
+- `paths` — print resolved OS-specific runtime paths.
+- `config show` — print the normalized configuration.
+- `config validate` — validate `config.json` and exit 0 on success.
+- `config update --patch <json>` — apply a JSON patch to the configuration.
+- `configure search` — interactively configure LinkedIn search settings.
+- `configure filters` — interactively configure the global deterministic filter set.
+- `init` — interactively initialize JobHunter (paths, config, profile, filters). Resumable.
+- `profile import <path>` — import one or two CV source files.
+- `profile extract` — extract a structured profile from imported sources via OpenAI.
+- `profile list` — list every persisted profile version.
+- `profile show <id>` — print the review summary for a profile version.
+- `profile approve <id>` — approve a draft profile version.
+- `profile reject <id>` — reject a draft profile version.
+- `profile edit <id>` — interactively edit a draft profile version.
+- `run` — run the full discovery + extraction + filtering + scoring pipeline.
+- `jobs list` — list jobs filtered by state and refinements.
+- `jobs show <job-id>` — print the full payload for a single job.
+- `jobs reevaluate` — reevaluate stored jobs (filters-only / scores-only / --job / --dry-run).
+- `runs list` — list recent pipeline runs.
+- `runs show <run-id>` — print the full payload for a single run.
+
 ## Architecture
 
 JobHunter is structured into isolated layers per `SPEC.md §43.1` and
@@ -59,6 +84,9 @@ share the same contract (Plan Decision 2, Wave B).
 ## Development
 
 ```bash
+# Build the production bundle (tsc → dist/)
+pnpm build
+
 # Typecheck (production + test configs)
 pnpm typecheck
 
