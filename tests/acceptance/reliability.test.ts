@@ -140,10 +140,18 @@ const ITEMS: readonly ReliabilityItem[] = [
   },
   {
     id: 'R-17',
-    requirement:
-      'Keep JSON stdout valid + isolated from logs — evidence: tests/cli/paths-json.test.ts + tests/cli/jobs-list.test.ts (--json stdout capture) + src/cli.ts (process.stdout.write with JSON.stringify)',
-    evidencePaths: ['tests/cli/paths-json.test.ts', 'tests/cli/jobs-list.test.ts', 'src/cli.ts'],
-    stronger: [{ path: 'src/cli.ts', pattern: /process\.stdout\.write[\s\S]*?JSON\.stringify/ }],
+    requirement: 'Keep JSON stdout valid and isolated from logs',
+    evidencePaths: [
+      'tests/cli/paths-json.test.ts',
+      'tests/cli/jobs-list.test.ts',
+      'tests/acceptance/cli-adapters.test.ts',
+    ],
+    stronger: [
+      {
+        path: 'src/cli.ts',
+        pattern: /stdout:\s*process\.stderr/,
+      },
+    ],
   },
 ];
 

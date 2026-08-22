@@ -660,27 +660,10 @@ describe('CLI adapter integration (TASK-018 T3, SPEC §34+§36+§37)', () => {
         pipelinePrompts: new ScriptedPipelinePrompts([true]),
       });
       expect(result.status).toBe(0);
-      // The reevaluation service writes structured log lines to
-      // stdout (via the Pino-backed `pinoReevaluationLogger` rooted
-      // at `src/cli.ts:148`) BEFORE the pretty-printed JSON
-      // document. We can't silence those logs in-process (the
-      // `rootLogger` reads `LOG_LEVEL` at module load time, which
-      // is already past by the time `beforeEach` runs), so the test
-      // locates the JSON document by its pretty-printed shape
-      // (starts with `{\n  "schemaVersion":`) and parses only that
-      // substring. This is a real production quirk: the logger and
-      // the `--json` writer share `process.stdout`, violating SPEC
-      // §40 "Keep JSON stdout valid and isolated from logs". The
-      // fix would route the logger to stderr or a file; until then
-      // the test works around it. (Not patched in this task per
-      // TASK-018 zero-`src/**`-changes rule.)
-      const match = result.stdout.match(/\{\n {2}"schemaVersion":\s*\d+,[\s\S]*?\n\}/);
-      expect(
-        match,
-        `no pretty-printed JSON document found in stdout:\n${result.stdout}`,
-      ).not.toBeNull();
-      const jsonText = match![0]!;
-      const parsed = JSON.parse(jsonText) as unknown;
+
+      // Since TASK-019, stdout is clean for --json commands (rootLogger routes
+      // to stderr per SPEC §40). Plain JSON.parse works directly.
+      const parsed = JSON.parse(result.stdout) as unknown;
       const round = REEVALUATION_JSON_SCHEMA.safeParse(parsed);
       expect(round.success, JSON.stringify(round.error?.issues)).toBe(true);
       const payload = parsed as { dryRun: boolean; scope: string };
@@ -717,6 +700,45 @@ describe('CLI adapter integration (TASK-018 T3, SPEC §34+§36+§37)', () => {
       bootDatabase().close();
       const result = await runCli(['runs', 'show', 'run_9999']);
       expect(result.status).toBe(2);
+    });
+  });
+
+  describe('logger routing (SPEC §40 — "Keep JSON stdout valid and isolated from logs")', () => {
+    it('routes Pino log records to stderr, leaving stdout clean for --json output', async () => {
+      // Seed: need an active filter config + at least one complete job.
+      const conn = bootDatabase();
+      try {
+        const repositories = createRepositories(conn);
+        await seedProfileAndFilter(repositories);
+      } finally {
+        conn.close();
+      }
+
+      const result = await runCli(['jobs', 'reevaluate', '--dry-run', '--json'], {
+        pipelinePrompts: new ScriptedPipelinePrompts([true]),
+      });
+      expect(result.status).toBe(0);
+
+      // (a) stdout is exactly one valid JSON document.
+      const stdoutDoc = JSON.parse(result.stdout) as unknown;
+      const round = REEVALUATION_JSON_SCHEMA.safeParse(stdoutDoc);
+      expect(round.success, JSON.stringify(round.error?.issues)).toBe(true);
+
+      // (b) stderr is non-empty — proves the logger routed there.
+      expect(result.stderr.length, 'expected stderr to receive Pino log records').toBeGreaterThan(
+        0,
+      );
+
+      // (c) stdout contains NO Pino log records (every line is JSON-shaped).
+      // Pino's default JSON format is `{"level":<n>,"time":<n>,...}` — assert
+      // no line starts with `{"level":`.
+      const stdoutLines = result.stdout.split('\n').filter((line) => line.length > 0);
+      for (const line of stdoutLines) {
+        expect(
+          line,
+          `stdout line should be JSON-shape, not a Pino log record: ${line}`,
+        ).not.toMatch(/^\{"level":\d+/);
+      }
     });
   });
 

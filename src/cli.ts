@@ -145,23 +145,32 @@ const cliFileSystem: FileSystem = {
  * configuration reads the LOG_LEVEL environment variable (falling back
  * to `info`) and writes to stdout.
  */
-const rootLogger = createLogger({
-  level: ((): 'info' | 'warn' | 'error' | 'debug' | 'trace' | 'fatal' | 'silent' => {
-    const raw = process.env['LOG_LEVEL'];
-    if (
-      raw === 'debug' ||
-      raw === 'trace' ||
-      raw === 'warn' ||
-      raw === 'error' ||
-      raw === 'fatal' ||
-      raw === 'silent'
-    ) {
-      return raw;
-    }
-    return 'info';
-  })(),
-  prettyTerminal: false,
-});
+const rootLogger = createLogger(
+  {
+    level: ((): 'info' | 'warn' | 'error' | 'debug' | 'trace' | 'fatal' | 'silent' => {
+      const raw = process.env['LOG_LEVEL'];
+      if (
+        raw === 'debug' ||
+        raw === 'trace' ||
+        raw === 'warn' ||
+        raw === 'error' ||
+        raw === 'fatal' ||
+        raw === 'silent'
+      ) {
+        return raw;
+      }
+      return 'info';
+    })(),
+    prettyTerminal: false,
+  },
+  // SPEC §40 reliability: keep JSON stdout valid and isolated from logs.
+  // The root logger routes to stderr so stdout is reserved for output
+  // (data + --json documents). Unix convention: stdout = data,
+  // stderr = diagnostics.
+  {
+    stdout: process.stderr,
+  },
+);
 
 function isCommanderError(error: unknown): error is { code: string; message: string } {
   return (
