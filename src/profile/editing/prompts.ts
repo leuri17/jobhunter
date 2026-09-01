@@ -1,5 +1,5 @@
 /**
- * Editor prompts interface and test-only adapters (TASK-009, SPEC §16.6).
+ * Editor prompts interface and test-only adapters.
  *
  * The state-machine reducer in `state-machine.ts` is pure and prompts-free.
  * The interactive editor in `prompts-inquirer.ts` is the only module allowed
@@ -32,7 +32,7 @@ import type { CollectionSection } from './validation.js';
 
 /* ----------------------------- Prompt inputs ----------------------------- */
 
-/** Input passed to `editScalar`. Mirrors SPEC §16.6 scalar editing rules. */
+/** Input passed to `editScalar`. Mirrors  scalar editing rules. */
 export interface ScalarEditPrompt {
   readonly section: 'basics' | 'derived';
   readonly field: string;
@@ -43,7 +43,7 @@ export interface ScalarEditPrompt {
 /**
  * Result of a scalar edit prompt. `keep` preserves the existing value
  * without writing a revision. `set` writes the supplied value. `cleared`
- * nulls out a nullable field (SPEC §16.6 "Allow nullable fields to be
+ * nulls out a nullable field ( "Allow nullable fields to be
  * cleared explicitly"). `cancelled` aborts the operation.
  */
 export type ScalarEditResult =

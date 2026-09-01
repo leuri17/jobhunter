@@ -1,6 +1,5 @@
 /**
  * Zod schemas for the `--json` output of `jobs reevaluate`
- * (TASK-017, SPEC §36 + §37).
  *
  * The schemas are the source of truth for the JSON contract — the
  * producer (service + CLI handler) trusts the service output, but
@@ -9,7 +8,7 @@
  * first key so consumers can branch on version without parsing the
  * whole document.
  *
- * Decision 14: TASK-014 did NOT extract `ScoringPlan` to a JSON Zod
+ *   did NOT extract `ScoringPlan` to a JSON Zod
  * schema because the plan is internal-only. The reevaluation module
  * inlines the minimal `ScoringPlan` shape here (via `z.object(...).strict()`).
  * A future task may extract it to `src/scoring/json-schemas.ts` if
@@ -18,13 +17,13 @@
  * All string fields use plain `z.string()` (no ISO 8601 regex needed
  * for the plan entries — only `ScoringPlan` carries ISO timestamps,
  * and the timestamps inside `ScoringPlan` are produced by the
- * TASK-014 pipeline scorer + planner, which already enforce the
+ *  pipeline scorer + planner, which already enforce the
  * format upstream).
  */
 
 import { z } from 'zod';
 
-/** The literal schema version (SPEC §36). Mirrors `REEVALUATION_SCHEMA_VERSION`. */
+/** The literal schema version. Mirrors `REEVALUATION_SCHEMA_VERSION`. */
 const REEVALUATION_SCHEMA_VERSION_LITERAL = z.literal(1);
 
 /**
@@ -69,10 +68,10 @@ const ScoringPlanEntryJsonSchema = z
   .strict();
 
 /**
- * Inline `ScoringPlan` shape (Decision 14). Mirrors `ScoringPlan`
+ * Inline `ScoringPlan` shape. Mirrors `ScoringPlan`
  * from `src/scoring/state.ts:82-93` field-for-field. The schema is
  * declared `.strict()` so unknown fields cause a validation failure
- * (mirrors the inspection-module conventions — SPEC §36).
+ * (mirrors the inspection-module conventions — ).
  */
 export const ScoringPlanJsonSchema = z
   .object({
@@ -91,7 +90,7 @@ export const ScoringPlanJsonSchema = z
 
 /**
  * One row in the `filtersToReevaluate` / `jobsToScore` arrays
- * (SPEC §36). Mirrors `ReevaluationPlanEntry` from
+ * Mirrors `ReevaluationPlanEntry` from
  * `src/reevaluation/state.ts` field-for-field.
  */
 const ReevaluationPlanEntryJsonSchema = z
@@ -106,7 +105,7 @@ const ReevaluationPlanEntryJsonSchema = z
   .strict();
 
 /**
- * One row in the `skipped` array (SPEC §36). Mirrors
+ * One row in the `skipped` array. Mirrors
  * `ReevaluationSkippedEntry` from `src/reevaluation/state.ts`
  * field-for-field.
  */
@@ -124,7 +123,7 @@ const ReevaluationSkippedEntryJsonSchema = z
   .strict();
 
 /**
- * The `totals` block on every payload (SPEC §36). All integer fields
+ * The `totals` block on every payload. All integer fields
  * are non-negative.
  */
 const ReevaluationTotalsJsonSchema = z
@@ -138,7 +137,7 @@ const ReevaluationTotalsJsonSchema = z
   .strict();
 
 /**
- * The top-level `--json` payload (SPEC §36). Mirrors
+ * The top-level `--json` payload. Mirrors
  * `ReevaluationPlan` from `src/reevaluation/state.ts` field-for-field.
  *
  * The schema is `.strict()` — unknown fields are rejected. The

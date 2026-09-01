@@ -24,7 +24,7 @@ export interface PlaywrightRouteSessionOptions {
  *
  * Used by the HTTP-shape fidelity tests in `tests/linkedin/`. The
  * integration tests that exercise the orchestrator + diagnostics
- * (Wave D) used `FakeBrowserSession` instead — this helper is for
+ * used `FakeBrowserSession` instead — this helper is for
  * tests that need a real Playwright Chromium + `linkedom`-parity
  * fixture serving WITHOUT live network.
  *

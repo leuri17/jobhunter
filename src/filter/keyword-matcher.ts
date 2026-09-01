@@ -2,8 +2,8 @@ import { findKeywordMatchIndex } from './keyword-normalize.js';
 import { type JobFilterConfig } from './schema.js';
 
 /**
- * Orchestrator for the deterministic keyword matcher (SPEC §17.5, §18;
- * TASK-010 Task 3).
+ * Orchestrator for the deterministic keyword matcher (;
+ * ).
  *
  * `matchKeywords` walks the four keyword lists on the parsed
  * `JobFilterConfig` and runs the shared token-stream matcher against

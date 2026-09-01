@@ -23,7 +23,7 @@ import { ScriptedFilterPrompts } from '../../src/filter/prompts.js';
 import { type JobFilterConfig } from '../../src/filter/schema.js';
 
 /**
- * TASK-010 Task 10 — `ConfigureFiltersService` tests.
+ *  — `ConfigureFiltersService` tests.
  *
  * The service composes:
  *

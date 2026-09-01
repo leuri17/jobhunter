@@ -1,12 +1,11 @@
 /**
- * JobsListService — read-side service for `jobs list` (TASK-016 Wave B,
- * SPEC §31 + §34.1 + §34.3 + §34.4 + §34.5).
+ * JobsListService — read-side service for `jobs list`.
  *
  * Validates the CLI refinements (`limit`, `minScore`, `--run`), asks
  * the repository for the matching JobRows (the SQL lives there so
  * the service stays thin), maps each row to the per-state
  * `JobListRow` discriminated-union variant, applies the documented
- * sort (SPEC §34.4), and truncates to `limit`.
+ * sort, and truncates to `limit`.
  *
  * Domain boundary: this service imports `src/persistence/repositories/`
  * — the only module under `src/inspection/` allowed to do so. It does
@@ -37,7 +36,7 @@ import type {
   JobRow,
 } from '../../persistence/repositories/jobs.js';
 
-/** Maximum limit the service allows (matches SPEC §34.3 default `50`). */
+/** Maximum limit the service allows (matches  default `50`). */
 const DEFAULT_LIMIT = 50;
 
 /** Internal: validation envelope returned by `validateInput`. */
@@ -67,8 +66,8 @@ export interface JobsListInput {
 /**
  * Read-only service backing `jobs list <state> [--refinements]`.
  *
- * Returns the discriminated `JobListResult` envelope (Wave A) so
- * both the formatter (Wave A) and the CLI handler (Wave C) can
+ * Returns the discriminated `JobListResult` envelope so
+ * both the formatter and the CLI handler can
  * consume the shape uniformly.
  */
 export class JobsListService {
@@ -79,7 +78,7 @@ export class JobsListService {
    * documented refinements.
    *
    * Throws `InspectionValidationError` for invalid `limit`,
-   * `minScore`, or `--run` inputs (per SPEC §34.3). The service
+   * `minScore`, or `--run` inputs (per ). The service
    * treats the input as fail-fast — every invalid refinement is
    * surfaced BEFORE any DB query so the CLI handler's exit code
    * mapping (`InvalidUsage` = 2) is deterministic.
@@ -156,7 +155,7 @@ export class JobsListService {
     if (runId === null) {
       // Without `--run`, the failed state is empty (the table is
       // indexed by pipelineRunId; a global scan would require a
-      // new repository method not in scope for Wave B).
+      // new repository method not in scope for ).
       return [];
     }
     const errors = await this.repositories.jobs.listDiscoveryErrorsByRun(runId);
@@ -258,7 +257,7 @@ async function discoveryErrorToFailedRow(
 
 /**
  * Convert one `JobRow` into the per-state `JobListRow` variant. The
- * per-state shape lives in `state.ts` (Wave A); this mapper pulls
+ * per-state shape lives in `state.ts`; this mapper pulls
  * the cross-table fields (latest active filter / score result, etc.)
  * on demand so the SQL stays in the repository.
  */
@@ -489,12 +488,8 @@ function rejectionReasonsAsStrings(value: readonly unknown[] | null): readonly s
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Sort helper (SPEC §34.4)
-// ---------------------------------------------------------------------------
-
 /**
- * Sort the per-state row set per the documented rules (SPEC §34.4).
+ * Sort the per-state row set per the documented rules.
  * The Node `Array.prototype.sort` is stable per ECMA-262 so the
  * secondary key (`sourceJobId` ASC) preserves insertion order
  * within ties on the primary key.

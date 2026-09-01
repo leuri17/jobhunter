@@ -30,7 +30,7 @@ export interface FakeScoringPipelineOptions {
  *
  * Wires the `FakeOpenAIClient` (from `src/profile/openai/fake-client.ts`)
  * into the real `ScoringService` over a real SQLite database in a
- * `mkdtempSync` temp directory. Mirrors the TASK-013 pattern at
+ * `mkdtempSync` temp directory. Mirrors the  pattern at
  * `tests/extraction/service.test.ts`.
  *
  * `cleanup()` must be called after each test to release the temp

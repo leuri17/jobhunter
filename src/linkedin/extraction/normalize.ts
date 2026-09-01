@@ -1,6 +1,6 @@
 /**
  * Pure text normalizer for the panel + dedicated-page description
- * HTML (TASK-013 Plan Task 3, SPEC §22.5, Decision 6 addendum).
+ * HTML (, ,  addendum).
  *
  * Strips presentation HTML, normalizes whitespace, preserves
  * paragraph + list boundaries, and strips the
@@ -103,7 +103,7 @@ export function normalizeText(input: string): string {
 }
 
 /**
- * Validate that a normalized field is non-empty (SPEC §22.4 —
+ * Validate that a normalized field is non-empty (
  * every required field must contain non-whitespace text after
  * normalization). Returns `false` for `null`, the empty string,
  * whitespace-only strings, and HTML whose text normalizes to

@@ -2,8 +2,7 @@ import { isValidRequiredField } from './normalize.js';
 import type { ExtractionFieldSet, RequiredField } from './state.js';
 
 /**
- * Result of `validateRequiredFields` (TASK-013 Plan Task 4,
- * SPEC §22.4).
+ * Result of `validateRequiredFields`.
  *
  * `valid === true`  → every required field is non-empty after `normalizeText()`.
  * `valid === false` → `missing` lists every field that failed the check
@@ -32,7 +31,7 @@ const REQUIRED_FIELDS: readonly RequiredField[] = ['title', 'company', 'location
  * normalization, otherwise `{ valid: false, missing }` with the
  * offending field names listed in declaration order.
  *
- * Per Decision 5: each text field is non-empty after `normalizeText()`.
+ * Per : each text field is non-empty after `normalizeText()`.
  * `sourceJobId` is the entry-gate and is NOT checked here — its
  * presence is asserted by the orchestrator BEFORE `extractOne`.
  */

@@ -404,7 +404,7 @@ describe('FilterResultRepository', () => {
       expect(flipped).toBe(3);
 
       // Every previously-active row for cfgA is now inactive; the rows
-      // themselves are still present (SPEC §27.4 "kept but inactive").
+      // themselves are still present ( "kept but inactive").
       const remainingA1 = await resultRepo.listByJob(jobId1);
       const remainingA2 = await resultRepo.listByJob(jobId2);
       const remainingA3 = await resultRepo.listByJob(jobId3);

@@ -1,5 +1,5 @@
 /**
- * Public barrel for `src/inspection/` (TASK-016).
+ * Public barrel for `src/inspection/`.
  *
  * Re-exports the public surface that the CLI handler
  * (`src/cli.ts`) and the test harness consume. Internal helpers
@@ -8,7 +8,7 @@
  * Layout:
  *   - Pure layer: state, errors, columns, truncate, format, json-schemas.
  *   - Service layer: services/{jobs-list,jobs-show,runs-list,runs-show}-service
- *     (Wave B — re-exported only after the wave lands).
+ *     (— re-exported only after the wave lands).
  */
 
 // Pure layer — state vocabulary.
@@ -74,7 +74,6 @@ export {
   type RunShowJsonPayload,
 } from './json-schemas.js';
 
-// Service layer — Wave B (TASK-016).
 export {
   JobsListService,
   sortJobListRows,

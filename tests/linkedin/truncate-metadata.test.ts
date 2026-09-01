@@ -5,7 +5,7 @@ import { truncateAvailableMetadata } from '../../src/linkedin/truncate-metadata.
 import { noopLinkedInScraperLogger } from '../../src/linkedin/log.js';
 import { AVAILABLE_METADATA_MAX_BYTES } from '../../src/linkedin/state.js';
 
-describe('truncateAvailableMetadata (Wave D)', () => {
+describe('truncateAvailableMetadata', () => {
   it('returns null for null input', () => {
     const result = truncateAvailableMetadata({ metadata: null });
     expect(result.result).toBeNull();

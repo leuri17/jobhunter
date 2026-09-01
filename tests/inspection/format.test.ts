@@ -13,7 +13,7 @@ import type {
   RunShowPayload,
 } from '../../src/inspection/state.js';
 
-describe('formatJobListTable (TASK-016 Wave A Task 5, SPEC §34.5)', () => {
+describe('formatJobListTable', () => {
   it('returns "(no jobs)" for empty input', () => {
     expect(formatJobListTable('scored', [], 120)).toBe('(no jobs)');
     expect(formatJobListTable('all', [], 80)).toBe('(no jobs)');
@@ -190,7 +190,7 @@ describe('formatJobListTable (TASK-016 Wave A Task 5, SPEC §34.5)', () => {
   });
 });
 
-describe('formatJobShow (TASK-016 Wave A Task 5, SPEC §34.6)', () => {
+describe('formatJobShow', () => {
   const basePayload: JobShowPayload = {
     id: 'job_1',
     internalId: 1,
@@ -292,7 +292,7 @@ describe('formatJobShow (TASK-016 Wave A Task 5, SPEC §34.6)', () => {
     expect(out).toContain('(none)');
   });
 
-  it('always prints the FULL description regardless of terminalWidth (SPEC §34.6)', () => {
+  it('always prints the FULL description regardless of terminalWidth', () => {
     const longDescription = 'X'.repeat(1000);
     const payload: JobShowPayload = { ...basePayload, description: longDescription };
     const out = formatJobShow(payload, 60);
@@ -320,7 +320,7 @@ describe('formatJobShow (TASK-016 Wave A Task 5, SPEC §34.6)', () => {
   });
 });
 
-describe('formatRunListTable (TASK-016 Wave A Task 5, SPEC §35.1)', () => {
+describe('formatRunListTable', () => {
   it('returns "(no runs)" for empty input', () => {
     expect(formatRunListTable([], 120)).toBe('(no runs)');
   });
@@ -354,7 +354,7 @@ describe('formatRunListTable (TASK-016 Wave A Task 5, SPEC §35.1)', () => {
   });
 });
 
-describe('formatRunShow (TASK-016 Wave A Task 5, SPEC §35.2)', () => {
+describe('formatRunShow', () => {
   const basePayload: RunShowPayload = {
     id: 'run_1',
     internalId: 1,

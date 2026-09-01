@@ -27,11 +27,11 @@ export interface PlaywrightExtractionRouteSessionOptions {
  * `PlaywrightBrowserSession` subclass that intercepts both
  * `https://www.linkedin.com/jobs/search/**` (panel fixture) AND
  * `https://www.linkedin.com/jobs/view/**` (dedicated-page fixture)
- * via `context.route()`. Used by the TASK-013 extraction integration
+ * via `context.route()`. Used by the  extraction integration
  * tests that need a real Playwright Chromium + fixture serving
  * WITHOUT live network access.
  *
- * Mirrors the TASK-012 `PlaywrightRouteSession`
+ * Mirrors the  `PlaywrightRouteSession`
  * (`tests/linkedin/helpers/playwright-route-session.ts:35`) but
  * serves two fixtures instead of one.
  *

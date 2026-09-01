@@ -1,6 +1,5 @@
 /**
- * Default `ProfileEditorPrompts` adapter for the Inquirer CLI (TASK-009,
- * SPEC §16.6 + §16.7).
+ * Default `ProfileEditorPrompts` adapter for the Inquirer CLI.
  *
  * This module is the only file in the JobHunter codebase allowed to import
  * `@inquirer/prompts`. Every other module talks to the editor through
@@ -8,7 +7,7 @@
  *
  * The adapter:
  *
- *   - selectSection       → @inquirer/select with the SPEC §16.6 menu
+ *   - selectSection       → @inquirer/select with the  menu
  *   - editScalar          → @inquirer/input with current value as default
  *                           + a literal `(clear)` sentinel for nullable
  *                           fields
@@ -90,7 +89,7 @@ const DERIVED_FIELDS: readonly DerivedFieldMeta[] = [
   },
 ];
 
-/** Labels for the top-level section menu (SPEC §16.6). */
+/** Labels for the top-level section menu. */
 const SECTION_LABELS: Readonly<Record<SectionKey, string>> = {
   basics: 'Basic information',
   experience: 'Work experience',

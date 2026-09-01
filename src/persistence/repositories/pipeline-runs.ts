@@ -246,7 +246,7 @@ export class PipelineRunRepository {
 
   /**
    * List the `limit` most recent pipeline runs, ordered by id DESC.
-   * Backs `RunsListService.list` (TASK-016 Wave B, SPEC §35.1).
+   * Backs `RunsListService.list`.
    *
    * `limit` is bounded to a positive integer; non-positive values
    * return an empty list (callers in the service layer validate the
@@ -363,12 +363,6 @@ export class PipelineRunRepository {
     });
   }
 
-  // -------------------------------------------------------------------------
-  // Private helpers — back `findWithDetails` (TASK-016 Wave B).
-  // Each helper is a single bounded SELECT that counts rows in one
-  // table for the given pipeline run.
-  // -------------------------------------------------------------------------
-
   private async countDiscoveryErrorsByRun(runId: number): Promise<number> {
     const rows = this.ctx.db
       .select({ id: discoveryErrors.id })
@@ -408,7 +402,7 @@ export class PipelineRunRepository {
 
 /**
  * Composite row shape returned by `PipelineRunRepository.findWithDetails`
- * (TASK-016 Wave B). The service layer (`RunsShowService.show`)
+ * The service layer (`RunsShowService.show`)
  * projects this into the public `RunShowPayload` envelope.
  *
  * - `searches`                       — every search execution in the run.

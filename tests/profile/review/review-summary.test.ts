@@ -141,7 +141,7 @@ function makeOverride(overrides: Partial<DerivedOverrideRow> = {}): DerivedOverr
 }
 
 describe('renderReviewSummary', () => {
-  it('renders every SPEC §16.2 section header', () => {
+  it('renders every  section header', () => {
     const out = renderReviewSummary({
       profile: makeProfile(),
       warnings: [],

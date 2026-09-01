@@ -58,7 +58,7 @@ const QUOTA_ERROR_CODES: ReadonlySet<string> = new Set([
  * `RESPONSE_SCHEMA_REGISTRY`, and forwards an optional
  * `maxCompletionTokens` cap to the SDK. Prompt building is the
  * caller's responsibility (see `buildProfileExtractionPrompt` for
- * profile extraction; `buildScoringPrompt` will land in Wave A).
+ * profile extraction; `buildScoringPrompt` will land in ).
  */
 export function createDefaultOpenAIClient(options: {
   readonly apiKey: string;

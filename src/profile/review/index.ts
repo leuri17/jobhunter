@@ -1,5 +1,5 @@
 /**
- * Public surface for the pure review helpers (TASK-009, SPEC §15–§16).
+ * Public surface for the pure review helpers.
  *
  * Re-exports every helper the review / approval / CLI layers are allowed
  * to depend on. Application services may import from this barrel; nothing

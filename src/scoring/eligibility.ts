@@ -1,5 +1,5 @@
 /**
- * Per-job scoring eligibility (SPEC §26.1).
+ * Per-job scoring eligibility.
  *
  * A job is eligible for scoring iff all three are true:
  *   1. `job.extractionStatus === 'complete'` — the job-detail

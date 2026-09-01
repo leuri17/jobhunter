@@ -1,6 +1,5 @@
 /**
  * `LinkedInDiscoveryService` — the discovery orchestrator
- * (TASK-012 Plan Task 9, SPEC §21.3 + §22.11–22.12 + §29.3 + §39).
  *
  * Walks the per-search sequence:
  *   1. Mark `searchExecutions.finalStatus = 'running'`.
@@ -15,13 +14,13 @@
  *   8. `updateSearchStatus` with the final status.
  *
  * The orchestrator NEVER calls `browserSession.launch()` or
- * `browserSession.close()` — that's TASK-015's run-level lifecycle
+ * `browserSession.close()` — that's 's run-level lifecycle
  * (per Plan Required Finding #1).
  *
  * On typed `LinkedInScraperError`: `diagnosticManager.recordScraperError`
  * is called BEFORE `closePage` (so the screenshot captures the live
  * state). The error is then re-thrown for the orchestrator boundary
- * (TASK-015).
+ *
  */
 import type { Page } from 'playwright';
 
@@ -90,10 +89,10 @@ export class LinkedInDiscoveryService {
   }
 
   /**
-   * Execute the per-search sequence (SPEC §21.3). Returns a
+   * Execute the per-search sequence. Returns a
    * typed `SearchDiscoveryOutcome` on success / cancellation /
    * per-card errors. Throws `LinkedInScraperError` on unrecoverable
-   * per-search conditions; the caller (TASK-015) catches + maps to
+   * per-search conditions; the caller catches + maps to
    * exit codes.
    */
   async discover(input: DiscoverInput): Promise<SearchDiscoveryOutcome> {
@@ -214,7 +213,7 @@ export class LinkedInDiscoveryService {
         }
 
         // New job: atomic insert (jobs + discovery event) with
-        // `currentExtractionState: 'failed'` placeholder. TASK-013
+        // `currentExtractionState: 'failed'` placeholder.
         // promotes this to 'complete' / 'partial' via
         // `Repositories.jobs.updateExtraction`.
         const newJobId = await this.repositories.jobs.recordNewJob({
@@ -238,7 +237,7 @@ export class LinkedInDiscoveryService {
           },
         });
         newJobs += 1;
-        // The discovery event's `jobId` is set by `recordNewJob` —
+        // The discovery event's `jobId` is set by `recordNewJob`
         // the atomic transaction ensures both rows share the same id.
         // We don't re-insert the event here (the newJobId round-trip
         // is encapsulated in the repository).
@@ -337,7 +336,7 @@ export class LinkedInDiscoveryService {
     const completedAt = this.now().toISOString();
 
     // Capture diagnostics first. The manager catches the page/context
-    // via `DiagnosticInput` (extended in Wave C). The screenshot +
+    // via `DiagnosticInput` (extended in ). The screenshot +
     // trace strategies need the live page; the no-op strategies
     // (stack-trace, current-url) need only the scope + currentUrl.
     try {

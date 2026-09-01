@@ -1,5 +1,5 @@
 /**
- * Filter configuration prompt seam (TASK-010 Task 10, SPEC §17.3 + §17.6).
+ * Filter configuration prompt seam.
  *
  * Every method of `FilterPrompts` corresponds to one question the
  * `ConfigureFiltersService` asks the user. The seam keeps the
@@ -46,7 +46,7 @@ export interface FilterPrompts {
   askDescriptionRequiredAnyKeywords(existing: readonly string[]): Promise<readonly string[]>;
   askMaximumSeniority(existing: SeniorityLevel | null): Promise<SeniorityLevel | null>;
   /**
-   * SPEC §17.6 requires the user to keep / remove / add / re-add languages,
+   *  requires the user to keep / remove / add / re-add languages,
    * including languages NOT in the profile. The default Inquirer adapter
    * renders a checkbox of `seeds` plus an "Other…" free-text input; the
    * union of toggled + entered languages is returned via `added`. The

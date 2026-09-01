@@ -2,26 +2,31 @@ import { MissingBrowserImplementationError } from '../errors.js';
 import type { CaptureContext, CaptureResult, CaptureStrategy } from './types.js';
 
 /**
- * Playwright-backed HTML snapshot capture (TASK-013 Wave B, SPEC §39.1).
+ * Playwright-backed HTML snapshot capture.
  *
- * Replaces the Wave A stub (`capture/html-snapshot.ts:7-13`). Reads the
- * live `Page` from `CaptureContext.page` (populated by
+ * Reads the live `Page` from `CaptureContext.page` (populated by
  * `DiagnosticManager.recordScraperError` from `DiagnosticInput.page`).
  * When the page is absent — e.g. when the strategy is invoked outside a
  * Playwright run — the strategy throws `MissingBrowserImplementationError`
  * so the manager's try/catch records a `capture_failed` failure rather
  * than crashing the orchestrator.
  *
- * Implementation notes (per TASK-013 Decision 13 refined):
+ * Implementation notes:
  * - Uses `await page.content()` rather than `document.documentElement.outerHTML`
  *   so the snapshot includes the `<!DOCTYPE>` declaration and the `<meta
  *   charset>` tag.
  * - HTML is returned as a string with mimeType `text/html; charset=utf-8`.
  *   The manager's `persist` method applies the `Redactor` to text/* mime
- *   types per its existing logic; the redactor's regex set is conservative
- *   enough that it does not corrupt valid HTML markup in the anonymous
- *   LinkedIn context (the page content does NOT contain cookies, session
- *   tokens, or `localStorage` per Decision 14).
+ *   types.
+ *
+ * Known limitation (anonymous-context only): the public-anonymous LinkedIn
+ * context guarantees no cookies, session tokens, or `localStorage` in the
+ * page content. However, job-description HTML may contain recruiter contact
+ * information (email addresses, phone numbers). The built-in redactor covers
+ * emails and OpenAI key prefixes but not phone numbers. Users who want
+ * stricter PII redaction should set `diagnostics.onScraperError.htmlSnapshot
+ * = false` in `config.json` or run JobHunter without persisting scraper
+ * errors. See `docs/responsible-use.md` for the user-facing policy.
  */
 export class HtmlSnapshotCapture implements CaptureStrategy {
   readonly artifactType = 'html_snapshot' as const;

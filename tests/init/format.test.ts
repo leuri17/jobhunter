@@ -4,7 +4,7 @@ import { formatInitSummary } from '../../src/init/format.js';
 import { INIT_STEPS, type InitStepReport, type SetupSummary } from '../../src/init/state.js';
 
 /**
- * TASK-011 Minor h — `formatInitSummary` test. Asserts the deterministic
+ *  Minor h — `formatInitSummary` test. Asserts the deterministic
  * human-readable renderer covers every documented `SetupSummary` shape:
  *
  *   1. `ready: true`

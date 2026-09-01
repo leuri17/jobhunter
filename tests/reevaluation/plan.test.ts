@@ -9,8 +9,7 @@ import {
 } from '../../src/reevaluation/state.js';
 
 /**
- * Pure-helper tests for `buildReevaluationPlan` (TASK-017 Wave A
- * Task 3, SPEC §36). Mirrors `tests/scoring/plan.test.ts`.
+ * Pure-helper tests for `buildReevaluationPlan`. Mirrors `tests/scoring/plan.test.ts`.
  *
  * The function is a TOTAL pure aggregation: it carries its inputs
  * through to the `ReevaluationPlan` envelope and computes the numeric
@@ -93,7 +92,7 @@ const BASE_SCORING_PLAN: ScoringPlan = {
   ],
 };
 
-describe('buildReevaluationPlan (TASK-017 Wave A Task 3, SPEC §36)', () => {
+describe('buildReevaluationPlan', () => {
   it('default scope: 2 filter reruns + 1 score rerun + 1 skip → documented totals', () => {
     const filterEntries = [makeFilterEntry(1, 'reran'), makeFilterEntry(2, 'reran')];
     const scoreEntries = [makeScoreEntry(3, 'reran')];

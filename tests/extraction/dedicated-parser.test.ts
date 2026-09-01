@@ -11,7 +11,6 @@ import { loadFixture } from './fixtures/loadFixture.js';
 
 /**
  * Unit tests for `src/linkedin/extraction/dedicated-parser.ts`
- * (TASK-013 Plan Task 11).
  *
  * Strategy mirrors `panel-parser.test.ts`: parse each fixture HTML
  * through `linkedom.parseHTML` (cheap, deterministic) and feed the
@@ -106,7 +105,7 @@ function makeFakePage(args: FakePageArgs): Page {
   } as unknown as Page;
 }
 
-describe('src/linkedin/extraction/dedicated-parser.ts (Wave C)', () => {
+describe('src/linkedin/extraction/dedicated-parser.ts', () => {
   it('parseDedicatedPage reads all 4 fields from dedicated-complete.html (status = complete)', async () => {
     const html = loadFixture('dedicated-complete');
     const page = makeFakePage({
@@ -190,7 +189,7 @@ describe('src/linkedin/extraction/dedicated-parser.ts (Wave C)', () => {
     }
   });
 
-  it('parseDedicatedPage reads from a custom field map (per Decision 25 wrapper seam)', async () => {
+  it('parseDedicatedPage reads from a custom field map (per  wrapper seam)', async () => {
     // Custom fields — verifies the parser honours the optional `fields`
     // override (no inheritance from the default `LINKEDIN_FIELDS`).
     const html = `

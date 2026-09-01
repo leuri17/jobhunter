@@ -1,7 +1,7 @@
 /**
- * Public barrel for `src/linkedin/` (TASK-012 Plan Task 11, Wave D).
+ * Public barrel for `src/linkedin/`.
  *
- * Re-exports the public surface that the orchestrator (TASK-015)
+ * Re-exports the public surface that the orchestrator
  * consumes. Test helpers (`FakeBrowserSession`, `FakePage`) stay
  * internal — consumers in `tests/linkedin/` import them from
  * their source paths.

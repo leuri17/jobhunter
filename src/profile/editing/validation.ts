@@ -1,5 +1,5 @@
 /**
- * Pure field-level validation for the profile editor (TASK-009, SPEC §16.5).
+ * Pure field-level validation for the profile editor.
  *
  * `validateScalar` is the only domain validator the editor needs. It maps a
  * (section, field) pair to the right Zod schema from `src/profile/schema.js`
@@ -57,7 +57,7 @@ function requiredString(field: string): z.ZodType<string> {
 
 /**
  * Build a schema that accepts `null` OR a non-empty string. Used for
- * nullable fields per SPEC §16.6.
+ * nullable fields per .
  */
 function nullableString(field: string) {
   return z.union([

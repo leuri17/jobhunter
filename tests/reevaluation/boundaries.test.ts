@@ -4,8 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Domain-boundary guard for `src/reevaluation/` (TASK-017 Wave A
- * Task 11, AGENTS.md §5 + §9).
+ * Domain-boundary guard for `src/reevaluation/` (, AGENTS.md §5 + §9).
  *
  * AGENTS.md §5: domain code must not depend on Commander, Inquirer,
  * Playwright, the `openai` SDK, or runtime `pino`. The reevaluation
@@ -14,8 +13,8 @@ import { describe, expect, it } from 'vitest';
  *     No repository I/O, no service composition, no OpenAI calls.
  *     MAY import from `src/pipeline/format.js` ONLY inside
  *     `src/reevaluation/format.ts` (the documented seam for the
- *     `formatScoringPlanForReevaluation` re-export — Decision 14).
- *   - Service layer: `src/reevaluation/service.ts` (Wave C, NOT YET
+ *     `formatScoringPlanForReevaluation` re-export — ).
+ *   - Service layer: `src/reevaluation/service.ts` (, NOT YET
  *     CREATED at this point in the plan).
  *
  * The pure layer MUST NOT import from `src/{filter,scoring,pipeline,persistence}`
@@ -78,7 +77,7 @@ const PIPELINE_RUNTIME_IMPORT_RE = /^import\s+(?!type\s).*from\s+['"](?:\.\.\/)+
 /**
  * Runtime-import guard for `src/{filter,scoring,persistence}/` paths.
  * These are the documented forbidden directories for the pure layer
- * (the `service.ts` Wave C file may import from them but does not
+ * (the `service.ts`  file may import from them but does not
  * exist yet at this point in the plan).
  */
 const PURE_FORBIDDEN_RUNTIME_IMPORT_RE = (subdir: string): RegExp => {
@@ -129,7 +128,7 @@ function relativeFromCwd(absolute: string): string {
   return absolute;
 }
 
-describe('src/reevaluation domain-boundary guard (TASK-017 Wave A Task 11)', () => {
+describe('src/reevaluation domain-boundary guard', () => {
   it('exists as a directory with pure-helper files', () => {
     const files = listReevaluationFiles(REEVALUATION_DIR);
     expect(files.length).toBeGreaterThanOrEqual(6);
@@ -167,7 +166,7 @@ describe('src/reevaluation domain-boundary guard (TASK-017 Wave A Task 11)', () 
       it(`${rel} does not runtime-import from src/pipeline/ (single allow-list carve-out for src/reevaluation/format.ts)`, () => {
         if (PIPELINE_FORMAT_ALLOW_LIST.has(rel)) {
           // `src/reevaluation/format.ts` is the documented exception
-          // (Decision 14 — `formatScoringPlanForReevaluation`).
+          // ( — `formatScoringPlanForReevaluation`).
           return;
         }
         expect(

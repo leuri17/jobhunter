@@ -28,7 +28,7 @@ import {
 
 /**
  * Deterministic post-processor that turns a validated OpenAI
- * `ExtractedProfile` into a canonical `ProfessionalProfile` (SPEC §14.3).
+ * `ExtractedProfile` into a canonical `ProfessionalProfile`.
  *
  * Pure domain module: depends only on `zod`, `node:crypto`, and the helper
  * modules in `src/profile/` (no Commander, Inquirer, Playwright, Drizzle,

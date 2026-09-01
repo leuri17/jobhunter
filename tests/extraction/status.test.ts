@@ -5,7 +5,7 @@ import type { ExtractionFieldSet } from '../../src/linkedin/extraction/state.js'
 
 /**
  * Tests for `src/linkedin/extraction/status.ts`
- * (TASK-013 Plan Task 4). Asserts every combination of the four
+ * Asserts every combination of the four
  * required fields being present/absent (16 cases total — `2^4`).
  *
  * The function is `validateRequiredFields` + ternary. The 16-case
@@ -60,7 +60,7 @@ function enumerateCombinations(): ReadonlyArray<{
   return out;
 }
 
-describe('src/linkedin/extraction/status — Wave A', () => {
+describe('src/linkedin/extraction/status — ', () => {
   it('returns complete when every field is present', () => {
     expect(computeExtractionStatus(FULL)).toBe('complete');
   });
@@ -140,9 +140,9 @@ describe('src/linkedin/extraction/status — Wave A', () => {
     ).toBe('partial');
   });
 
-  it('never returns failed — failed is reserved for the no-sourceJobId path (TASK-012)', () => {
+  it('never returns failed — failed is reserved for the no-sourceJobId path', () => {
     // The status calculator never returns 'failed'. Per Decision
-    // 4: 'failed' is reserved for the no-sourceJobId case (TASK-012
+    // 4: 'failed' is reserved for the no-sourceJobId case (
     // owns the discoveryErrors row). This is a regression guard.
     const cases = enumerateCombinations();
     for (const { fields, expected } of cases) {

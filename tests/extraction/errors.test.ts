@@ -13,16 +13,16 @@ import {
 import { LinkedInScraperError } from '../../src/linkedin/errors.js';
 
 /**
- * Tests for `src/linkedin/extraction/errors.ts` (TASK-013 Plan Task 2).
+ * Tests for `src/linkedin/extraction/errors.ts`.
  *
- * Mirrors `tests/linkedin/errors.test.ts` (TASK-012 Wave A). Each
+ * Mirrors `tests/linkedin/errors.test.ts`. Each
  * subclass is asserted for:
  *   - `code` (the stable lower_snake_case identifier)
  *   - `exitCode` (always `ExitCode.Fatal = 1`)
  *   - `metadata` shape (the per-subclass payload)
  *   - `instanceof` chain (extends `LinkedInScraperError` → `ApplicationError`)
  */
-describe('src/linkedin/extraction/errors — Wave A', () => {
+describe('src/linkedin/extraction/errors — ', () => {
   it('LinkedInExtractionError extends LinkedInScraperError → ApplicationError', () => {
     const err = new LinkedInExtractionError('test_code', 'test message', { foo: 'bar' });
     expect(err).toBeInstanceOf(LinkedInExtractionError);
@@ -164,8 +164,8 @@ describe('src/linkedin/extraction/errors — Wave A', () => {
   });
 
   it('every subclass uses ExitCode.Fatal (1) — none use LinkedInBlocked', () => {
-    // Per Decision 16: extraction errors all exit 1. The orchestrator
-    // catches LinkedInAccessBlockedError from TASK-012 separately;
+    // Per : extraction errors all exit 1. The orchestrator
+    // catches LinkedInAccessBlockedError from  separately;
     // extraction never re-emits it.
     const errors: LinkedInExtractionError[] = [
       new PanelExtractionError({ url: 'x', reason: 'y' }),

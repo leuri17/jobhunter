@@ -7,7 +7,7 @@ export interface DiagnosticScope {
   readonly extractionAttemptId?: number | null;
   readonly discoveryErrorId?: number | null;
   /**
-   * TASK-014: the auto-increment primary key of the `openai_request_metadata`
+   *  the auto-increment primary key of the `openai_request_metadata`
    * row that captured the failing OpenAI request. Optional because
    * diagnostics written before the OpenAI metadata row is committed
    * (or for non-OpenAI failures) do not yet have this id.

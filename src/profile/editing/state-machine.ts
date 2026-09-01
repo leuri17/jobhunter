@@ -1,5 +1,5 @@
 /**
- * Pure reducer for the profile editor (TASK-009, SPEC §16.6).
+ * Pure reducer for the profile editor.
  *
  * `reduce(state, op)` is a pure function: it never mutates `state`, never
  * touches the database, and never calls Inquirer / OpenAI / Playwright.
@@ -81,7 +81,7 @@ export type { DerivedFieldKey } from '../review/override-application.js';
  * Override state to apply. `active: false` clears the override
  * (effective value falls back to the generated value). `active: true`
  * writes the supplied value into `effectiveValue` and `overrideValue`;
- * a `null` value represents the intentional-empty override (SPEC §16.7).
+ * a `null` value represents the intentional-empty override.
  */
 export type OverrideState =
   { readonly active: false } | { readonly active: true; readonly value: unknown };

@@ -1,11 +1,11 @@
 /**
- * Adaptive column selection for inspection tables (SPEC §34.5 + §34.6).
+ * Adaptive column selection for inspection tables.
  *
  * Pure helper. The output of `selectColumns` drives both the
  * human-readable table formatter (`formatJobListTable`) and the
  * width-aware truncation logic in `truncate.ts`. The fixed
  * headers + priorities per state are the documented column order
- * (SPEC §34.5); the priority list controls which columns are
+ * the priority list controls which columns are
  * dropped first when the terminal is narrow.
  *
  * Priority convention:
@@ -15,7 +15,7 @@
  *
  * The `ID` column is always priority `0`; `Score` is always `1`;
  * `Title` is always `2`. The remaining priorities are assigned to
- * make the SPEC §34.5 drop order fall out naturally (e.g. for
+ * make the  drop order fall out naturally (e.g. for
  * `--scored`, `Location` and `First discovered` drop before
  * `Title` / `Company`).
  */
@@ -38,7 +38,7 @@ export const DEFAULT_TERMINAL_WIDTH = 120;
 const COLUMN_GROWTH = 24;
 
 /**
- * The per-state header array (SPEC §34.5). The order is the
+ * The per-state header array. The order is the
  * documented display order. Each state's column set is intentionally
  * distinct: the column count per state is 5–8 and the priority list
  * below is what `selectColumns` uses to drop columns under narrow
@@ -85,7 +85,7 @@ export const HEADERS_BY_STATE: Record<JobListState, readonly string[]> = {
  *   - For `--scored`, `Score` is priority `1`; `Title` is `2`;
  *     `Company` is `3`; `Location` is `4`; `First discovered` is
  *     `5` — so a narrow terminal drops `Location` + `First discovered`
- *     before `Title` / `Company` (the SPEC §34.5 test).
+ *     before `Title` / `Company` (the  test).
  */
 export const PRIORITY_BY_STATE: Record<JobListState, readonly number[]> = {
   // ID(0) Extraction(4) Filter(5) ScoreStatus(2) Score(1) Title(2) Company(3) Location(4) FirstDiscovered(5)
@@ -111,7 +111,7 @@ export const PRIORITY_BY_STATE: Record<JobListState, readonly number[]> = {
 /**
  * Columns that are NEVER truncated regardless of the terminal
  * width — the spec calls out `ID` and `Score` as essential
- * (SPEC §34.6 "never truncated").
+ * ( "never truncated").
  */
 const NEVER_TRUNCATE_HEADERS: ReadonlySet<string> = new Set(['ID', 'Score', 'Error ID']);
 

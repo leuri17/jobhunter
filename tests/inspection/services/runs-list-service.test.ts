@@ -7,14 +7,13 @@ import {
 import { buildInspectionHarness, type InspectionHarness } from './helpers/inspection-harness.js';
 
 /**
- * Service-layer tests for `RunsListService` (TASK-016 Wave D Task 14,
- * SPEC §31 + §35.1).
+ * Service-layer tests for `RunsListService`.
  *
  * Fixture: three pipeline runs with varying statuses. The
  * `errorSummary` column is the synthetic `'<code>: <count>'`
  * summary derived from `pipelineRuns.searchErrorsJson`.
  */
-describe('RunsListService (TASK-016 Wave D Task 14, SPEC §35.1)', () => {
+describe('RunsListService', () => {
   let harness: InspectionHarness;
   let service: RunsListService;
   let runId1: number;

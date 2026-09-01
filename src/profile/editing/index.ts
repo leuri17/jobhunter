@@ -1,5 +1,5 @@
 /**
- * Public surface for the profile editor (TASK-009, SPEC §16.6 + §16.7).
+ * Public surface for the profile editor.
  *
  * Re-exports the pure reducer, the prompts seam (interface + failing /
  * scripted test adapters + the default Inquirer adapter), and the field

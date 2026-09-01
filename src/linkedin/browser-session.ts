@@ -1,16 +1,16 @@
 /**
- * Browser session interface (TASK-012 Plan Task 7, SPEC §21.2).
+ * Browser session interface.
  *
  * The `BrowserSession` interface is the seam between the LinkedIn
- * discovery orchestrator (Wave C's `discovery-service.ts`) and the
+ * discovery orchestrator (`discovery-service.ts`) and the
  * underlying browser implementation. Three implementations exist:
  *   - `PlaywrightBrowserSession` (`playwright-session.ts`) — sole
  *     runtime Playwright importer in `src/linkedin/`. Real Chromium
- *     + new context per run (SPEC §21.2).
+ *     + new context per run.
  *   - `FakeBrowserSession` (`fake-session.ts`) — pure-Node test helper.
  *     No Playwright import. Used for the `BrowserSession` interface
  *     contract tests in `tests/linkedin/browser-session.test.ts`.
- *   - `tests/linkedin/helpers/playwright-route-session.ts` (Wave E) —
+ *   - `tests/linkedin/helpers/playwright-route-session.ts`
  *     real Playwright + `context.route()` interception against saved
  *     HTML fixtures for the integration tests.
  *
@@ -21,14 +21,14 @@
 import type { Browser, BrowserContext, Page, Request, Route } from 'playwright';
 
 /**
- * Per-Plan Decision 9 / Decision 12 / SPEC §21.7 / §29.1:
- *   - `launch()` / `close()` are owned by TASK-015's run-level orchestrator.
- *     TASK-012's `discover()` NEVER calls them.
+ * Per-Plan  /  / :
+ *   - `launch()` / `close()` are owned by 's run-level orchestrator.
+ *     's `discover()` NEVER calls them.
  *   - `openPage()` / `closePage()` are the per-search page lifecycle.
  *     The orchestrator wraps each `discover()` call in a
  *     `try { ... } finally { closePage(page) }`.
  *   - `openFallbackPage()` / `closeFallbackPage()` are forward-compat
- *     for TASK-013's dedicated-page fallback (SPEC §22.7). The session
+ *     for 's dedicated-page fallback. The session
  *     enforces a single-active-fallback invariant and throws
  *     `BrowserCapacityExceededError` on the second concurrent call.
  *   - `withRoute()` registers a `context.route()` interceptor.
@@ -36,14 +36,14 @@ import type { Browser, BrowserContext, Page, Request, Route } from 'playwright';
  *     for hermetic fixture rotation).
  */
 export interface BrowserSession {
-  /** Run-level launch. Owned by TASK-015's orchestrator. */
+  /** Run-level launch. Owned by 's orchestrator. */
   launch(): Promise<{ browser: Browser; context: BrowserContext }>;
-  /** Run-level close. Owned by TASK-015. Idempotent. */
+  /** Run-level close. Owned by . Idempotent. */
   close(): Promise<void>;
   /** Per-search page lifecycle. */
   openPage(url: string): Promise<Page>;
   closePage(page: Page): Promise<void>;
-  /** Forward-compat for TASK-013's dedicated-page fallback (SPEC §22.7). */
+  /** Forward-compat for 's dedicated-page fallback. */
   openFallbackPage(url: string): Promise<Page>;
   closeFallbackPage(page: Page): Promise<void>;
   /** Network interception (used by integration tests + future cache layer). */

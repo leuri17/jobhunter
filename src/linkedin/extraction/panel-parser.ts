@@ -1,13 +1,13 @@
 /**
- * Search-detail-panel parser (TASK-013 Plan Task 10, SPEC §22.6).
+ * Search-detail-panel parser.
  *
  * `parsePanel` reads the 4 required fields (`title`, `company`,
- * `location`, `description`) from the open search-detail panel —
+ * `location`, `description`) from the open search-detail panel
  * the right-hand-side pane LinkedIn renders when the user clicks a
  * card on the search-results page. After the fields land, the
  * parser verifies that the panel title anchor's `href` matches the
- * selected `sourceJobId` (Decision 7 + Decision 26) so a swapped
- * panel ("the panel shows another job" per SPEC §22.7) is caught
+ * selected `sourceJobId` so a swapped
+ * panel ("the panel shows another job" per ) is caught
  * and surfaces a typed `PanelJobIdMismatchError` for the orchestrator
  * to fall back to the dedicated page.
  *
@@ -25,7 +25,7 @@
  * the inner `<a>` does. The field text reads use `fields.title` (the
  * `<h1>` text equals the anchor text).
  *
- * Per Decision 25: shares the `LINKEDIN_FIELDS` map with
+ * Per : shares the `LINKEDIN_FIELDS` map with
  * `dedicated-parser.ts` (LinkedIn reuses the unified top-card DOM).
  */
 import type { Locator, Page } from 'playwright';
@@ -37,7 +37,7 @@ import type { ExtractionFieldSet } from './state.js';
 
 /**
  * Bounded retry count for the panel title-anchor href verification
- * loop (Decision 7). Each attempt waits `PANEL_VERIFY_RETRY_MS`
+ * loop. Each attempt waits `PANEL_VERIFY_RETRY_MS`
  * (500ms) before re-reading the anchor; the loop returns
  * `PanelJobIdMismatchError` after the budget is exhausted.
  */
@@ -53,7 +53,7 @@ export const PANEL_VERIFY_RETRY_MS = 500;
 /**
  * Time budget for the description container to become visible after
  * the click. 10s matches the spec's `detailPanelMs` ceiling
- * (SPEC §22.6 — "the description container's visibility").
+ * ( — "the description container's visibility").
  */
 export const PANEL_DESCRIPTION_WAIT_MS = 10_000;
 
@@ -61,9 +61,9 @@ export const PANEL_DESCRIPTION_WAIT_MS = 10_000;
  * Per-call options.
  *
  * `sourceJobId` is REQUIRED — the parser uses it to verify the
- * panel's href matches the selected job (Decision 7 + Decision 26).
+ * panel's href matches the selected job.
  * `fields` defaults to `LINKEDIN_FIELDS`. `signal` is the
- * cancellation seam (checked between retries — Decision 12).
+ * cancellation seam (checked between retries — ).
  */
 export interface ParsePanelOptions {
   readonly sourceJobId: string;
@@ -82,13 +82,13 @@ export interface ParsePanelOptions {
  *   2. Verify the panel title anchor's `href` matches
  *      `options.sourceJobId` via a bounded retry loop
  *      (`PANEL_VERIFY_MAX_ATTEMPTS` × `PANEL_VERIFY_RETRY_MS`).
- *      On mismatch → `PanelJobIdMismatchError` (Decision 26).
+ *      On mismatch → `PanelJobIdMismatchError`.
  *   3. Read `title`, `company`, `location`, `description` text
  *      concurrently via `Promise.all`. Each text node is normalized
  *      via `normalizeText`.
  *
  * The parser throws `PanelExtractionError` (description not visible
- * OR aborted mid-loop) and `PanelJobIdMismatchError` (Decision 26).
+ * OR aborted mid-loop) and `PanelJobIdMismatchError`.
  *
  * @param page    The live `Page` whose panel is open (search page).
  * @param options Required `sourceJobId` + optional `fields` / `signal`.
@@ -119,7 +119,7 @@ export async function parsePanel(
   }
 
   // Step 2: verify the panel title anchor's href matches `expectedId`
-  // (Decision 7 + Decision 26 — Oracle Finding 2: read from
+  // ( — Oracle Finding 2: read from
   // `panel.titleAnchor`, NOT `fields.title`). Throws on mismatch /
   // cancellation / exhaustion.
   await verifyPanelHrefMatches({
@@ -147,7 +147,7 @@ export async function parsePanel(
 
 /**
  * Verify the panel's title anchor href matches `expectedId` (Decision
- * 7 + Decision 26). Reads from `LINKEDIN_SELECTORS.panel.titleAnchor`
+ * 7 + ). Reads from `LINKEDIN_SELECTORS.panel.titleAnchor`
  * (the inner `<a>`, NOT the `<h1>` — Oracle Finding 2).
  *
  * Retries up to `PANEL_VERIFY_MAX_ATTEMPTS` times with
@@ -190,7 +190,7 @@ async function verifyPanelHrefMatches(args: {
     }
   }
   // Exhausted the budget — throw a typed mismatch error with the
-  // latest observation (Decision 26). `lastCaptured === null` means
+  // latest observation. `lastCaptured === null` means
   // the href was always missing/non-matching; surface 'unknown' so
   // the orchestrator can distinguish a clean miss from a stale ID.
   throw new PanelJobIdMismatchError({
@@ -240,7 +240,7 @@ async function readFieldText(locator: Locator): Promise<string | null> {
  * Pause for `ms` milliseconds. Used between the bounded retry
  * attempts in `verifyPanelHrefMatches`. Tests that want a
  * deterministic clock can override this via dependency injection
- * in Wave D — for Wave C, the simple `setTimeout` is fine because
+ * in  — for , the simple `setTimeout` is fine because
  * Vitest's fake timers are not in use here.
  */
 function pause(ms: number): Promise<void> {

@@ -7,17 +7,16 @@ import { type FilterOutcome } from '../persistence/repositories/filter-results.j
 
 /**
  * Composite rule evaluator for the global deterministic filter engine
- * (TASK-010 Task 6, SPEC §17–§20).
  *
  * `evaluateJob` runs the seven SPEC-mandated rules in order and combines
  * their outcomes into a single auditable decision. The evaluator NEVER
  * throws — every helper call is wrapped in a top-level try/catch so a
  * synthetic or unexpected helper failure produces
- * `overallOutcome: 'error'` (SPEC §24.1) instead of crashing the caller.
+ * `overallOutcome: 'error'` instead of crashing the caller.
  *
- * Rule order (SPEC §17.4 → §17.5 → §17.6 → §18 → §19 → §20):
+ * Rule order:
  *
- *   1. `excluded-companies` — Normalized exact match (SPEC §17.4).
+ *   1. `excluded-companies` — Normalized exact match.
  *   2. `title-excluded-keywords` — `matchKeywords` + per-field filter.
  *   3. `title-required-any-keywords` — Empty list ⇒ abstained.
  *   4. `description-excluded-keywords` — Same as rule 2.
@@ -25,7 +24,7 @@ import { type FilterOutcome } from '../persistence/repositories/filter-results.j
  *   6. `max-seniority` — `detectSeniority` + `applySeniorityRule`.
  *   7. `language-rejection` — `detectLanguageRequirements` per required language.
  *
- * Overall outcome mapping (SPEC §24.1):
+ * Overall outcome mapping:
  *
  *   - Any rule `failed` → `overallOutcome: 'rejected'`,
  *     `rejectionReasons` = list of failed rule `reason` strings.
@@ -79,7 +78,7 @@ function normalizeCompanyName(value: string): string {
  * RuleEvaluation the rule produced or an `error` record with
  * `reason: 'evaluator_internal_error'`.
  *
- * Used by `evaluateJob` to honour the SPEC §24.1 contract: a malformed
+ * Used by `evaluateJob` to honour the  contract: a malformed
  * rule implementation surfaces as a filter `error`, never as a
  * rejection and never as a thrown exception.
  */
@@ -109,14 +108,14 @@ function safeEvaluate(
 }
 
 /**
- * Rule 1 — `excluded-companies` (SPEC §17.4).
+ * Rule 1 — `excluded-companies`.
  *
  * Normalize the company (lowercase, trim, collapse whitespace) and
  * compare it against the normalized form of every entry in
  * `config.excludedCompanies`. A hit fails the rule with the
  * original-case name from the config, so the audit reason reads
  * `excluded_company:<originalName>`. A `null` or empty company is
- * treated as "no possible exclusion" and passes (SPEC §17.4
+ * treated as "no possible exclusion" and passes (
  * "no hit ⇒ passed"); an empty excluded list trivially passes too.
  */
 function evaluateExcludedCompanies(
@@ -175,7 +174,7 @@ function evaluateExcludedCompanies(
 }
 
 /**
- * Rule 2 — `title-excluded-keywords` (SPEC §17.5 + §18).
+ * Rule 2 — `title-excluded-keywords`.
  *
  * Delegates to `matchKeywords` and filters the excluded hits for
  * `field === 'title'`. A hit fails the rule with the configured
@@ -243,7 +242,7 @@ function evaluateTitleExcludedKeywords(
 }
 
 /**
- * Rule 3 — `title-required-any-keywords` (SPEC §17.5 + §18).
+ * Rule 3 — `title-required-any-keywords`.
  *
  * Empty list ⇒ the rule does not apply and abstains. Non-empty with at
  * least one hit ⇒ passes. Non-empty with zero hits ⇒ fails.
@@ -412,7 +411,7 @@ function evaluateDescriptionRequiredAny(
 }
 
 /**
- * Rule 6 — `max-seniority` (SPEC §19).
+ * Rule 6 — `max-seniority`.
  */
 function evaluateMaxSeniority(config: JobFilterConfig, job: JobInput): readonly RuleEvaluation[] {
   if (config.seniority.maximum === null) {
@@ -470,7 +469,7 @@ function evaluateMaxSeniority(config: JobFilterConfig, job: JobInput): readonly 
 }
 
 /**
- * Rule 7 — `language-rejection` (SPEC §20).
+ * Rule 7 — `language-rejection`.
  *
  * The rule emits ONE RuleEvaluation per required language check, plus
  * ONE RuleEvaluation for each abstention branch. This shape honours
@@ -570,7 +569,7 @@ function evaluateLanguageRejection(
       });
     }
   }
-  // SPEC §20.3 + brief: "If at least one required language is in
+  //  + brief: "If at least one required language is in
   // accepted, the rule passes (if there are no fails)." Our evaluations
   // already encode that — the failed entries drive `rejectionReasons`,
   // the passed entries fill `rulesPassed`. No extra synthesis needed.
@@ -585,7 +584,7 @@ function evaluateLanguageRejection(
  *
  * The function never throws. Helper exceptions are caught and surfaced
  * as `overallOutcome: 'error'` with the offending rule reported via
- * `evaluator_internal_error` (SPEC §24.1).
+ * `evaluator_internal_error`.
  */
 export function evaluateJob(config: JobFilterConfig, job: JobInput): FilterEvaluationResult {
   try {
@@ -612,7 +611,7 @@ export function evaluateJob(config: JobFilterConfig, job: JobInput): FilterEvalu
     ];
 
     // An internal-error record (from `safeEvaluate`) takes precedence
-    // over a per-rule failure. SPEC §24.1: errors are NOT rejections.
+    // over a per-rule failure. : errors are NOT rejections.
     const hasInternalError = rulesEvaluated.some(
       (rule) => rule.reason === 'evaluator_internal_error',
     );

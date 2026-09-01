@@ -1,6 +1,5 @@
 /**
- * State vocabulary for TASK-015 — pipeline orchestration
- * (SPEC §8.4 + §27 + §29 + §30 + §33 + §38).
+ * State vocabulary for  — pipeline orchestration
  *
  * The shapes below are the typed contract between the
  * orchestrator and the CLI renderer. Pure TypeScript types
@@ -10,14 +9,14 @@ export const PIPELINE_SCHEMA_VERSION = 1 as const;
 export type PipelineSchemaVersion = typeof PIPELINE_SCHEMA_VERSION;
 
 /**
- * Status values for a pipeline run (SPEC §38). The literal
+ * Status values for a pipeline run. The literal
  * type mirrors the `pipelineRuns.status` DDL.
  */
 export type PipelineRunStatus =
   'running' | 'cancelling' | 'completed' | 'completed_with_errors' | 'failed' | 'cancelled';
 
 /**
- * The 21-count run summary (SPEC §38). The fields are the
+ * The 21-count run summary. The fields are the
  * final values the orchestrator persists via
  * `PipelineRunRepository.finalizeRunStats`.
  */
@@ -48,7 +47,7 @@ export interface RunSummary {
 }
 
 /**
- * Top-N row for the post-run renderer (SPEC §33.1).
+ * Top-N row for the post-run renderer.
  */
 export interface TopNRow {
   readonly jobId: number;

@@ -1,14 +1,14 @@
 /**
- * Version-controlled phrase patterns for language detection (SPEC §20).
+ * Version-controlled phrase patterns for language detection.
  *
  * The detector (`language-detector.ts`) consumes two phrase lists:
  *
- *   - `LANGUAGE_REQUIRED_PHRASES` — SPEC §20.1 explicit-requirement phrases
+ *   - `LANGUAGE_REQUIRED_PHRASES` —  explicit-requirement phrases
  *     that imply a job *requires* the language (e.g. "is required",
  *     "must speak", "professional proficiency in", "native-level",
  *     "excellent command of", "is mandatory").
  *
- *   - `LANGUAGE_REFERENCE_PHRASES` — SPEC §20.2 non-rejecting phrases that
+ *   - `LANGUAGE_REFERENCE_PHRASES` —  non-rejecting phrases that
  *     only mention the language as a nice-to-have or context (e.g.
  *     "is a plus", "preferred", "would be beneficial", "is desirable",
  *     "our team speaks").
@@ -49,7 +49,7 @@ export const LANGUAGE_REFERENCE_PHRASES: readonly string[] = [
 
 /**
  * Canonical list of every language the detector knows how to recognize in a
- * job description (SPEC §20; TASK-010 Task 5 + Task 6).
+ * job description (;  + Task 6).
  *
  * The detector scans the description for occurrences of *every* slug in
  * this list, not just the candidate's accepted languages. The

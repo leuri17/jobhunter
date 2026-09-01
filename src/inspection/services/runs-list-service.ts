@@ -1,9 +1,8 @@
 /**
- * RunsListService — read-side service for `runs list` (TASK-016
- * Wave B, SPEC §31 + §35.1).
+ * RunsListService — read-side service for `runs list`.
  *
  * Returns the `limit` most recent pipeline runs as `RunListRow`s
- * (Wave A), ordered by id DESC. The `errorSummary` field is
+ * ordered by id DESC. The `errorSummary` field is
  * synthesised from the run's `searchErrors` JSON column: it is
  * `'none'` when the run had no errors, or `<code>: <count>` when
  * at least one error is present.
@@ -16,7 +15,7 @@ import type { RunListRow } from '../state.js';
 import type { Repositories } from '../../persistence/repositories/index.js';
 import type { PipelineRunRow } from '../../persistence/repositories/pipeline-runs.js';
 
-/** Default limit per SPEC §33.1 (`runTopN` default). */
+/** Default limit per  (`runTopN` default). */
 const DEFAULT_RUNS_LIST_LIMIT = 20;
 
 export interface RunsListServiceOptions {

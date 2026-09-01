@@ -80,4 +80,18 @@ describe('CLI smoke (paths / config show / config validate)', () => {
     expect(status).toBe(2);
     expect(stderr).toMatch(/parse|invalid|configuration/i);
   });
+
+  it('--help exits 0, prints usage, and writes nothing to stderr', () => {
+    const { status, stdout, stderr } = runCli(['--help'], baseEnv);
+    expect(status).toBe(0);
+    expect(stdout).toContain('Usage: jobhunter');
+    expect(stderr).toBe('');
+  });
+
+  it('help <subcommand> exits 0 and writes nothing to stderr', () => {
+    const { status, stdout, stderr } = runCli(['help', 'run'], baseEnv);
+    expect(status).toBe(0);
+    expect(stdout).toContain('discovery + extraction + filtering + scoring');
+    expect(stderr).toBe('');
+  });
 });

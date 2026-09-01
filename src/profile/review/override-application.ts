@@ -1,19 +1,19 @@
 /**
- * Pure derived-value override application (TASK-009, SPEC §16.7).
+ * Pure derived-value override application.
  *
  * `applyOverrides(profile, overrides)` walks the four derived fields on
  * `ProfessionalProfile.derived` (likelySeniority, primaryRoles,
  * primaryDomains, strongestSkills) and recomputes each `effectiveValue`
  * from the persisted `overrideActive` / `overrideValue` pair.
  *
- * Three override states are explicitly distinguished (SPEC §16.7):
+ * Three override states are explicitly distinguished:
  *
  *   - `overrideActive = false`              → effectiveValue = generatedValue
  *   - `overrideActive = true`, valued       → effectiveValue = overrideValue
  *   - `overrideActive = true`, value = null → effectiveValue = null
  *     (intentional empty / null override)
  *
- * The function never mutates the input profile or its derived entries —
+ * The function never mutates the input profile or its derived entries
  * it returns a brand-new `ProfessionalProfile` with the same shape, just
  * with `effectiveValue` recomputed for the four derived entries.
  *

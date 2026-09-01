@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 /**
- * Real-Playwright smoke test for `PlaywrightRouteSession` (Wave E).
+ * Real-Playwright smoke test for `PlaywrightRouteSession`.
  *
  * This test launches a real headless Chromium via the route session
  * and confirms the `context.route()` interception serves the basic

@@ -53,7 +53,7 @@ export class ProfileSourceStorageError extends ProfileImportError {
 
 /**
  * Base class for errors raised by the profile review / editing / approval /
- * rejection lifecycle (TASK-009, SPEC §16.1–§16.7). Accepts an explicit exit
+ * rejection lifecycle. Accepts an explicit exit
  * code so subclasses can pick the documented failure-class mapping.
  *
  * The subclass hierarchy mirrors the four failure surfaces the CLI can hit:

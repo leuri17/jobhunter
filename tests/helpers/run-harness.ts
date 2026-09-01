@@ -49,7 +49,7 @@ export interface RunHarnessOptions {
   readonly createPage?: CreateFakePage;
   /**
    * Optional pre-existing `AbortSignal` forwarded to the
-   * `PipelineOrchestrator` (SPEC §29.3). When supplied, the
+   * `PipelineOrchestrator`. When supplied, the
    * orchestrator uses this signal instead of creating its own.
    */
   readonly cancelSignal?: AbortSignal;
@@ -109,7 +109,7 @@ export function buildRunHarness(options: RunHarnessOptions = {}): RunHarness {
     repositories,
   });
 
-  // Note: `ScoringService` does NOT accept a `diagnosticManager` —
+  // Note: `ScoringService` does NOT accept a `diagnosticManager`
   // the scoring pipeline persists its own diagnostic metadata via
   // `openaiMetadata`. The scorer logs go through the
   // `ScoringLogger` seam, not the run-level `DiagnosticManager`.

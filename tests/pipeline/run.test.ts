@@ -12,7 +12,7 @@ import { buildRunHarness, type RunHarness } from '../helpers/run-harness.js';
 
 /**
  * End-to-end smoke tests for the `jobhunter run` CLI wiring
- * (TASK-015 Wave E Task 18). The CLI's `runCommand` helper itself is
+ * The CLI's `runCommand` helper itself is
  * not exported from `src/cli.ts` (it constructs real
  * OpenAIClient / BrowserSession / DiagnosticManager implementations
  * internally), so the tests below assert the *contract* the CLI

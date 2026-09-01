@@ -1,5 +1,3 @@
-// Existing TASK-007 surface (CV import flow).
-
 export {
   SUPPORTED_SOURCE_TYPES,
   SourceTypeSchema,
@@ -51,8 +49,6 @@ export {
   defaultFilenameFor,
   resolveSourceStoragePath,
 } from './file-copy.js';
-
-// TASK-008 surface (OpenAI profile extraction).
 
 export {
   PROFILE_SCHEMA_VERSION,
@@ -121,9 +117,6 @@ export {
 // `openai/` submodule.
 export * from './openai/index.js';
 
-// TASK-009 surface (review / approval / rejection lifecycle).
-
-// Typed lifecycle errors (TASK-009 Task 10).
 export {
   ProfileLifecycleError,
   InvalidProfileIdentifierError,
@@ -134,13 +127,10 @@ export {
   UserCancelledRejectionError,
 } from './errors.js';
 
-// Profile CLI identifier resolution (TASK-009 Task 1).
 export { resolveProfileVersionId } from './identifier-resolution.js';
 
-// Pure review helpers (TASK-009 Task 2).
 export * from './review/index.js';
 
-// Application services (TASK-009 Tasks 6, 7, 8, 9).
 export {
   ProfileReviewService,
   type ProfileListEntry,
@@ -165,5 +155,4 @@ export {
   type ProfileEditingServiceOptions,
 } from './editing-service.js';
 
-// Editor surface (TASK-009 Tasks 4 + 5).
 export * from './editing/index.js';

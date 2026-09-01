@@ -1,6 +1,5 @@
 /**
- * Default `FilterPrompts` adapter for the Inquirer CLI (TASK-010 Task 10,
- * SPEC §17.3 + §17.6).
+ * Default `FilterPrompts` adapter for the Inquirer CLI.
  *
  * This module is the ONLY file under `src/filter/` that imports
  * `@inquirer/prompts`. Every other module talks to the configurator

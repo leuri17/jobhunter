@@ -4,9 +4,9 @@ import { isValidRequiredField, normalizeText } from '../../src/linkedin/extracti
 
 /**
  * Tests for `src/linkedin/extraction/normalize.ts`
- * (TASK-013 Plan Task 3). Linkedom-free; pure string manipulation.
+ * Linkedom-free; pure string manipulation.
  *
- * Mirrors the test plan from §Wave A in the plan file:
+ * Mirrors the test plan from  in the plan file:
  *   - empty input → ''
  *   - simple tag dropping
  *   - script/style block dropping
@@ -16,7 +16,7 @@ import { isValidRequiredField, normalizeText } from '../../src/linkedin/extracti
  *   - whitespace collapsed
  *   - isValidRequiredField for null / whitespace / non-empty input
  */
-describe('src/linkedin/extraction/normalize — Wave A', () => {
+describe('src/linkedin/extraction/normalize — ', () => {
   describe('normalizeText', () => {
     it('returns the empty string for empty input', () => {
       expect(normalizeText('')).toBe('');

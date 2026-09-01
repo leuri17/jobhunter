@@ -53,7 +53,7 @@ const BASE_CONTEXT: Omit<CaptureContext, 'page' | 'browserContext'> = {
   timestamp: '2026-08-13T10:00:00.000Z',
 };
 
-describe('LinkedInPlaywrightTraceCapture (Wave C)', () => {
+describe('LinkedInPlaywrightTraceCapture', () => {
   let tempDir: string;
 
   beforeEach(() => {
@@ -142,7 +142,7 @@ describe('LinkedInPlaywrightTraceCapture (Wave C)', () => {
   it('exposes the legacy PlaywrightTraceCapture name via the index barrel', () => {
     // The `PlaywrightTraceCapture` symbol in `capture/index.ts` is
     // a re-export alias for `LinkedInPlaywrightTraceCapture`. This
-    // preserves backward compat with Wave A consumers.
+    // preserves backward compat with  consumers.
     expect(PlaywrightTraceCapture).toBe(LinkedInPlaywrightTraceCapture);
     // The index also re-exports the new name directly for forward compat.
     expect(LinkedInPlaywrightTraceCaptureFromIndex).toBe(LinkedInPlaywrightTraceCapture);

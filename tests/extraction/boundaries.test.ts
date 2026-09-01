@@ -4,8 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Domain-boundary guard for `src/linkedin/extraction/` (TASK-013
- * Plan Task 14, Wave E).
+ * Domain-boundary guard for `src/linkedin/extraction/`.
  *
  * Granular mirror of `tests/linkedin/boundaries.test.ts`. AGENTS.md
  * §5 / §9: domain code must not depend on Commander, Inquirer,
@@ -18,11 +17,11 @@ import { describe, expect, it } from 'vitest';
  * Per AGENTS.md §5: extraction domain code does not import
  * Commander, Inquirer, OpenAI, or runtime Pino. Runtime Playwright
  * is reserved for `src/linkedin/playwright-session.ts`. `drizzle-orm`
- * is allowed only inside `service.ts` (Wave D carve-out — the
+ * is allowed only inside `service.ts` (carve-out — the
  * orchestrator wraps 3 per-job writes in a single sync
  * `db.transaction`).
  *
- * File structure (Wave E end-state — 11 files):
+ * File structure (end-state — 11 files):
  *   - `src/linkedin/extraction/state.ts`             (pure types)
  *   - `src/linkedin/extraction/errors.ts`            (typed errors)
  *   - `src/linkedin/extraction/normalize.ts`         (pure helpers)
@@ -33,14 +32,14 @@ import { describe, expect, it } from 'vitest';
  *   - `src/linkedin/extraction/panel-parser.ts`      (Playwright TYPES)
  *   - `src/linkedin/extraction/dedicated-parser.ts`  (Playwright TYPES)
  *   - `src/linkedin/extraction/service.ts`           (Playwright TYPES + Drizzle carve-out)
- *   - `src/linkedin/extraction/index.ts`             (Wave E barrel)
+ *   - `src/linkedin/extraction/index.ts`             (barrel)
  */
 const EXTRACTION_DIR = join(process.cwd(), 'src', 'linkedin', 'extraction');
 
 const BANNED_IMPORTS = ['commander', '@inquirer/prompts', 'drizzle-orm', 'openai', 'pino'] as const;
 
 /**
- * Wave D carve-out: `extraction/service.ts` is the ONLY file under
+ *  carve-out: `extraction/service.ts` is the ONLY file under
  * `src/linkedin/extraction/` that may import `drizzle-orm`. The
  * orchestrator wraps 3 per-job writes (extractionAttempts insert +
  * jobs update + discoveryEvents patch) in a single sync
@@ -120,14 +119,14 @@ function relativeFromCwd(absolute: string): string {
   return absolute;
 }
 
-describe('src/linkedin/extraction domain-boundary guard (Wave E)', () => {
+describe('src/linkedin/extraction domain-boundary guard', () => {
   it('exists as a directory with all 11 extraction files', () => {
     const files = listExtractionSourceFiles(EXTRACTION_DIR);
-    // Wave A: state, errors, normalize, required-fields, status,
+    //  state, errors, normalize, required-fields, status,
     // detail-url, log (7)
-    // Wave C: panel-parser, dedicated-parser (2)
-    // Wave D: service (1)
-    // Wave E: index (1)
+    //  panel-parser, dedicated-parser (2)
+    //  service (1)
+    //  index (1)
     // Total: 11
     expect(files.length).toBeGreaterThanOrEqual(11);
   });

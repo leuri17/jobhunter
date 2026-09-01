@@ -1,5 +1,5 @@
 /**
- * Human-readable renderer for `SetupSummary` (TASK-011 Minor h).
+ * Human-readable renderer for `SetupSummary` ( Minor h).
  *
  * Mirrors the existing `formatSummary` / `formatExtractSummary` helpers in
  * `src/cli.ts`. The output is deterministic (same input → same output)

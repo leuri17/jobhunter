@@ -16,7 +16,7 @@ import { NoActiveFilterConfigError } from '../../src/filter/errors.js';
 import { type JobFilterConfig } from '../../src/filter/schema.js';
 
 /**
- * TASK-010 Task 9 — `FilterApplyService` tests.
+ *  — `FilterApplyService` tests.
  *
  * The service composes:
  *

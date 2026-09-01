@@ -1,6 +1,6 @@
 /**
- * Playwright-backed `BrowserSession` implementation (TASK-012 Plan Task 7,
- * SPEC §21.2, Decision 2 / Decision 9 / Decision 12).
+ * Playwright-backed `BrowserSession` implementation (,
+ *   /  / ).
  *
  * **This is the only file in `src/linkedin/` that imports `playwright`
  * at runtime.** The boundaries test
@@ -8,17 +8,17 @@
  * other file in `src/linkedin/` either uses `import type` or has no
  * Playwright reference at all.
  *
- * Lifecycle ownership (per Plan Decision 2 / Required Finding #1 in
+ * Lifecycle ownership (per Plan  / Required Finding #1 in
  * the bounded remediation pass):
- *   - `launch()` / `close()` are owned by TASK-015's run-level
+ *   - `launch()` / `close()` are owned by 's run-level
  *     orchestrator. The session is fresh per `jobhunter run`
  *     invocation (one context, no persistent profile).
  *   - `openPage()` / `closePage()` are the per-search page lifecycle.
- *     The orchestrator (Wave C) wraps each `discover()` call in a
+ *     The orchestrator wraps each `discover()` call in a
  *     `try { ... } finally { closePage(page) }` and NEVER calls
  *     `close()`.
  *   - `openFallbackPage()` enforces the single-active-fallback
- *     invariant from SPEC §21.7.
+ *     invariant from .
  */
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 
@@ -102,7 +102,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
 
   /**
    * Close the context first, then the browser. Idempotent: a second
-   * call is a no-op. The caller is TASK-015's run-level try/finally
+   * call is a no-op. The caller is 's run-level try/finally
    * — the per-search loop in `discover()` does NOT call this.
    */
   async close(): Promise<void> {
@@ -142,9 +142,9 @@ export class PlaywrightBrowserSession implements BrowserSession {
    * not called first. The orchestrator owns the matching
    * `closePage()`.
    *
-   * URL validation is NOT done here — the orchestrator (Wave C)
+   * URL validation is NOT done here — the orchestrator
    * is responsible for constructing search URLs via
-   * `SearchMatrixEntry.generatedUrl` (TASK-006). The session's
+   * `SearchMatrixEntry.generatedUrl`. The session's
    * contract is: "open a page and navigate to whatever URL the
    * caller passed."
    */
@@ -181,13 +181,13 @@ export class PlaywrightBrowserSession implements BrowserSession {
   }
 
   /**
-   * Open a dedicated-page fallback (SPEC §22.7). Throws
-   * `BrowserCapacityExceededError` if a fallback is already open —
+   * Open a dedicated-page fallback. Throws
+   * `BrowserCapacityExceededError` if a fallback is already open
    * the single-active-fallback invariant is a hard contract.
    *
-   * Wave B's scope: TASK-012 never calls this; TASK-013 will.
+   * 's scope:  never calls this;  will.
    *
-   * URL validation is NOT done here — the orchestrator (TASK-013)
+   * URL validation is NOT done here — the orchestrator
    * constructs `/jobs/view/<id>/` URLs from `Repositories.jobs.sourceJobId`.
    */
   async openFallbackPage(url: string): Promise<Page> {

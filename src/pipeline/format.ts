@@ -35,7 +35,7 @@ export function formatRunSummary(summary: RunSummary): string {
 }
 
 /**
- * Render the top-N table (SPEC §33.1).
+ * Render the top-N table.
  */
 export function formatTopNTable(rows: readonly TopNRow[], terminalWidth: number): string {
   if (rows.length === 0) return '(no scored jobs)';
@@ -68,7 +68,7 @@ export function formatTopNTable(rows: readonly TopNRow[], terminalWidth: number)
 }
 
 /**
- * Render the scoring plan (SPEC §30).
+ * Render the scoring plan.
  */
 export function formatScoringPlan(plan: ScoringPlan): string {
   const lines: string[] = [];

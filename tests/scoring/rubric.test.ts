@@ -29,7 +29,7 @@ describe('RUBRIC', () => {
     expect(Math.abs(total - 1.0)).toBeLessThan(1e-9);
   });
 
-  it('uses the SPEC §26.2 weights (30/25/20/10/5/5/5)', () => {
+  it('uses the  weights (30/25/20/10/5/5/5)', () => {
     expect(RUBRIC.technicalSkills.weight).toBe(0.3);
     expect(RUBRIC.relevantExperience.weight).toBe(0.25);
     expect(RUBRIC.roleResponsibilityFit.weight).toBe(0.2);

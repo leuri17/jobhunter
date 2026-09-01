@@ -4,7 +4,7 @@ import { matchKeywords, type KeywordMatchHit } from '../../src/filter/keyword-ma
 import { type JobFilterConfig } from '../../src/filter/schema.js';
 
 /**
- * TASK-010 Task 3 — `keyword-matcher.ts` tests.
+ *  — `keyword-matcher.ts` tests.
  *
  * `matchKeywords` walks the four keyword lists (`title.excludedKeywords`,
  * `title.requiredAnyKeywords`, `description.excludedKeywords`,

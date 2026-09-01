@@ -14,8 +14,7 @@ import {
 } from './helpers/inspection-harness.js';
 
 /**
- * Service-layer tests for `JobsListService` (TASK-016 Wave D Task 14,
- * SPEC §31 + §34.1 + §34.3 + §34.4 + §34.5).
+ * Service-layer tests for `JobsListService`.
  *
  * The fixture mirrors the documented state matrix:
  *   - Job 1: complete, accepted, scored 85 — `scored` (+ `accepted`)
@@ -28,7 +27,7 @@ import {
  * `failed` are exercised via the same fixture (the SQL-driven
  * repository handles each state uniformly).
  */
-describe('JobsListService (TASK-016 Wave D Task 14, SPEC §34.1)', () => {
+describe('JobsListService', () => {
   let harness: InspectionHarness;
   let service: JobsListService;
   let profileVersionId: number;

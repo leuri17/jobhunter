@@ -3,19 +3,19 @@ import { z } from 'zod';
 import { SeniorityLevelSchema } from '../profile/schema.js';
 
 /**
- * On-disk global filter configuration schema (SPEC §17.2).
+ * On-disk global filter configuration schema.
  *
  * The schema pins `schemaVersion` to the literal `1` and is `.strict()` per
  * AGENTS.md §6 — unknown fields are rejected at the persisted boundary.
  *
  * `seniority.maximum` is `SeniorityLevel | null` (`null` means "no cap"). The
- * enum itself is re-exported from `src/profile/schema.ts` (Decision 2): we
+ * enum itself is re-exported from `src/profile/schema.ts`: we
  * intentionally do NOT define a duplicate enum here.
  */
 
 export { SeniorityLevelSchema } from '../profile/schema.js';
 
-/** Literal version of the on-disk `JobFilterConfig` shape (SPEC §17.2). */
+/** Literal version of the on-disk `JobFilterConfig` shape. */
 export const FILTER_SCHEMA_VERSION = 1;
 
 export const JobFilterConfigSchema = z

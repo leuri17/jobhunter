@@ -1,5 +1,5 @@
 /**
- * Pure card-ID parser (TASK-012 Plan Task 4, Decision 6).
+ * Pure card-ID parser.
  *
  * `parseCardJobId(element, document)` extracts the canonical LinkedIn
  * job ID from a card element using two priority paths:

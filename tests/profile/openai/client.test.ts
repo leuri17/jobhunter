@@ -139,7 +139,7 @@ describe('createDefaultOpenAIClient', () => {
     // The client is a pure transport — it must forward the caller's
     // pre-built messages exactly. Prompt construction is the caller's
     // job (see `buildProfileExtractionPrompt` for profile extraction
-    // and `buildScoringPrompt` for scoring, Wave A).
+    // and `buildScoringPrompt` for scoring, ).
     expect(call.messages).toEqual(REQUEST.messages);
   });
 

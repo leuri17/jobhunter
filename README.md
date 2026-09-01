@@ -1,92 +1,112 @@
 # JobHunter
 
-> Local-first, public-anonymous LinkedIn scraper for the MVP. JobHunter
-> discovers public search results, persists them, and surfaces a
-> ranked short-list. No authentication, no third-party job source, no
-> per-job data extraction beyond what the public search-results page
-> already shows.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![CI](https://github.com/leuri17/jobhunter/actions/workflows/ci.yml/badge.svg)](https://github.com/leuri17/jobhunter/actions/workflows/ci.yml)
+[![Node >= 24.18.0](https://img.shields.io/badge/node-%3E%3D24.18.0-brightgreen)](.node-version)
+[![pnpm 11.18.0](https://img.shields.io/badge/pnpm-11.18.0-blue)](package.json)
+
+> Local-first CLI that scrapes public LinkedIn job search results,
+> persists them locally, and ranks them with deterministic filters plus
+> OpenAI scoring.
+
+JobHunter helps one job seeker discover job listings on LinkedIn,
+apply their own deterministic filters, and rank the survivors against
+their profile using OpenAI. Everything runs on your machine; nothing
+is sent anywhere except your local SQLite database and the two
+outbound HTTP calls you explicitly authorize (one to LinkedIn's
+public search pages, one to OpenAI for scoring).
+
+## Demo
+
+A short terminal recording of the basic flow lives at
+[`docs/demo.gif`](./docs/demo.gif). The source tape is
+[`docs/demo.tape`](./docs/demo.tape); re-render with `vhs docs/demo.tape`.
 
 ## Quick start
 
 ```bash
-# Install dependencies (Node 24.18.0, pnpm 11.18.0)
+# Install dependencies (Node 24.18.0, pnpm 11.18.0).
 pnpm install
 
-# Initialize the database + write the default config
-pnpm dev -- init
+# Initialize the database + write the default config.
+pnpm dev init
 
-# Discover jobs from a public LinkedIn search
-pnpm dev -- run --search='engineer' --location='Remote'
+# Configure your searches and locations interactively.
+pnpm dev configure search
 
-# Or pass the full pipeline options (search matrix from configured queries/locations):
-pnpm dev -- run                    # human-readable run summary + top-N
-pnpm dev -- run --yes              # skip the scoring-plan confirmation
-pnpm dev -- run --json             # emit a single JSON document to stdout
-# SIGINT once → graceful cancellation; twice → force exit.
+# Run the full pipeline (requires OPENAI_API_KEY in your env).
+pnpm dev run --yes
 
-# Reevaluate stored jobs after a config/profile change (SPEC §28).
-pnpm dev -- jobs reevaluate                     # default: complete jobs with stale/missing filter or score
-pnpm dev -- jobs reevaluate --filters-only      # rerun stale filters only, mark dependent scores stale
-pnpm dev -- jobs reevaluate --scores-only       # skip jobs whose filter is stale/missing (filter_update_required)
-pnpm dev -- jobs reevaluate --job job_42        # target a single complete job
-pnpm dev -- jobs reevaluate --dry-run           # plan with no DB writes, no OpenAI calls
-pnpm dev -- jobs reevaluate --dry-run --json    # single JSON document to stdout
-pnpm dev -- jobs reevaluate --yes               # bypass only the OpenAI confirmation
+# Inspect results as JSON.
+pnpm dev jobs list --json
 
-# Print help
-pnpm dev -- --help
+# See resolved OS-specific runtime paths.
+pnpm dev paths
 ```
+
+`--help` exits 0 and prints the help text to stdout. SIGINT (Ctrl-C)
+once cancels the current run gracefully; twice force-exits. See
+[`docs/architecture.md`](./docs/architecture.md) for the full pipeline
+walkthrough.
 
 ## Commands
 
-Every command registered by `createProgram()` (see `src/cli.ts`):
+JobHunter's CLI is small and explicit. Run `pnpm dev --help` for
+the full list with descriptions; the most-used commands:
 
-- `paths` — print resolved OS-specific runtime paths.
-- `config show` — print the normalized configuration.
-- `config validate` — validate `config.json` and exit 0 on success.
-- `config update --patch <json>` — apply a JSON patch to the configuration.
-- `configure search` — interactively configure LinkedIn search settings.
-- `configure filters` — interactively configure the global deterministic filter set.
-- `init` — interactively initialize JobHunter (paths, config, profile, filters). Resumable.
-- `profile import <path>` — import one or two CV source files.
-- `profile extract` — extract a structured profile from imported sources via OpenAI.
-- `profile list` — list every persisted profile version.
-- `profile show <id>` — print the review summary for a profile version.
-- `profile approve <id>` — approve a draft profile version.
-- `profile reject <id>` — reject a draft profile version.
-- `profile edit <id>` — interactively edit a draft profile version.
-- `run` — run the full discovery + extraction + filtering + scoring pipeline.
-- `jobs list` — list jobs filtered by state and refinements.
-- `jobs show <job-id>` — print the full payload for a single job.
-- `jobs reevaluate` — reevaluate stored jobs (filters-only / scores-only / --job / --dry-run).
-- `runs list` — list recent pipeline runs.
-- `runs show <run-id>` — print the full payload for a single run.
+| Command | What it does |
+| --- | --- |
+| `pnpm dev paths` | Print the resolved OS-specific runtime paths. |
+| `pnpm dev init` | Interactively initialize (paths, config, profile, filters). Resumable. |
+| `pnpm dev configure search` | Interactively configure LinkedIn search settings. |
+| `pnpm dev configure filters` | Interactively configure the global deterministic filter set. |
+| `pnpm dev profile import <path>` | Import one or two CV source files. |
+| `pnpm dev profile extract` | Extract a structured profile from imported sources via OpenAI. |
+| `pnpm dev profile list` | List every persisted profile version. |
+| `pnpm dev profile show <id>` | Print the review summary for a profile version. |
+| `pnpm dev profile approve <id>` | Approve a draft profile version. |
+| `pnpm dev profile reject <id>` | Reject a draft profile version. |
+| `pnpm dev profile edit <id>` | Interactively edit a draft profile version. |
+| `pnpm dev run` | Run the full discovery + extraction + filtering + scoring pipeline. |
+| `pnpm dev jobs list` | List jobs filtered by state and refinements. |
+| `pnpm dev jobs show <job-id>` | Print the full payload for a single job. |
+| `pnpm dev jobs reevaluate` | Reevaluate stored jobs (filters-only / scores-only / --job / --dry-run). |
+| `pnpm dev runs list` | List recent pipeline runs. |
+| `pnpm dev runs show <run-id>` | Print the full payload for a single run. |
+
+Most read-only commands accept `--json` to emit a single JSON document
+to stdout. Logs go to stderr. See [`docs/architecture.md`](./docs/architecture.md)
+for the JSON-envelope contract.
 
 ## Architecture
 
-JobHunter is structured into isolated layers per `SPEC.md §43.1` and
-`AGENTS.md §5`:
+JobHunter is layered per `docs/architecture.md`:
 
-| Layer       | Path                            | Owns                                 |
-| ----------- | ------------------------------- | ------------------------------------ |
-| CLI         | `src/cli.ts`                    | Argument parsing + exit-code mapping |
-| Application | `src/<feature>/<service>.ts`    | Orchestrators + per-task services    |
-| Domain      | `src/<feature>/` (pure modules) | Rules, parsers, validators           |
-| Persistence | `src/persistence/`              | Drizzle + SQLite + repositories      |
-| Browser     | `src/linkedin/`                 | Playwright + LinkedIn DOM            |
-| Diagnostics | `src/diagnostics/`              | Capture strategies + artifacts       |
-| Logging     | `src/logging/`                  | Pino adapter                         |
+| Layer | Path | Owns |
+| --- | --- | --- |
+| CLI | `src/cli.ts` | Commander argument parsing + the only `process.exit` site |
+| Application | `src/<feature>/<service>.ts` | Orchestrators that compose domain logic with persistence and the browser |
+| Domain | `src/<feature>/` (pure modules) | Rules, parsers, validators |
+| Persistence | `src/persistence/` | Drizzle ORM + SQLite + repositories |
+| Browser | `src/linkedin/` | Playwright + LinkedIn DOM |
+| Diagnostics | `src/diagnostics/` | Capture strategies + artifact persistence |
+| Logging | `src/logging/` | Pino adapter; logs go to stderr |
 
 The scraper is built around a `BrowserSession` interface so the
 production Playwright implementation and the test `FakeBrowserSession`
-share the same contract (Plan Decision 2, Wave B).
+share the same contract.
 
 ## Development
 
-```bash
-# Build the production bundle (tsc → dist/)
-pnpm build
+Requires Node.js `24.18.0` (pinned via `.node-version`) and pnpm
+`11.18.0`.
 
+```bash
+pnpm install --frozen-lockfile
+pnpm dev --help            # confirm CLI runs
+```
+
+```bash
 # Typecheck (production + test configs)
 pnpm typecheck
 
@@ -97,67 +117,71 @@ pnpm lint
 pnpm format:check
 pnpm format
 
+# Build (tsc → dist/)
+pnpm build
+
 # Run the normal test suite
 pnpm test
 
-# Run the live tests (opt-in; uses real network)
+# Run live tests (opt-in; uses real LinkedIn)
 LINKEDIN_LIVE=1 pnpm test:live
-
-# Run the real-Playwright smoke tests (opt-in; needs Chromium binary)
-PLAYWRIGHT_SMOKE=1 pnpm test tests/linkedin/playwright-session.smoke.test.ts
-PLAYWRIGHT_SMOKE=1 pnpm test tests/linkedin/helpers/playwright-route-session.smoke.test.ts
 ```
-
-The smoke tests require the Chromium binary:
-
-```bash
-pnpm exec playwright install chromium
-```
-
-### LinkedIn HTML fixtures
-
-The fixture HTML files at `tests/linkedin/fixtures/*.html` are snapshots
-of LinkedIn's public search page DOM used by the scraper's unit +
-integration tests. They will go stale when LinkedIn changes its
-markup. When a scraper test fails on selector drift, regenerate the
-affected fixture(s) by:
-
-1. Navigating to a real LinkedIn public search page in a browser.
-2. Saving the rendered HTML.
-3. Committing the update alongside any selector changes in
-   `src/linkedin/selectors.ts`.
-
-The selector map (`src/linkedin/selectors.ts`) is versioned
-(`LINKEDIN_SELECTORS_MAP_VERSION`) so a stale fixture is visible via
-the version mismatch.
 
 ## Testing strategy
 
-- **Unit / pure tests:** cover domain rules, parsers, config
-  validation, and the LinkedIn scraper's pure helpers (parser,
-  navigation helper, load-more loop with a `FakePage`).
-- **Integration tests:** run against a real SQLite database with the
-  real Drizzle migrations + a `FakeBrowserSession` for the browser
-  layer. The discovery-service test in
-  `tests/linkedin/discovery-service.test.ts` exercises 9 scenarios
-  covering the SPEC §21.3 walk.
-- **HTTP-shape fidelity tests:** use the
-  `PlaywrightRouteSession` helper to serve the saved HTML fixtures
-  through `context.route()` interception (no live network).
-- **Live tests:** opt-in via `LINKEDIN_LIVE=1`. Default behavior: all
-  tests are skipped so the live suite exits 0 in CI.
+- **Unit tests** cover domain rules, parsers, config validation, and
+  the LinkedIn scraper's pure helpers.
+- **Integration tests** run against a real SQLite database with the
+  real Drizzle migrations and a `FakeBrowserSession`.
+- **HTTP-shape fidelity tests** use the `PlaywrightRouteSession` helper
+  to serve saved HTML fixtures through `context.route()` interception
+  (no live network).
+- **Live tests** are opt-in via `LINKEDIN_LIVE=1` and excluded from
+  normal CI.
+
+Saved HTML fixtures at `tests/linkedin/fixtures/*.html` are snapshots
+of LinkedIn's public search page DOM used by the unit + integration
+tests. They will go stale when LinkedIn changes its markup. When a
+scraper test fails on selector drift, regenerate the affected
+fixture(s) by navigating to a real LinkedIn public search page in an
+incognito/private window (no cookies, no logged-in state, no PII),
+saving the rendered HTML, and committing the update alongside any
+selector changes in `src/linkedin/selectors.ts`.
 
 ## Constraints
 
-- No `any` in new code.
-- Type-only Playwright imports allowed in: `browser-session.ts`,
-  `overlay.ts`, `load-more.ts`, `navigation.ts`,
-  `discovery-service.ts`. Runtime Playwright imports allowed in:
-  `playwright-session.ts` only (the sole runtime importer).
-- Strict TypeScript, native ESM, NodeNext imports.
-- `process.exit` lives in `src/cli.ts` only; domain code must throw
-  typed errors that the CLI maps to exit codes.
+- Strict TypeScript with `noUncheckedIndexedAccess` and
+  `exactOptionalPropertyTypes`. No `any` in new code.
+- Native ESM, NodeNext imports. No CommonJS.
+- `process.exit` lives only in `src/cli.ts`; domain code throws typed
+  errors that the CLI maps to exit codes.
+- Runtime Playwright imports live only in
+  `src/linkedin/playwright-session.ts`. Every other `src/linkedin/`
+  file imports types only. Both rules are enforced by tests.
 
-See `AGENTS.md` for the full development ruleset and
-`docs/superpowers/plans/2026-08-19-task-012-linkedin-discovery-result-loading.md`
-for the TASK-012 plan + reconciliation notes.
+## Documentation
+
+- [`docs/architecture.md`](./docs/architecture.md) — canonical
+  architecture reference.
+- [`docs/responsible-use.md`](./docs/responsible-use.md) — LinkedIn
+  Terms-of-Service posture and user responsibilities.
+
+## Contributing
+
+Contributions welcome. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for
+dev setup, testing strategy, architecture boundaries, exit codes, and
+PR conventions.
+
+## Security
+
+To report a vulnerability privately, see
+[`SECURITY.md`](./SECURITY.md).
+
+## License
+
+[MIT](./LICENSE) — Copyright (c) 2026 leuri17.
+
+JobHunter is not affiliated with, endorsed by, or sponsored by LinkedIn
+or Microsoft. "LinkedIn" is a trademark of Microsoft Corporation. See
+[`docs/responsible-use.md`](./docs/responsible-use.md) for the full
+responsible-use policy.

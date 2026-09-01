@@ -24,13 +24,13 @@ import {
 } from '../inspection/services/helpers/inspection-harness.js';
 
 /**
- * TASK-016 Wave D Task 15 — CLI wiring tests for `jobs show`.
+ *  — CLI wiring tests for `jobs show`.
  *
  * Same boot/stub pattern as `tests/cli/jobs-list.test.ts`. Covers
  * the three error surfaces (invalid identifier, unknown id,
  * success with --json).
  */
-describe('CLI: jobhunter jobs show (TASK-016 Wave D Task 15, SPEC §34.6)', () => {
+describe('CLI: jobhunter jobs show', () => {
   let tempHome: string;
   let originalHome: string | undefined;
   let stdout: string[] = [];

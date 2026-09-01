@@ -1,8 +1,7 @@
 import type { Page } from 'playwright';
 
 /**
- * Outcome of `navigateWithTimeout` (TASK-012 Plan Task 9, SPEC §21.3
- * + §21.6). Discriminated union so the orchestrator can branch
+ * Outcome of `navigateWithTimeout`. Discriminated union so the orchestrator can branch
  * without inspecting thrown errors. `kind: 'blocked'` carries the
  * LinkedIn auth-wall detection (exit 4 path); the orchestrator
  * converts that to a thrown `LinkedInAccessBlockedError`.

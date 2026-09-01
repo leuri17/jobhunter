@@ -16,7 +16,7 @@ import { resolvePlatformPaths } from '../../src/platform/paths.js';
 import { createDefaultPlatformAdapter } from '../../src/platform/paths-default.js';
 
 /**
- * TASK-016 Wave D Task 15 — CLI wiring tests for `runs list`.
+ *  — CLI wiring tests for `runs list`.
  *
  * Mirrors the stub + DB-boot pattern from `tests/cli/jobs-list.test.ts`.
  * No fixture needed for the documented scenarios — the empty-DB
@@ -24,7 +24,7 @@ import { createDefaultPlatformAdapter } from '../../src/platform/paths-default.j
  * `--limit 1` test inserts one pipeline run so the table has one
  * row to surface.
  */
-describe('CLI: jobhunter runs list (TASK-016 Wave D Task 15, SPEC §35.1)', () => {
+describe('CLI: jobhunter runs list', () => {
   let tempHome: string;
   let originalHome: string | undefined;
   let stdout: string[] = [];
@@ -162,7 +162,7 @@ describe('CLI: jobhunter runs list (TASK-016 Wave D Task 15, SPEC §35.1)', () =
     });
   });
 
-  describe('JSON output (SPEC §36)', () => {
+  describe('JSON output', () => {
     it('emits valid single JSON document with --json on an empty DB', async () => {
       await ensureDatabaseReady();
       const result = await runCli(['runs', 'list', '--json']);

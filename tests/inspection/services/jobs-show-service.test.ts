@@ -17,14 +17,13 @@ import {
 } from './helpers/inspection-harness.js';
 
 /**
- * Service-layer tests for `JobsShowService` (TASK-016 Wave D Task 14,
- * SPEC §31 + §34.6).
+ * Service-layer tests for `JobsShowService`.
  *
  * Fixture: one complete job, two discovery events, one active filter
  * result, one active score result. The service is expected to assemble
  * the full 5-section payload from these inputs.
  */
-describe('JobsShowService (TASK-016 Wave D Task 14, SPEC §34.6)', () => {
+describe('JobsShowService', () => {
   let harness: InspectionHarness;
   let service: JobsShowService;
   let profileVersionId: number;

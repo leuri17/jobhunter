@@ -7,7 +7,7 @@ import {
 
 /**
  * Base class for every error raised by `LinkedInDiscoveryService`.
- * Subclasses pin a specific `ExitCode` so the CLI boundary (TASK-015)
+ * Subclasses pin a specific `ExitCode` so the CLI boundary
  * does not need an `instanceof` cascade. Per-card errors are NOT
  * represented here — they live on `SearchDiscoveryOutcome.errors[]`
  * (see `src/linkedin/state.ts`) and on the `discoveryErrors` table.
@@ -78,7 +78,7 @@ export class OverlayUndismissableError extends LinkedInScraperError {
 
 /**
  * Load-more loop exhausted `maxNoProgressAttempts` consecutive no-progress
- * iterations. Exit 1 — soft warning; TASK-015's orchestrator may catch
+ * iterations. Exit 1 — soft warning; 's orchestrator may catch
  * and treat as success. The orchestrator surfaces this only when the
  * page still has more "load-more" controls to click (i.e. a real bug).
  */
@@ -103,9 +103,9 @@ export class BrowserLaunchError extends LinkedInScraperError {
 
 /**
  * Browser capacity contract violated — more than one fallback page
- * requested. Exit 1. Defensive: TASK-015 owns the lifecycle and should
- * never hit this; TASK-013's orchestrator may hit it during fallback
- * extraction (SPEC §22.7) when the orchestrator opens two panels at
+ * requested. Exit 1. Defensive:  owns the lifecycle and should
+ * never hit this; 's orchestrator may hit it during fallback
+ * extraction when the orchestrator opens two panels at
  * once.
  */
 export class BrowserCapacityExceededError extends LinkedInScraperError {

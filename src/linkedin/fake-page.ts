@@ -1,5 +1,5 @@
 /**
- * Minimal `Page`-shaped object for tests (TASK-012 Wave B + D).
+ * Minimal `Page`-shaped object for tests ( + D).
  *
  * The real Playwright `Page` interface has ~80 methods. Tests only
  * touch a handful: `url()`, `close()`, `goto()`, `locator()`, and

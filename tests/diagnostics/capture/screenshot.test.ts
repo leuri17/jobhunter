@@ -31,7 +31,7 @@ const BASE_CONTEXT: Omit<CaptureContext, 'page' | 'browserContext'> = {
   timestamp: '2026-08-13T10:00:00.000Z',
 };
 
-describe('ScreenshotCapture (Wave C)', () => {
+describe('ScreenshotCapture', () => {
   it('returns a PNG buffer when ctx.page.screenshot() resolves with bytes', async () => {
     const bytes = Buffer.from('89504e470d0a1a0a', 'hex'); // PNG magic bytes
     const page = makeScreenshotPage(bytes);

@@ -15,7 +15,6 @@ import {
 
 /**
  * Pure-helper tests for the human-readable formatters
- * (TASK-017 Wave A Task 4, SPEC §36 + §30).
  *
  * The tests assert snapshot-style output for each scope + dry-run
  * combination and the adaptive-truncation behavior of
@@ -92,7 +91,7 @@ const SCORING_PLAN: ScoringPlan = {
   ],
 };
 
-describe('formatReevaluationSummary (TASK-017 Wave A Task 4)', () => {
+describe('formatReevaluationSummary', () => {
   it('empty default plan → all zeros + (none) per section', () => {
     const out = formatReevaluationSummary(basePlan(), 120);
     expect(out).toBe(
@@ -187,7 +186,7 @@ describe('formatReevaluationSummary (TASK-017 Wave A Task 4)', () => {
   });
 });
 
-describe('formatReevaluationTable (TASK-017 Wave A Task 4)', () => {
+describe('formatReevaluationTable', () => {
   it('returns "(no actions)" when both filter and score lists are empty', () => {
     const out = formatReevaluationTable(basePlan(), 120);
     expect(out).toBe('(no actions)');
@@ -261,7 +260,7 @@ describe('formatReevaluationTable (TASK-017 Wave A Task 4)', () => {
   });
 });
 
-describe('formatScoringPlanForReevaluation (TASK-017 Wave A Task 4)', () => {
+describe('formatScoringPlanForReevaluation', () => {
   it('re-exports formatScoringPlan from src/pipeline/format.js', () => {
     const out = formatScoringPlanForReevaluation(SCORING_PLAN, 120);
     expect(out).toContain('scoring plan:');

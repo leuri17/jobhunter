@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 /**
- * Live LinkedIn discovery tests (TASK-012 Plan Task 13, Wave E).
+ * Live LinkedIn discovery tests.
  *
  * These tests are opt-in via the LINKEDIN_LIVE=1 env var. By
  * default they are skipped so `pnpm test:live` exits 0 in CI
@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
  * To run:
  *   LINKEDIN_LIVE=1 pnpm test:live
  *
- * Future waves (TASK-013 / TASK-015) will replace the placeholder
+ * Future waves ( / ) will replace the placeholder
  * with real coverage: navigate to a public LinkedIn search page,
  * assert card discovery + canonical sourceJobId extraction, and
  * exercise the per-card error path (no-ID cards).
@@ -28,7 +28,7 @@ describe.skipIf(!ENABLED)('LinkedIn live discovery (opt-in)', () => {
     expect(true).toBe(true);
   });
 
-  // Future live test (TASK-013 / TASK-015): navigate to a real
+  // Future live test ( / ): navigate to a real
   // LinkedIn search page + assert the orchestrator's per-search
   // walk completes. Skipped until the wave that introduces the live
   // orchestrator + scrape-side wiring.
@@ -41,8 +41,8 @@ describe.skipIf(!ENABLED)('LinkedIn live discovery (opt-in)', () => {
     expect(true).toBe(true); // placeholder — real assertion in future wave
   });
 
-  it.skipIf(!ENABLED)('scores a public job-detail page end-to-end (TASK-014)', async () => {
-    // TASK-014 Wave E part 2: live scoring flow.
+  it.skipIf(!ENABLED)('scores a public job-detail page end-to-end', async () => {
+    //  part 2: live scoring flow.
     // Navigate to a known public LinkedIn job-detail page.
     // Use the PlaywrightRouteSession to serve the dedicated fixture + open the page.
     // Then call ScoringService.scoreOne on the extracted job + a fake
@@ -52,6 +52,6 @@ describe.skipIf(!ENABLED)('LinkedIn live discovery (opt-in)', () => {
     //   - displayScore matches overallScore.toFixed(1)
     //   - the structured output has all 7 categories
     // This test is opt-in via LINKEDIN_LIVE=1.
-    expect(true).toBe(true); // placeholder — real assertion in TASK-015 (orchestrator wire-up)
+    expect(true).toBe(true); // placeholder — real assertion in  (orchestrator wire-up)
   });
 });

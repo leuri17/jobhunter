@@ -1,5 +1,5 @@
 /**
- * CLI-only prompt adapters for the init orchestrator (TASK-011).
+ * CLI-only prompt adapters for the init orchestrator.
  *
  * These adapters isolate the inquirer-based prompts from the
  * orchestrator. They are imported ONLY by `src/cli.ts` and the test

@@ -1,6 +1,5 @@
 /**
  * RunsShowService — read-side service for `runs show <run-id>`
- * (TASK-016 Wave B, SPEC §31 + §35.2).
  *
  * Resolves the `run_<int>` identifier via `parsePrefixedId`, fetches
  * the pipeline run row + searches + per-run counts + diagnostic
@@ -155,7 +154,7 @@ export class RunsShowService {
     // Resolve each job's `extractionStatus` via the repository's
     // `findById`. The MVP's job volume per run is bounded (≤ a few
     // hundred) so a per-id query is acceptable; the alternative
-    // would be a dedicated repository method (not in scope for Wave B).
+    // would be a dedicated repository method (not in scope for ).
     const rows = await Promise.all(jobIds.map((id) => this.repositories.jobs.findById(id)));
     let completeCount = 0;
     let partialCount = 0;

@@ -24,7 +24,7 @@ import {
 } from '../inspection/services/helpers/inspection-harness.js';
 
 /**
- * TASK-016 Wave D Task 15 — CLI wiring tests for `jobs list`.
+ *  — CLI wiring tests for `jobs list`.
  *
  * Mirrors the stub pattern from `tests/cli/profile-list.test.ts`
  * + the database-boot pattern from `tests/cli/configure-filters.test.ts`
@@ -32,7 +32,7 @@ import {
  * connect to the same file + seed fixtures, then run the CLI
  * again to capture stdout/stderr).
  */
-describe('CLI: jobhunter jobs list (TASK-016 Wave D Task 15, SPEC §34)', () => {
+describe('CLI: jobhunter jobs list', () => {
   let tempHome: string;
   let originalHome: string | undefined;
   let stdout: string[] = [];
@@ -156,7 +156,7 @@ describe('CLI: jobhunter jobs list (TASK-016 Wave D Task 15, SPEC §34)', () => 
     };
   }
 
-  describe('command registration (SPEC §34)', () => {
+  describe('command registration', () => {
     it('registers the `jobs` subcommand', () => {
       const program = createProgram();
       const jobs = program.commands.find((c) => c.name() === 'jobs');
@@ -230,7 +230,7 @@ describe('CLI: jobhunter jobs list (TASK-016 Wave D Task 15, SPEC §34)', () => 
     });
   });
 
-  describe('state flag mutex (Decision 5)', () => {
+  describe('state flag mutex', () => {
     it('exits 2 + jobs_list_state_conflict when two state flags are supplied', async () => {
       await ensureDatabaseReady();
       const result = await runCli(['jobs', 'list', '--all', '--scored']);
@@ -262,7 +262,7 @@ describe('CLI: jobhunter jobs list (TASK-016 Wave D Task 15, SPEC §34)', () => 
     });
   });
 
-  describe('JSON output (SPEC §36)', () => {
+  describe('JSON output', () => {
     it('emits valid single JSON document with --json on an empty DB', async () => {
       await ensureDatabaseReady();
       const result = await runCli(['jobs', 'list', '--json']);

@@ -1,6 +1,5 @@
 /**
- * ProfileReviewService — read-side application service for TASK-009
- * (SPEC §16.1–§16.2, §31).
+ * ProfileReviewService — read-side application service for
  *
  * Two operations:
  *

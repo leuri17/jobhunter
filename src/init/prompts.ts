@@ -21,7 +21,7 @@ export interface InitPrompts {
    * Confirm whether the user wants to edit the current draft through
    * `jobhunter profile edit` before init offers to approve it. The
    * orchestrator NEVER calls `ProfileEditingService.startEdit` directly
-   * (Decision 6).
+   *
    */
   askEditHandoff(input: {
     readonly draftProfileVersionId: number;

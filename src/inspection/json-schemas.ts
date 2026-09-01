@@ -1,6 +1,5 @@
 /**
  * Zod schemas for the `--json` output of every inspection command
- * (SPEC §36 + §37).
  *
  * The schemas are the source of truth for the JSON contract — the
  * producer (services + CLI handler) trusts the service output, but
@@ -25,7 +24,7 @@ import {
   type RunShowPayload,
 } from './state.js';
 
-/** The literal schema version (SPEC §36). Mirrors `INSPECTION_SCHEMA_VERSION`. */
+/** The literal schema version. Mirrors `INSPECTION_SCHEMA_VERSION`. */
 const SCHEMA_VERSION = z.literal(1);
 
 /** ISO 8601 timestamp string. Accepts both UTC (`Z`) and offset suffixes. */

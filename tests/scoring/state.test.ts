@@ -11,7 +11,7 @@ describe('LINKEDIN_SCORING_SCHEMA_VERSION', () => {
 });
 
 describe('SCORING_CATEGORIES', () => {
-  it('contains exactly the 7 SPEC §26.2 categories', () => {
+  it('contains exactly the 7  categories', () => {
     expect(SCORING_CATEGORIES).toHaveLength(7);
     expect(new Set(SCORING_CATEGORIES)).toEqual(
       new Set<ScoringCategory>([

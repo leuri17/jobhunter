@@ -1,5 +1,5 @@
 /**
- * Public barrel for src/pipeline/ (TASK-015).
+ * Public barrel for src/pipeline/.
  *
  * Re-exports the public surface that the CLI handler (src/cli.ts)
  * and the test harness consume. Internal helpers stay accessible

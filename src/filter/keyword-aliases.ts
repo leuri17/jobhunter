@@ -1,6 +1,5 @@
 /**
- * Deterministic alias map for the deterministic keyword matcher (SPEC §18,
- * TASK-010 Task 3).
+ * Deterministic alias map for the deterministic keyword matcher.
  *
  * Keys are the **normalized** token form produced by `normalizeKeyword`
  * (NFKC, lowercase, trim, `.`, `-`, `_`, `/` folded to a single space,
@@ -33,8 +32,6 @@
 export const KEYWORD_ALIAS_VERSION = '1.0.0';
 
 export const ALIAS_MAP: Readonly<Record<string, string>> = Object.freeze({
-  // SPEC §18 examples — multi-word keys (documented intent; per-token
-  // resolution unfolds them via the single-word entries below).
   'node.js': 'nodejs',
   'node js': 'nodejs',
   'react.js': 'react',

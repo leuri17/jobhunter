@@ -1,7 +1,7 @@
 import { hashString } from '../profile/hashing.js';
 
 /**
- * Inputs that go into the score fingerprint (SPEC §27.3).
+ * Inputs that go into the score fingerprint.
  *
  * The fingerprint is the SHA-256 hash of the canonical JSON
  * serialization of these inputs. Any change to any field
@@ -29,7 +29,7 @@ export interface ScoreFingerprintInput {
 export const SCORER_IMPLEMENTATION_VERSION = 1 as const;
 
 /**
- * Compute the score fingerprint (SPEC §27.3).
+ * Compute the score fingerprint.
  *
  * SHA-256 of canonical JSON with sorted keys (RFC 8785 / JCS pattern).
  * Returns a lowercase hex string (64 chars). Defaults are substituted

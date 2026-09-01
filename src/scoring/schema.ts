@@ -4,10 +4,10 @@ import { SCORING_CATEGORIES, type ScoringCategory } from './types.js';
 
 /**
  * Zod source of truth for the OpenAI structured-output response of one
- * scoring request (SPEC §25.2 + §26.2).
+ * scoring request.
  *
  * Shape:
- *   - `categoryScores`: 7 categories from SPEC §26.2, each with an
+ *   - `categoryScores`: 7 categories from , each with an
  *     integer 0-100 score, an explanation, and an evidence list.
  *   - `keyMatches` / `importantGaps` / `importantConcerns`: free-form
  *     short text highlights the model is expected to surface.
@@ -19,7 +19,7 @@ import { SCORING_CATEGORIES, type ScoringCategory } from './types.js';
  * projection rejects unknown keys at the wire boundary (mirrors
  * `src/profile/openai/structured-output.ts`). Bump
  * `SCORING_STRUCTURED_OUTPUT_SCHEMA_VERSION` on any shape change so the
- * score fingerprint invalidates correctly (SPEC §27.3).
+ * score fingerprint invalidates correctly.
  */
 export const ScoringCategoryScoreSchema = z
   .object({

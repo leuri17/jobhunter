@@ -2,11 +2,10 @@ import { SENIORITY_LEVELS } from '../profile/schema.js';
 import { normalizeKeyword } from './keyword-normalize.js';
 
 /**
- * Deterministic seniority detection from job titles (SPEC §19; TASK-010
- * Task 4).
+ * Deterministic seniority detection from job titles (; ).
  *
  * The detector inspects ONLY the normalized title's token stream against
- * the inline SPEC §19 phrase map. When multiple phrases match, the
+ * the inline  phrase map. When multiple phrases match, the
  * highest detected rank (per `SENIORITY_LEVELS` order in
  * `src/profile/schema.ts`) wins. Unlabelled titles return `unknown` with
  * an empty `matchedPhrases` array.
@@ -54,7 +53,7 @@ export interface SeniorityDetectionResult {
 }
 
 /**
- * SPEC §19 example mapping. Multi-word entries are stored as
+ *  example mapping. Multi-word entries are stored as
  * single space-separated keys whose tokens appear consecutively in the
  * normalized title's token stream.
  *
@@ -142,11 +141,11 @@ function pickHighest(matches: readonly SeniorityMatchedPhrase[]): KnownSeniority
 }
 
 /**
- * Inspect a job title for seniority markers (SPEC §19).
+ * Inspect a job title for seniority markers.
  *
  * Returns `{ detected: 'unknown', matchedPhrases: [] }` when the title is
  * `null`, empty after normalization, or contains no phrase from the
- * SPEC §19 mapping. Otherwise the returned `detected` is the highest
+ *  mapping. Otherwise the returned `detected` is the highest
  * detected rank across all matched phrases; `matchedPhrases` is the full
  * list of matches sorted by ascending rank, so `matchedPhrases.at(-1)`
  * always matches `detected`.

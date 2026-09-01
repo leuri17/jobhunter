@@ -19,7 +19,6 @@ import { loadFixture } from './fixtures/loadFixture.js';
 
 /**
  * Unit tests for `src/linkedin/extraction/panel-parser.ts`
- * (TASK-013 Plan Task 10).
  *
  * Strategy: parse each fixture HTML through `linkedom.parseHTML`
  * (cheap, deterministic), then hand-construct a fake `Page` whose
@@ -182,7 +181,7 @@ function pinPanelTitleAnchorHref(doc: FakeDocument, expectedId: string): void {
   expect(href).toContain(`/${expectedId}/`);
 }
 
-describe('src/linkedin/extraction/panel-parser.ts (Wave C)', () => {
+describe('src/linkedin/extraction/panel-parser.ts', () => {
   it('exports the documented retry + wait budgets', () => {
     expect(PANEL_VERIFY_MAX_ATTEMPTS).toBe(3);
     expect(PANEL_VERIFY_RETRY_MS).toBe(500);

@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { detectSeniority } from '../../src/filter/seniority-detector.js';
 
 /**
- * TASK-010 Task 4 — `seniority-detector.ts` tests.
+ *  — `seniority-detector.ts` tests.
  *
- * SPEC §19 example mapping covers the deterministic seniority detection
+ *  example mapping covers the deterministic seniority detection
  * surface for job titles. The detector walks a normalized title's token
  * stream against the inline phrase map and returns:
  *
@@ -20,7 +20,7 @@ import { detectSeniority } from '../../src/filter/seniority-detector.js';
  * keys and matched against the normalized token stream.
  */
 
-describe('detectSeniority — SPEC §19 example titles', () => {
+describe('detectSeniority —  example titles', () => {
   it('returns unknown for an unlabelled Software Engineer title', () => {
     const result = detectSeniority('Software Engineer');
     expect(result.detected).toBe('unknown');
@@ -266,7 +266,7 @@ describe('detectSeniority — multi-word phrase coverage', () => {
   });
 
   it('does NOT match `head of` when an intervening word breaks consecutiveness', () => {
-    // `head of` is a multi-word phrase in the SPEC §19 map; inserting a
+    // `head of` is a multi-word phrase in the  map; inserting a
     // token between `head` and `of` must defeat the match.
     const result = detectSeniority('head workplace of engineering');
     expect(result.detected).toBe('unknown');

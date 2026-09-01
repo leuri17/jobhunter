@@ -12,7 +12,7 @@ import {
 } from '../../src/persistence/identifiers.js';
 
 describe('identifier prefixes', () => {
-  it('exposes the documented prefixes from SPEC §32', () => {
+  it('exposes the documented prefixes from ', () => {
     expect(IDENTIFIER_PREFIXES).toEqual({
       job: 'job_',
       run: 'run_',
@@ -68,7 +68,7 @@ describe('resolveId', () => {
     expect(() => resolveId('run', 'run-18')).toThrow(InvalidIdentifierError);
   });
 
-  it('rejects wrong-case prefixes (case-sensitive per SPEC §32)', () => {
+  it('rejects wrong-case prefixes (case-sensitive per )', () => {
     expect(() => resolveId('job', 'JOB_42')).toThrow(InvalidIdentifierError);
     expect(() => resolveId('run', 'Run_18')).toThrow(InvalidIdentifierError);
   });

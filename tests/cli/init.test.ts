@@ -25,7 +25,7 @@ import { createDefaultFileSystem } from '../../src/config/file-system-default.js
 import type { FileSystem } from '../../src/config/file-system.js';
 
 /**
- * TASK-011 Task 9 / Wave C — `jobhunter init` CLI smoke test.
+ *  /  — `jobhunter init` CLI smoke test.
  *
  * Mirrors the pattern from `tests/cli/configure-filters.test.ts`:
  *   1. `mkdtempSync` for `HOME` (so `resolvePlatformPaths` resolves a

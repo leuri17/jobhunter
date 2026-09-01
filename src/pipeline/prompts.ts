@@ -1,7 +1,7 @@
 import type { ScoringPlan } from '../scoring/state.js';
 
 /**
- * UI seam for the pipeline orchestrator (TASK-015).
+ * UI seam for the pipeline orchestrator.
  */
 export interface PipelinePrompts {
   askScoringConfirmation(input: { plan: ScoringPlan }): Promise<boolean>;

@@ -4,7 +4,7 @@ import type { ScoringCategory } from './types.js';
 
 /**
  * Inputs to `buildScoringPlan`. Pure data — no I/O. The caller (the
- * TASK-015 orchestrator) resolves the per-job eligibility + score-kind
+ *  orchestrator) resolves the per-job eligibility + score-kind
  * maps; the function below aggregates them into the `ScoringPlan` shape
  * that the confirmation UI consumes.
  */
@@ -26,7 +26,7 @@ export interface BuildScoringPlanInput {
 }
 
 /**
- * Build the `ScoringPlan` data structure (SPEC §30).
+ * Build the `ScoringPlan` data structure.
  *
  * - `perJob`: one entry per job in the input order. The default eligibility
  *   flag is `isEligible: true, reason: null` (a job with no flag entry is

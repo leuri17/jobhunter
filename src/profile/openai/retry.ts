@@ -24,7 +24,7 @@ import {
  * Production code passes `Date.now` (the default) so the seed varies
  * and the resulting backoff is non-deterministic.
  *
- * `jitter` defaults to `'full'` per SPEC §25.3:
+ * `jitter` defaults to `'full'` per :
  * `delay = random(0, min(maxDelay, base * 2^(attempt-1)))`.
  * `'equal'` is half-jitter (`delay = ceiling / 2 + random(0, ceiling / 2)`).
  * `'none'` disables jitter entirely (`delay = ceiling`).
@@ -60,7 +60,7 @@ const DEFAULT_JITTER: 'full' | 'equal' | 'none' = 'full';
 export type AttemptRecord = RetryAttemptSummary;
 
 /**
- * Runs `operation` with the SPEC §25.3 retry policy.
+ * Runs `operation` with the  retry policy.
  *
  * Behavior:
  * - At most `maxAttempts` total attempts.

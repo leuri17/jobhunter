@@ -4,7 +4,7 @@ import { ALIAS_MAP, KEYWORD_ALIAS_VERSION } from '../../src/filter/keyword-alias
 import { keywordMatches, normalizeKeyword } from '../../src/filter/keyword-normalize.js';
 
 /**
- * TASK-010 Task 3 — `keyword-normalize.ts` tests.
+ *  — `keyword-normalize.ts` tests.
  *
  * The brief specifies the canonical normalization chain:
  *
@@ -44,7 +44,7 @@ describe('normalizeKeyword', () => {
   });
 
   it('folds the four separators (`.`, `-`, `_`, `/`) to a single space', () => {
-    // The separator set is documented in the task brief and SPEC §18.
+    // The separator set is documented in the task brief and .
     expect(normalizeKeyword('node.js')).toBe('node js');
     expect(normalizeKeyword('node-js')).toBe('node js');
     expect(normalizeKeyword('node_js')).toBe('node js');
@@ -73,7 +73,7 @@ describe('ALIAS_MAP', () => {
     expect(Object.isFrozen(ALIAS_MAP)).toBe(true);
   });
 
-  it('declares the SPEC §18 initial entries', () => {
+  it('declares the  initial entries', () => {
     expect(ALIAS_MAP['node.js']).toBe('nodejs');
     expect(ALIAS_MAP['node js']).toBe('nodejs');
     expect(ALIAS_MAP['react.js']).toBe('react');
@@ -105,7 +105,7 @@ describe('keywordMatches — normalization + alias resolution', () => {
   });
 
   it('does NOT match when the keyword is a prefix of a different token (JavaScript ≠ Java)', () => {
-    // Boundary case from SPEC §18: `Java` is its own token, `JavaScript` is its
+    // Boundary case from : `Java` is its own token, `JavaScript` is its
     // own token — `Java` does NOT match `JavaScript`.
     expect(keywordMatches('JavaScript developer', 'Java')).toBe(false);
   });
@@ -115,7 +115,7 @@ describe('keywordMatches — normalization + alias resolution', () => {
   });
 
   it('resolves the per-token alias for `node.js` / `Node JS` after normalization', () => {
-    // SPEC §18: "node.js matches Node JS" after normalization + alias.
+    //  "node.js matches Node JS" after normalization + alias.
     // After normalization, both sides have the two tokens `node`, `js`.
     // Per-token alias resolution turns `js` into `javascript`, so the
     // canonical form is `node javascript` on both sides — they match.

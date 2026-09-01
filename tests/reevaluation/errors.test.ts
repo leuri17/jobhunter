@@ -8,8 +8,7 @@ import {
 } from '../../src/reevaluation/errors.js';
 
 /**
- * Smoke test for the typed reevaluation errors (TASK-017 Wave A Task 2,
- * SPEC §37). Mirrors `tests/pipeline/errors.test.ts`.
+ * Smoke test for the typed reevaluation errors. Mirrors `tests/pipeline/errors.test.ts`.
  *
  * The test verifies:
  *   - `ReevaluationValidationError` defaults to `ExitCode.InvalidUsage`.
@@ -19,10 +18,10 @@ import {
  *   - `PipelinePrerequisiteError` (re-exported from
  *     `src/pipeline/errors.js`) carries `ExitCode.MissingRequired`
  *     — the documented exit code for missing-profile / missing-filter
- *     / missing-key cases (Decision 15 + 16).
+ *     / missing-key cases ( + 16).
  */
 
-describe('Reevaluation errors (TASK-017 Wave A Task 2, SPEC §37)', () => {
+describe('Reevaluation errors', () => {
   it('ReevaluationValidationError has exitCode 2 (InvalidUsage)', () => {
     const error = new ReevaluationValidationError(
       'reevaluate_scope_conflict',
@@ -84,7 +83,7 @@ describe('Reevaluation errors (TASK-017 Wave A Task 2, SPEC §37)', () => {
   });
 });
 
-describe('PipelinePrerequisiteError re-export (TASK-017 Wave A Task 2, Decision 16)', () => {
+describe('PipelinePrerequisiteError re-export', () => {
   it('has exitCode 3 (MissingRequired)', () => {
     const error = new PipelinePrerequisiteError('no_active_filter', 'missing');
     expect(error.exitCode).toBe(ExitCode.MissingRequired);

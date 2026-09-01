@@ -5,14 +5,13 @@ import { buildDetailUrl } from '../../src/linkedin/extraction/detail-url.js';
 
 /**
  * Tests for `src/linkedin/extraction/detail-url.ts`
- * (TASK-013 Plan Task 4).
  *
  * Asserts:
  *   - Valid 6+ digit IDs produce the canonical URL.
  *   - Empty / non-numeric / under-6-digit IDs throw
  *     `DetailUrlBuildError`.
  */
-describe('src/linkedin/extraction/detail-url — Wave A', () => {
+describe('src/linkedin/extraction/detail-url — ', () => {
   it('builds the canonical URL for a 6-digit sourceJobId', () => {
     expect(buildDetailUrl('123456')).toBe('https://www.linkedin.com/jobs/view/123456/');
   });

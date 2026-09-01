@@ -4,7 +4,7 @@ import type { SeniorityLevel } from '../profile/schema.js';
 import type { DetectedSeniority, SeniorityDetectionResult } from './seniority-detector.js';
 
 /**
- * SPEC §19 max-seniority rule (TASK-010 Task 4).
+ *  max-seniority rule.
  *
  * The rule compares the detected level against the configured maximum and
  * reports one of three outcomes:
@@ -14,7 +14,7 @@ import type { DetectedSeniority, SeniorityDetectionResult } from './seniority-de
  *   - `abstained`: rule does not apply (`maximum === null`) or the
  *     detection produced `unknown`
  *
- * Abstention aligns with SPEC §19's "Abstain for unknown" rule and with
+ * Abstention aligns with 's "Abstain for unknown" rule and with
  * the broader §9 principle: deterministic filters must abstain when a rule
  * cannot decide reliably. The rule helper itself reports all three
  * outcomes; it does NOT translate rejection — that translation is the
@@ -33,7 +33,7 @@ export interface SeniorityRuleResult {
 }
 
 /**
- * Apply the SPEC §19 maximum-seniority rule.
+ * Apply the  maximum-seniority rule.
  *
  * @param maximum  The configured maximum acceptable level. `null`
  *                 disables the rule; the helper abstains.

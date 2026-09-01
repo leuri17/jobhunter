@@ -1,11 +1,11 @@
 /**
- * Human-readable formatters for TASK-017 (SPEC §36 + §28.5 + §30).
+ * Human-readable formatters for .
  *
  * Pure formatters. NO imports from `src/persistence/`,
  * `src/cli/`, `src/linkedin/`, `src/profile/`, `src/filter/`,
  * `src/scoring/`, `src/inspection/`. The formatters operate on the
  * plain `ReevaluationPlan` row shape declared in `./state.ts`; the
- * service layer (Wave C) is responsible for the row → shape mapping.
+ * service layer is responsible for the row → shape mapping.
  *
  * The ONLY cross-module import in this file is the
  * `formatScoringPlanForReevaluation` thin pass-through that calls
@@ -72,7 +72,7 @@ const REASON_COL_MAX = 24;
 
 /**
  * Thin pass-through that re-exports `formatScoringPlan` from
- * `src/pipeline/format.js` (Decision 14 + TASK-017 plan Task 4).
+ * `src/pipeline/format.js` ( +  plan Task 4).
  * The function exists in this module only to document the import
  * boundary — the reevaluation module reuses the existing
  * pipeline-scoring-plan renderer unchanged. The `terminalWidth`
@@ -80,7 +80,7 @@ const REASON_COL_MAX = 24;
  * reevaluation formatters but is ignored because the pipeline
  * formatter does not consult terminal width.
  *
- * The CLI handler in Wave D renders the scoring plan via this
+ * The CLI handler in  renders the scoring plan via this
  * function when the plan requires new OpenAI requests. The
  * boundaries test excludes this single `src/pipeline/format.js`
  * import from the reevaluation-module ban.
@@ -100,7 +100,7 @@ export function formatScoringPlanForReevaluation(plan: ScoringPlan, terminalWidt
  * the longest `sourceJobId`, every `sourceJobId` is truncated to
  * fit the available budget (with the standard ellipsis suffix).
  * Long `fingerprint` strings are truncated to 8 hex chars (matches
- * the SPEC §36 example shape).
+ * the  example shape).
  */
 export function formatReevaluationSummary(plan: ReevaluationPlan, terminalWidth: number): string {
   void terminalWidth; // reserved for future adaptive truncation of the summary block itself
@@ -135,7 +135,7 @@ export function formatReevaluationSummary(plan: ReevaluationPlan, terminalWidth:
 /**
  * Render the `ReevaluationPlan` as a compact table with adaptive
  * column widths. The shape mirrors `formatJobListTable` /
- * `formatRunListTable` (SPEC §34.5 / §35.1) — header row + one row
+ * `formatRunListTable` — header row + one row
  * per entry, joined by `\n`.
  *
  * - Single summary block when `totals.skipped === 0` (just the

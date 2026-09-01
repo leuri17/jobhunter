@@ -1,6 +1,6 @@
 /**
  * `InitOrchestrator` — the application service that walks the 10
- * prerequisite steps (SPEC §9.1) for `jobhunter init`.
+ * prerequisite steps for `jobhunter init`.
  *
  * The orchestrator NEVER re-implements prerequisite service logic — it
  * delegates via the existing barrels (`src/profile/index.js`,
@@ -95,7 +95,7 @@ export interface InitOrchestratorOptions {
   readonly fileSystem: FileSystem;
   /** Injected by `src/cli.ts`; tests may supply a scripted or failing adapter. */
   readonly prompts: InitPrompts;
-  /** Injected by `src/cli.ts` (or by tests); null when `OPENAI_API_KEY` is absent (Decision 4). */
+  /** Injected by `src/cli.ts` (or by tests); null when `OPENAI_API_KEY` is absent. */
   readonly openaiClient: OpenAIClient | null;
   /** Optional. Wired by the CLI to `defaultInquirerPrompts`; tests inject scripted. */
   readonly searchPrompts?: SearchPrompts;
@@ -137,7 +137,7 @@ export class InitOrchestrator {
    * cancellation error for the CLI boundary (which maps it to exit 130).
    *
    * The `env` parameter is the source of truth for the `OPENAI_API_KEY`
-   * presence check (Decision 4). The orchestrator combines `env` with
+   * presence check. The orchestrator combines `env` with
    * the `openaiClient` constructor argument: the key is "present" when
    * either source provides it. This lets tests inject an `env` record
    * with the key while passing `openaiClient: null` (the test does not
@@ -226,7 +226,6 @@ export class InitOrchestrator {
       config: loadedConfig.config,
     });
     if (configReport.status === 'not_started') {
-      // Materialize config.json via a no-op patch (Decision 5).
       try {
         await updateConfig(opts.paths, {}, { confirm: async () => true }, opts.fileSystem);
       } catch (cause) {
@@ -431,7 +430,6 @@ export class InitOrchestrator {
     });
 
     if (extractReport.status === 'incomplete' && extractReport.reason === 'openai_key_missing') {
-      // Stop the walk (Decision 4 + Finding 4a).
       logger.stepStart({ stepId: 'extract' });
       stepReports['extract'] = extractReport;
       logger.stepComplete({ stepId: 'extract', artifactId: null });

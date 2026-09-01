@@ -13,13 +13,13 @@ import {
 
 /**
  * TypeScript-only structural assertions for `src/linkedin/extraction/state.ts`
- * (TASK-013 Plan Task 1). Pure type-level exercise — no runtime I/O,
+ * Pure type-level exercise — no runtime I/O,
  * no fixtures. The compile-time assignment of the literal objects
  * below is the primary verification; the `expect(...)` calls
  * surface the literals at runtime so vitest reports a meaningful
  * test name.
  */
-describe('src/linkedin/extraction/state — Wave A', () => {
+describe('src/linkedin/extraction/state — ', () => {
   it('LINKEDIN_EXTRACTION_SCHEMA_VERSION === 1', () => {
     expect(LINKEDIN_EXTRACTION_SCHEMA_VERSION).toBe(1);
   });

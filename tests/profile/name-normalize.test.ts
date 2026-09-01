@@ -3,11 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { normalizeLanguageName, normalizeSkillName } from '../../src/profile/name-normalize.js';
 
 describe('normalizeSkillName', () => {
-  it('maps "Node.js" to normalizedName "nodejs" (SPEC §12.2)', () => {
+  it('maps "Node.js" to normalizedName "nodejs"', () => {
     expect(normalizeSkillName('Node.js')).toEqual({ name: 'Node.js', normalizedName: 'nodejs' });
   });
 
-  it('maps "NodeJS" to normalizedName "nodejs" (SPEC §12.2, case-insensitive)', () => {
+  it('maps "NodeJS" to normalizedName "nodejs" (, case-insensitive)', () => {
     expect(normalizeSkillName('NodeJS')).toEqual({ name: 'NodeJS', normalizedName: 'nodejs' });
   });
 
@@ -22,7 +22,7 @@ describe('normalizeSkillName', () => {
     });
   });
 
-  it('maps "PostgreSQL" to normalizedName "postgresql" (SPEC §12.2)', () => {
+  it('maps "PostgreSQL" to normalizedName "postgresql"', () => {
     expect(normalizeSkillName('PostgreSQL')).toEqual({
       name: 'PostgreSQL',
       normalizedName: 'postgresql',
@@ -41,7 +41,7 @@ describe('normalizeSkillName', () => {
 });
 
 describe('normalizeLanguageName', () => {
-  it('maps "English" to normalizedName "english" (SPEC §12.2)', () => {
+  it('maps "English" to normalizedName "english"', () => {
     expect(normalizeLanguageName('English')).toEqual({
       name: 'English',
       normalizedName: 'english',

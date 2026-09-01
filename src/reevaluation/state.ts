@@ -1,14 +1,14 @@
 /**
- * State vocabulary for TASK-017 — explicit job reevaluation and scope
- * handling (SPEC §28 + §30 + §32 + §36 + §37 + §40).
+ * State vocabulary for  — explicit job reevaluation and scope
+ * handling.
  *
  * The shapes below are the typed contract between the reevaluation
- * service layer (Wave C) and the formatter + JSON-schema layers (this
+ * service layer and the formatter + JSON-schema layers (this
  * wave). Pure TypeScript types — no runtime values, no I/O.
  *
- * The scope vocabulary (Decision 3) and skip reasons (Decisions 6 +
- * 7) are documented in the TASK-017 plan. The JSON schema in
- * `./json-schemas.ts` mirrors these literals via `z.union([...])` —
+ * The scope vocabulary and skip reasons (Decisions 6 +
+ * 7) are documented in the  plan. The JSON schema in
+ * `./json-schemas.ts` mirrors these literals via `z.union([...])`
  * adding a new scope or skip reason is a coordinated edit across this
  * file + the schema + the CLI handler.
  *
@@ -17,7 +17,7 @@
 
 /**
  * JSON schema version for every `--json` payload produced by the
- * reevaluation module (SPEC §36). Bumped on any payload shape change
+ * reevaluation module. Bumped on any payload shape change
  * so consumers can detect breaking changes via `schemaVersion`.
  * Mirrors `INSPECTION_SCHEMA_VERSION`, `PIPELINE_SCHEMA_VERSION`,
  * `LINKEDIN_SCORING_SCHEMA_VERSION`.
@@ -26,7 +26,7 @@ export const REEVALUATION_SCHEMA_VERSION = 1 as const;
 export type ReevaluationSchemaVersion = typeof REEVALUATION_SCHEMA_VERSION;
 
 /**
- * Re-evaluation scope vocabulary (Decision 3). The CLI handler maps
+ * Re-evaluation scope vocabulary. The CLI handler maps
  * the documented flag set to one of these literals BEFORE calling the
  * service. The plan envelope + the `--json` output both carry the
  * scope verbatim so consumers can branch on it.
@@ -44,8 +44,7 @@ export type ReevaluationSchemaVersion = typeof REEVALUATION_SCHEMA_VERSION;
 export type ReevaluationScope = 'default' | 'filters-only' | 'scores-only' | 'job';
 
 /**
- * Action label for one `ReevaluationPlanEntry` (Decision 14 +
- * SPEC §28.5). In `--dry-run` mode every action is `'would-rerun'`;
+ * Action label for one `ReevaluationPlanEntry`. In `--dry-run` mode every action is `'would-rerun'`;
  * in live mode entries flip to `'reran'` or `'reused'` as the service
  * executes them.
  */
@@ -53,7 +52,7 @@ export type ReevaluationPlanAction = 'would-rerun' | 'reran' | 'reused';
 
 /**
  * Reason for a `ReevaluationSkippedEntry` (Decisions 6 + 7 +
- * SPEC §28.3 + §28.4).
+ * ).
  *
  * - `filter_update_required` — `--scores-only` skipped a job because
  *   its current filter is stale or missing.
@@ -67,9 +66,9 @@ export type ReevaluationSkipReason =
 
 /**
  * One row in the `ReevaluationPlan.filtersToReevaluate` /
- * `ReevaluationPlan.jobsToScore` arrays (SPEC §36). The per-row
+ * `ReevaluationPlan.jobsToScore` arrays. The per-row
  * fingerprint is the new filter fingerprint (after rerun) or the
- * reused fingerprint when the action is `'reused'` (Decision 14).
+ * reused fingerprint when the action is `'reused'`.
  */
 export interface ReevaluationPlanEntry {
   readonly jobId: string;
@@ -81,7 +80,7 @@ export interface ReevaluationPlanEntry {
 }
 
 /**
- * One row in the `ReevaluationPlan.skipped` array (SPEC §36).
+ * One row in the `ReevaluationPlan.skipped` array.
  */
 export interface ReevaluationSkippedEntry {
   readonly jobId: string;
@@ -92,9 +91,9 @@ export interface ReevaluationSkippedEntry {
 
 /**
  * Re-export of the `ScoringPlan` shape consumed by the `--json` output
- * for `--scores-only` / `--dry-run` (Decision 14 + SPEC §30 + §36).
+ * for `--scores-only` / `--dry-run`.
  * The reevaluation module does NOT mutate this shape — the
- * `ScoringService.buildScoringPlan` builder (TASK-014) produces it and
+ * `ScoringService.buildScoringPlan` builder produces it and
  * the reevaluation service carries it through verbatim. Re-exported
  * here so consumers can import the entire reevaluation contract from
  * a single module.
@@ -107,7 +106,7 @@ import type { ScoringPlan } from '../scoring/state.js';
  * fields mirror the per-section lengths + score-invalidation counts
  * so consumers do not have to re-aggregate. `scoringDeclinedByUser` is
  * `true` when the user was prompted for scoring confirmation and
- * declined (TASK-017 Decision 10 — `--yes` bypasses the prompt).
+ * declined (  — `--yes` bypasses the prompt).
  */
 export interface ReevaluationTotals {
   readonly filtersRerun: number;
@@ -119,11 +118,11 @@ export interface ReevaluationTotals {
 
 /**
  * The structured plan returned by `ReevaluationService.execute`
- * (Wave C) and rendered by the formatter + JSON schema. The shape
+ * and rendered by the formatter + JSON schema. The shape
  * is the consumer-facing contract; the per-job `fingerprint` is the
  * new filter fingerprint (or the reused one), and the `action`
  * labels describe what the service did (or would have done in
- * `--dry-run` mode — Decision 8).
+ * `--dry-run` mode — ).
  *
  * `jobId` is `null` for every scope except `--job`, where it is the
  * CLI-supplied identifier verbatim. `scoringPlan` is `null` when no
@@ -143,7 +142,7 @@ export interface ReevaluationPlan {
 }
 
 /**
- * The envelope returned by `ReevaluationService.execute` (Wave C).
+ * The envelope returned by `ReevaluationService.execute`.
  * The shape wraps the plan for forward-compat — the service may add
  * fields (e.g. a generated `runId`, an execution log) without
  * breaking existing consumers of `ReevaluationPlan`.
@@ -154,7 +153,7 @@ export interface ReevaluationOutcome {
 
 /**
  * The input shape passed by the CLI handler into
- * `ReevaluationService.execute` (Wave C). The CLI handler maps the
+ * `ReevaluationService.execute`. The CLI handler maps the
  * Commander flag set onto the scope literal BEFORE calling the
  * service — the service only sees a fully validated input.
  *

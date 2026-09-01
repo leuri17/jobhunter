@@ -27,10 +27,10 @@ import {
 } from './state.js';
 import { SCORING_CATEGORIES } from './types.js';
 
-/** Hardcoded 200 KB cap for the assembled scoring payload (SPEC §25.8). */
+/** Hardcoded 200 KB cap for the assembled scoring payload. */
 const MAX_INPUT_BYTES = 200_000;
 
-/** Three consecutive authentication failures abort the batch (SPEC §25.3). */
+/** Three consecutive authentication failures abort the batch. */
 const CONSECUTIVE_AUTH_FAILURE_LIMIT = 3;
 
 export interface ScoringServiceConfig {

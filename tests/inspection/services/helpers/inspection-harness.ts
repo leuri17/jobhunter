@@ -17,7 +17,7 @@ const MIGRATIONS_FOLDER = join(REPO_ROOT, 'drizzle');
 
 /**
  * Hermetic test harness for the inspection service-layer tests
- * (TASK-016 Wave D, Task 14, SPEC §31).
+ * (, Task 14, ).
  *
  * Mirrors the patterns from `tests/helpers/run-harness.ts` (the
  * orchestrator-level harness) and `tests/scoring/helpers/fake-scoring-pipeline.ts`

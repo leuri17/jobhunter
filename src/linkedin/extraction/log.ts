@@ -1,14 +1,14 @@
 /**
- * LinkedIn extraction structured-log seam (TASK-013 Plan Task 5,
- * SPEC §29 + §39, AGENTS.md §5 + §10).
+ * LinkedIn extraction structured-log seam (,
+ *  AGENTS.md §5 + §10).
  *
- * Mirrors TASK-012's `LinkedInScraperLogger` at `src/linkedin/log.ts`
+ * Mirrors 's `LinkedInScraperLogger` at `src/linkedin/log.ts`
  * but for extraction events. The orchestrator never imports `pino`
  * directly — it only sees the `LinkedInExtractionLogger` interface.
  *
  * Per AGENTS.md §5: this file imports only the `Logger` TYPE from
  * `src/logging/logger.ts` (no runtime Pino). The boundaries test
- * (added in Wave E at `tests/extraction/boundaries.test.ts`)
+ * (added in  at `tests/extraction/boundaries.test.ts`)
  * treats `pino` as banned at runtime; this file is allowed the
  * type-only import.
  *
@@ -30,7 +30,7 @@ import type { ExtractionKind } from './state.js';
  * `jobId` (stringified at the adapter), and an optional
  * `errorCode` / `expectedSourceJobId` / `actualSourceJobId`.
  *
- * Method inventory (mirrors Plan Decision 23):
+ * Method inventory (mirrors Plan ):
  *   - `extractionStart`        — per-job extraction begins
  *   - `extractionComplete`     — per-job extraction ended (any kind)
  *   - `extractionSkip`         — per-job extraction skipped
@@ -81,7 +81,7 @@ export function noopLinkedInExtractionLogger(): LinkedInExtractionLogger {
 /**
  * Default no-op logger instance. Equivalent to
  * `noopLinkedInExtractionLogger()` but as a `const` reference,
- * mirroring the TASK-012 `noopLinkedInScraperLogger` shape
+ * mirroring the  `noopLinkedInScraperLogger` shape
  * (`src/linkedin/log.ts:61-70`) for callers that prefer the
  * const form.
  */
@@ -202,7 +202,7 @@ export function pinoLinkedInExtractionLogger(logger: CodebaseLogger): LinkedInEx
 }
 
 /**
- * Internal helper exported for the Wave A test suite — the test
+ * Internal helper exported for the  test suite — the test
  * asserts the adapter stringifies numeric IDs deterministically.
  * Not part of the public surface.
  */

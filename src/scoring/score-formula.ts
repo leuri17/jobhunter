@@ -3,7 +3,7 @@ import type { ScoringCategory } from './types.js';
 import { SCORING_CATEGORIES } from './types.js';
 
 /**
- * Compute the full-precision weighted overall score (SPEC §26.3).
+ * Compute the full-precision weighted overall score.
  *
  * JobHunter calculates this — OpenAI does NOT. The weighted sum is
  * computed across the 7 categories with weights from `RUBRIC`; the
@@ -29,7 +29,7 @@ export function computeOverallScore(
 
 /**
  * Format the full-precision overall score as a one-decimal display
- * value (SPEC §26.4). Pure — does not depend on locale. The display
+ * value. Pure — does not depend on locale. The display
  * value is what the user sees; the full-precision number is what the
  * ranking + persistence layer uses.
  */

@@ -1,23 +1,22 @@
 /**
- * State vocabulary for TASK-016 — inspection tables and JSON output
- * (SPEC §31 + §32 + §34 + §35 + §36 + §37 + §41.1).
+ * State vocabulary for  — inspection tables and JSON output
  *
  * The shapes below are the typed contract between the inspection
- * service layer (Wave B) and the formatter + JSON-schema layers
+ * service layer and the formatter + JSON-schema layers
  * (this wave). Pure TypeScript types — no runtime values, no I/O.
  *
- * The 9-state job-list vocabulary mirrors SPEC §34.1 exactly; the
+ * The 9-state job-list vocabulary mirrors  exactly; the
  * `JobListRow` discriminated union captures the per-state column
- * shape documented in SPEC §34.5. The `RunListRow` /
+ * shape documented in . The `RunListRow` /
  * `RunShowPayload` shapes mirror the same pattern for pipeline
- * runs (SPEC §35).
+ * runs.
  *
  * No new state vocabulary is introduced outside this module.
  */
 
 /**
  * JSON schema version for every `--json` payload produced by the
- * inspection module (SPEC §36). Bumped on any payload shape change
+ * inspection module. Bumped on any payload shape change
  * so consumers can detect breaking changes via `schemaVersion`.
  * Mirrors `PIPELINE_SCHEMA_VERSION` and `LINKEDIN_SCORING_SCHEMA_VERSION`.
  */
@@ -25,7 +24,7 @@ export const INSPECTION_SCHEMA_VERSION = 1 as const;
 export type InspectionSchemaVersion = typeof INSPECTION_SCHEMA_VERSION;
 
 /**
- * The 9 job-list states documented in SPEC §34.1. Each state
+ * The 9 job-list states documented in . Each state
  * produces a `JobListRow` variant with a distinct column shape.
  *
  * - `all`            — every canonical job row (deduplicated).
@@ -62,7 +61,7 @@ export const JOB_LIST_STATES: readonly JobListState[] = [
 ] as const;
 
 /**
- * Discriminated-union row shape for `jobs list` (SPEC §34.5).
+ * Discriminated-union row shape for `jobs list`.
  * The discriminator is `state`; every variant carries the exact
  * column set documented for that state.
  */
@@ -77,7 +76,7 @@ export type JobListRow =
   | JobListRowFilterErrors
   | JobListRowScoringErrors;
 
-/** `jobs list --all` row (SPEC §34.5). */
+/** `jobs list --all` row. */
 export interface JobListRowAll {
   readonly state: 'all';
   readonly id: string;
@@ -93,7 +92,7 @@ export interface JobListRowAll {
   readonly firstDiscoveredAt: string;
 }
 
-/** `jobs list --scored` row (SPEC §34.5). */
+/** `jobs list --scored` row. */
 export interface JobListRowScored {
   readonly state: 'scored';
   readonly id: string;
@@ -107,7 +106,7 @@ export interface JobListRowScored {
   readonly firstDiscoveredAt: string;
 }
 
-/** `jobs list --accepted` row (SPEC §34.5). */
+/** `jobs list --accepted` row. */
 export interface JobListRowAccepted {
   readonly state: 'accepted';
   readonly id: string;
@@ -120,7 +119,7 @@ export interface JobListRowAccepted {
   readonly filteredAt: string;
 }
 
-/** `jobs list --rejected` row (SPEC §34.5). */
+/** `jobs list --rejected` row. */
 export interface JobListRowRejected {
   readonly state: 'rejected';
   readonly id: string;
@@ -134,7 +133,7 @@ export interface JobListRowRejected {
   readonly filteredAt: string;
 }
 
-/** `jobs list --unscored` row (SPEC §34.5). */
+/** `jobs list --unscored` row. */
 export interface JobListRowUnscored {
   readonly state: 'unscored';
   readonly id: string;
@@ -147,7 +146,7 @@ export interface JobListRowUnscored {
   readonly lastAttemptAt: string | null;
 }
 
-/** `jobs list --partial` row (SPEC §34.5). */
+/** `jobs list --partial` row. */
 export interface JobListRowPartial {
   readonly state: 'partial';
   readonly id: string;
@@ -159,7 +158,7 @@ export interface JobListRowPartial {
   readonly discoveredAt: string;
 }
 
-/** `jobs list --failed` row (SPEC §34.5). */
+/** `jobs list --failed` row. */
 export interface JobListRowFailed {
   readonly state: 'failed';
   readonly errorId: number;
@@ -171,7 +170,7 @@ export interface JobListRowFailed {
   readonly discoveredAt: string;
 }
 
-/** `jobs list --filter-errors` row (SPEC §34.5). */
+/** `jobs list --filter-errors` row. */
 export interface JobListRowFilterErrors {
   readonly state: 'filter-errors';
   readonly id: string;
@@ -183,7 +182,7 @@ export interface JobListRowFilterErrors {
   readonly lastAttemptAt: string;
 }
 
-/** `jobs list --scoring-errors` row (SPEC §34.5). */
+/** `jobs list --scoring-errors` row. */
 export interface JobListRowScoringErrors {
   readonly state: 'scoring-errors';
   readonly id: string;
@@ -198,7 +197,7 @@ export interface JobListRowScoringErrors {
 
 /**
  * The result envelope returned by `JobsListService.list`
- * (Wave B). The pure formatter + JSON-schema layers consume this
+ * The pure formatter + JSON-schema layers consume this
  * shape; the service layer assembles it from the repositories.
  */
 export interface JobListResult {
@@ -215,10 +214,10 @@ export interface JobListResult {
 }
 
 /**
- * Full payload for `jobs show <job-id>` (SPEC §31 + §34.6).
+ * Full payload for `jobs show <job-id>`.
  * Captures the full job row + discovery history + current filter +
  * current score + timestamps. The description and explanation are
- * NEVER truncated (SPEC §34.6 — "preserve full stored values").
+ * NEVER truncated ( — "preserve full stored values").
  */
 export interface JobShowPayload {
   readonly id: string;
@@ -271,7 +270,7 @@ export interface JobShowPayload {
 }
 
 /**
- * One row in the `runs list` table (SPEC §35.1). The `errorSummary`
+ * One row in the `runs list` table. The `errorSummary`
  * is the first search error code + count, or `'none'` when the run
  * had no errors.
  */
@@ -289,7 +288,7 @@ export interface RunListRow {
 }
 
 /**
- * Full payload for `runs show <run-id>` (SPEC §35.2). Captures the
+ * Full payload for `runs show <run-id>`. Captures the
  * full pipeline-run row + searches + denormalized job / filter /
  * score counts + errors + cancellation state + diagnostic refs.
  *
@@ -391,8 +390,8 @@ export interface ColumnSpec {
 }
 
 /**
- * The sort-key tuple per state (SPEC §34.4). The pure
- * `sortJobListRows` helper (Wave B service layer) consumes this
+ * The sort-key tuple per state. The pure
+ * `sortJobListRows` helper (service layer) consumes this
  * vocabulary. Each tuple is the (primary key, secondary key) the
  * state sorts by.
  */

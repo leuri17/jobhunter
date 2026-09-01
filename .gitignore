@@ -21,6 +21,11 @@ test-results/
 .superpowers/
 .slim/
 
+# Internal agent artifacts (not tracked in the public repository)
+docs/tasks/
+docs/superpowers/
+tests/acceptance/
+
 # OpenCode read-allowlist (per-user, not tracked)
 .ignore
 

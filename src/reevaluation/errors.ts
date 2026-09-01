@@ -1,5 +1,5 @@
 /**
- * Typed reevaluation errors for TASK-017 (SPEC §37).
+ * Typed reevaluation errors for .
  *
  * Mirrors the `InspectionError` / `InspectionValidationError` pattern
  * from `src/inspection/errors.ts`. The two-class hierarchy maps to the
@@ -10,12 +10,12 @@
  *
  * The missing-prerequisite cases (no active profile, no active filter
  * config, missing `OPENAI_API_KEY`) reuse `PipelinePrerequisiteError`
- * from `src/pipeline/errors.ts` (Decision 16) — the class is
+ * from `src/pipeline/errors.ts` — the class is
  * re-exported here for consumer convenience. The existing
  * `exitWithError` helper already maps `MissingRequired = 3` for it,
  * so no new error class is needed.
  *
- * No new exit codes are introduced (Decision 15).
+ * No new exit codes are introduced.
  *
  * The `ReevaluationError` base accepts an explicit exit code so
  * subclasses can pick the documented failure-class mapping,
@@ -34,7 +34,7 @@ import {
 /**
  * Re-export of `PipelinePrerequisiteError` for the
  * missing-profile / missing-filter / missing-`OPENAI_API_KEY`
- * cases (Decision 16). The class is owned by `src/pipeline/errors.ts`
+ * cases. The class is owned by `src/pipeline/errors.ts`
  * — re-exports keep the reevaluation consumer surface narrow.
  */
 export { PipelinePrerequisiteError } from '../pipeline/errors.js';
@@ -58,7 +58,7 @@ export class ReevaluationError extends ApplicationError {
 
 /**
  * Raised when a CLI argument, scope flag, or identifier is invalid
- * (SPEC §37 + Decision 9 + Decision 7). Maps to
+ * Maps to
  * `ExitCode.InvalidUsage` (2). The `code` field distinguishes the
  * failure mode so the CLI handler can produce precise stderr
  * messages:
@@ -68,7 +68,7 @@ export class ReevaluationError extends ApplicationError {
  *                                   `--scores-only` (invalid combo).
  *   - `job_not_found`            — `--job <id>` resolved no row.
  *   - `job_not_complete`         — `--job <id>` resolved a partial /
- *                                   failed row (Decision 7).
+ *                                   failed row.
  */
 export class ReevaluationValidationError extends ReevaluationError {
   constructor(

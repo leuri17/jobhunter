@@ -1,9 +1,9 @@
 /**
- * Pure review-summary renderer (TASK-009, SPEC §16.2).
+ * Pure review-summary renderer.
  *
  * `renderReviewSummary` formats a `ProfessionalProfile` plus its warnings,
  * conflicts, and overrides into a single human-readable text block. Every
- * documented SPEC §16.2 section is rendered; null / empty sections render
+ * documented  section is rendered; null / empty sections render
  * as `(none)` so the review never silently drops a section.
  *
  * The function is pure: it depends only on the schema types and the
@@ -159,7 +159,7 @@ function formatWarnings(warnings: readonly ProfileWarningRow[]): string {
 }
 
 /**
- * Render a profile and its surrounding state into the SPEC §16.2 review
+ * Render a profile and its surrounding state into the  review
  * summary. Pure function of the inputs.
  */
 export function renderReviewSummary(inputs: ReviewSummaryInputs): string {

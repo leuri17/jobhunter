@@ -1,0 +1,50 @@
+name: Bug report
+description: Report a bug in JobHunter.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please fill in the
+        sections below. Logs and diagnostics live under the OS-specific
+        paths shown by `jobhunter paths` (typically
+        `~/.local/state/jobhunter/logs/` on Linux).
+  - type: input
+    id: version
+    attributes:
+      label: JobHunter version
+      description: Output of `jobhunter --version` (or commit SHA if built from source).
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Node.js version, pnpm version, OS, and (if applicable) Playwright Chromium version.
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      description: The exact `jobhunter ...` command you ran.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste the relevant snippet from the path shown by `jobhunter paths`.

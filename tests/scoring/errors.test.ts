@@ -35,7 +35,7 @@ describe('ScoringError', () => {
 });
 
 describe('ScoringInputTooLargeError', () => {
-  it('exposes code, exitCode, and metadata per SPEC §25.8', () => {
+  it('exposes code, exitCode, and metadata per ', () => {
     const error = new ScoringInputTooLargeError({
       estimatedInputBytes: 250_000,
       maxInputBytes: 200_000,
@@ -52,7 +52,7 @@ describe('ScoringInputTooLargeError', () => {
 });
 
 describe('ScoringInvalidStructuredOutputError', () => {
-  it('exposes code, exitCode, and metadata per SPEC §25.3', () => {
+  it('exposes code, exitCode, and metadata per ', () => {
     const error = new ScoringInvalidStructuredOutputError({
       attemptNumber: 2,
       validationError: 'categoryScores.technicalSkills.score must be <= 100',

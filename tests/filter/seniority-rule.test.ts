@@ -4,9 +4,9 @@ import { applySeniorityRule } from '../../src/filter/seniority-rule.js';
 import type { SeniorityDetectionResult } from '../../src/filter/seniority-detector.js';
 
 /**
- * TASK-010 Task 4 — `seniority-rule.ts` tests.
+ *  — `seniority-rule.ts` tests.
  *
- * The max-seniority rule (SPEC §19) compares the detected level against
+ * The max-seniority rule compares the detected level against
  * the configured maximum:
  *
  *   - `maximum === null` → rule does NOT apply (abstained);
@@ -14,7 +14,7 @@ import type { SeniorityDetectionResult } from '../../src/filter/seniority-detect
  *   - `detected` rank ≤ `maximum` rank → accepted;
  *   - `detected` rank > `maximum` rank → rejected.
  *
- * The abbreviation "abstained" preserves SPEC §19's language; the rule
+ * The abbreviation "abstained" preserves 's language; the rule
  * helper itself reports all three outcomes (`accepted | abstained |
  * rejected`) — the evaluator (Task 6) does NOT need to translate the
  * surface.

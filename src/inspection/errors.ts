@@ -1,5 +1,5 @@
 /**
- * Typed inspection errors for TASK-016 (SPEC §31 + §37).
+ * Typed inspection errors for .
  *
  * Mirrors the existing `ProfileLifecycleError` /
  * `InvalidProfileIdentifierError` pattern from
@@ -11,7 +11,7 @@
  *   - `InspectionResourceNotFoundError`     → Fatal (1) — referenced dependent row missing
  *   - `InspectionError` (base)              → Fatal (1) — default
  *
- * No new exit codes are introduced (Decision 12).
+ * No new exit codes are introduced.
  *
  * The `InspectionError` base accepts an explicit exit code so
  * subclasses can pick the documented failure-class mapping,
@@ -46,7 +46,7 @@ export class InspectionError extends ApplicationError {
 
 /**
  * Raised when a CLI argument or refinement is invalid
- * (SPEC §34.1 / §34.3 / §34.6). Maps to `ExitCode.InvalidUsage` (2).
+ * Maps to `ExitCode.InvalidUsage` (2).
  */
 export class InspectionValidationError extends InspectionError {
   constructor(
@@ -62,7 +62,7 @@ export class InspectionValidationError extends InspectionError {
 /**
  * Raised when a referenced row (job, run) is unknown or the
  * identifier is malformed. Mirrors `InvalidProfileIdentifierError`'s
- * `InvalidUsage` mapping (SPEC §37). The error code distinguishes
+ * `InvalidUsage` mapping. The error code distinguishes
  * "identifier is malformed" from "row does not exist" so the CLI
  * handler can produce precise stderr messages.
  */
@@ -80,8 +80,8 @@ export class InspectionNotFoundError extends InspectionError {
 /**
  * Raised when a referenced row's dependent row is missing
  * (e.g. a job row references a `pipelineRunId` that has been
- * deleted). Mirrors TASK-009's `Fatal` pattern for data-integrity
- * bugs (SPEC §37).
+ * deleted). Mirrors 's `Fatal` pattern for data-integrity
+ * bugs.
  */
 export class InspectionResourceNotFoundError extends InspectionError {
   constructor(

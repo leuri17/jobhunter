@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { InspectionValidationError } from '../../src/inspection/errors.js';
 import { truncateWithEllipsis } from '../../src/inspection/truncate.js';
 
-describe('truncateWithEllipsis (TASK-016 Wave A Task 4, SPEC §34.6)', () => {
+describe('truncateWithEllipsis', () => {
   it('returns text unchanged when text.length <= maxWidth', () => {
     expect(truncateWithEllipsis('hello', 5)).toBe('hello');
     expect(truncateWithEllipsis('hi', 5)).toBe('hi');

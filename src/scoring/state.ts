@@ -2,11 +2,10 @@ import type { ScoringStructuredOutput } from './schema.js';
 import type { ScoringCategory } from './types.js';
 
 /**
- * State vocabulary for TASK-014 — LinkedIn scoring
- * (SPEC §25 + §26 + §27.3–27.4 + §30).
+ * State vocabulary for  — LinkedIn scoring
  *
  * The shapes below are the typed contract between `service.ts`
- * and TASK-015's pipeline orchestrator. Pure TypeScript types
+ * and 's pipeline orchestrator. Pure TypeScript types
  * — no runtime values, no I/O.
  *
  * The overall scoring state vocabulary version. Bump on any
@@ -19,12 +18,12 @@ import type { ScoringCategory } from './types.js';
 export const LINKEDIN_SCORING_SCHEMA_VERSION = 1 as const;
 export type LinkedinScoringSchemaVersion = typeof LINKEDIN_SCORING_SCHEMA_VERSION;
 
-/** The 7 scoring categories from SPEC §26.2. Re-exported from `./types.ts`
+/** The 7 scoring categories from . Re-exported from `./types.ts`
  *  for convenience so consumers can import everything from `./state.js`. */
 export type { ScoringCategory } from './types.js';
 export { SCORING_CATEGORIES } from './types.js';
 
-/** Outcome kind for a single job's scoring attempt (SPEC §25.3 + §26.1). */
+/** Outcome kind for a single job's scoring attempt. */
 export type ScoringKind = 'reused' | 'complete' | 'failed' | 'skipped' | 'cancelled';
 
 /** Tag for the only scoring method in MVP — OpenAI structured output. */
@@ -68,7 +67,7 @@ export interface ScoringBatchOutcome {
   };
 }
 
-/** Per-job entry in the `ScoringPlan` consumed by TASK-015's confirmation UI. */
+/** Per-job entry in the `ScoringPlan` consumed by 's confirmation UI. */
 export interface ScoringPlanEntry {
   readonly jobId: number;
   readonly sourceJobId: string;
@@ -78,7 +77,7 @@ export interface ScoringPlanEntry {
   readonly reason: string | null;
 }
 
-/** Data structure that the TASK-015 orchestrator uses for the confirmation UI. */
+/** Data structure that the  orchestrator uses for the confirmation UI. */
 export interface ScoringPlan {
   readonly schemaVersion: LinkedinScoringSchemaVersion;
   readonly runId: number;

@@ -1,6 +1,5 @@
 /**
- * Read-only fingerprint helpers for the reevaluation service (TASK-017
- * Wave C, SPEC §27.4 + §28).
+ * Read-only fingerprint helpers for the reevaluation service.
  *
  * Both helpers in this module are PURE functions of the inputs. They
  * NEVER touch the database — they only reproduce the canonical fingerprint
@@ -38,7 +37,7 @@ import type { JobRow } from '../persistence/repositories/jobs.js';
 /**
  * Compute the filter fingerprint for a single complete job, given the
  * active filter configuration + profile JSON (mirrors
- * `calculateFilterFingerprint`'s input shape — SPEC §24.3).
+ * `calculateFilterFingerprint`'s input shape — ).
  *
  * The helper intentionally accepts the raw `unknown` row shape for the
  * config + profile so it does not depend on the persistence-layer
@@ -69,7 +68,7 @@ export function computeFilterFingerprintForJob(
  * Compute the score fingerprint for a single complete job, given the
  * active approved profile + the effective derived values + the active
  * filter configuration (mirrors `computeScoreFingerprint`'s input
- * shape — SPEC §27.3).
+ * shape — ).
  *
  * The service computes the `jobContentHash` from the row's title /
  * company / location / description exactly the way
@@ -81,7 +80,7 @@ export function computeFilterFingerprintForJob(
  * `effectiveDerivedValues` is read-only data the caller passes
  * through. The MVP pipeline sets it to `{}` (the scoring prompt
  * consults the profile, not the derived values, in the current MVP);
- * Wave C mirrors that.
+ *  mirrors that.
  *
  * `modelConfig` is left at `{}` because the production
  * `ScoringService` also uses `{}` here (no model-specific overrides

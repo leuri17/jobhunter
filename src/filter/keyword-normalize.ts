@@ -2,7 +2,6 @@ import { ALIAS_MAP } from './keyword-aliases.js';
 
 /**
  * Shared deterministic keyword normalization for the filter engine
- * (SPEC §18, TASK-010 Task 3).
  *
  * The matcher's normalization chain is a strict superset of
  * `normalizeForHashing` from `content-hash.ts`:

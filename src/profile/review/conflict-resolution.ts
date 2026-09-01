@@ -1,5 +1,5 @@
 /**
- * Pure conflict resolution helpers (TASK-009, SPEC §15.2 + §15.3).
+ * Pure conflict resolution helpers.
  *
  * `resolveConflictOnProfile` applies a single resolution choice to a
  * `ProfessionalProfile` and returns a NEW profile. The original claims
@@ -11,7 +11,7 @@
  * Resolution therefore requires the editor to pass the affected entity
  * id explicitly via the `entityId` parameter.
  *
- * Conflict types covered (TASK-008 post-processor prefixes):
+ * Conflict types covered ( post-processor prefixes):
  *
  *   - work_experience.*     → profile.experience[i]
  *   - language.*            → profile.languages[i]
@@ -19,7 +19,7 @@
  *   - certification.*       → profile.certifications[i]
  *   - project.*             → profile.projects[i]
  *
- * Conflict types outside this set throw `InvalidProfileStateError` —
+ * Conflict types outside this set throw `InvalidProfileStateError`
  * they should never reach the editor.
  *
  * The helper is pure domain code: no persistence, no prompts, no IO.

@@ -4,7 +4,7 @@ import type { ScoringKind } from './state.js';
 /**
  * Logger facade for the scoring layer. Mirrors the
  * `LinkedInScraperLogger` + `LinkedInExtractionLogger` pattern from
- * TASK-012/013. The pure scoring layer (rubric, score-formula, rank,
+ * /013. The pure scoring layer (rubric, score-formula, rank,
  * fingerprint, plan, state, errors) does not import this — only the
  * orchestrator (`service.ts`) does, and only through the `ScoringLogger`
  * interface. The pino adapter stays at the boundary.

@@ -1,5 +1,5 @@
 /**
- * Overlay detection + dismissal (TASK-012 Plan Task 5, SPEC §21.5).
+ * Overlay detection + dismissal.
  *
  * The orchestrator calls `detectOverlays` per search to enumerate
  * currently-visible overlays (login / join / cookie consent / modal),
@@ -11,7 +11,7 @@
  * boundary.
  *
  * Imports `Page` and `Locator` as TYPES only — the runtime values flow
- * through Playwright in Wave D (`playwright-session.ts`). Wave A
+ * through Playwright in  (`playwright-session.ts`).
  * exercises this code via inline fakes in `tests/linkedin/overlay.test.ts`.
  */
 import type { Page, Locator } from 'playwright';
@@ -103,7 +103,7 @@ export async function detectOverlays(
  * Apply ONE strategy to dismiss a single overlay, bounded by
  * `overlayDismissalMs`. Returns the discriminated `OverlayDismissalResult`;
  * the caller is responsible for converting `kind: 'undismissable'` to
- * a thrown `OverlayUndismissableError` (Wave C's orchestrator).
+ * a thrown `OverlayUndismissableError` (orchestrator).
  */
 export async function dismissOverlay(
   page: Page,
@@ -161,8 +161,8 @@ export async function dismissRecoverableOverlays(
  * Apply a single dismissal strategy. Returns `true` if the action was
  * attempted (callers should follow up with a `waitFor` to confirm).
  * Each branch uses Playwright locator semantics that are compatible
- * with both the real `BrowserSession` (Wave D) and the inline test
- * fakes (Wave A).
+ * with both the real `BrowserSession` and the inline test
+ * fakes.
  */
 async function applyStrategy(
   page: Page,

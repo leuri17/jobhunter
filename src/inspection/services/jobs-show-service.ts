@@ -1,6 +1,5 @@
 /**
  * JobsShowService — read-side service for `jobs show <job-id>`
- * (TASK-016 Wave B, SPEC §31 + §34.6).
  *
  * Resolves the CLI identifier (either `job_<int>` or the numeric
  * LinkedIn `sourceJobId`), fetches the full job row + discovery
@@ -83,8 +82,8 @@ export class JobsShowService {
       this.repositories.jobs.listExtractionAttemptsByJob(row.id),
     ]);
 
-    void attempts; // attempts feed the Wave D test fixtures; the show
-    // payload does not surface them directly per SPEC §34.6.
+    void attempts; // attempts feed the  test fixtures; the show
+    // payload does not surface them directly per .
 
     // Step 4: assemble the payload from the latest active rows.
     const activeFilter = filterResults.find((f) => f.active) ?? null;

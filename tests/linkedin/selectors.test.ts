@@ -8,12 +8,12 @@ import {
   OVERLAY_DISMISSAL_STRATEGY,
 } from '../../src/linkedin/selectors.js';
 
-describe('src/linkedin/selectors — Wave A', () => {
-  it('LINKEDIN_SELECTORS_MAP_VERSION === 2 (bumped in Wave C for panel + dedicated)', () => {
+describe('src/linkedin/selectors — ', () => {
+  it('LINKEDIN_SELECTORS_MAP_VERSION === 2 (bumped in  for panel + dedicated)', () => {
     expect(LINKEDIN_SELECTORS_MAP_VERSION).toBe(2);
   });
 
-  it('exposes the six selector groups after Wave C', () => {
+  it('exposes the six selector groups after ', () => {
     const groupKeys = Object.keys(LINKEDIN_SELECTORS).sort();
     expect(groupKeys).toEqual([
       'cards',
@@ -118,7 +118,7 @@ describe('src/linkedin/selectors — Wave A', () => {
   });
 });
 
-describe('src/linkedin/selectors — Wave C (panel + dedicated + FIELDS map)', () => {
+describe('src/linkedin/selectors —  (panel + dedicated + FIELDS map)', () => {
   it('panel group carries container + titleElement + titleAnchor + company + location + description', () => {
     expect(Object.keys(LINKEDIN_SELECTORS.panel).sort()).toEqual([
       'company',

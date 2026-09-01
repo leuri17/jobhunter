@@ -160,13 +160,13 @@ describe('src/init domain-boundary guard', () => {
   it('explicitly scans src/init/init-service.ts for banned imports (when present)', () => {
     // The tree-walk test above already covers every file under
     // src/init/, but this dedicated assertion documents that the
-    // orchestrator (added in Wave B) stays on the domain side of
+    // orchestrator (added in ) stays on the domain side of
     // AGENTS.md §5 / §9. The test is skipped (via length check) when
-    // src/init/init-service.ts has not been added yet — Wave A ships
+    // src/init/init-service.ts has not been added yet —  ships
     // only the six pure modules.
     const absolute = join(INIT_DIR, 'init-service.ts');
     const files = listInitSourceFiles(INIT_DIR);
-    expect(files, 'src/init/init-service.ts must exist after Wave B').toContain(absolute);
+    expect(files, 'src/init/init-service.ts must exist after ').toContain(absolute);
     const source = readFileSync(absolute, 'utf8');
     for (const banned of BANNED_IMPORTS) {
       if (banned === '@inquirer/prompts' && INQUIRER_ALLOW_LIST.has('src/init/init-service.ts')) {

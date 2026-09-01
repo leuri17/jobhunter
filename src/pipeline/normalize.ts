@@ -23,7 +23,7 @@ export function deterministicJsonStringify(value: unknown): string {
 }
 
 /**
- * Build the run configuration snapshot (SPEC §8.4).
+ * Build the run configuration snapshot.
  *
  * The snapshot is the normalized OperationalConfig shape (no secrets).
  * The hash is the SHA-256 of the deterministic JSON string.

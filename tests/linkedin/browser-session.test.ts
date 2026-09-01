@@ -4,7 +4,7 @@ import { FakeBrowserSession } from '../../src/linkedin/fake-session.js';
 import { FakePage } from '../../src/linkedin/fake-page.js';
 import { BrowserCapacityExceededError } from '../../src/linkedin/errors.js';
 
-describe('src/linkedin/fake-session — Wave B', () => {
+describe('src/linkedin/fake-session — ', () => {
   it('launch() records the launch event + returns a stub browser/context', async () => {
     const session = new FakeBrowserSession();
     const { browser, context } = await session.launch();
@@ -149,7 +149,7 @@ describe('src/linkedin/fake-session — Wave B', () => {
   });
 });
 
-describe('src/linkedin/fake-page — Wave B', () => {
+describe('src/linkedin/fake-page — ', () => {
   it('default url() returns "about:blank"', () => {
     const page = new FakePage();
     expect(page.url()).toBe('about:blank');

@@ -1,9 +1,8 @@
 /**
- * State vocabulary for TASK-012 — LinkedIn result discovery (SPEC §21.3,
- * §22.11–22.12).
+ * State vocabulary for  — LinkedIn result discovery.
  *
  * The shapes below are the typed contract between `discovery-service.ts`
- * (Wave C) and TASK-015's pipeline orchestrator. They are pure
+ * and 's pipeline orchestrator. They are pure
  * TypeScript types (no runtime values, no I/O), so this file has no
  * side effects and no imports beyond the single type import below.
  *
@@ -12,7 +11,7 @@
  * file is a pure vocabulary module — it imports only a type from the
  * persistence barrel.
  *
- * Per the deepwork Decision 12 / Plan Task 1: the orchestrator's per-card
+ * Per the deepwork  / Plan Task 1: the orchestrator's per-card
  * error shape lives here (not on `LinkedInScraperError`); per-card errors
  * are NOT thrown — they are surfaced via `SearchDiscoveryOutcome.errors`
  * and persisted to the `discoveryErrors` table by the orchestrator.
@@ -35,12 +34,12 @@ export const AVAILABLE_METADATA_MAX_BYTES = 2048;
  * builds this shape per card before persisting a `discoveryEvents` row
  * (and possibly a canonical `jobs` row when the card has an ID).
  *
- * Wave D extension: `sourceJobId` is `string | null` to support the
+ *  extension: `sourceJobId` is `string | null` to support the
  * no-ID card path. Cards whose anchor has neither a
  * `data-occludable-job-id` attribute nor a parseable
  * `/jobs/view/<digits>/` href are preserved in the loop output with
  * `sourceJobId: null` so the orchestrator can write a `discoveryErrors`
- * row (per Plan Decision 22 / SPEC §22.11).
+ * row (per Plan  / ).
  */
 export interface DiscoveredCard {
   /** LinkedIn numeric job ID (canonical source identifier). `null` for unparseable anchors. */
@@ -52,7 +51,7 @@ export interface DiscoveredCard {
   /**
    * Optional metadata extracted from the card (title / company / location
    * snippet). Null when the card carried no readable text. The orchestrator
-   * passes this through `truncateAvailableMetadata` (Wave C) before
+   * passes this through `truncateAvailableMetadata` before
    * persisting to `discoveryErrors.availableMetadata`.
    */
   readonly availableMetadata: Readonly<Record<string, string>> | null;
@@ -72,10 +71,10 @@ export interface OverlayDescriptor {
 }
 
 /**
- * Browser capacity contract (Plan Decision 9 + SPEC §21.7 / §29.1).
+ * Browser capacity contract (Plan  + ).
  * `BrowserSession` tracks this; the orchestrator opens at most one page
- * per `discover()` invocation and never opens a fallback page in TASK-012
- * (TASK-013 owns dedicated-page fallback).
+ * per `discover()` invocation and never opens a fallback page in
+ * ( owns dedicated-page fallback).
  */
 export interface BrowserCapacity {
   readonly activePages: number;
@@ -94,9 +93,9 @@ export type OverlayDismissalResult =
 
 /**
  * Outcome of the bounded load-more loop. Returned by `loadMoreResults`
- * (Wave A, this task). The orchestrator decides whether `kind:
+ * (, this task). The orchestrator decides whether `kind:
  * 'exhausted'` / `kind: 'no-progress'` surface a soft warning or a
- * `LoadMoreLoopExhaustedError` (Plan Decision 8 + Decision 13).
+ * `LoadMoreLoopExhaustedError` (Plan ).
  */
 export type LoadMoreOutcome =
   | {
@@ -158,14 +157,14 @@ export interface DiscoveredCardError {
 
 /**
  * Top-level result returned by `LinkedInDiscoveryService.discover(...)`.
- * Consumed by TASK-015's pipeline orchestrator. The orchestrator
- * (TASK-015) maps this into `searchExecutions` + `discoveryEvents` +
+ * Consumed by 's pipeline orchestrator. The orchestrator
+ * maps this into `searchExecutions` + `discoveryEvents` +
  * `discoveryErrors` via `Repositories.pipelineRuns.updateSearchStatus`
  * and the per-card insert path.
  */
 export interface SearchDiscoveryOutcome {
   readonly schemaVersion: LinkedinDiscoverySchemaVersion;
-  /** LinkedIn-side numeric ID of the search execution row (TASK-015 owns the row). */
+  /** LinkedIn-side numeric ID of the search execution row ( owns the row). */
   readonly searchExecutionId: number;
   /** Final status to apply to `searchExecutions.finalStatus`. */
   readonly finalStatus: SearchExecutionStatus;
@@ -176,8 +175,8 @@ export interface SearchDiscoveryOutcome {
   /** Number of re-discovered jobs (already in `jobs` table). */
   readonly existingJobs: number;
   /**
-   * Per-card errors written to `discoveryErrors` (TASK-012 owns the
-   * rows; TASK-015 surfaces them in the run summary).
+   * Per-card errors written to `discoveryErrors` ( owns the
+   * rows;  surfaces them in the run summary).
    */
   readonly errors: readonly DiscoveredCardError[];
   /** Diagnostic artifact IDs produced during the search. */
@@ -198,9 +197,9 @@ export function createLoadMoreState(): LoadMoreState {
  * Truncate a card-metadata record to fit within `AVAILABLE_METADATA_MAX_BYTES`
  * (UTF-8) by dropping whole keys in the order they were declared until
  * the size fits. Returns `null` when the input is null or every value
- * is empty. Pure: no I/O, no `Redactor` (redaction is added in Wave C).
+ * is empty. Pure: no I/O, no `Redactor` (redaction is added in ).
  *
- * Wave A ships the size-cap logic without the redaction pass; Wave C
+ *  ships the size-cap logic without the redaction pass;
  * (`truncate-metadata.ts`) wires `Redactor` from `src/diagnostics/redactor.ts`.
  */
 export function truncateAvailableMetadata(

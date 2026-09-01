@@ -1,7 +1,7 @@
 /**
- * Public barrel for the scoring module (TASK-014).
+ * Public barrel for the scoring module.
  *
- * Consumers (the TASK-015 pipeline orchestrator) import from here so
+ * Consumers (the  pipeline orchestrator) import from here so
  * the import surface stays narrow and the layer boundary is enforced
  * at the type level.
  *

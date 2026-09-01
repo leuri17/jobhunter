@@ -11,7 +11,6 @@ import type { Logger, LogContext } from '../../src/logging/logger.js';
 
 /**
  * Tests for `src/linkedin/extraction/log.ts`
- * (TASK-013 Plan Task 5).
  *
  * Asserts:
  *   - The noop adapter does not throw on any method.
@@ -49,7 +48,7 @@ function findCall(calls: readonly CapturedCall[], event: string): CapturedCall |
   return calls.find((c) => c.context['event'] === event);
 }
 
-describe('src/linkedin/extraction/log — Wave A', () => {
+describe('src/linkedin/extraction/log — ', () => {
   describe('noopLinkedInExtractionLogger', () => {
     it('returns a fresh object on every call', () => {
       const a = noopLinkedInExtractionLogger();

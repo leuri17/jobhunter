@@ -30,7 +30,7 @@ importers:
         specifier: 10.3.1
         version: 10.3.1
       playwright:
-        specifier: ^1.62.1
+        specifier: 1.62.1
         version: 1.62.1
       zod:
         specifier: 4.4.3
@@ -61,7 +61,7 @@ importers:
         specifier: 17.8.0
         version: 17.8.0
       linkedom:
-        specifier: ^0.18.13
+        specifier: 0.18.13
         version: 0.18.13
       pino-pretty:
         specifier: 13.1.3

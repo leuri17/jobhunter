@@ -10,7 +10,7 @@ import {
 
 /**
  * Pure-helper tests for the Zod schemas in `src/inspection/json-schemas.ts`
- * (TASK-016 Wave D, Task 14, SPEC §36 + §37).
+ * (, Task 14, ).
  *
  * The schemas are the source of truth for the `--json` payload contract.
  * These tests:
@@ -21,7 +21,7 @@ import {
  *   - Pin the no-truncation invariant: ellipsis characters (U+2026) are
  *     NEVER present in the parsed JSON output.
  *   - Pin the ISO 8601 timestamp invariant at the schema level (the
- *     format the services emit per SPEC §36).
+ *     format the services emit per ).
  *   - For `JobListJsonSchema`, build one fixture per documented state
  *     (all 9 — 'all', 'scored', 'accepted', 'rejected', 'unscored',
  *     'partial', 'failed', 'filter-errors', 'scoring-errors').
@@ -307,7 +307,7 @@ const pathsPayload = {
 // JobListJsonSchema — discriminated union over all 9 states
 // ---------------------------------------------------------------------------
 
-describe('JobListJsonSchema (TASK-016 Wave D Task 14, SPEC §36)', () => {
+describe('JobListJsonSchema', () => {
   it('accepts a representative fixture for the --all state', () => {
     const result = JobListJsonSchema.safeParse(jobListEnvelope('all'));
     expect(result.success).toBe(true);
@@ -417,7 +417,7 @@ describe('JobListJsonSchema (TASK-016 Wave D Task 14, SPEC §36)', () => {
 // JobShowJsonSchema
 // ---------------------------------------------------------------------------
 
-describe('JobShowJsonSchema (TASK-016 Wave D Task 14, SPEC §36)', () => {
+describe('JobShowJsonSchema', () => {
   it('accepts a representative fixture', () => {
     const result = JobShowJsonSchema.safeParse(jobShowPayload);
     expect(result.success).toBe(true);
@@ -479,7 +479,7 @@ describe('JobShowJsonSchema (TASK-016 Wave D Task 14, SPEC §36)', () => {
 // RunListJsonSchema
 // ---------------------------------------------------------------------------
 
-describe('RunListJsonSchema (TASK-016 Wave D Task 14, SPEC §36)', () => {
+describe('RunListJsonSchema', () => {
   it('accepts a representative fixture', () => {
     const result = RunListJsonSchema.safeParse(runListEnvelope);
     expect(result.success).toBe(true);
@@ -535,7 +535,7 @@ describe('RunListJsonSchema (TASK-016 Wave D Task 14, SPEC §36)', () => {
 // RunShowJsonSchema
 // ---------------------------------------------------------------------------
 
-describe('RunShowJsonSchema (TASK-016 Wave D Task 14, SPEC §36)', () => {
+describe('RunShowJsonSchema', () => {
   it('accepts a representative fixture', () => {
     const result = RunShowJsonSchema.safeParse(runShowPayload);
     expect(result.success).toBe(true);
@@ -587,7 +587,7 @@ describe('RunShowJsonSchema (TASK-016 Wave D Task 14, SPEC §36)', () => {
 // PathsJsonSchema
 // ---------------------------------------------------------------------------
 
-describe('PathsJsonSchema (TASK-016 Wave D Task 14, SPEC §36)', () => {
+describe('PathsJsonSchema', () => {
   it('accepts a representative fixture', () => {
     const result = PathsJsonSchema.safeParse(pathsPayload);
     expect(result.success).toBe(true);
@@ -624,10 +624,10 @@ describe('PathsJsonSchema (TASK-016 Wave D Task 14, SPEC §36)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// ISO 8601 timestamp contract (cross-schema, SPEC §36)
+// ISO 8601 timestamp contract (cross-schema, )
 // ---------------------------------------------------------------------------
 
-describe('ISO 8601 timestamp contract (TASK-016 Wave D Task 14, SPEC §36)', () => {
+describe('ISO 8601 timestamp contract', () => {
   it('JobShowJsonSchema accepts "2026-07-30T09:00:00.000Z"', () => {
     const fixture = {
       ...jobShowPayload,

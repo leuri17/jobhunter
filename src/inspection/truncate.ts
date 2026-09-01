@@ -1,12 +1,12 @@
 /**
- * Width-aware text truncation for inspection tables (SPEC §34.6).
+ * Width-aware text truncation for inspection tables.
  *
  * Pure helper. No I/O, no platform-specific behavior. The
  * ellipsis character is U+2026 HORIZONTAL ELLIPSIS so consumers can
  * grep for it and so the truncated form stays visually distinct
  * from the original.
  *
- * The stored value is NEVER mutated (SPEC §34.6 "preserve full
+ * The stored value is NEVER mutated ( "preserve full
  * stored values") — this helper only renders a truncated display
  * string; the original is untouched. `jobs show` always prints the
  * full value via `formatJobShow` (no width budget).

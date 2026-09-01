@@ -36,7 +36,7 @@ function makeContentPage(
   };
 }
 
-describe('DiagnosticManager.recordScraperError + HtmlSnapshotCapture (TASK-013 Wave B)', () => {
+describe('DiagnosticManager.recordScraperError + HtmlSnapshotCapture', () => {
   let directory: string;
   let diagnosticsDir: string;
   let connection: DatabaseConnection;

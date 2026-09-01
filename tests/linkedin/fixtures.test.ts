@@ -23,7 +23,7 @@ const FIXTURES: readonly FixtureName[] = [
   'search-results-basic',
   'search-results-no-results',
   'search-results-with-modal',
-  // Wave C — TASK-013 extraction layer
+  //  —  extraction layer
   'panel-complete',
   'panel-partial',
   'panel-mismatch',
@@ -47,7 +47,7 @@ function toElements(iterable: {
   return out;
 }
 
-describe('tests/linkedin/fixtures (Wave E)', () => {
+describe('tests/linkedin/fixtures', () => {
   it.each(FIXTURES)('loadFixture(%j) returns a non-empty string', (name) => {
     const html = loadFixture(name);
     expect(typeof html).toBe('string');

@@ -12,7 +12,7 @@ import { FILTER_IMPLEMENTATION_VERSION } from './version.js';
 import { type ProfessionalProfile } from '../profile/schema.js';
 
 /**
- * Filter fingerprint composer (TASK-010 Task 7, SPEC §24.3).
+ * Filter fingerprint composer.
  *
  * The fingerprint is a stable SHA-256 digest that combines:
  *
@@ -21,7 +21,7 @@ import { type ProfessionalProfile } from '../profile/schema.js';
  *   - the SHA-256 of the normalized filter configuration, via
  *     `calculateFilterConfigContentHash`;
  *   - the relevant effective profile values (the "profile slice"), trimmed
- *     to the fields the SPEC §24.3 + Decision 7 fingerprint must reflect:
+ *     to the fields the  +  fingerprint must reflect:
  *       - `derived.likelySeniority.effectiveValue`
  *       - `derived.primaryRoles.effectiveValue`
  *       - `derived.primaryDomains.effectiveValue`

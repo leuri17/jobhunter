@@ -7,9 +7,9 @@ import { discoverAllCards, type LoadMoreOptions } from '../../src/linkedin/load-
 import { LINKEDIN_SELECTORS } from '../../src/linkedin/selectors.js';
 
 /**
- * Wave A: a deterministic fake `Page` for `load-more` tests. The fake
+ *  a deterministic fake `Page` for `load-more` tests. The fake
  * serves a fixed list of card-count snapshots and answers `click()` on
- * the load-more button with the next snapshot. Wave D will exercise
+ * the load-more button with the next snapshot.  will exercise
  * `discoverAllCards` against real Playwright via
  * `tests/linkedin/helpers/playwright-route-session.ts`.
  */
@@ -163,7 +163,7 @@ const BASE_OPTS: LoadMoreOptions = {
   scrollDelayMs: 0,
 };
 
-describe('src/linkedin/load-more — Wave A', () => {
+describe('src/linkedin/load-more — ', () => {
   it('returns 5 cards in 1 iteration when the snapshot has 5 cards and no load-more', async () => {
     const ids = ['100001', '100002', '100003', '100004', '100005'];
     const page = new FakePage([

@@ -2,10 +2,9 @@ import { DetailUrlBuildError } from './errors.js';
 
 /**
  * Build the canonical dedicated-page URL for a LinkedIn job
- * (TASK-013 Plan Task 4, SPEC §22.2).
  *
  * The URL is DERIVED from the `sourceJobId` (never scraped) and
- * is the input to `BrowserSession.openFallbackPage` (TASK-015's
+ * is the input to `BrowserSession.openFallbackPage` ('s
  * orchestrator owns the lifecycle).
  *
  * Per Plan Task 4 + Open Question 5: the regex requires 6+ digits.

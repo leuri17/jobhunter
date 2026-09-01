@@ -1,5 +1,5 @@
 /**
- * ProfileEditingService — application service for TASK-009 / SPEC §16.6.
+ * ProfileEditingService — application service for  / .
  *
  * The service runs the interactive profile-edit session. It glues the
  * pure state machine (`reduce`) to the prompt adapter (default
@@ -14,7 +14,7 @@
  *   2. If the row is `approved`, derive a NEW `draft` row whose JSON
  *      carries a fresh `id` and timestamps; record a `profile_revisions`
  *      row with source=`user` and `note = derived_from_approved_<prior.id>`.
- *      Only drafts may be edited in place per SPEC §16.6.
+ *      Only drafts may be edited in place per .
  *   3. If the row is `draft`, open the editor on it directly.
  *   4. If the row is `rejected` / `superseded`, refuse with
  *      `InvalidProfileStateError`.

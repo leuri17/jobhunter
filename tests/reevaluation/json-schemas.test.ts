@@ -11,8 +11,7 @@ import {
 
 /**
  * Pure-helper tests for the Zod schemas in
- * `src/reevaluation/json-schemas.ts` (TASK-017 Wave A Task 5,
- * SPEC §36 + §37).
+ * `src/reevaluation/json-schemas.ts`.
  *
  * The schemas are the source of truth for the `--json` payload
  * contract. These tests:
@@ -81,7 +80,7 @@ function buildFixture(overrides: Record<string, unknown> = {}): Record<string, u
   return { ...base, ...overrides } as unknown as Record<string, unknown>;
 }
 
-describe('REEVALUATION_JSON_SCHEMA (TASK-017 Wave A Task 5, SPEC §36)', () => {
+describe('REEVALUATION_JSON_SCHEMA', () => {
   it('accepts a representative default-scope fixture', () => {
     const fixture = buildFixture({
       filtersToReevaluate: [
@@ -360,7 +359,7 @@ describe('REEVALUATION_JSON_SCHEMA (TASK-017 Wave A Task 5, SPEC §36)', () => {
   });
 });
 
-describe('ScoringPlanJsonSchema (TASK-017 Wave A Task 5, Decision 14 inline shape)', () => {
+describe('ScoringPlanJsonSchema (,  inline shape)', () => {
   it('accepts the canonical fixture', () => {
     const result = ScoringPlanJsonSchema.safeParse(SCORING_PLAN_FIXTURE);
     expect(result.success).toBe(true);

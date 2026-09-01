@@ -1,5 +1,5 @@
 /**
- * Per-prerequisite status of the initialization state machine (SPEC §9.6).
+ * Per-prerequisite status of the initialization state machine.
  *
  * - `complete` — the prerequisite is satisfied; init skips it on resume.
  * - `incomplete` — the prerequisite is partially satisfied; init runs the
@@ -16,7 +16,7 @@
 export type InitStepStatus = 'complete' | 'incomplete' | 'failed' | 'not_started';
 
 /**
- * Stable identifiers for the 10 classification prerequisites (SPEC §9.1
+ * Stable identifiers for the 10 classification prerequisites (
  * collapsed). The `INIT_STEPS` tuple below enumerates them in the order
  * the orchestrator walks them. Adding a new prerequisite requires:
  *   1. Adding the literal here.
@@ -85,7 +85,7 @@ export interface InitStepReport {
 
 /**
  * Top-level summary emitted by the orchestrator. Printed to stdout by
- * the CLI handler. The `ready` flag is the SPEC §9.5 completion bit
+ * the CLI handler. The `ready` flag is the  completion bit
  * (derived, never persisted).
  */
 export interface SetupSummary {

@@ -1,8 +1,8 @@
 /**
- * Helper to resolve the OpenAI client from the environment (TASK-011).
+ * Helper to resolve the OpenAI client from the environment.
  *
  * Reads `OPENAI_API_KEY` from `process.env`. Returns `null` when the
- * key is absent (Decision 4 — init treats absence as a skip-not-fail
+ * key is absent ( — init treats absence as a skip-not-fail
  * for the `extract` step). When present, returns a freshly
  * constructed `OpenAIClient` via `createDefaultOpenAIClient`.
  *

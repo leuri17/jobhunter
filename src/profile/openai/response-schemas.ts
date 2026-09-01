@@ -26,7 +26,7 @@ import { STRUCTURED_OUTPUT_SCHEMA_VERSION } from './structured-output.js';
  * the OpenAI client surface can serve scoring requests. The dependency
  * flows one way — `src/scoring/` does NOT import from
  * `src/profile/openai/`. The scoring module is otherwise self-contained
- * and is consumed by `src/scoring/service.ts` in Wave D.
+ * and is consumed by `src/scoring/service.ts` in .
  */
 export interface ResponseSchemaEntry {
   readonly schema: Record<string, unknown>;

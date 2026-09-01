@@ -11,9 +11,9 @@ import {
 } from '../../src/filter/language-patterns.js';
 
 /**
- * TASK-010 Task 5 — `language-detector.ts` tests.
+ *  — `language-detector.ts` tests.
  *
- * SPEC §20 surfaces deterministic phrase-based language detection:
+ *  surfaces deterministic phrase-based language detection:
  *
  *   - §20.1 examples (required) match a phrase in `LANGUAGE_REQUIRED_PHRASES`
  *     and produce `kind: 'required'`.
@@ -61,7 +61,7 @@ describe('language-patterns module — versioned phrase lists', () => {
     expect(LANGUAGE_REFERENCE_PHRASES.length).toBeGreaterThan(0);
   });
 
-  it('covers every SPEC §20.1 phrase in the required list', () => {
+  it('covers every  phrase in the required list', () => {
     expect(LANGUAGE_REQUIRED_PHRASES).toEqual(
       expect.arrayContaining([
         'is required',
@@ -79,7 +79,7 @@ describe('language-patterns module — versioned phrase lists', () => {
     );
   });
 
-  it('covers every SPEC §20.2 phrase in the reference list', () => {
+  it('covers every  phrase in the reference list', () => {
     expect(LANGUAGE_REFERENCE_PHRASES).toEqual(
       expect.arrayContaining([
         'is a plus',
@@ -95,7 +95,7 @@ describe('language-patterns module — versioned phrase lists', () => {
   });
 });
 
-describe('detectLanguageRequirements — SPEC §20.1 explicit requirements', () => {
+describe('detectLanguageRequirements —  explicit requirements', () => {
   it('detects "required" from "Dutch required"', () => {
     const result = detectLanguageRequirements({
       description: 'Dutch required',
@@ -204,7 +204,7 @@ describe('detectLanguageRequirements — SPEC §20.1 explicit requirements', () 
   });
 });
 
-describe('detectLanguageRequirements — SPEC §20.2 non-rejecting references', () => {
+describe('detectLanguageRequirements —  non-rejecting references', () => {
   it('detects "is a plus" from "Dutch is a plus"', () => {
     const result = detectLanguageRequirements({
       description: 'Dutch is a plus',

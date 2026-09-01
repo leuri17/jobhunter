@@ -1,17 +1,16 @@
 /**
  * Adaptive table + multi-line show formatters for inspection commands
- * (SPEC §34.5 + §34.6 + §35).
  *
  * Pure formatters. NO imports from `src/persistence/`, `src/pipeline/`,
  * `src/init/`, `src/scoring/`, `src/linkedin/`, `src/filter/`,
  * `src/profile/`. The formatters operate on the plain row shapes
- * declared in `state.ts`; the service layer (Wave B) is responsible
+ * declared in `state.ts`; the service layer is responsible
  * for the row → shape mapping.
  *
  * The formatters are TOTAL: an empty input returns `(no rows)` /
  * `(no runs)` / `(no jobs)` placeholders rather than crashing. The
  * `formatJobShow` formatter always prints the full stored values
- * (SPEC §34.6) — no truncation, no width budget for the description
+ * — no truncation, no width budget for the description
  * + explanation.
  */
 
@@ -204,7 +203,7 @@ function jobListCell(state: JobListState, row: JobListRow, columnIndex: number):
 }
 
 /**
- * Render the `jobs list` table (SPEC §34.5). The output is the
+ * Render the `jobs list` table. The output is the
  * header line + one line per row, joined by `\n`. Empty input
  * returns the documented `(no jobs)` placeholder.
  */
@@ -227,9 +226,9 @@ export function formatJobListTable(
 }
 
 /**
- * Render the `jobs show` multi-line block (SPEC §34.6). The
+ * Render the `jobs show` multi-line block. The
  * formatter prints the FULL stored description + explanation
- * regardless of the terminal width — SPEC §34.6 "preserve full
+ * regardless of the terminal width —  "preserve full
  * stored values". The `terminalWidth` argument is accepted for
  * API symmetry with `formatJobListTable` (callers can pass
  * `process.stdout.columns ?? 120` to all formatters) but is not
@@ -323,7 +322,7 @@ export function formatJobShow(payload: JobShowPayload, terminalWidth: number): s
 }
 
 /**
- * Render the `runs list` table (SPEC §35.1). The columns are
+ * Render the `runs list` table. The columns are
  * fixed: `ID | Start | End | Status | Searches | Jobs | Scored | Errors`.
  * Adaptive width per column with the same priority + drop logic
  * as `formatJobListTable` (callers can pre-compute the column
@@ -411,7 +410,7 @@ export function formatRunListTable(rows: readonly RunListRow[], terminalWidth: n
 }
 
 /**
- * Render the `runs show` multi-line block (SPEC §35.2). The
+ * Render the `runs show` multi-line block. The
  * formatter prints the full configuration snapshot + diagnostic
  * paths (the latter truncated to the terminal width budget so a
  * very long path doesn't blow up the terminal).

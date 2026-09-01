@@ -23,11 +23,11 @@ import { createRepositories, type Repositories } from '../../src/persistence/rep
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 
 /**
- * TASK-010 Task 12 — end-to-end integration test.
+ *  — end-to-end integration test.
  *
  * Exercises the full configure → apply → reuse → swap → re-apply
  * workflow against a real temporary SQLite database. This is the
- * single integration test mandated by the TASK-010 brief.
+ * single integration test mandated by the  brief.
  *
  * Flow (mirrors the brief's 11 steps):
  *

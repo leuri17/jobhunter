@@ -1,6 +1,5 @@
 /**
- * Structured-logger facade for the reevaluation service (TASK-017
- * Wave C, SPEC §28.5 + §36).
+ * Structured-logger facade for the reevaluation service.
  *
  * Mirrors the `PipelineLogger` pattern from `src/pipeline/log.ts` +
  * the `ScoringLogger` pattern from `src/scoring/log.ts`. The pure

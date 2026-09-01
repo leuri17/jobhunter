@@ -23,7 +23,7 @@ describe('RESPONSE_SCHEMA_REGISTRY', () => {
     expect(entry).toBeDefined();
     expect(entry.version).toBe(SCORING_STRUCTURED_OUTPUT_SCHEMA_VERSION);
     expect(entry.schema['type']).toBe('object');
-    // The 7 categories from SPEC §26.2 must all be present on the
+    // The 7 categories from  must all be present on the
     // projected JSON Schema so OpenAI strict mode can validate them.
     const properties = entry.schema['properties'] as Record<string, unknown>;
     const categoryScores = properties['categoryScores'] as Record<string, unknown>;

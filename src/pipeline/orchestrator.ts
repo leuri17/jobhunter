@@ -56,7 +56,7 @@ export interface PipelineOrchestratorOptions {
   readonly now?: () => Date;
   readonly logger?: PipelineLogger;
   /**
-   * Optional pre-existing abort signal (SPEC §29.3). When supplied,
+   * Optional pre-existing abort signal. When supplied,
    * the orchestrator uses this signal INSTEAD OF creating a new
    * `AbortController` inside `run()`. The CLI passes its SIGINT-
    * driven signal here; tests pass `AbortSignal.abort()` to short-
@@ -263,7 +263,7 @@ export class PipelineOrchestrator {
   }
 
   /**
-   * Run one search (SPEC §22.9 + §22.10 + §27). Returns true on
+   * Run one search. Returns true on
    * success, false on a hard per-search failure (the orchestrator
    * continues with the next search).
    *
@@ -296,8 +296,6 @@ export class PipelineOrchestrator {
     const events = await this.repositories.jobs.findEventsByRun(runId);
     stats.jobsDiscovered += events.length;
 
-    // Open a fresh search page for the extraction batch. The
-    // orchestrator re-opens the page (TASK-013 §22.6).
     let page: Page | null = null;
     let extractionOutcome: ExtractionBatchOutcome | undefined;
     try {
@@ -332,11 +330,6 @@ export class PipelineOrchestrator {
       // Aggregate extraction totals.
       const t = extractionOutcome.totals;
       stats.newCompleteJobs += t.complete;
-      // The orchestrator surfaces existing-complete / existing-partial
-      // as the number of `skipped` outcomes whose source job was
-      // previously extracted. TASK-013's batch returns the per-job
-      // `kind: 'skipped'` for jobs that are already complete or
-      // partial (TASK-013 §22.9 + §22.10). Count those.
       for (const o of extractionOutcome.perJob) {
         if (o.kind === 'skipped') {
           // We don't know which bucket (complete vs partial) without
@@ -417,7 +410,7 @@ export class PipelineOrchestrator {
   }
 
   /**
-   * Build the scoring plan (SPEC §30).
+   * Build the scoring plan.
    *
    * Filters `perJobs` for `filterResult.outcome === 'accepted'` and
    * delegates to `ScoringService.buildScoringPlan` to aggregate the
@@ -452,12 +445,12 @@ export class PipelineOrchestrator {
   }
 
   /**
-   * Run the scoring batch (SPEC §25 + §29.2).
+   * Run the scoring batch.
    *
    * Loads the active approved profile, maps each accepted perJob to a
    * `ScoreOneInput`, and calls `scoringService.scoreBatch`. The
    * per-job fingerprint is provided by the scoring service itself
-   * (TASK-014); the orchestrator only assembles the inputs.
+   * the orchestrator only assembles the inputs.
    */
   private async runScoring(
     runId: number,

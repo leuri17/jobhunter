@@ -3,7 +3,7 @@ export { StackTraceCapture } from './stack-trace.js';
 export { CurrentUrlCapture } from './current-url.js';
 export { ScreenshotCapture } from './screenshot.js';
 // Backward-compatible re-export: the legacy `PlaywrightTraceCapture`
-// name (Wave A) is now an alias for the new `LinkedInPlaywrightTraceCapture`
+// name is now an alias for the new `LinkedInPlaywrightTraceCapture`
 // class. Tests + call sites that imported `PlaywrightTraceCapture`
 // from this barrel keep working unchanged.
 export { LinkedInPlaywrightTraceCapture as PlaywrightTraceCapture } from './playwright-trace.js';

@@ -1,5 +1,5 @@
 /**
- * Filter engine implementation version (SPEC §24.2, Decision 5).
+ * Filter engine implementation version.
  *
  * Bump on any change that alters filter outcomes (alias map, phrase patterns,
  * evaluation order, abstention semantics). Pure data-only changes do NOT

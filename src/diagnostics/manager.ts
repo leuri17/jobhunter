@@ -38,7 +38,7 @@ export interface DiagnosticInput {
   readonly currentUrl?: string;
   readonly timestamp?: string;
   /**
-   * Wave C extension: optional Playwright handles for the live
+   *  extension: optional Playwright handles for the live
    * capture strategies. The orchestrator passes the active page +
    * context; the manager forwards them to the capture context.
    * When both are absent, the new strategies throw

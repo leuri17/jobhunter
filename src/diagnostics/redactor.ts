@@ -10,6 +10,26 @@ const BUILTIN_PATTERNS: ReadonlyArray<{ name: string; match: RegExp; replace: st
     match: /(api[_-]?key|apikey|password|secret|token)[\s"':=]+(?!\s*\[REDACTED)[^\s"',}{]+/gi,
     replace: '[REDACTED:$1]',
   },
+  {
+    name: 'linkedin-cookie',
+    match: /\b(?:li_at|li_aq|JSESSIONID|csrfToken|_csrf)\s*[=:]\s*[A-Za-z0-9._-]+/g,
+    replace: '[REDACTED:cookie]',
+  },
+  {
+    name: 'email',
+    match: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
+    replace: '[REDACTED:email]',
+  },
+  {
+    name: 'set-cookie',
+    match: /Set-Cookie:\s*[^\r\n]+/gi,
+    replace: 'Set-Cookie: [REDACTED]',
+  },
+  {
+    name: 'openai-key',
+    match: /\bsk-[A-Za-z0-9]{20,}\b/g,
+    replace: '[REDACTED:openai-key]',
+  },
 ];
 
 const SENSITIVE_KEYS = /^(api_?key|apikey|password|secret|token|access_?token|authorization|cookie)$/i;

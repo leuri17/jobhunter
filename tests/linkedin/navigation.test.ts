@@ -56,7 +56,7 @@ function makeNavPage(
   return { page, gotoCalls };
 }
 
-describe('navigateWithTimeout (Wave D)', () => {
+describe('navigateWithTimeout', () => {
   it('returns ok: true with the response status on a successful navigation', async () => {
     const { page, gotoCalls } = makeNavPage({
       finalUrl: 'https://www.linkedin.com/jobs/search/?q=engineer',

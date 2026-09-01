@@ -2,9 +2,9 @@ import { MissingBrowserImplementationError } from '../errors.js';
 import type { CaptureContext, CaptureResult, CaptureStrategy } from './types.js';
 
 /**
- * Playwright-backed screenshot capture (TASK-012 Plan Task 8, SPEC §39).
+ * Playwright-backed screenshot capture.
  *
- * Replaces the Wave A stub (`capture/screenshot.ts:11` placeholder).
+ * Replaces the  stub (`capture/screenshot.ts:11` placeholder).
  * Reads the live `Page` from `CaptureContext.page` (populated by
  * `DiagnosticManager.recordScraperError` from `DiagnosticInput.page`).
  * When the page is absent — e.g. when the capture strategy is invoked
@@ -12,7 +12,7 @@ import type { CaptureContext, CaptureResult, CaptureStrategy } from './types.js'
  * `MissingBrowserImplementationError` so the manager's try/catch
  * records a `capture_failed` failure rather than crashing.
  *
- * Wave C deviation from the plan's `Deps` closure pattern: the brief
+ *  deviation from the plan's `Deps` closure pattern: the brief
  * asked for the page to flow through `CaptureContext` rather than a
  * constructor-injected `getPage()` closure. This keeps the strategy
  * stateless + easier to test in isolation.

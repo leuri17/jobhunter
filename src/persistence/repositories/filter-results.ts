@@ -71,9 +71,6 @@ export class FilterResultRepository {
 
   async activateResult(input: Omit<FilterResultInsert, 'active'>): Promise<number> {
     return this.ctx.db.transaction((tx) => {
-      // SPEC §23.5: deactivate the previous active row for this job, then insert
-      // the new active row. The partial unique index `filter_results_active_idx`
-      // guarantees at most one active row per job.
       tx.update(filterResults)
         .set({ active: false })
         .where(and(eq(filterResults.jobId, input.jobId), eq(filterResults.active, true)))
@@ -151,7 +148,7 @@ export class FilterResultRepository {
   /**
    * Mark every active `filter_results` row tied to the supplied profile
    * version as inactive. Used by `ProfileApprovalService` after a profile
-   * is approved (SPEC §16.3 step 9): filter outcomes computed against the
+   * is approved ( step 9): filter outcomes computed against the
    * prior profile become stale and must not be used as the current result.
    *
    * Idempotent — re-running with no active rows returns 0. The method
@@ -159,7 +156,7 @@ export class FilterResultRepository {
    * the invalidation number in its audit output.
    *
    * Score-result invalidation lives behind a separate path: `score_results`
-   * does not currently carry a `profile_version_id` column (TASK-014 will
+   * does not currently carry a `profile_version_id` column ( will
    * resolve that with its own migration). For now only filter outcomes are
    * invalidated.
    */
@@ -185,17 +182,17 @@ export class FilterResultRepository {
 
   /**
    * Mark every active `filter_results` row tied to the supplied filter
-   * configuration version as inactive (Decision 8, SPEC §27.1).
+   * configuration version as inactive.
    *
    * The composition analogue of `invalidateByProfileVersion`: when the
-   * active global filter configuration changes (SPEC §16.3 step 9 analog),
+   * active global filter configuration changes ( step 9 analog),
    * filter outcomes computed against the prior configuration become
    * stale and must not be reused as the current result. The invalidation
    * also fires whenever any fingerprint input changes (config content
    * hash, profile slice, filter implementation version) — the call site
    * decides when to run this; the repository only owns the flip.
    *
-   * History is preserved per SPEC §27.4 ("kept but inactive"): rows are
+   * History is preserved per  ("kept but inactive"): rows are
    * flipped to `active = false` rather than deleted, so the audit trail
    * remains queryable via `listByJob` / `listByRun`.
    *

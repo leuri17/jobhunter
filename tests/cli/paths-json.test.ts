@@ -7,14 +7,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createProgram } from '../../src/cli.js';
 
 /**
- * TASK-016 Wave D Task 15 — CLI wiring tests for `paths --json`.
+ *  — CLI wiring tests for `paths --json`.
  *
  * The `paths` command doesn't touch the database — it only reads
  * the OS-specific platform paths via `resolvePlatformPaths`. So
  * no DB-boot pattern is needed here. Just stub HOME + capture
  * stdout.
  */
-describe('CLI: jobhunter paths --json (TASK-016 Wave D Task 15, SPEC §36)', () => {
+describe('CLI: jobhunter paths --json', () => {
   let tempHome: string;
   let originalHome: string | undefined;
   let stdout: string[] = [];
@@ -97,7 +97,7 @@ describe('CLI: jobhunter paths --json (TASK-016 Wave D Task 15, SPEC §36)', () 
     const result = await runCli(['paths', '--json']);
     expect(result.status).toBe(0);
     // JSON.parse is permissive but will throw on any leading/trailing
-    // garbage. The CLI uses `JSON.stringify(payload, null, 2)\n` —
+    // garbage. The CLI uses `JSON.stringify(payload, null, 2)\n`
     // confirm the trailing newline doesn't break parsing.
     expect(() => JSON.parse(result.stdout)).not.toThrow();
   });

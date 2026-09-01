@@ -5,7 +5,7 @@
  * The service glues together:
  *   - source loading (`repositories.profileSources.findById`)
  *   - stored-text recovery (file system + extractor + normalizer)
- *   - extraction fingerprint calculation (SPEC §14.5)
+ *   - extraction fingerprint calculation
  *   - draft reuse detection (`repositories.profileVersions.findByExtractionFingerprint`)
  *   - OpenAI structured-output extraction via `runWithRetry`
  *   - Zod validation against the known `sourceId` set
@@ -141,7 +141,7 @@ const RESPONSE_SCHEMA_NAME = 'ExtractedProfile';
  * Default upper bound on the total UTF-8 size of all source `extractedText`
  * values that one extraction request is allowed to carry. We fail loud
  * (`ProfileExtractionInputTooLargeError`) above this rather than silently
- * truncate the input, in line with SPEC §25.8's posture applied to the
+ * truncate the input, in line with 's posture applied to the
  * extraction surface.
  *
  * 1,000,000 bytes ≈ 250k tokens for English-heavy UTF-8 inputs. Tunable
@@ -228,7 +228,7 @@ export class ProfileExtractionService {
       rows.push(row);
     }
 
-    // 2. Compute the extraction fingerprint (SPEC §14.5). Sources are sorted
+    // 2. Compute the extraction fingerprint. Sources are sorted
     //    by sha256 inside `calculateExtractionFingerprint`, so order on the
     //    CLI does not affect the digest.
     const fingerprint = calculateExtractionFingerprint({
@@ -319,7 +319,7 @@ export class ProfileExtractionService {
       ],
     };
 
-    // 6-7. Call OpenAI with the SPEC §25.3 retry policy. Parse and Zod-validate
+    // 6-7. Call OpenAI with the  retry policy. Parse and Zod-validate
     //      the response INSIDE the operation closure so a corrective retry
     //      (single permitted retry on `OpenAIInvalidOutputError`) can rerun
     //      the parse with a fresh response.
@@ -339,7 +339,7 @@ export class ProfileExtractionService {
       attempts: readonly { readonly attemptNumber: number; readonly succeeded: boolean }[];
     };
     try {
-      // 6. Reject oversized inputs BEFORE any OpenAI call (SPEC §25.8).
+      // 6. Reject oversized inputs BEFORE any OpenAI call.
       //    We fail loud rather than silently truncate.
       const totalRequestByteSize = totalRequestBytes(request.sources);
       if (totalRequestByteSize > this.inputByteLimit) {
@@ -349,7 +349,7 @@ export class ProfileExtractionService {
         });
       }
 
-      // 7. Call OpenAI with the SPEC §25.3 retry policy. Parse and Zod-validate
+      // 7. Call OpenAI with the  retry policy. Parse and Zod-validate
       //    the response INSIDE the operation closure so a corrective retry
       //    (single permitted retry on `OpenAIInvalidOutputError`) can rerun
       //    the parse with a fresh response.

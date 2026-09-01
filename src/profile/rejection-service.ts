@@ -1,8 +1,8 @@
 /**
- * ProfileRejectionService — application service for TASK-009 / SPEC §16.4.
+ * ProfileRejectionService — application service for  / .
  *
  * Rejection marks a draft `rejected` and leaves the previously approved
- * profile active. No dependent results are invalidated (per SPEC §16.4:
+ * profile active. No dependent results are invalidated (per :
  * "Avoid invalidating existing results").
  *
  * Allowed input states:

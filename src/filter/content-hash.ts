@@ -3,8 +3,7 @@ import { createHash } from 'node:crypto';
 import { type JobFilterConfig, normalizeJobFilterConfig } from './schema.js';
 
 /**
- * Pure deterministic hash helpers used by the filter engine (TASK-010,
- * SPEC §17–§24).
+ * Pure deterministic hash helpers used by the filter engine.
  *
  * Two helpers are exported:
  *
@@ -24,7 +23,7 @@ import { type JobFilterConfig, normalizeJobFilterConfig } from './schema.js';
  *
  * The normalization helper `normalizeForHashing` is exported because Task 3
  * (the keyword matcher) reuses it for the same canonical normalization the
- * hash applies. Normalization order (per SPEC §18, applied to the hash input):
+ * hash applies. Normalization order (per , applied to the hash input):
  *
  *   1. Unicode NFKC (`String.prototype.normalize('NFKC')`)
  *   2. Lowercase

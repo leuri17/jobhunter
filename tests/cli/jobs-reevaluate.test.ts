@@ -30,8 +30,7 @@ import { loadScoringFixture } from '../scoring/fixtures/loadFixture.js';
 import { ScriptedPipelinePrompts } from '../../src/pipeline/prompts.js';
 
 /**
- * CLI smoke tests for `jobhunter jobs reevaluate` (TASK-017 Wave D
- * Task 8 + Task 11 cases). Mirrors the stub pattern from
+ * CLI smoke tests for `jobhunter jobs reevaluate` ( + Task 11 cases). Mirrors the stub pattern from
  * `tests/cli/jobs-list.test.ts` — boot the CLI once to create the
  * SQLite file + schema, then connect to the same file + seed
  * fixtures, then run the CLI again to capture stdout/stderr.
@@ -51,7 +50,7 @@ import { ScriptedPipelinePrompts } from '../../src/pipeline/prompts.js';
  *   6. `jobs reevaluate` (human-readable) → stdout contains
  *      `Scope: default`, `Filters to reevaluate: <n>`, `Jobs to score: <n>`.
  */
-describe('CLI: jobhunter jobs reevaluate (TASK-017 Wave D Task 8 + Task 11, SPEC §28 + §36)', () => {
+describe('CLI: jobhunter jobs reevaluate ( + Task 11, )', () => {
   let tempHome: string;
   let originalHome: string | undefined;
   let stdout: string[] = [];
@@ -264,7 +263,7 @@ describe('CLI: jobhunter jobs reevaluate (TASK-017 Wave D Task 8 + Task 11, SPEC
     // For `--json` runs, the reevaluation service's Pino logger
     // interleaves single-line JSON log lines with the multi-line
     // pretty-printed payload on stdout. Locate the payload by
-    // finding the line that starts with `{` AND ends with `}` —
+    // finding the line that starts with `{` AND ends with `}`
     // every pino log is one line, the payload is multi-line. For
     // human-readable runs pass through the full stdout (the test
     // asserts on specific section labels).
@@ -285,7 +284,7 @@ describe('CLI: jobhunter jobs reevaluate (TASK-017 Wave D Task 8 + Task 11, SPEC
   }
 
   // -------------------------------------------------------------------
-  // Command registration (SPEC §31).
+  // Command registration.
   // -------------------------------------------------------------------
   describe('command registration', () => {
     it('registers the `jobs reevaluate` subcommand under `jobs`', () => {

@@ -36,7 +36,7 @@ describe('FILTER_SCHEMA_VERSION', () => {
 });
 
 describe('JobFilterConfigSchema', () => {
-  it('parses a representative valid configuration (SPEC §17.2)', () => {
+  it('parses a representative valid configuration', () => {
     const config: JobFilterConfig = {
       schemaVersion: 1,
       excludedCompanies: ['Acme Corp', 'Initech'],

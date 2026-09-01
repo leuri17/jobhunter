@@ -1,6 +1,5 @@
 /**
- * In-memory `BrowserSession` for unit tests (TASK-012 Plan Task 7,
- * Decision 2).
+ * In-memory `BrowserSession` for unit tests.
  *
  * `FakeBrowserSession` does NOT import Playwright. It implements the
  * `BrowserSession` interface using a `Map<FakePage, PageMeta>` to
@@ -10,7 +9,7 @@
  *
  * The fake is intentionally minimal: it does NOT simulate
  * `context.route()` (use the real-Playwright helper in
- * `tests/linkedin/helpers/playwright-route-session.ts` — Wave E — for
+ * `tests/linkedin/helpers/playwright-route-session.ts` —  — for
  * HTTP-shape fidelity tests). It DOES enforce the
  * `BrowserCapacityExceededError` contract for the fallback page,
  * since that's a load-bearing invariant.

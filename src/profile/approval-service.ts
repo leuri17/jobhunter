@@ -1,8 +1,8 @@
 /**
- * ProfileApprovalService — application service for TASK-009 / SPEC §16.3.
+ * ProfileApprovalService — application service for  / .
  *
  * Approval is the explicit lifecycle gate that turns a draft into the
- * single active approved profile. The service implements the SPEC §16.3
+ * single active approved profile. The service implements the
  * step list:
  *
  *   1. Validate the profile again (Zod parse of the stored JSON).
@@ -13,13 +13,13 @@
  *   4. Mark the draft `approved`, set it active, supersede the prior
  *      active profile, recalculate the final content hash.
  *   5. Invalidate dependent `filter_results` rows tied to the prior
- *      approved profile (SPEC §16.3 step 9). Score-result invalidation is
- *      deferred to TASK-014 because the table lacks a `profile_version_id`
+ *      approved profile ( step 9). Score-result invalidation is
+ *      deferred to  because the table lacks a `profile_version_id`
  *      column.
  *
  * `profileVersions.approve` already flips the prior active row to
  * `superseded` and promotes the new row to active inside one transaction
- * (TASK-004). We layer the content-hash update + filter invalidation on
+ * We layer the content-hash update + filter invalidation on
  * top, sequenced so the approval stays atomic and reversible.
  */
 
@@ -94,9 +94,6 @@ export class ProfileApprovalService {
       );
     }
 
-    // 2. Refuse if any blocking conflict remains (unresolved conflict row OR
-    //    a `blocking_conflict` warning row). Per SPEC §16.5 both surfaces
-    //    must be clear before approval proceeds.
     const conflicts = await this.repositories.profileVersions.listConflicts(profileVersionId);
     const warnings = await this.repositories.profileVersions.listWarnings(profileVersionId);
     const unresolvedConflicts = conflicts.filter((c) => c.resolutionStatus === 'unresolved');

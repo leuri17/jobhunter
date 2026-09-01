@@ -1,7 +1,7 @@
 /**
- * Public barrel for `src/linkedin/extraction/` (TASK-013 Plan Task 14).
+ * Public barrel for `src/linkedin/extraction/`.
  *
- * Re-exports the public surface that the orchestrator (TASK-015)
+ * Re-exports the public surface that the orchestrator
  * consumes. Test helpers stay internal.
  */
 export { LinkedInExtractionService } from './service.js';

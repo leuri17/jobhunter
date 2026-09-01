@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Domain-boundary guard for `src/linkedin/` (TASK-012 Plan Task 11).
+ * Domain-boundary guard for `src/linkedin/`.
  *
  * AGENTS.md §5 / §9: domain code must not depend on Commander, Inquirer,
  * Drizzle, OpenAI, or runtime Pino. The Playwright allow-list covers
@@ -15,20 +15,20 @@ import { describe, expect, it } from 'vitest';
  * puts them under `src/linkedin/` but the boundaries test verifies
  * they import no Playwright anywhere).
  *
- * File structure after Wave B:
+ * File structure after :
  *   - `src/linkedin/state.ts`              (pure types)
  *   - `src/linkedin/errors.ts`             (typed error family)
  *   - `src/linkedin/selectors.ts`          (selector constants)
  *   - `src/linkedin/card-id.ts`            (pure parser, linkedom-typed)
- *   - `src/linkedin/overlay.ts`            (Playwright TYPES only — Wave A)
- *   - `src/linkedin/load-more.ts`          (Playwright TYPES only — Wave A)
+ *   - `src/linkedin/overlay.ts`            (Playwright TYPES only — )
+ *   - `src/linkedin/load-more.ts`          (Playwright TYPES only — )
  *   - `src/linkedin/log.ts`                (Logger TYPE-only — no runtime Pino)
- *   - `src/linkedin/browser-session.ts`    (Playwright TYPES only — Wave B)
+ *   - `src/linkedin/browser-session.ts`    (Playwright TYPES only — )
  *   - `src/linkedin/playwright-session.ts` (Playwright RUNTIME — sole importer)
  *   - `src/linkedin/fake-session.ts`       (no Playwright import — test helper)
  *   - `src/linkedin/fake-page.ts`          (no Playwright import — test helper)
  *
- * Wave C will add `discovery-service.ts`; Wave D finalises the allow-list.
+ *  will add `discovery-service.ts`;  finalises the allow-list.
  */
 
 const LINKEDIN_DIR = join(process.cwd(), 'src', 'linkedin');
@@ -39,11 +39,11 @@ const BANNED_IMPORTS = [
   'drizzle-orm',
   'openai',
   'pino',
-  // 'playwright' is ALLOWED only for files in PLAYWRIGHT_ALLOW_LIST (Wave B: 4 entries).
+  // 'playwright' is ALLOWED only for files in PLAYWRIGHT_ALLOW_LIST (: 4 entries).
 ] as const;
 
 /**
- * Wave D carve-out: `extraction/service.ts` is the ONLY file under
+ *  carve-out: `extraction/service.ts` is the ONLY file under
  * `src/linkedin/extraction/` that may import `drizzle-orm`. The
  * orchestrator wraps 3 per-job writes (extractionAttempts insert +
  * jobs update + discoveryEvents patch) in a single sync
@@ -53,13 +53,13 @@ const BANNED_IMPORTS = [
  * (`state.ts` / `errors.ts` / `normalize.ts` / `required-fields.ts`
  * / `status.ts` / `detail-url.ts` / `log.ts`) and the parsers
  * (`panel-parser.ts` / `dedicated-parser.ts`) MUST remain
- * Drizzle-free. Wave E's `tests/extraction/boundaries.test.ts` is
+ * Drizzle-free. 's `tests/extraction/boundaries.test.ts` is
  * the granular mirror of this carve-out.
  */
 const DRIZZLE_ORM_ALLOW_LIST: ReadonlySet<string> = new Set(['src/linkedin/extraction/service.ts']);
 
 /**
- * Wave B allow-list. The boundary test asserts this set contains
+ *  allow-list. The boundary test asserts this set contains
  * EXACTLY these entries, locking the file structure against accidental
  * additions without a corresponding test update.
  *
@@ -149,13 +149,13 @@ function relativeFromCwd(absolute: string): string {
   return absolute;
 }
 
-describe('src/linkedin domain-boundary guard (Wave B)', () => {
-  it('exists as a directory with at least the 26 modules after Wave E', () => {
+describe('src/linkedin domain-boundary guard', () => {
+  it('exists as a directory with at least the 26 modules after ', () => {
     const files = listLinkedinSourceFiles(LINKEDIN_DIR);
-    // Final TASK-013 state: 15 TASK-012 files (state, errors, selectors,
+    // Final  state: 15  files (state, errors, selectors,
     // card-id, overlay, load-more, log, browser-session,
     // playwright-session, fake-session, fake-page, navigation,
-    // truncate-metadata, discovery-service, index) + 11 TASK-013
+    // truncate-metadata, discovery-service, index) + 11
     // extraction files (state, errors, normalize, required-fields,
     // status, detail-url, log, panel-parser, dedicated-parser,
     // service, index) = 26 files.
@@ -169,11 +169,11 @@ describe('src/linkedin domain-boundary guard (Wave B)', () => {
       const rel = relativeFromCwd(absolute);
       const source = readFileSync(absolute, 'utf8');
       for (const banned of BANNED_IMPORTS) {
-        // Wave D carve-out: `drizzle-orm` is allowed inside
+        //  carve-out: `drizzle-orm` is allowed inside
         // `src/linkedin/extraction/service.ts` (per Task 13 sketch
         // — the orchestrator wraps 3 per-job writes in a single
         // sync `db.transaction` and the schema-table references
-        // require the import). Wave E's
+        // require the import). 's
         // `tests/extraction/boundaries.test.ts` is the granular
         // mirror of this carve-out.
         if (banned === 'drizzle-orm' && DRIZZLE_ORM_ALLOW_LIST.has(rel)) {
@@ -184,7 +184,7 @@ describe('src/linkedin domain-boundary guard (Wave B)', () => {
     }
   });
 
-  it('encodes the Wave D Playwright allow-list (6 entries)', () => {
+  it('encodes the  Playwright allow-list (6 entries)', () => {
     expect(PLAYWRIGHT_ALLOW_LIST.has('src/linkedin/overlay.ts')).toBe(true);
     expect(PLAYWRIGHT_ALLOW_LIST.has('src/linkedin/load-more.ts')).toBe(true);
     expect(PLAYWRIGHT_ALLOW_LIST.has('src/linkedin/browser-session.ts')).toBe(true);
@@ -232,7 +232,7 @@ describe('src/linkedin domain-boundary guard (Wave B)', () => {
       const source = readFileSync(absolute, 'utf8');
       expect(
         RUNTIME_PLAYWRIGHT_IMPORT_RE.test(source),
-        `${rel} must not have a runtime playwright import (it is not in the Wave B allow-list)`,
+        `${rel} must not have a runtime playwright import (it is not in the  allow-list)`,
       ).toBe(false);
     }
   });

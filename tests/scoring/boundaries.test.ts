@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Domain-boundary guard for `src/scoring/` (TASK-014, Wave E Task 13).
+ * Domain-boundary guard for `src/scoring/` (,  Task 13).
  *
  * Granular mirror of `tests/extraction/boundaries.test.ts`. AGENTS.md
  * §5 / §9: domain code must not depend on Commander, Inquirer,
@@ -13,12 +13,12 @@ import { describe, expect, it } from 'vitest';
  * — the cross-module dependency is the seam for the pure transport
  * + registry design from Task 0).
  *
- * Per AGENTS.md §5 + the TASK-014 plan rev1 §26:
- *   - The scoring service uses `this.repositories.transact(...)` —
+ * Per AGENTS.md §5 + the  plan rev1 §26:
+ *   - The scoring service uses `this.repositories.transact(...)`
  *     it goes through the repository facade and does NOT import
  *     `drizzle-orm` directly. NO `DRIZZLE_ORM_ALLOW_LIST` carve-out.
  *   - The `openai` runtime import stays in `src/profile/openai/client.ts`
- *     (TASK-008). `src/scoring/` MUST NOT import the `openai` package
+ * `src/scoring/` MUST NOT import the `openai` package
  *     directly. Cross-module imports from `../profile/openai/` ARE
  *     allowed (the regex below correctly distinguishes `'openai'`
  *     from `'../profile/openai/client.js'`).
@@ -39,9 +39,9 @@ import { describe, expect, it } from 'vitest';
  *   - `src/scoring/plan.ts`                (ScoringPlan builder)
  *   - `src/scoring/log.ts`                 (Logger TYPE-only)
  *   - `src/scoring/index.ts`               (public barrel)
- *   - `src/scoring/prompt.ts`              (buildScoringPrompt, Wave D)
- *   - `src/scoring/eligibility.ts`         (isJobEligibleForScoring, Wave D)
- *   - `src/scoring/service.ts`             (ScoringService orchestrator, Wave D)
+ *   - `src/scoring/prompt.ts`              (buildScoringPrompt, )
+ *   - `src/scoring/eligibility.ts`         (isJobEligibleForScoring, )
+ *   - `src/scoring/service.ts`             (ScoringService orchestrator, )
  */
 const SCORING_DIR = join(process.cwd(), 'src', 'scoring');
 
@@ -109,10 +109,10 @@ function relativeFromCwd(absolute: string): string {
   return absolute;
 }
 
-describe('src/scoring domain-boundary guard (Wave E Task 13)', () => {
+describe('src/scoring domain-boundary guard (Task 13)', () => {
   it('exists as a directory with the expected scoring files', () => {
     const files = listScoringSourceFiles(SCORING_DIR);
-    // Task 0 (types + schema) + Wave A (8 files) + Wave E (index) + Wave D (3 files) = 14
+    // Task 0 (types + schema) +  (8 files) +  (index) +  (3 files) = 14
     expect(files.length).toBeGreaterThanOrEqual(11);
   });
 

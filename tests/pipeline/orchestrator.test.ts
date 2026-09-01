@@ -12,7 +12,7 @@ import { insertActiveFilter, insertApprovedProfile } from './helpers/fixtures.js
 import { fakePageWithCard } from './helpers/fake-page-with-card.js';
 
 /**
- * Integration tests for `PipelineOrchestrator` (TASK-015 Wave D Task 17).
+ * Integration tests for `PipelineOrchestrator`.
  *
  * The harness (`tests/helpers/run-harness.ts`) wires a `FakeBrowserSession`
  * + a `FakeOpenAIClient` + an in-memory SQLite DB so every test is hermetic
@@ -182,7 +182,7 @@ describe('PipelineOrchestrator', () => {
     }
   });
 
-  // T8: signal aborted mid-run → status 'cancelled' (SPEC §29.3).
+  // T8: signal aborted mid-run → status 'cancelled'.
   it('T8: signal aborted mid-run → status cancelled', async () => {
     const oneSearchConfig = {
       ...DEFAULT_OPERATIONAL_CONFIG,
@@ -214,13 +214,13 @@ describe('PipelineOrchestrator', () => {
     }
   });
 
-  // T9: scoring hard-stop → status 'completed_with_errors'. SKIPPED —
+  // T9: scoring hard-stop → status 'completed_with_errors'. SKIPPED
   // requires the scoring batch to actually fire (at least one
   // accepted job), which in turn requires the extraction panel parser
   // to mark a job as 'complete'. The fakePageWithCard helper stubs
   // the panel-parser surface, but the parser's waitFor + href-match
   // logic still needs a working DOM mock that returns a complete
-  // field set (title/company/location/description). Wave E can wire
+  // field set (title/company/location/description).  can wire
   // a richer fake-page fixture (e.g. with a title anchor and a
   // description container) to enable this test.
   it.skip('T9: scoring hard-stop → status completed_with_errors', async () => undefined);

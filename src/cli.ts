@@ -69,7 +69,7 @@ import type { ProfileApprovalPrompts } from './profile/approval-service.js';
 import type { ProfileRejectionPrompts } from './profile/rejection-service.js';
 import { resolveOpenAiClientOrNull } from './init/openai-resolve.js';
 import { formatInitSummary } from './init/format.js';
-import { pinoInitLogger } from './init/log.js';
+import { noopInitLogger } from './init/log.js';
 import { createLogger } from './logging/logger.js';
 import {
   PipelineOrchestrator,
@@ -163,10 +163,9 @@ const rootLogger = createLogger(
     })(),
     prettyTerminal: false,
   },
-  // SPEC §40 reliability: keep JSON stdout valid and isolated from logs.
-  // The root logger routes to stderr so stdout is reserved for output
-  // (data + --json documents). Unix convention: stdout = data,
-  // stderr = diagnostics.
+  // Keep JSON stdout valid and isolated from logs. The root logger
+  // routes to stderr so stdout is reserved for output (data + --json
+  // documents). Unix convention: stdout = data, stderr = diagnostics.
   {
     stdout: process.stderr,
   },
@@ -184,8 +183,20 @@ function isCommanderError(error: unknown): error is { code: string; message: str
 
 function exitWithError(error: unknown): never {
   if (isCommanderError(error)) {
+    if (
+      error.code === 'commander.helpDisplayed' ||
+      error.code === 'commander.help' ||
+      error.code === 'commander.version'
+    ) {
+      process.exit(0);
+    }
     process.stderr.write(`${error.message}\n`);
     process.exit(2);
+  }
+  if (error instanceof Error) {
+    if (error.name === 'ExitPromptError' || /SIGINT/.test(error.message)) {
+      process.exit(130);
+    }
   }
   if (error instanceof ApplicationError) {
     process.stderr.write(`${error.code}: ${error.message}\n`);
@@ -198,7 +209,7 @@ function exitWithError(error: unknown): never {
 
 /**
  * Path-slot key order is part of the documented JSON contract
- * (SPEC §36 — `paths --json` emits exactly these 6 keys). The human-
+ * The 6 keys emitted by `paths --json`. The human-
  * readable output maps each key to a slightly nicer label (e.g.
  * `profileSources` → `profile-sources`) so the existing UX is
  * preserved when `--json` is absent.
@@ -485,7 +496,7 @@ async function profileExtractCommand(
     // 5. Render the result. Failures are surfaced as typed errors so the
     //    action handler's `exitWithError` writes `<code>: <message>` to
     //    stderr and exits with the documented exit code (5 for the
-    //    OpenAI failure family per SPEC §25). For `--json` we emit the
+    //    OpenAI failures map to exit code 5. For `--json` we emit the
     //    structured failure document to stdout FIRST so the JSON stream
     //    is a single valid document, then throw the typed error so the
     //    CLI exits with code 5.
@@ -690,7 +701,7 @@ async function runCommand(
     migrationsFolder: resolveRepoRootForMigrations(),
   });
 
-  // OpenAI key gate (Decision 11). The CLI validates the env
+  // OpenAI key gate. The CLI validates the env
   // variable here (mirrors the `profile extract` pre-validation),
   // BEFORE the orchestrator's prerequisite check runs.
   const apiKey = process.env['OPENAI_API_KEY'];
@@ -702,7 +713,7 @@ async function runCommand(
     );
   }
 
-  // SIGINT handling (Decision 5 + SPEC §40): the first SIGINT
+  // SIGINT handling: the first SIGINT
   // triggers graceful cancellation; the second SIGINT force-exits.
   // The listener is removed in the finally block to keep the
   // process state clean for any subsequent invocations.
@@ -715,7 +726,7 @@ async function runCommand(
       controller.abort();
     } else {
       process.stderr.write('force exit (second SIGINT)\n');
-      process.exit(1);
+      process.exit(130);
     }
   };
   process.once('SIGINT', onSigInt);
@@ -787,10 +798,13 @@ async function runCommand(
       logger: pinoPipelineLogger(rootLogger),
       // Forward the SIGINT-driven signal so the orchestrator can
       // detect cancellation between every search / job / score
-      // step (SPEC §29.3 + §40).
+      // step.
       cancelSignal: controller.signal,
     });
     const result: PipelineRunResult = await orchestrator.run({});
+    if (result.summary.status === 'cancelled') {
+      process.exit(130);
+    }
     if (jsonOutput) {
       const payload = {
         ...result.summary,
@@ -812,10 +826,10 @@ async function runCommand(
 }
 
 // ---------------------------------------------------------------------------
-// TASK-016 — Inspection command handlers (`jobs list`, `jobs show`,
+// Inspection command handlers (`jobs list`, `jobs show`,
 // `runs list`, `runs show`). The handlers own:
-//   - the `--json` flag (Decision 10 + 11),
-//   - the state-flag mutex + default (`--scored` per Decision 4),
+//   - the `--json` flag,
+//   - the state-flag mutex + default (`--scored` when none supplied),
 //   - the terminal-width budget for the human-readable tables
 //     (mirrors `formatTopNTable` at src/pipeline/format.ts:60),
 //   - the typed-error → exit-code mapping via the existing
@@ -863,9 +877,6 @@ const JOB_LIST_STATE_FLAGS: ReadonlyArray<{
 ];
 
 async function jobsListCommand(options: JobsListCommandOptions): Promise<void> {
-  // 1. State-flag mutex + default. Exactly one of the documented
-  //    `--<state>` flags may be supplied (Decision 5). When none is
-  //    supplied, the default is `scored` per Decision 4.
   const setFlags = JOB_LIST_STATE_FLAGS.filter((f) => options[f.key] === true);
   if (setFlags.length > 1) {
     throw new InspectionValidationError(
@@ -975,8 +986,7 @@ async function jobsShowCommand(
 }
 
 // ---------------------------------------------------------------------------
-// TASK-017 — `jobs reevaluate` CLI handler. SPEC §28 + §30 + §36 + §37.
-// The handler owns:
+// `jobs reevaluate` CLI handler. The handler owns:
 //   - the documented flag mutex (`--filters-only` XOR `--scores-only`),
 //   - the `--job <id>` identifier resolution + partial-job rejection,
 //   - service composition (FilterApplyService + ScoringService +
@@ -987,7 +997,7 @@ async function jobsShowCommand(
 // The handler does NOT call `process.exit` directly — that lives
 // in `exitWithError` only. All typed errors are surfaced via
 // `exitWithError` for the documented exit-code mapping (no new
-// exit codes per Decision 15).
+// exit codes introduced).
 // ---------------------------------------------------------------------------
 
 interface JobsReevaluateCommandOptions {
@@ -1002,7 +1012,7 @@ interface JobsReevaluateCommandOptions {
 /**
  * Resolve the CLI-supplied `--job` argument into a row id. Throws
  * `ReevaluationValidationError` for the documented invalid-input
- * cases (Decision 7). The `InvalidIdentifierError` thrown by
+ * cases. The `InvalidIdentifierError` thrown by
  * `resolveJobIdentifier` for malformed input bubbles up to
  * `exitWithError` (which already maps it to exit code 2 per the
  * `InvalidIdentifierError` class convention).
@@ -1035,7 +1045,6 @@ async function jobsReevaluateLookupJob(
     );
   }
 
-  // Step 3: enforce complete extraction (Decision 7).
   if (row.extractionStatus !== 'complete') {
     throw new ReevaluationValidationError(
       'job_not_complete',
@@ -1051,10 +1060,9 @@ async function jobsReevaluateCommand(
   testHooks: { openaiClient?: OpenAIClient } = {},
   pipelinePrompts: PipelinePrompts = new InquirerPipelinePrompts(),
 ): Promise<void> {
-  // (a) Flag validation — `--filters-only` XOR `--scores-only`
-  // (Decision 9). The `--job` flag may combine with either filter
-  // or score scope, or with `--dry-run` — but never both filter and
-  // score scopes together.
+  // (a) Flag validation — `--filters-only` XOR `--scores-only`.
+  // The `--job` flag may combine with either filter or score scope,
+  // or with `--dry-run` — but never both filter and score scopes together.
   if (options.filtersOnly && options.scoresOnly) {
     throw new ReevaluationValidationError(
       'reevaluate_scope_conflict',
@@ -1070,8 +1078,8 @@ async function jobsReevaluateCommand(
         ? 'job'
         : 'default';
 
-  // (b) Identifier resolution (Decision 7). The throw surfaces as
-  // a typed error → `exitWithError` maps to exit code 2.
+  // (b) Identifier resolution. The throw surfaces as a typed
+  // error → `exitWithError` maps to exit code 2.
   let jobInternalId: number | null = null;
   if (options.job !== undefined) {
     // The database handle is needed for the lookup; open it here
@@ -1102,8 +1110,8 @@ async function jobsReevaluateCommand(
     // + the scoring confirmation prompt. The MVP scoring config
     // (model + reasoning effort) is hard-coded inside
     // `ReevaluationService` to keep the fingerprint byte-for-byte
-    // compatible with the pipeline scorer (see TASK-017 plan
-    // Known Limitations). Tests inject a fake OpenAI client via
+    // compatible with the pipeline scorer (the reevaluation plan
+    // documents any divergences). Tests inject a fake OpenAI client via
     // `testHooks.openaiClient`; production code reads the API key
     // from the environment via `createDefaultOpenAIClient`.
     const openaiClient: OpenAIClient =
@@ -1238,9 +1246,8 @@ export function createProgram(
   } = {},
 ): Command {
   // OpenAI client for the `profile extract` + `jobs reevaluate`
-  // subcommands (Decision 4 + Decision 10). Tests inject a fake via
-  // `options.openaiClient`; production code reads the API key from the
-  // environment.
+  // subcommands. Tests inject a fake via `options.openaiClient`;
+  // production code reads the API key from the environment.
   const reevaluationOpenaiClient: OpenAIClient | undefined = options.openaiClient;
   const prompts: SearchPrompts = options.prompts ?? defaultInquirerPrompts;
   const filterPrompts: FilterPrompts | undefined = options.filterPrompts;
@@ -1397,7 +1404,6 @@ export function createProgram(
         });
         try {
           const repositories = createRepositories(handle);
-          // OpenAI key gate (Decision 4): null when absent.
           const openaiClient = testHooks.openaiClient ?? resolveOpenAiClientOrNull();
           const orchestratorOptions: InitOrchestratorOptions = {
             paths: platformPaths,
@@ -1409,7 +1415,7 @@ export function createProgram(
             filterPrompts: filterPrompts ?? configureFiltersPromptAdapter(),
             approvalPrompts: initApprovalPrompts ?? profileApprovalPromptAdapter(),
             rejectionPrompts: initRejectionPrompts ?? profileRejectionPromptAdapter(),
-            logger: pinoInitLogger(rootLogger),
+            logger: noopInitLogger,
           };
           const orchestrator = new InitOrchestrator(orchestratorOptions);
           const summary = await orchestrator.run(process.env);
@@ -1526,7 +1532,7 @@ export function createProgram(
   program
     .command('run')
     .description(
-      'Run the full discovery + extraction + filtering + scoring pipeline (SPEC §33). ' +
+      'Run the full discovery + extraction + filtering + scoring pipeline. ' +
         'Requires OPENAI_API_KEY in the environment and an active approved profile + ' +
         'active filter configuration.',
     )
@@ -1545,9 +1551,8 @@ export function createProgram(
     });
 
   // -------------------------------------------------------------------------
-  // TASK-016 — Inspection subcommands (`jobs list` / `jobs show` /
-  // `runs list` / `runs show`). See SPEC §31 + §34 + §35 + §36 +
-  // §37. All four reuse `exitWithError` for typed-error → exit-code
+  // Inspection subcommands (`jobs list` / `jobs show` / `runs list` /
+  // `runs show`). All four reuse `exitWithError` for typed-error → exit-code
   // mapping; none call `process.exit` directly.
   // -------------------------------------------------------------------------
 
@@ -1594,7 +1599,6 @@ export function createProgram(
       }
     });
 
-  // TASK-017 — `jobs reevaluate`. SPEC §28 + §30 + §36 + §37.
   jobs
     .command('reevaluate')
     .description(
@@ -1692,7 +1696,7 @@ export {
   type SearchConfiguration,
 } from './search/index.js';
 export { ProfileImportService } from './profile/importer.js';
-// TASK-008 re-exports were removed by Task 9 — the full extraction surface
-// (services, fake, retry policy, prompt builder, errors, types, structured
-// output) is now reachable through `src/profile/index.js`. Re-exports here
-// would duplicate the canonical barrel.
+// The full extraction surface (services, fake, retry policy, prompt
+// builder, errors, types, structured output) is reachable through
+// `src/profile/index.js`. Re-exports here would duplicate the canonical
+// barrel.

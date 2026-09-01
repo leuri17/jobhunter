@@ -1,6 +1,5 @@
 /**
  * `ConfigureFiltersService` — interactive filter configuration flow
- * (TASK-010 Task 10, SPEC §17.3, §17.6).
  *
  * The service combines two existing patterns:
  *
@@ -20,7 +19,7 @@
  *
  *   1. Load the active approved profile via
  *      `profileVersions.findActiveApproved()`. If absent, throw
- *      `NoActiveProfileError` — this is the SPEC §17.3 first-run gate
+ *      `NoActiveProfileError` — this is the  first-run gate
  *      and is checked BEFORE the config check.
  *   2. Load the existing active config via
  *      `filterConfigurations.findActive()` (may be `null`).
@@ -116,7 +115,6 @@ export class ConfigureFiltersService {
   }
 
   async run(): Promise<ConfigureFiltersOutcome> {
-    // 1. Active approved profile gate (SPEC §17.3 first-run gate).
     const profileVersion = await this.repositories.profileVersions.findActiveApproved();
     if (profileVersion === null) {
       throw new NoActiveProfileError(

@@ -30,7 +30,7 @@ export interface TruncateAvailableMetadataResult {
 }
 
 /**
- * Pure truncation + redaction helper. Wave C deviation: the
+ * Pure truncation + redaction helper.  deviation: the
  * placeholder `truncateAvailableMetadata` in `state.ts` only capped
  * the size; the real implementation lives here and adds the
  * `Redactor` pass + a `droppedFields` audit trail.

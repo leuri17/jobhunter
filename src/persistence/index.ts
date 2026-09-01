@@ -8,7 +8,6 @@ export {
 } from './database.js';
 export { schema, type Schema } from './schema.js';
 
-// TASK-004 additions
 export { InvalidIdentifierError } from './identifier-errors.js';
 export {
   formatId,

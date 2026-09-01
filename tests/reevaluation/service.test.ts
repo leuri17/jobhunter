@@ -34,7 +34,7 @@ import {
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 
 /**
- * Integration tests for `ReevaluationService` (TASK-017 Wave C, Task
+ * Integration tests for `ReevaluationService` (, Task
  * 11). Mirrors `tests/pipeline/orchestrator.test.ts`: hermetic
  * `:memory:` SQLite + a fresh migrations run + fakes for
  * `FilterApplyService` / `ScoringService` so the test surface stays
@@ -43,10 +43,10 @@ const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
  * T18 is the CLI-handler scope-conflict test — at the service level
  * there is no concept of `--filters-only + --scores-only`
  * (single-string `scope` input). T18 is exercised by
- * `tests/cli/jobs-reevaluate.test.ts` (Wave D). Here we record it as
+ * `tests/cli/jobs-reevaluate.test.ts`. Here we record it as
  * `it.skip` with a pointer to its CLI home.
  */
-describe('ReevaluationService (TASK-017 Wave C Task 11)', () => {
+describe('ReevaluationService', () => {
   let directory: string;
   let connection: DatabaseConnection;
   let repositories: Repositories;
@@ -239,7 +239,7 @@ describe('ReevaluationService (TASK-017 Wave C Task 11)', () => {
       pipelineRunId,
       searchExecutionId,
     );
-    // Pre-seed an active filter result with a STALE fingerprint —
+    // Pre-seed an active filter result with a STALE fingerprint
     // the service will treat the filter as stale and rerun it.
     const staleFilterFp = 'stale-filter-fp-t3';
     const filterResultId = await insertActiveFilterResultForReeval(repositories, {

@@ -46,7 +46,7 @@ function adapt(document: LinkedomDocument): CardIdDocument {
   };
 }
 
-describe('src/linkedin/card-id — Wave A', () => {
+describe('src/linkedin/card-id — ', () => {
   function makeDocument(html: string): {
     readonly document: CardIdDocument;
     readonly firstCard: () => MinimalElement | null;

@@ -14,8 +14,7 @@ import {
 } from './helpers/inspection-harness.js';
 
 /**
- * Service-layer tests for `RunsShowService` (TASK-016 Wave D Task 14,
- * SPEC §31 + §35.2).
+ * Service-layer tests for `RunsShowService`.
  *
  * Fixture (per the plan's Task 14 details):
  *   - 1 pipeline run + 2 search executions
@@ -24,7 +23,7 @@ import {
  *   - 2 score results (active, successful)
  *   - 1 diagnostic artifact
  */
-describe('RunsShowService (TASK-016 Wave D Task 14, SPEC §35.2)', () => {
+describe('RunsShowService', () => {
   let harness: InspectionHarness;
   let service: RunsShowService;
   let runId: number;

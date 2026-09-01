@@ -75,8 +75,8 @@ describe('PipelineRunRepository', () => {
     // The repository overrides each search's pipelineRunId to the just-created
     // run id, so a user-supplied bad pipelineRunId does NOT trigger an FK
     // violation. To exercise the rollback path we wrap the real database
-    // connection with a transaction shim that throws after the run insert —
-    // see the implementation note in TASK-004 §Task 5 ("an explicit throw
+    // connection with a transaction shim that throws after the run insert
+    // see the implementation note in  §Task 5 ("an explicit throw
     // inside a wrapping test fixture").
     const db = connection.db;
     const originalTransaction = db.transaction.bind(db);

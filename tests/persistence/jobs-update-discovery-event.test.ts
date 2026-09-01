@@ -1,7 +1,6 @@
 /**
  * Tests for `JobRepository.updateDiscoveryEvent` +
  * `JobRepository.findLatestDiscoveryEventByJobAndSearch`
- * (TASK-013 Plan Task 12, SPEC §23.2 / §23.3).
  *
  * Both methods are method additions — no schema/migration change.
  * The tests exercise them against a real SQLite database via

@@ -5,7 +5,7 @@ import {
 } from '../errors/application-error.js';
 
 /**
- * Base class for pipeline-lifecycle errors (TASK-015).
+ * Base class for pipeline-lifecycle errors.
  *
  * Lifecycle errors are typed + exit-code-mapped. They cross the
  * orchestrator boundary only for unrecoverable conditions;
@@ -27,7 +27,7 @@ export class PipelineLifecycleError extends ApplicationError {
  * Thrown when a prerequisite (config / active profile / active filter
  * config) is missing or invalid before the run starts.
  *
- * Exit code: 3 (MissingRequired) — per SPEC §37 + §42.
+ * Exit code: 3 (MissingRequired) — per .
  */
 export class PipelinePrerequisiteError extends PipelineLifecycleError {
   constructor(
@@ -45,7 +45,7 @@ export class PipelinePrerequisiteError extends PipelineLifecycleError {
 /**
  * Thrown when OPENAI_API_KEY is missing — the run cannot proceed.
  *
- * Exit code: 3 (MissingRequired) — per SPEC §9.2 + §37.
+ * Exit code: 3 (MissingRequired) — per .
  */
 export class PipelineOpenAIKeyMissingError extends PipelinePrerequisiteError {
   constructor(

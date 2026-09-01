@@ -7,16 +7,16 @@ import { MissingBrowserImplementationError } from '../errors.js';
 import type { CaptureContext, CaptureResult, CaptureStrategy } from './types.js';
 
 /**
- * Playwright-backed trace capture (TASK-012 Plan Task 8, SPEC §39).
+ * Playwright-backed trace capture.
  *
- * Replaces the Wave A stub (`capture/playwright-trace.ts:11`).
+ * Replaces the  stub (`capture/playwright-trace.ts:11`).
  * Reads the live `BrowserContext` from `CaptureContext.browserContext`
  * (populated by `DiagnosticManager.recordScraperError` from
  * `DiagnosticInput.browserContext`). When the context is absent
  * the strategy throws `MissingBrowserImplementationError` so the
  * manager's try/catch records a `capture_failed` failure.
  *
- * Lifecycle: the orchestrator (TASK-015) calls
+ * Lifecycle: the orchestrator calls
  * `browserContext.tracing.start()` at the START of the run and
  * `browserContext.tracing.stop({ path })` here. `tracing.stop` is
  * one-shot — once stopped, it cannot be stopped again. The strategy
@@ -25,7 +25,7 @@ import type { CaptureContext, CaptureResult, CaptureStrategy } from './types.js'
  * then writes the Buffer to the diagnostics directory + inserts the
  * `diagnosticArtifacts` row.
  *
- * Wave C deviation from the plan's `Deps` closure pattern: the brief
+ *  deviation from the plan's `Deps` closure pattern: the brief
  * asked for the browser context to flow through `CaptureContext`
  * rather than a constructor-injected `getContext()` closure.
  */

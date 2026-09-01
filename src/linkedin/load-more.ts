@@ -1,6 +1,5 @@
 /**
- * Bounded load-more loop (TASK-012 Plan Task 6, SPEC §21.4 / §21.6,
- * Decision 8).
+ * Bounded load-more loop.
  *
  * `discoverAllCards` walks the LinkedIn search-results page card-by-card
  * until a deterministic end condition fires:
@@ -12,12 +11,12 @@
  *
  * The function is PURE on its inputs (no I/O outside Playwright). It
  * returns a typed `LoadMoreOutcome` so the orchestrator can decide
- * whether to surface a `LoadMoreLoopExhaustedError` (Plan Decision 8 +
- * Decision 13 — soft warning; the search has still produced
+ * whether to surface a `LoadMoreLoopExhaustedError` (Plan  +
+ *  — soft warning; the search has still produced
  * `totalCardsDiscovered`).
  *
  * Imports `Page` and `Locator` as TYPES only — runtime Playwright
- * values flow through `BrowserSession` in Wave D. Wave A exercises
+ * values flow through `BrowserSession` in .  exercises
  * this module via inline fakes in `tests/linkedin/load-more.test.ts`.
  */
 import type { Page, Locator } from 'playwright';
@@ -165,7 +164,7 @@ const DEFAULT_MAX_ITERATIONS = 200;
  * Walk the current iteration's card locators, parse each one's ID via
  * `parseCardJobId`, and record it in `idToCard` (first-seen wins).
  *
- * Wave D deviation: `sourceJobId` may be `null` when the anchor has
+ *  deviation: `sourceJobId` may be `null` when the anchor has
  * neither `data-occludable-job-id` nor a parseable `/jobs/view/<digits>/`
  * href. We preserve those cards in the output so the orchestrator
  * can write a `discoveryErrors` row.
@@ -228,11 +227,11 @@ function coerceElement(handle: {
   readonly evaluate?: (fn: (e: Element) => unknown) => Promise<unknown>;
 }): MinimalElement {
   // We use `evaluate` to read attributes via a runtime-side script.
-  // For Wave A's `FakePage` elements (which expose `getAttribute` /
+  // For 's `FakePage` elements (which expose `getAttribute` /
   // `querySelector` directly) the cast is straightforward. We expose
   // a proxy that delegates to `evaluate` only when those methods are
-  // missing on the handle — keeps Wave A's fakes simple while still
-  // working with real Playwright handles in Wave D.
+  // missing on the handle — keeps 's fakes simple while still
+  // working with real Playwright handles in .
   const candidate = handle as unknown as Partial<MinimalElement>;
   if (
     typeof candidate.getAttribute === 'function' &&
@@ -282,8 +281,8 @@ async function wait(ms: number, now?: () => number): Promise<void> {
 export type { LoadMoreOutcome, LoadMoreState };
 
 /**
- * Public alias for `discoverAllCards` (Wave D). The plan + brief use
+ * Public alias for `discoverAllCards`. The plan + brief use
  * `loadMoreResults` as the canonical name; `discoverAllCards` is
- * preserved as a backward-compatible alias for Wave A test callers.
+ * preserved as a backward-compatible alias for  test callers.
  */
 export const loadMoreResults = discoverAllCards;

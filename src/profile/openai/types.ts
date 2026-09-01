@@ -8,7 +8,7 @@
  * imports `openai` directly.
  *
  * The `OpenAIClient` interface is shared by profile extraction
- * (TASK-008) and job scoring (TASK-014). The shape of the request is
+ * and job scoring. The shape of the request is
  * generic — the prompt template and the response schema are looked up
  * at the client via the response-schema registry, so adding a new
  * operation is purely a registry entry (see `./response-schemas.ts`).
@@ -28,7 +28,7 @@ export interface OpenAIChatMessage {
  * A single source supplied to the extraction prompt.
  *
  * `sourceId` is the opaque `'source_<int>'` identifier exposed to the model
- * (per SPEC §32). The model is expected to echo this back inside every
+ * (per ). The model is expected to echo this back inside every
  * `SourceReference.sourceId` so the post-processor can map extracted facts
  * back to the originating source.
  */
@@ -44,14 +44,14 @@ export interface OpenAIExtractionSource {
  * `promptVersion` is the versioned prompt identifier the caller used to
  * build `messages` (e.g. `PROFILE_EXTRACTION_PROMPT_VERSION` for
  * extraction, or the scoring prompt version for scoring). It is the
- * caller's responsibility to assert the prompt version is current —
+ * caller's responsibility to assert the prompt version is current
  * the client transports whatever the caller supplies.
  *
  * `messages` is the pre-built chat payload the client passes through to
  * the OpenAI SDK. Building messages is a domain concern; the client is
  * a pure transport and never builds messages itself. The prompt builder
  * for profile extraction lives at `./prompt.ts`; the scoring prompt
- * builder lives at `../../scoring/prompt.ts` (Wave A).
+ * builder lives at `../../scoring/prompt.ts`.
  *
  * `responseSchemaName` is the OpenAI structured-output schema identifier.
  * The client looks the name up in `RESPONSE_SCHEMA_REGISTRY` to find

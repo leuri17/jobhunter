@@ -14,7 +14,7 @@ import {
   type SearchDiscoveryOutcome,
 } from '../../src/linkedin/state.js';
 
-describe('src/linkedin/state — Wave A', () => {
+describe('src/linkedin/state — ', () => {
   it('LINKEDIN_DISCOVERY_SCHEMA_VERSION === 1', () => {
     expect(LINKEDIN_DISCOVERY_SCHEMA_VERSION).toBe(1);
   });

@@ -24,15 +24,15 @@ import {
 } from '../inspection/services/helpers/inspection-harness.js';
 
 /**
- * TASK-016 Wave D Task 15 — CLI wiring tests for `runs show`.
+ *  — CLI wiring tests for `runs show`.
  *
  * Mirrors the stub + DB-boot pattern from `tests/cli/jobs-show.test.ts`.
  * Covers the three error surfaces (invalid identifier, unknown
  * id, success with --json). The `runs show --json` payload is
- * wrapped with `schemaVersion: 1` (SPEC §36 requirement) by the
+ * wrapped with `schemaVersion: 1` ( requirement) by the
  * CLI handler — the test asserts that field on the emitted JSON.
  */
-describe('CLI: jobhunter runs show (TASK-016 Wave D Task 15, SPEC §35.2)', () => {
+describe('CLI: jobhunter runs show', () => {
   let tempHome: string;
   let originalHome: string | undefined;
   let stdout: string[] = [];

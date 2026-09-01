@@ -8,7 +8,7 @@ import type { ExtractionFieldSet } from '../../src/linkedin/extraction/state.js'
 
 /**
  * Tests for `src/linkedin/extraction/required-fields.ts`
- * (TASK-013 Plan Task 4). Asserts every combination of the four
+ * Asserts every combination of the four
  * required fields being present/absent (16 cases total — `2^4`)
  * plus a few edge cases.
  */
@@ -72,7 +72,7 @@ function enumerateCombinations(): ReadonlyArray<{
   return out;
 }
 
-describe('src/linkedin/extraction/required-fields — Wave A', () => {
+describe('src/linkedin/extraction/required-fields — ', () => {
   it('returns valid: true + missing: [] when every field is present', () => {
     const result = validateRequiredFields(FULL);
     expect(result.valid).toBe(true);

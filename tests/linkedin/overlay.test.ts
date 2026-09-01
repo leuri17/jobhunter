@@ -12,8 +12,8 @@ import {
 import type { OverlayDescriptor } from '../../src/linkedin/state.js';
 
 /**
- * Inline fake `Page` for Wave A. The Wave D `BrowserSession` will
- * provide a real Playwright `Page`; Wave A uses this fake so the
+ * Inline fake `Page` for . The  `BrowserSession` will
+ * provide a real Playwright `Page`;  uses this fake so the
  * detector + dismisser can be exercised without launching Chromium.
  */
 interface LocatorCall {
@@ -73,7 +73,7 @@ class FakePage {
         if (opts.state === 'hidden' && state.count === 0) return;
         throw new Error('waitFor: not hidden');
       },
-      // Pass-through methods we don't exercise in Wave A.
+      // Pass-through methods we don't exercise in .
       elementHandle: async () => null,
       all: async () => [],
     } as unknown as Locator;
@@ -102,7 +102,7 @@ class FakePage {
 
 const OPTS: OverlayDetectionOptions = { overlayDismissalMs: 5_000 };
 
-describe('src/linkedin/overlay — Wave A', () => {
+describe('src/linkedin/overlay — ', () => {
   it('detectOverlays returns an empty array when no overlays are visible', async () => {
     const page = new FakePage();
     const descriptors = await detectOverlays(page as unknown as Page, OPTS);

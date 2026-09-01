@@ -13,7 +13,7 @@ import {
   OverlayUndismissableError,
 } from '../../src/linkedin/errors.js';
 
-describe('src/linkedin/errors — Wave A', () => {
+describe('src/linkedin/errors — ', () => {
   it('LinkedInScraperError extends ApplicationError', () => {
     const err = new LinkedInScraperError('test_code', 'test message', ExitCode.Fatal);
     expect(err).toBeInstanceOf(LinkedInScraperError);

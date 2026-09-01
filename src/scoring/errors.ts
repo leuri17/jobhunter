@@ -1,14 +1,14 @@
-import { ExitCode } from '../errors/application-error.js';
+import { ApplicationError, ExitCode } from '../errors/application-error.js';
 
 /**
- * Typed error family for TASK-014 scoring (SPEC §25 + §26).
+ * Typed error family for the scoring layer.
  *
  * Every subclass extends `ScoringError`, which extends
- * `ApplicationError` directly. The base class pins the exit code
- * to `ExitCode.OpenAIFailure = 5` so a `scoring` task failure surfaces
+ * `ApplicationError`. The base class pins the exit code to
+ * `ExitCode.OpenAIFailure = 5` so a scoring-layer failure surfaces
  * a single, predictable exit status at the CLI boundary.
  *
- * Per-job failures are NOT thrown across the `scoreOne` boundary —
+ * Per-job failures are NOT thrown across the `scoreOne` boundary
  * they are surfaced as `ScoringOutcome.kind: 'failed'` and persisted
  * to `openaiMetadata` with `success: false`. The errors defined here
  * are reserved for:
@@ -19,25 +19,14 @@ import { ExitCode } from '../errors/application-error.js';
  *   3. Pre-call guard conditions the service wants to surface
  *      explicitly (e.g. `ScoringInputTooLargeError`).
  */
-export class ScoringError extends Error {
-  readonly code: string;
-  readonly exitCode: typeof ExitCode.OpenAIFailure;
-  readonly metadata: Readonly<Record<string, unknown>>;
-
+export class ScoringError extends ApplicationError {
   constructor(
     code: string,
     message: string,
     metadata: Readonly<Record<string, unknown>> = {},
     cause?: Error,
   ) {
-    super(message);
-    this.name = this.constructor.name;
-    this.code = code;
-    this.exitCode = ExitCode.OpenAIFailure;
-    this.metadata = metadata;
-    if (cause !== undefined) {
-      this.cause = cause;
-    }
+    super(code, message, ExitCode.OpenAIFailure, metadata, cause);
   }
 }
 
@@ -46,7 +35,7 @@ export interface ScoringInputTooLargeMetadata {
   readonly maxInputBytes: number;
 }
 
-/** Non-retryable per SPEC §25.8 — the scoring payload exceeds the 200 KB cap. */
+/** Non-retryable per  — the scoring payload exceeds the 200 KB cap. */
 export class ScoringInputTooLargeError extends ScoringError {
   constructor(metadata: ScoringInputTooLargeMetadata, cause?: Error) {
     super(
@@ -63,7 +52,7 @@ export interface ScoringInvalidStructuredOutputMetadata {
   readonly validationError: string;
 }
 
-/** Retryable once per SPEC §25.3 — OpenAI returned JSON that failed Zod validation. */
+/** Retryable once per  — OpenAI returned JSON that failed Zod validation. */
 export class ScoringInvalidStructuredOutputError extends ScoringError {
   constructor(metadata: ScoringInvalidStructuredOutputMetadata, cause?: Error) {
     super(

@@ -214,7 +214,7 @@ export function classifyMigrations(input: ClassifyMigrationsInput): InitStepRepo
 }
 
 /**
- * `classifyOpenAiKey` always returns `complete` (Decision 4 — absence is
+ * `classifyOpenAiKey` always returns `complete` ( — absence is
  * a skip, not a failure). The orchestrator reads the missing-key signal
  * from `classifyExtract`'s `reason === 'openai_key_missing'` instead.
  */
@@ -281,7 +281,7 @@ export function classifySources(input: ClassifySourcesInput): InitStepReport {
  * `classifyExtract` returns:
  *  - `complete` when a draft exists and at least one source is usable.
  *  - `incomplete` with `reason: 'openai_key_missing'` when the key is
- *    absent (skip-not-fail per Decision 4 + Finding 4a).
+ *    absent (skip-not-fail per  + Finding 4a).
  *  - `incomplete` with `reason: null` when no draft exists but the key
  *    is present and at least one source is usable.
  *  - `not_started` when no usable source exists yet (the orchestrator

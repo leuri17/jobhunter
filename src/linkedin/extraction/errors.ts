@@ -10,9 +10,8 @@ import type { RequiredField } from './state.js';
 
 /**
  * Typed error family for the LinkedIn job-detail extraction layer
- * (TASK-013 Plan Task 2, Decision 16, Decision 26).
  *
- * Every subclass extends `LinkedInScraperError` (TASK-012) so the CLI
+ * Every subclass extends `LinkedInScraperError` so the CLI
  * boundary can map via the existing `exitWithError`. Per-job failures
  * are NOT thrown across the `extractOne` boundary — they are
  * surfaced via `ExtractionOutcome.kind: 'failed'` and persisted to
@@ -22,13 +21,13 @@ import type { RequiredField } from './state.js';
  *
  * Per AGENTS.md §10: typed errors only at the domain boundary.
  *
- * All exit codes are `ExitCode.Fatal = 1` per Decision 16.
+ * All exit codes are `ExitCode.Fatal = 1` per .
  */
 
 /**
  * Base class for every error raised by `LinkedInExtractionService`.
  * Subclasses pin a specific `code` so the CLI boundary does not need
- * an `instanceof` cascade. Per-job errors are NOT represented here —
+ * an `instanceof` cascade. Per-job errors are NOT represented here
  * they live on `ExtractionOutcome` and on the `extractionAttempts`
  * table (see `src/linkedin/extraction/state.ts`).
  */
@@ -47,7 +46,7 @@ export class LinkedInExtractionError extends LinkedInScraperError {
  * Panel extraction failed (load/parse/timeout/undismissable overlay).
  * Thrown when the search-detail panel cannot be read after the
  * bounded retry loop. The orchestrator catches this and falls back to
- * the dedicated page (SPEC §22.7).
+ * the dedicated page.
  */
 export class PanelExtractionError extends LinkedInExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
@@ -57,9 +56,9 @@ export class PanelExtractionError extends LinkedInExtractionError {
 
 /**
  * Panel title anchor's `href` does not match the selected
- * `sourceJobId` after the bounded retry loop (Decision 26). The
+ * `sourceJobId` after the bounded retry loop. The
  * orchestrator catches this and falls back to the dedicated page
- * (SPEC §22.7 — "The panel shows another job" is one of the
+ * ( — "The panel shows another job" is one of the
  * fallback conditions).
  *
  * `expectedSourceJobId` / `actualSourceJobId` are the canonical
@@ -111,7 +110,7 @@ export class RequiredFieldMissingError extends LinkedInExtractionError {
 
 /**
  * The supplied `sourceJobId` cannot be embedded into a canonical
- * LinkedIn detail URL (SPEC §22.2). Thrown by `buildDetailUrl` for
+ * LinkedIn detail URL. Thrown by `buildDetailUrl` for
  * empty / non-numeric / under-6-digit IDs.
  */
 export class DetailUrlBuildError extends LinkedInExtractionError {

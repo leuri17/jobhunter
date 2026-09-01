@@ -8,7 +8,7 @@ import {
 
 /**
  * Deterministic language-requirement detection from job descriptions
- * (SPEC §20; TASK-010 Task 5).
+ * (; ).
  *
  * The detector scans the normalized description for occurrences of each
  * slug in the union of `input.acceptedLanguages` and `KNOWN_LANGUAGES`
@@ -67,7 +67,7 @@ import {
  *   - `desirable`, `preferred` clearly mean preference.
  *
  * The evaluator (Task 6) treats `ambiguous` matches with the same
- * abstention logic as `reference` matches per SPEC §20.3 ("Abstain when
+ * abstention logic as `reference` matches per  ("Abstain when
  * wording cannot be classified reliably. Abstention must not reject the
  * job.").
  *
@@ -322,7 +322,6 @@ function pushRequirement(
 
 /**
  * Inspect a job description for required and reference language phrases
- * (SPEC §20).
  *
  * The detector walks the description token-by-token:
  *
@@ -361,7 +360,7 @@ export function detectLanguageRequirements(input: DetectLanguageInput): Language
 
   // The detector scans for the UNION of `acceptedLanguages` and
   // `KNOWN_LANGUAGES`. This is required by the language-rejection
-  // rule (Task 6, SPEC §20): the rule must surface "French required"
+  // rule (Task 6, ): the rule must surface "French required"
   // as an unsupported required language even when French is NOT in
   // the candidate's accepted list. With an accepted-only scan, the
   // detector would never return French, and the rule's "fail" branch

@@ -109,7 +109,7 @@ export interface ProfileExtractionPromptInput {
 }
 
 /**
- * Versioned profile-extraction prompt (SPEC §14.2, prompt version
+ * Versioned profile-extraction prompt (, prompt version
  * `profile-extraction-prompt@v1`).
  *
  * Returns the `systemMessage` and `userMessage` that the OpenAI SDK

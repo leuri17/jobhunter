@@ -18,9 +18,9 @@ import { createDefaultPlatformAdapter } from '../../src/platform/paths-default.j
 import { createRepositories } from '../../src/persistence/repositories/index.js';
 
 /**
- * TASK-010 Task 11 — `configure filters` CLI smoke test.
+ *  — `configure filters` CLI smoke test.
  *
- * The test mirrors `tests/cli/profile-list.test.ts` (TASK-009). It sets
+ * The test mirrors `tests/cli/profile-list.test.ts`. It sets
  * `HOME` to a temp directory so `resolvePlatformPaths` resolves a fresh
  * `data/` slot, runs `runMigrations` to create the schema, seeds the
  * prerequisite rows, closes the seed connection, then drives the CLI

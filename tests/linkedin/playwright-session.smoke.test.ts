@@ -1,5 +1,5 @@
 /**
- * Real-Playwright smoke test for `PlaywrightBrowserSession` (Wave B).
+ * Real-Playwright smoke test for `PlaywrightBrowserSession`.
  *
  * This test launches a real headless Chromium via the
  * `PlaywrightBrowserSession` class and confirms the launch → openPage

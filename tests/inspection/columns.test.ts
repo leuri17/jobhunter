@@ -9,7 +9,7 @@ import {
 import { InspectionValidationError } from '../../src/inspection/errors.js';
 import { JOB_LIST_STATES, type JobListState } from '../../src/inspection/state.js';
 
-describe('selectColumns + per-state headers + priorities (TASK-016 Wave A Task 3)', () => {
+describe('selectColumns + per-state headers + priorities', () => {
   describe('DEFAULT_TERMINAL_WIDTH', () => {
     it('is 120 (matches src/pipeline/format.ts:60)', () => {
       expect(DEFAULT_TERMINAL_WIDTH).toBe(120);
@@ -17,7 +17,7 @@ describe('selectColumns + per-state headers + priorities (TASK-016 Wave A Task 3
   });
 
   describe('HEADERS_BY_STATE', () => {
-    it('matches the documented per-state column counts (SPEC §34.5)', () => {
+    it('matches the documented per-state column counts', () => {
       expect(HEADERS_BY_STATE.scored.length).toBe(6);
       expect(HEADERS_BY_STATE.accepted.length).toBe(6);
       expect(HEADERS_BY_STATE.rejected.length).toBe(7);
@@ -96,7 +96,7 @@ describe('selectColumns + per-state headers + priorities (TASK-016 Wave A Task 3
     });
   });
 
-  describe('priority drop (SPEC §34.5)', () => {
+  describe('priority drop', () => {
     it('--scored at width 60 fits all 6 documented columns (sum of minWidths = 43)', () => {
       const specs = selectColumns('scored', 60);
       expect(specs.map((s) => s.header)).toEqual(HEADERS_BY_STATE.scored);

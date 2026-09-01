@@ -5,10 +5,10 @@ import { type JobFilterConfig } from '../../src/filter/schema.js';
 import { evaluateJob, type JobInput, type RuleEvaluation } from '../../src/filter/evaluate.js';
 
 /**
- * TASK-010 Task 6 — `evaluate.ts` tests.
+ *  — `evaluate.ts` tests.
  *
  * `evaluateJob` composes the seven deterministic filter rules from
- * SPEC §17–§20 into a single auditable decision. The tests cover:
+ *  into a single auditable decision. The tests cover:
  *
  *   1. End-to-end behaviour for each rule in isolation.
  *   2. The no-rule-evaluates baseline (every rule abstains or passes).
@@ -130,7 +130,7 @@ describe('evaluateJob — rule 1: excluded-companies', () => {
   });
 
   it('passes for null company even when excludedCompanies is non-empty (no hit ⇒ passed)', () => {
-    // SPEC §17.4 "no hit ⇒ passed" — a null company has no possible
+    //  "no hit ⇒ passed" — a null company has no possible
     // exclusion, so the rule passes. This is intentionally different
     // from title/description abstention, which the brief calls out
     // explicitly ("Stale input with null title / null description ⇒

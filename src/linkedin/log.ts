@@ -1,9 +1,9 @@
 /**
- * LinkedIn scraper structured-log seam (TASK-012 Plan Task 10, SPEC §39).
+ * LinkedIn scraper structured-log seam.
  *
- * Wave B ships a minimal placeholder: the `LinkedInScraperLogger`
+ *  ships a minimal placeholder: the `LinkedInScraperLogger`
  * interface + a `noopLinkedInScraperLogger` default + the production
- * `pinoLinkedInScraperLogger` adapter. Wave D's Task 10 may extend
+ * `pinoLinkedInScraperLogger` adapter. 's Task 10 may extend
  * this module with additional events (e.g. `page.lifecycle`,
  * `cancel.received`); the public surface stays backward-compatible.
  *

@@ -1,7 +1,7 @@
 /**
- * Public barrel for `src/reevaluation/` (TASK-017).
+ * Public barrel for `src/reevaluation/`.
  *
- * Re-exports the public surface that the CLI handler (Wave D) and
+ * Re-exports the public surface that the CLI handler and
  * the test harness consume. Internal helpers stay accessible via
  * their source paths.
  *

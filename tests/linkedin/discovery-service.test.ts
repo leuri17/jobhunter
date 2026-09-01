@@ -103,7 +103,7 @@ function pageWithCards(
       // The orchestrator's `loadMoreResults` queries each card's
       // elementHandle for the card-anchor selector. The per-card
       // locator above handles that. This hook is the fallback used
-      // by `parseCardJobId` when the element has no anchor inside —
+      // by `parseCardJobId` when the element has no anchor inside
       // we return null (parser returns null on miss).
       void selector;
       return null;
@@ -174,7 +174,7 @@ function setupTestRig(cardIds: readonly string[] = []): TestRig {
       return pageWithCards(cardIds);
     },
   });
-  // Per the orchestrator's contract, `launch()` is owned by TASK-015's
+  // Per the orchestrator's contract, `launch()` is owned by 's
   // run-level orchestrator — NOT by the discovery service. Tests
   // launch the fake session explicitly to match the real lifecycle.
   void session.launch();
@@ -237,7 +237,7 @@ function setupTestRig(cardIds: readonly string[] = []): TestRig {
 
 const NO_SIGNAL = new AbortController().signal;
 
-describe('LinkedInDiscoveryService (Wave D integration)', () => {
+describe('LinkedInDiscoveryService (integration)', () => {
   let rig: TestRig;
   let searchExecutionId = 0;
   let runId = 0;
@@ -305,14 +305,14 @@ describe('LinkedInDiscoveryService (Wave D integration)', () => {
     // launch/close the session.
     expect(session.activePageCount).toBe(0);
     expect(session.eventLog.some((e) => e.kind === 'closePage')).toBe(true);
-    // The session `launch` is owned by TASK-015 — the orchestrator
+    // The session `launch` is owned by  — the orchestrator
     // never calls it. `setupTestRig` calls `launch()` once; the
     // orchestrator's `discover()` must not add a SECOND launch
     // event.
     const launchEvents = session.eventLog.filter((e) => e.kind === 'launch');
     expect(launchEvents.length).toBe(1);
     // Same for `close()` — the orchestrator never calls it; only
-    // TASK-015's run-level teardown does.
+    // 's run-level teardown does.
     expect(session.eventLog.some((e) => e.kind === 'close')).toBe(false);
   });
 
@@ -472,7 +472,7 @@ describe('LinkedInDiscoveryService (Wave D integration)', () => {
     // The default `dismissRecoverableOverlays` in the real overlay
     // module always succeeds (it has no visible overlays on a blank
     // page). To test the failure path we'd need to mock the overlay
-    // module. For Wave D we exercise the orchestrator's error
+    // module. For  we exercise the orchestrator's error
     // contract via the navigation-timeout path below; the
     // undismissable path is structurally identical (typed error →
     // `recordScraperError` → `updateSearchStatus({ finalStatus:
@@ -747,7 +747,7 @@ describe('LinkedInDiscoveryService (Wave D integration)', () => {
     expect(['completed', 'cancelled']).toContain(row?.finalStatus);
   });
 
-  it('currentExtractionState is "failed" for newly-inserted jobs (TASK-013 placeholder)', async () => {
+  it('currentExtractionState is "failed" for newly-inserted jobs ( placeholder)', async () => {
     await rig.service.discover({
       run: { id: runId },
       searchExecution: makeSearchExecution(

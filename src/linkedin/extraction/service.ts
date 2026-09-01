@@ -1,28 +1,27 @@
 /**
  * `LinkedInExtractionService` — the extraction orchestrator
- * (TASK-013 Plan Task 13, SPEC §22 + §23.2 + §23.3 + §29.3 + §39 + §40).
  *
  * Walks the per-job sequence:
  *   1. Read existing job via `findBySourceJobId` (caller's
  *      responsibility — `extractOne` reads the pre-supplied job row).
- *   2. Skip if `extractionStatus === 'complete' | 'partial'` —
+ *   2. Skip if `extractionStatus === 'complete' | 'partial'`
  *      no panel opened, no fallback opened, no DB writes (SPEC
  *      §22.9 + §22.10).
  *   3. Panel select + bounded wait + bounded retry loop on the
- *      title anchor's `href` (Decision 7 + Decision 26).
+ *      title anchor's `href`.
  *   4. On any panel error (`PanelExtractionError` /
  *      `PanelJobIdMismatchError`), fall back to the dedicated
  *      `/jobs/view/<id>/` page via `BrowserSession.openFallbackPage`.
  *   5. Compute status via `computeExtractionStatus`.
  *   6. Atomic update: `extractionAttempts` insert +
  *      `jobs` update + `discoveryEvents` patch — all inside a
- *      single sync `db.transaction(...)` (SPEC §23.2 / §23.3,
+ *      single sync `db.transaction(...)` (,
  *      AGENTS.md §6 + Reconciler fact on per-job atomicity).
  *   7. Close the dedicated fallback page in `try/finally`.
  *
  * The orchestrator NEVER calls `browserSession.launch()` or
- * `browserSession.close()` — that's TASK-015's run-level lifecycle
- * (mirrors TASK-012's `LinkedInDiscoveryService`).
+ * `browserSession.close()` — that's 's run-level lifecycle
+ * (mirrors 's `LinkedInDiscoveryService`).
  *
  * Per AGENTS.md §5: this file imports Playwright TYPES only; runtime
  * Playwright values flow via the `BrowserSession` seam. Drizzle is
@@ -31,7 +30,7 @@
  * `Repositories.transact` callback is sync, so the only runtime use
  * is the typed `tx.update(...)` / `tx.insert(...)` calls that drive
  * the per-job atomic transaction. The boundaries test
- * (`tests/extraction/boundaries.test.ts` in Wave E) treats the
+ * (`tests/extraction/boundaries.test.ts` in ) treats the
  * type-only Playwright import as an allow-list carve-out; the
  * Drizzle imports stay at the schema-table level (NOT the
  * `drizzle-orm` runtime helpers).
@@ -67,11 +66,10 @@ import { eq } from 'drizzle-orm';
 
 /**
  * Constructor options for `LinkedInExtractionService`
- * (TASK-013 Plan Task 13).
  *
  * `config` mirrors the `OperationalConfigSchema.scraper.timeouts`
  * surface (`src/config/schema.ts:49-64`) — the orchestrator does
- * not read config directly; the caller (TASK-015) supplies the
+ * not read config directly; the caller supplies the
  * timeout values.
  */
 export interface LinkedInExtractionServiceOptions {
@@ -126,18 +124,18 @@ const SKIP_REASON_PARTIAL = 'partial_job_already_exists';
 
 /**
  * The orchestrator. Per-job flow: skip-if-complete → panel → fallback
- * → status → atomic update → close fallback. Mirrors TASK-012's
+ * → status → atomic update → close fallback. Mirrors 's
  * `LinkedInDiscoveryService` (`src/linkedin/discovery-service.ts:75`).
  */
 export class LinkedInExtractionService {
   private readonly repositories: Repositories;
   private readonly browserSession: BrowserSession;
   // The diagnosticManager is held for future per-job typed-error
-  // diagnostics (Wave E wires `recordScraperError` into the
-  // `extractOne` failure path). For Wave D the orchestrator
+  // diagnostics (wires `recordScraperError` into the
+  // `extractOne` failure path). For  the orchestrator
   // surfaces per-job failures as outcomes, not typed errors that
   // cross the boundary; the diagnosticManager is accepted so the
-  // constructor signature matches the plan + the Wave E tests do
+  // constructor signature matches the plan + the  tests do
   // not need to change.
   private readonly diagnosticManager: DiagnosticManager;
   private readonly logger: LinkedInExtractionLogger;
@@ -152,12 +150,12 @@ export class LinkedInExtractionService {
     this.config = options.config;
     this.now = options.now ?? (() => new Date());
     // DiagnosticManager is referenced so the typed field stays
-    // available for Wave E without an "unused variable" lint.
+    // available for  without an "unused variable" lint.
     void this.diagnosticManager;
   }
 
   /**
-   * Extract one job (SPEC §22 + §23).
+   * Extract one job.
    *
    * Steps:
    *   1. Log `extractionStart`.
@@ -177,7 +175,6 @@ export class LinkedInExtractionService {
     const { job, searchExecution, run, searchPage, signal } = input;
     this.logger.extractionStart({ jobId: job.id, sourceJobId: job.sourceJobId });
 
-    // Step 1: skip complete/partial (SPEC §22.9 + §22.10).
     if (job.extractionStatus === 'complete' || job.extractionStatus === 'partial') {
       this.logger.extractionSkip({
         jobId: job.id,
@@ -224,7 +221,7 @@ export class LinkedInExtractionService {
         });
         outcomes.push({ method: 'search_detail_panel', fields, error: null });
       } catch (panelError) {
-        // Record the panel attempt as a failure (Decision 16 + the
+        // Record the panel attempt as a failure ( + the
         // plan's per-method extractionAttempts invariant — every
         // attempted method gets a row regardless of success).
         outcomes.push({
@@ -232,7 +229,7 @@ export class LinkedInExtractionService {
           fields: EMPTY_FIELDS,
           error: panelError instanceof Error ? panelError : new Error(String(panelError)),
         });
-        // Log the specific failure shape (Decision 26). Other
+        // Log the specific failure shape. Other
         // panel errors fall through to the dedicated-page fallback.
         if (panelError instanceof PanelJobIdMismatchError) {
           const expected = panelError.metadata['expectedSourceJobId'];
@@ -309,9 +306,9 @@ export class LinkedInExtractionService {
       searchExecution.id,
     );
     if (event === null) {
-      // Data-integrity bug: TASK-012 always inserts a
+      // Data-integrity bug:  always inserts a
       // discoveryEvent alongside the job row. The orchestrator
-      // surfaces a typed error so TASK-015 can decide to abort
+      // surfaces a typed error so  can decide to abort
       // the run.
       throw new Error(
         `extractOne: no discovery event found for jobId=${job.id}, searchExecutionId=${searchExecution.id}`,
@@ -409,9 +406,9 @@ export class LinkedInExtractionService {
   }
 
   /**
-   * Process a batch of jobs sequentially (SPEC §22.12 + §40). The
+   * Process a batch of jobs sequentially. The
    * orchestrator NEVER calls `browserSession.launch()` /
-   * `browserSession.close()` — those belong to TASK-015's run-level
+   * `browserSession.close()` — those belong to 's run-level
    * lifecycle (Required Finding #1).
    *
    * Cancellation is `AbortSignal`-driven: the signal is checked

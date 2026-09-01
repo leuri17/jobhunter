@@ -1,7 +1,7 @@
 import type { Logger } from '../logging/logger.js';
 
 /**
- * Structured-logger seam for the pipeline orchestrator (TASK-015).
+ * Structured-logger seam for the pipeline orchestrator.
  *
  * The orchestrator calls each method on transition events with
  * no secrets, no prompt transcripts, no raw OpenAI responses.

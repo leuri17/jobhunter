@@ -8,12 +8,12 @@ import { type JobFilterConfig } from '../../src/filter/schema.js';
 import { type ProfessionalProfile } from '../../src/profile/schema.js';
 
 /**
- * TASK-010 Task 7 — `fingerprint.ts` tests.
+ *  — `fingerprint.ts` tests.
  *
  * `calculateFilterFingerprint` composes the job content hash, the active
  * config hash, the relevant effective profile values, and the filter
- * implementation version into a single SHA-256 digest (SPEC §24.3). The
- * fingerprint is the cache key for `filter_results` (SPEC §27.1).
+ * implementation version into a single SHA-256 digest. The
+ * fingerprint is the cache key for `filter_results`.
  *
  * The tests cover:
  *

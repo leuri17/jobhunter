@@ -1,13 +1,13 @@
 /**
- * Pure plan aggregation for TASK-017 (SPEC §28.5 + §36).
+ * Pure plan aggregation for .
  *
  * `buildReevaluationPlan` is a TOTAL pure function: it carries its
  * inputs through to the `ReevaluationPlan` envelope and computes the
- * numeric totals. No I/O, no scoring, no DB. The service layer (Wave C)
+ * numeric totals. No I/O, no scoring, no DB. The service layer
  * assembles the per-job entries + the `ScoringPlan` and passes them
  * here; this module only does the bookkeeping.
  *
- * The selection order is `jobId ASC` (mirrors SPEC §34.4 — the
+ * The selection order is `jobId ASC` (mirrors  — the
  * tie-breaker documented for inspection tables). Callers MUST supply
  * already-sorted entries; this function does NOT re-sort.
  */
@@ -23,7 +23,7 @@ import { REEVALUATION_SCHEMA_VERSION } from './state.js';
 
 /**
  * Inputs to `buildReevaluationPlan`. Pure data — no I/O. The caller
- * (the Wave C service) resolves the per-job selection + the
+ * (the  service) resolves the per-job selection + the
  * `ScoringPlan`; this module only does the aggregation.
  */
 export interface BuildReevaluationPlanInput {
@@ -40,7 +40,7 @@ export interface BuildReevaluationPlanInput {
 /**
  * Assemble the `ReevaluationPlan` envelope from the selection inputs.
  *
- * Totals (SPEC §36):
+ * Totals:
  *   - `filtersRerun`         — count of `filterEntries` (every
  *                              selected job that needed a filter
  *                              rerun, regardless of action label).

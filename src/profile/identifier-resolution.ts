@@ -1,10 +1,10 @@
 /**
- * Profile version identifier resolution (TASK-009, SPEC §31 + §32).
+ * Profile version identifier resolution.
  *
  * Accepts either of the two documented CLI forms:
  *
  * 1. `profile_<int>`            — the integer primary key with the standard
- *                                  `profile_` prefix (SPEC §32 example:
+ *                                  `profile_` prefix ( example:
  *                                  `profile_3`).
  * 2. `profile_<profileId>`      — the human-friendly id stored inside the
  *                                  persisted `ProfessionalProfile.id` field.

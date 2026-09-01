@@ -1,7 +1,6 @@
 /**
  * `ReevaluationService` — the application service that composes the
- * filter + score caches for `jobs reevaluate` (TASK-017 Wave C,
- * SPEC §28 + §30 + §32).
+ * filter + score caches for `jobs reevaluate`.
  *
  * The service is the read-or-rerun execution engine: it walks every
  * complete job, classifies each as filter-stale / score-stale /
@@ -27,7 +26,7 @@
  * errors / plan / format / json-schemas / index / log) does NOT.
  *
  * The service NEVER calls `process.exit`. The CLI handler in
- * Wave D owns the exit-code mapping via `exitWithError`.
+ *  owns the exit-code mapping via `exitWithError`.
  */
 
 import type { FilterApplyResult, FilterApplyInput } from '../filter/service.js';
@@ -54,7 +53,7 @@ import { noopReevaluationLogger, type ReevaluationLogger } from './log.js';
 
 /**
  * The model + reasoning-effort strings used by the scoring fingerprint
- * (SPEC §27.3). These match the MVP defaults from
+ * These match the MVP defaults from
  * `DEFAULT_OPERATIONAL_CONFIG.openai.jobScoring`. The service does
  * NOT take a `ScoringService` dependency on the model/reasoning
  * settings — the reevaluation fingerprint must stay byte-for-byte
@@ -378,7 +377,7 @@ export class ReevaluationService {
         }
       } else if (input.scope === 'scores-only' && filterOutcome !== 'accepted') {
         // --scores-only with a non-accepted filter outcome (rejected,
-        // error, or stale/missing) — skip per Decision 6
+        // error, or stale/missing) — skip per
         // ("filter_update_required").
         skipped.push({
           jobId: `job_${job.id}`,

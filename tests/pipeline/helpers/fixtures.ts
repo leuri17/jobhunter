@@ -125,11 +125,11 @@ export async function insertActiveFilter(repositories: Repositories): Promise<nu
  * `sourceJobId`. This is the minimum surface the discovery flow
  * needs to insert a new job row.
  *
- * NOTE: this helper is NOT used by any test in Wave D — the
+ * NOTE: this helper is NOT used by any test in  — the
  * orchestrator tests cannot inject a custom page factory through the
  * current `buildRunHarness` helper (the harness's `FakeBrowserSession`
  * is constructed without exposing its `createPage` hook). The helper
- * is preserved here for future Wave E work that wires the page
+ * is preserved here for future  work that wires the page
  * factory into the harness.
  */
 export function makeFakePageWithCard(sourceJobId: string): FakePage {

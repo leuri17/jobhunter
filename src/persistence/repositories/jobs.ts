@@ -74,7 +74,7 @@ export interface DiscoveryEventRow {
 }
 
 /**
- * Patch shape for `updateDiscoveryEvent` (TASK-013 Plan Task 12).
+ * Patch shape for `updateDiscoveryEvent`.
  * Every field is optional — the repository only writes the keys
  * that are defined. `skipReason: null` is honored as an explicit
  * reset (distinct from `undefined`, which means "leave alone").
@@ -275,7 +275,7 @@ export class JobRepository {
 
   /**
    * Read-only: every job row whose `extractionStatus === 'complete'`
-   * (TASK-017 Plan Task 9, SPEC §28). Used by `jobs reevaluate`
+   * Used by `jobs reevaluate`
    * selection — partial / failed rows are excluded because their
    * filter + score state cannot be trusted.
    *
@@ -332,8 +332,8 @@ export class JobRepository {
   }
 
   /**
-   * Patch an existing `discoveryEvents` row in place (TASK-013 Plan
-   * Task 12, SPEC §23.2 / §23.3, AGENTS.md §6). Only the fields
+   * Patch an existing `discoveryEvents` row in place ( Plan
+   * Task 12, , AGENTS.md §6). Only the fields
    * present in `patch` are written — the existing row is preserved
    * otherwise (no cascading delete, no row replacement).
    *
@@ -343,7 +343,7 @@ export class JobRepository {
    * the callback is sync because better-sqlite3 rejects Promise
    * returns (`src/persistence/repositories/index.ts:54-58`).
    *
-   * The orchestrator (Wave D's `LinkedInExtractionService`) calls
+   * The orchestrator (`LinkedInExtractionService`) calls
    * this method inside its own atomic transaction so the
    * `extractionAttempts` insert, the `jobs` update, and this row
    * patch all commit together — see `service.ts`.
@@ -373,7 +373,7 @@ export class JobRepository {
 
   /**
    * Look up the most recent `discoveryEvents` row for the supplied
-   * `(jobId, searchExecutionId)` pair (TASK-013 Plan Task 12).
+   * `(jobId, searchExecutionId)` pair.
    *
    * Used by `LinkedInExtractionService.extractOne` to resolve the
    * `discoveryEvents.id` that the per-job atomic update must patch
@@ -427,12 +427,12 @@ export class JobRepository {
 
   /**
    * Read-only: fetch every discovery event for a given pipeline run
-   * (TASK-015 Decision 13 + Task 13). Used by the pipeline
+   * (  + Task 13). Used by the pipeline
    * orchestrator to enumerate the jobs discovered during the run.
    *
    * Functionally equivalent to `listDiscoveryEventsByRun`. Kept as
    * a distinct method to preserve the discoverability + matching
-   * unit-test contract documented in the TASK-015 plan.
+   * unit-test contract documented in the  plan.
    */
   async findEventsByRun(pipelineRunId: number): Promise<readonly DiscoveryEventRow[]> {
     return this.listDiscoveryEventsByRun(pipelineRunId);
@@ -505,7 +505,7 @@ export class JobRepository {
   }
 
   // -------------------------------------------------------------------------
-  // Inspection queries (TASK-016 Wave B, SPEC §34.1 / §34.5)
+  // Inspection queries
   //
   // The queries below back `JobsListService.list`. Each `state` selects the
   // job rows that match the documented per-state semantics; the service
@@ -761,8 +761,7 @@ export class JobRepository {
 }
 
 /**
- * Filter shape consumed by `JobRepository.listByState` (TASK-016 Wave B,
- * SPEC §34.3). Lives next to the repository method so the SQL layer
+ * Filter shape consumed by `JobRepository.listByState`. Lives next to the repository method so the SQL layer
  * can read + apply refinements without the service layer re-marshalling.
  *
  * `company` and `location` are expected to be already lowercased by the

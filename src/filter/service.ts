@@ -14,8 +14,7 @@ import { NoActiveFilterConfigError } from './errors.js';
 
 /**
  * `FilterApplyService` — application service that applies the global
- * deterministic filter engine to a single complete job (TASK-010 Task 9,
- * SPEC §17, §24, §27.1).
+ * deterministic filter engine to a single complete job.
  *
  * The service is the **cache ledger**: it consults
  * `filterResults.findActiveByJob(jobId, fingerprint)` and re-activates a
@@ -23,11 +22,11 @@ import { NoActiveFilterConfigError } from './errors.js';
  * computed from the active config hash, the relevant profile slice, and
  * the job content hash (Task 7).
  *
- * Flow (SPEC §17.4 → §17.5 → §17.6 → §18 → §19 → §20):
+ * Flow:
  *
  *   1. Load the active `filter_configuration_versions` row. If absent,
  *      throw `NoActiveFilterConfigError` — the orchestrator must refuse to
- *      run a pipeline without an active global configuration (SPEC §9.5).
+ *      run a pipeline without an active global configuration.
  *   2. Load the active approved `profile_versions` row (may be `null`).
  *      The fingerprint composer's profile slice is `null` when there is no
  *      active profile (per Task 7).

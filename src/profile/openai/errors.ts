@@ -22,7 +22,7 @@ export interface RetryAttemptSummary {
  * Base class for every error raised by the profile-extraction pipeline.
  *
  * Every subclass maps to exit code 5 (`ExitCode.OpenAIFailure`) at the CLI
- * boundary per SPEC §25.
+ * boundary per .
  *
  * `attempts` is populated by the retry policy (`runWithRetry`) when the
  * final attempt fails. Callers (Task 7's `ProfileExtractionService`) use
@@ -146,7 +146,7 @@ export class OpenAIUnsupportedModelError extends ProfileExtractionError {
 /**
  * Raised before any OpenAI call when the source text — across all stored
  * sources — cannot fit into the request size limit. We fail loud rather than
- * silently truncate, in line with SPEC §25.8's posture.
+ * silently truncate, in line with 's posture.
  */
 export class ProfileExtractionInputTooLargeError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {

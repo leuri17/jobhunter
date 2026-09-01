@@ -12,7 +12,7 @@ export type DrizzleTransaction = Parameters<
  *
  * The callback MUST be synchronous: better-sqlite3's transaction wrapper
  * rejects callbacks that return a Promise (`TypeError: Transaction function
- * cannot return a promise`). For SPEC §23.5 atomic writes that span multiple
+ * cannot return a promise`). For  atomic writes that span multiple
  * repositories, use `Repositories.transact()` — it accepts the same sync shape.
  *
  * Async work (e.g., reading the result via an `async` repository) must happen

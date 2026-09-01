@@ -1,12 +1,12 @@
 /**
- * Dedicated-job-page parser (TASK-013 Plan Task 11, SPEC §22.7).
+ * Dedicated-job-page parser.
  *
  * `parseDedicatedPage` reads the 4 required fields (`title`,
  * `company`, `location`, `description`) from the open
  * `/jobs/view/<id>/` page using `page.locator(selector).textContent()`
  * for auto-waiting per-field reads. No verification step is
  * performed — the URL is built from `sourceJobId` directly by
- * `buildDetailUrl` upstream (Decision 8), so the page is guaranteed
+ * `buildDetailUrl` upstream, so the page is guaranteed
  * to be the right job's detail page.
  *
  * Imports `Page` and `Locator` as TYPES only — runtime Playwright
@@ -16,10 +16,10 @@
  * `import type`.
  *
  * Per AGENTS.md §4: strict TypeScript, no `any`. The function reads
- * fields in parallel via `Promise.all` (per Decision 25 — sharing
+ * fields in parallel via `Promise.all` (per  — sharing
  * the `LINKEDIN_FIELDS` map with `panel-parser.ts`).
  *
- * Per Decision 12: cancellation is `AbortSignal`-driven; the signal
+ * Per : cancellation is `AbortSignal`-driven; the signal
  * is checked between field waits.
  */
 import type { Locator, Page } from 'playwright';
@@ -58,7 +58,7 @@ export interface ParseDedicatedPageOptions {
  * Read `ExtractionFieldSet` from the dedicated job-detail page.
  *
  * The dedicated page reuses the unified top-card DOM (per librarian
- * research, Decision 25), so the field selectors are identical to
+ * research, ), so the field selectors are identical to
  * the panel's. The parser:
  *
  *   1. Reads each of the 4 fields (`title`, `company`, `location`,
@@ -70,7 +70,7 @@ export interface ParseDedicatedPageOptions {
  *      `Show more` / `See more` / `View more` literal).
  *
  * A per-field `null` resolves to a `partial` extraction status when
- * passed to `computeExtractionStatus` (Decision 4 + Decision 5).
+ * passed to `computeExtractionStatus`.
  * The dedicated parser is more permissive than the panel parser:
  * the navigation has already succeeded (the orchestrator opened
  * the URL via `BrowserSession.openFallbackPage`), so a missing

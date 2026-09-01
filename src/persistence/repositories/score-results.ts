@@ -192,8 +192,7 @@ export class ScoreResultRepository {
   }
 
   /**
-   * List every active + successful score result for a run (TASK-016
-   * Wave B, SPEC §35.2). Functionally equivalent to `topByRun` minus
+   * List every active + successful score result for a run. Functionally equivalent to `topByRun` minus
    * the `LIMIT` + `ORDER BY` — the service layer uses this to count
    * `scored` jobs and to assemble the `RunShowPayload` `scoreCounts`.
    */
@@ -214,7 +213,7 @@ export class ScoreResultRepository {
 
   /**
    * Flip every active `scoreResults` row for the supplied `jobId` to
-   * `active = false` (TASK-017 Plan Task 10, SPEC §27.4 + §28.2).
+   * `active = false`.
    * Used by the reevaluation service after a `--filters-only` rerun
    * produces a fingerprint that differs from the prior active filter
    * — every dependent score is now stale and must be re-derived.

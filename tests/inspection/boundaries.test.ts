@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Domain-boundary guard for `src/inspection/` (TASK-016 Wave D Task 14).
+ * Domain-boundary guard for `src/inspection/`.
  *
  * AGENTS.md §5: domain code must not depend on Commander, Inquirer,
  * Drizzle, OpenAI, or runtime Pino. The inspection layer is split into:
@@ -109,7 +109,7 @@ function relativeFromCwd(absolute: string): string {
   return absolute;
 }
 
-describe('src/inspection domain-boundary guard (TASK-016 Wave D Task 14)', () => {
+describe('src/inspection domain-boundary guard', () => {
   it('exists as a directory with both pure helpers + services', () => {
     const pureFiles = listInspectionFiles(INSPECTION_DIR).filter((f) => !isInServicesDir(f));
     const serviceFiles = listInspectionFiles(SERVICES_DIR);

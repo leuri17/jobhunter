@@ -1,13 +1,12 @@
 /**
- * Full integration tests for `LinkedInExtractionService` (TASK-013
- * Plan Task 13, Wave D, SPEC §22 + §23).
+ * Full integration tests for `LinkedInExtractionService`.
  *
  * Strategy: a custom `FakeBrowserSession` that routes BOTH the
  * search-page URL and the dedicated-page URL to fixture HTML. The
  * orchestrator gets the same FakePage-shaped object for both URLs;
  * the fixture selection is driven by the URL.
  *
- * Per Decision 25 + the plan's test plan:
+ * Per  + the plan's test plan:
  *   - happy path (panel-complete) → kind: 'complete'
  *   - skip-complete → kind: 'skipped', zero DB writes
  *   - skip-partial → kind: 'skipped', zero DB writes
@@ -80,7 +79,7 @@ class CapturingLogger implements LinkedInExtractionLogger {
 /**
  * Minimal DiagnosticManager stub — records the calls but produces
  * no artifacts. The orchestrator doesn't call `recordScraperError`
- * in Wave D (per-job errors are surfaced as outcomes), so this stub
+ * in  (per-job errors are surfaced as outcomes), so this stub
  * just satisfies the constructor signature.
  */
 class FakeDiagnosticManager {
@@ -350,7 +349,7 @@ function makeSearchExecution(id: number, generatedUrl: string): SearchExecutionR
 
 /**
  * Insert a job via `recordNewJob` (returns `discoveryEventId`).
- * Mimics TASK-012's discovery flow: extractionStatus: 'failed'
+ * Mimics 's discovery flow: extractionStatus: 'failed'
  * placeholder; the orchestrator promotes it via `updateExtraction`.
  */
 async function seedJob(
@@ -387,7 +386,7 @@ async function seedJob(
 
 const NO_SIGNAL = new AbortController().signal;
 
-describe('LinkedInExtractionService (Wave D integration)', () => {
+describe('LinkedInExtractionService (integration)', () => {
   let rig: TestRig;
 
   beforeEach(async () => {

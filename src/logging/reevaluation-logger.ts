@@ -1,10 +1,9 @@
 /**
- * Pino adapter for the reevaluation structured logger (TASK-017
- * Wave C).
+ * Pino adapter for the reevaluation structured logger.
  *
  * Mirrors the `pinoPipelineLogger` adapter from `src/pipeline/log.ts`
- * (TASK-015) and `pinoScoringLogger` from `src/scoring/log.ts`
- * (TASK-014). Every event method:
+ * and `pinoScoringLogger` from `src/scoring/log.ts`
+ * Every event method:
  *
  *   - calls the matching Pino level (`info` for normal events, `warn`
  *     for `reevaluationScoreFail`);

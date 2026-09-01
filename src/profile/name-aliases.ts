@@ -10,7 +10,7 @@
  */
 
 export const ALIAS_MAP: Readonly<Record<string, string>> = Object.freeze({
-  // SPEC §12.2 examples — including the open-decision-table entry
+  //  examples — including the open-decision-table entry
   // `nodejs → nodejs` as an intentional self-mapping that documents the
   // canonical form (no alias is required for `nodejs` to round-trip, but
   // listing it here makes the canonical spelling explicit).
