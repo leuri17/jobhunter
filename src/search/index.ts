@@ -53,7 +53,6 @@ export {
 
 export {
   createFailingPrompts,
-  defaultInquirerPrompts,
   type SearchConfigurationPreview,
   type SearchPrompts,
 } from './prompts.js';

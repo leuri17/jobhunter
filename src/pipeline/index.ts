@@ -26,7 +26,6 @@ export { formatRunSummary, formatTopNTable, formatScoringPlan } from './format.j
 
 export type { PipelinePrompts } from './prompts.js';
 export { ScriptedPipelinePrompts, FailingPipelinePrompts } from './prompts.js';
-export { InquirerPipelinePrompts } from './prompts-inquirer.js';
 
 export { getApplicationVersion } from './version.js';
 
