@@ -3,9 +3,9 @@
  * the init layer so external consumers (desktop sidecar, tests) can
  * pull from a single import path.
  *
- * Domain boundaries: this module does not import Commander, Playwright,
- * Drizzle directly, or Pino directly. The InitLogger is reached via the
- * `./log.js` adapter.
+ * Domain boundaries: this module does not import Playwright,
+ * Drizzle directly, or Pino directly. The InitLogger is reached via
+ * the `./log.js` adapter.
  */
 export {
   INIT_STEPS,

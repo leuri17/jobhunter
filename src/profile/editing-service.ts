@@ -2,10 +2,10 @@
  * ProfileEditingService — application service for  / .
  *
  * The service runs the interactive profile-edit session. It glues the
- * pure state machine (`reduce`) to the prompt adapter (default
- * `InquirerProfileEditorPrompts`, fake `FailingProfileEditorPrompts`, or
- * the `ScriptedProfileEditorPrompts` used by tests) and persists the
- * result through the `Repositories` facade.
+ * pure state machine (`reduce`) to the prompt adapter (a sidecar-wired
+ * production adapter, fake `FailingProfileEditorPrompts`, or the
+ * `ScriptedProfileEditorPrompts` used by tests) and persists the result
+ * through the `Repositories` facade.
  *
  * Lifecycle:
  *
@@ -27,8 +27,7 @@
  *
  * The service depends only on the repositories, identifier-resolution,
  * the pure state-machine helpers, and the typed lifecycle errors. It
- * never touches Commander, Inquirer, Playwright, Drizzle directly, or
- * the openai SDK.
+ * never touches Playwright, Drizzle directly, or the openai SDK.
  */
 
 import { randomUUID } from 'node:crypto';

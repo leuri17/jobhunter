@@ -197,7 +197,7 @@ export const filterConfigurationVersions = sqliteTable(
 );
 
 // 9. pipeline_runs ---------------------------------------------------------
-// One row per `jobhunter run` invocation. Counts are denormalized for inspection.
+// One row per pipeline run invocation. Counts are denormalized for inspection.
 export const pipelineRuns = sqliteTable(
   'pipeline_runs',
   {

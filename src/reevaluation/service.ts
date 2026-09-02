@@ -25,8 +25,9 @@
  * `src/pipeline/`, and `src/persistence/`. The pure layer (state /
  * errors / plan / format / json-schemas / index / log) does NOT.
  *
- * The service NEVER calls `process.exit`. The CLI handler in
- *  owns the exit-code mapping via `exitWithError`.
+ * The service NEVER calls `process.exit`. The HTTP error mapper
+ * owns the exit-code translation; the domain layer throws typed
+ * errors and lets the boundary convert them.
  */
 
 import type { FilterApplyResult, FilterApplyInput } from '../filter/service.js';
@@ -253,7 +254,7 @@ export class ReevaluationService {
     if (configRow === null) {
       throw new PipelinePrerequisiteError(
         'no_active_filter',
-        'No active filter configuration. Run `jobhunter filters configure` before reevaluating.',
+        'No active filter configuration. Open the Filters tab in the desktop app before reevaluating.',
         { scope: input.scope },
       );
     }
@@ -270,7 +271,7 @@ export class ReevaluationService {
       if (profileVersion === null) {
         throw new PipelinePrerequisiteError(
           'no_active_profile',
-          'No active approved profile. Run `jobhunter profile approve` before reevaluating.',
+          'No active approved profile. Approve a profile from the Profile page before reevaluating.',
           { scope: input.scope },
         );
       }

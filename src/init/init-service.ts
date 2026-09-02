@@ -1,6 +1,6 @@
 /**
  * `InitOrchestrator` — the application service that walks the 10
- * prerequisite steps for `jobhunter init`.
+ * prerequisite steps needed to set up the desktop app.
  *
  * The orchestrator NEVER re-implements prerequisite service logic — it
  * delegates via the existing barrels (`src/profile/index.js`,
@@ -9,8 +9,8 @@
  * not reach into their internals.
  *
  * Domain boundaries (AGENTS.md §5, §9): this module does NOT import
- * Commander, Inquirer, Playwright, Drizzle directly, the `openai` SDK,
- * or Pino directly. The `InitLogger` interface is the logging seam.
+ * Playwright, Drizzle directly, the `openai` SDK, or Pino directly.
+ * The `InitLogger` interface is the logging seam.
  */
 
 import { loadConfig } from '../config/loader.js';
@@ -82,11 +82,11 @@ import {
 } from './classify.js';
 
 /**
- * Prerequisite-prompt seams are OPTIONAL. The CLI handler (Task 9)
- * wires them to the production adapters; tests inject scripted or
- * failing adapters (Finding 2). When a prerequisite seam is omitted,
- * the orchestrator surfaces a typed `InitLifecycleError` (the field is
- * not optional in the plan, but in practice the CLI always supplies
+ * Prerequisite-prompt seams are OPTIONAL. The desktop sidecar wires
+ * them to the production adapters; tests inject scripted or failing
+ * adapters (Finding 2). When a prerequisite seam is omitted, the
+ * orchestrator surfaces a typed `InitLifecycleError` (the field is not
+ * optional in the plan, but in practice the sidecar always supplies
  * them so this branch is a defensive guard).
  */
 export interface InitOrchestratorOptions {
@@ -97,9 +97,9 @@ export interface InitOrchestratorOptions {
   readonly prompts: InitPrompts;
   /** Injected by the desktop sidecar (or by tests); null when `OPENAI_API_KEY` is absent. */
   readonly openaiClient: OpenAIClient | null;
-  /** Optional. Wired by the sidecar to `defaultInquirerPrompts`; tests inject scripted. */
+  /** Optional. Wired by the sidecar to the search prompts adapter; tests inject scripted. */
   readonly searchPrompts?: SearchPrompts;
-  /** Optional. Wired by the sidecar to `defaultInquirerFilterPrompts`; tests inject scripted. */
+  /** Optional. Wired by the sidecar to the filter prompts adapter; tests inject scripted. */
   readonly filterPrompts?: FilterPrompts;
   /** Optional. Wired by the sidecar to the inline approval-confirm prompt; tests inject scripted. */
   readonly approvalPrompts?: ProfileApprovalPrompts;
@@ -535,7 +535,7 @@ export class InitOrchestrator {
       const latestDraftForApproval = refreshedVersions.find((row) => row.status === 'draft');
       if (latestDraftForApproval === undefined) {
         // No draft to approve. Return partial summary (the operator must
-        // run `jobhunter profile extract` first).
+        // extract a profile draft from the Profile page first).
         stepReports['approvedProfile'] = approvedReport;
         logger.stepComplete({ stepId: 'approvedProfile', artifactId: null });
         return this.buildSummary(stepReports, false, opts);

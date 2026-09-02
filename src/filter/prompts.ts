@@ -4,9 +4,8 @@
  * Every method of `FilterPrompts` corresponds to one question the
  * `ConfigureFiltersService` asks the user. The seam keeps the
  * `ConfigureFiltersService` prompt-free so its flow can be tested with
- * a `ScriptedFilterPrompts` fixture; the Inquirer CLI implementation
- * lives in `prompts-inquirer.ts` and is the ONLY module under
- * `src/filter/` permitted to import `@inquirer/prompts`.
+ * a `ScriptedFilterPrompts` fixture. Production adapters are wired by
+ * the desktop sidecar at composition time.
  *
  * The two test adapters mirror the `createFailingPrompts` /
  * scripted-recorder pattern used by `src/search/prompts.ts` and
@@ -20,9 +19,8 @@
  *
  * The preview shape (`FilterConfigurationPreview`) intentionally mirrors
  * `JobFilterConfig` 1:1 so the rendered preview is a literal JSON
- * reflection of what gets persisted. The Inquirer adapter writes the
- * preview to `stderr`; the service treats `showPreview` as fire-and-forget
- * (no error path).
+ * reflection of what gets persisted. The sidecar renders the preview;
+ * the service treats `showPreview` as fire-and-forget (no error path).
  */
 
 import type { SeniorityLevel } from '../profile/schema.js';

@@ -11,9 +11,9 @@
  * The missing-prerequisite cases (no active profile, no active filter
  * config, missing `OPENAI_API_KEY`) reuse `PipelinePrerequisiteError`
  * from `src/pipeline/errors.ts` — the class is
- * re-exported here for consumer convenience. The existing
- * `exitWithError` helper already maps `MissingRequired = 3` for it,
- * so no new error class is needed.
+ * re-exported here for consumer convenience. The HTTP error mapper
+ * already maps `MissingRequired = 3` for it, so no new error class is
+ * needed.
  *
  * No new exit codes are introduced.
  *

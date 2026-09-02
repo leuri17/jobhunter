@@ -112,8 +112,8 @@ export async function registerProfileRoutes(
   app.post<{ Params: { id: string }; Body: { profileJson?: unknown } }>(
     '/api/profile/:id/edit',
     async (req, reply) => {
-      // v1 limitation: the interactive ProfileEditingService prompts over stdin
-      // (Inquirer), which is incompatible with an HTTP sidecar. Calling it would
+      // v1 limitation: the interactive ProfileEditingService prompts over
+      // stdin, which is incompatible with an HTTP sidecar. Calling it would
       // hang or throw TtyError. Surface this clearly to the desktop UI,
       // acknowledge the body, and signal the follow-up. The full programmatic
       // edit (apply profileJson as a new draft version via the repo) is tracked
