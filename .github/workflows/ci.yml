@@ -10,9 +10,9 @@ jobs:
   core-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with: { node-version-file: '.node-version' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
@@ -22,9 +22,9 @@ jobs:
   sidecar-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with: { node-version-file: '.node-version' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @jobhunter/sidecar test
@@ -32,9 +32,9 @@ jobs:
   ui-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with: { node-version-file: '.node-version' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @jobhunter/ui test
