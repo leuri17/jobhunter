@@ -6,7 +6,7 @@
  * complete job, classifies each as filter-stale / score-stale /
  * already-current, executes the planned reruns (or no-op for the
  * dry-run path), and produces the structured `ReevaluationPlan`
- * envelope the CLI renders + serializes as JSON.
+ * envelope the sidecar renders + serializes as JSON.
  *
  * Composition:
  *   - `FilterApplyService.apply()`   — cache ledger for filter results
@@ -297,14 +297,14 @@ export class ReevaluationService {
       if (input.jobId === undefined || input.jobId === null) {
         throw new ReevaluationValidationError(
           'job_not_found',
-          'No job identifier supplied to --job scope.',
+          'No job identifier supplied for the reevaluation scope.',
           { scope: input.scope },
         );
       }
       const job = allCompleteJobs.find((j) => j.id === input.jobId);
       if (job === undefined) {
         // Could be partial / failed (excluded by listComplete) or
-        // genuinely missing. The CLI has already validated for
+        // genuinely missing. The HTTP route has already validated for
         // partial/failed + not-found, so this is the defensive
         // double-check.
         throw new ReevaluationValidationError(
@@ -377,7 +377,7 @@ export class ReevaluationService {
           });
         }
       } else if (input.scope === 'scores-only' && filterOutcome !== 'accepted') {
-        // --scores-only with a non-accepted filter outcome (rejected,
+        // scores-only with a non-accepted filter outcome (rejected,
         // error, or stale/missing) — skip per
         // ("filter_update_required").
         skipped.push({

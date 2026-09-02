@@ -12,7 +12,7 @@ import { Route as rootRoute } from './__root';
 // warnings / overrides extracted by the sidecar and exposes Approve
 // / Reject actions. Editing is intentionally not implemented yet:
 // POST `/api/profile/:id/edit` returns 501 per B4-fix (interactive
-// Inquirer prompts aren't available over HTTP).
+// prompts aren't available over HTTP).
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/profile',

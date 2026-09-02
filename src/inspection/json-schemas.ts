@@ -1,8 +1,9 @@
 /**
- * Zod schemas for the `--json` output of every inspection command
+ * Zod schemas for the JSON envelope produced by every inspection
+ * sidecar route.
  *
  * The schemas are the source of truth for the JSON contract — the
- * producer (services + CLI handler) trusts the service output, but
+ * producer (services + sidecar) trusts the service output, but
  * consumers + tests run `safeParse` against the schema to catch
  * regressions. Every payload carries a `schemaVersion: 1` first key
  * so consumers can branch on version without parsing the whole

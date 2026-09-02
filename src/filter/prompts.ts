@@ -45,10 +45,10 @@ export interface FilterPrompts {
   askMaximumSeniority(existing: SeniorityLevel | null): Promise<SeniorityLevel | null>;
   /**
    *  requires the user to keep / remove / add / re-add languages,
-   * including languages NOT in the profile. The default Inquirer adapter
-   * renders a checkbox of `seeds` plus an "Other…" free-text input; the
-   * union of toggled + entered languages is returned via `added`. The
-   * scripted test adapter mirrors the same shape.
+   * including languages NOT in the profile. The default editor
+   * adapter renders a checkbox of `seeds` plus an "Other…" free-text
+   * input; the union of toggled + entered languages is returned via
+   * `added`. The scripted test adapter mirrors the same shape.
    */
   askAcceptedLanguages(
     seeds: readonly string[],

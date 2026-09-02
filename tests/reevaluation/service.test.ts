@@ -40,11 +40,11 @@ const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
  * `FilterApplyService` / `ScoringService` so the test surface stays
  * deterministic.
  *
- * T18 is the CLI-handler scope-conflict test — at the service level
- * there is no concept of `--filters-only + --scores-only`
- * (single-string `scope` input). T18 is exercised by
- * `tests/cli/jobs-reevaluate.test.ts`. Here we record it as
- * `it.skip` with a pointer to its CLI home.
+ * T18 is the sidecar scope-conflict test — at the service level
+ * there is no concept of `filters-only + scores-only`
+ * (single-string `scope` input). T18 is exercised by the sidecar's
+ * HTTP route validation. Here we record it as
+ * `it.skip` with a pointer to its HTTP home.
  */
 describe('ReevaluationService', () => {
   let directory: string;
@@ -185,9 +185,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T2: --filters-only with 2 stale filters.
+  // T2: scope 'filters-only' with 2 stale filters.
   // -----------------------------------------------------------------
-  it('T2: --filters-only with 2 stale filters → 2 filter entries, 0 score entries, no OpenAI calls', async () => {
+  it('T2: scope "filters-only" with 2 stale filters → 2 filter entries, 0 score entries, no OpenAI calls', async () => {
     const job1 = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -230,9 +230,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T3: --filters-only with stale filter + prior active score → invalidate.
+  // T3: scope 'filters-only' with stale filter + prior active score → invalidate.
   // -----------------------------------------------------------------
-  it('T3: --filters-only with a stale filter + prior active score → scoresInvalidated = 1', async () => {
+  it('T3: scope "filters-only" with a stale filter + prior active score → scoresInvalidated = 1', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -280,9 +280,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T4: --scores-only with stale filter → skipped, no OpenAI calls.
+  // T4: scope 'scores-only' with stale filter → skipped, no OpenAI calls.
   // -----------------------------------------------------------------
-  it('T4: --scores-only with a stale filter → skipped + no OpenAI calls', async () => {
+  it('T4: scope "scores-only" with a stale filter → skipped + no OpenAI calls', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -307,9 +307,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T5: --scores-only with fresh accepted filter + stale score → OpenAI call.
+  // T5: scope 'scores-only' with fresh accepted filter + stale score → OpenAI call.
   // -----------------------------------------------------------------
-  it('T5: --scores-only with a fresh accepted filter + stale score → OpenAI call', async () => {
+  it('T5: scope "scores-only" with a fresh accepted filter + stale score → OpenAI call', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -342,14 +342,14 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T6: --job job_42 where the job is partial → throws job_not_complete.
+  // T6: scope 'job' with jobId 42 where the job is partial → throws job_not_complete.
   // -----------------------------------------------------------------
-  it('T6: --job job_42 with a partial job → defensive job_not_found', async () => {
+  it('T6: scope "job" with jobId 42 (partial job) → defensive job_not_found', async () => {
     await insertCompleteJobForReeval(repositories, '111', pipelineRunId, searchExecutionId);
     // No complete job with id 42 → listComplete() doesn't include it,
-    // service throws job_not_found. The CLI handler maps the same
+    // service throws job_not_found. The sidecar route maps the same
     // identifier to "partial" via findById + extractionStatus check
-    // (the CLI raises job_not_complete). The service is defensive
+    // (the sidecar raises job_not_complete). The service is defensive
     // against both cases — listComplete excludes partial rows, so
     // job 42 is simply not present and the service throws
     // job_not_found. T6 asserts this defensive behaviour.
@@ -367,9 +367,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T7: --job 99999999 (numeric LinkedIn ID) where the job is partial.
+  // T7: scope 'job' with jobId 99999999 (numeric LinkedIn ID) where the job is partial.
   // -----------------------------------------------------------------
-  it('T7: --job 99999999 (numeric) → defensive job_not_found', async () => {
+  it('T7: scope "job" with jobId 99999999 (numeric) → defensive job_not_found', async () => {
     await insertCompleteJobForReeval(repositories, '111', pipelineRunId, searchExecutionId);
     // Service receives a pre-resolved numeric id; no LinkedIn
     // resolution happens here (that's the CLI's job).
@@ -387,9 +387,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T8: --job job_9999 (does not exist) → throws job_not_found.
+  // T8: scope 'job' with jobId 9999 (does not exist) → throws job_not_found.
   // -----------------------------------------------------------------
-  it('T8: --job 9999 (does not exist) → throws ReevaluationValidationError(job_not_found)', async () => {
+  it('T8: scope "job" with jobId 9999 (does not exist) → throws ReevaluationValidationError(job_not_found)', async () => {
     await expect(
       makeService().execute({
         scope: 'job',
@@ -413,9 +413,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T9: --job job_42 complete + stale filter → 1 filter entry, 0 score entries.
+  // T9: scope 'job' with jobId 42 (complete) + stale filter → 1 filter entry, 0 score entries.
   // -----------------------------------------------------------------
-  it('T9: --job (complete, stale filter) → 1 filter entry, 0 score entries', async () => {
+  it('T9: scope "job" (complete, stale filter) → 1 filter entry, 0 score entries', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '777',
@@ -444,9 +444,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T10: --job --filters-only → runs only filter rerun.
+  // T10: scope 'job' + 'filters-only' → runs only filter rerun.
   // -----------------------------------------------------------------
-  it('T10: --job --filters-only → runs only the filter rerun', async () => {
+  it('T10: scope "job" + filters-only → runs only the filter rerun', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '888',
@@ -476,9 +476,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T11: --job --scores-only → runs only score rerun.
+  // T11: scope 'job' + 'scores-only' → runs only score rerun.
   // -----------------------------------------------------------------
-  it('T11: --job --scores-only → runs only the score rerun', async () => {
+  it('T11: scope "job" + scores-only → runs only the score rerun', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '999',
@@ -512,9 +512,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T12: --job --dry-run → dryRun: true, no DB writes, no OpenAI calls.
+  // T12: scope 'job' + dryRun → dryRun: true, no DB writes, no OpenAI calls.
   // -----------------------------------------------------------------
-  it('T12: --job --dry-run → dryRun: true, all would-rerun, no DB writes, no OpenAI calls', async () => {
+  it('T12: scope "job" + dryRun → dryRun: true, all would-rerun, no DB writes, no OpenAI calls', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '1010',
@@ -539,9 +539,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T13: --dry-run (no --job) → every action would-rerun.
+  // T13: dryRun (no jobId) → every action would-rerun.
   // -----------------------------------------------------------------
-  it('T13: --dry-run (no --job) → every action would-rerun, no DB writes, no OpenAI calls', async () => {
+  it('T13: dryRun (no jobId) → every action would-rerun, no DB writes, no OpenAI calls', async () => {
     await insertCompleteJobForReeval(repositories, '1111', pipelineRunId, searchExecutionId);
     await insertCompleteJobForReeval(repositories, '2222', pipelineRunId, searchExecutionId);
 
@@ -660,9 +660,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T16: Default scope + --yes → no prompt call, scoring proceeds.
+  // T16: Default scope + confirmScoring:false → no prompt call, scoring proceeds.
   // -----------------------------------------------------------------
-  it('T16: default scope + --yes → confirmScoring=false, no prompt, scoring proceeds', async () => {
+  it('T16: default scope + confirmScoring=false → no prompt, scoring proceeds', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -695,9 +695,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T17: --filters-only + --yes → confirmScoring=False trivially.
+  // T17: scope 'filters-only' + confirmScoring:false → scoring proceeds trivially.
   // -----------------------------------------------------------------
-  it('T17: --filters-only + --yes → scoring proceeds trivially (no OpenAI required)', async () => {
+  it('T17: scope "filters-only" + confirmScoring=false → scoring proceeds trivially (no OpenAI required)', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -727,9 +727,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T18: --filters-only + --scores-only → CLI handler error.
+  // T18: scope 'filters-only' + 'scores-only' → sidecar route error.
   // -----------------------------------------------------------------
-  it.skip('T18: scope conflict → CLI handler throws ReevaluationValidationError(reevaluate_scope_conflict)', () =>
+  it.skip('T18: scope conflict → sidecar route throws ReevaluationValidationError(reevaluate_scope_conflict)', () =>
     undefined);
 
   // -----------------------------------------------------------------
@@ -793,9 +793,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T22: --filters-only + missing OPENAI_API_KEY → succeeds.
+  // T22: scope 'filters-only' + missing OPENAI_API_KEY → succeeds.
   // -----------------------------------------------------------------
-  it('T22: --filters-only with missing OPENAI_API_KEY → executes successfully', async () => {
+  it('T22: scope "filters-only" with missing OPENAI_API_KEY → executes successfully', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -822,9 +822,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T23: --dry-run + missing OPENAI_API_KEY → executes successfully.
+  // T23: dryRun + missing OPENAI_API_KEY → executes successfully.
   // -----------------------------------------------------------------
-  it('T23: --dry-run with missing OPENAI_API_KEY → executes successfully', async () => {
+  it('T23: dryRun with missing OPENAI_API_KEY → executes successfully', async () => {
     const outcome = await makeService().execute({
       scope: 'default',
       dryRun: true,

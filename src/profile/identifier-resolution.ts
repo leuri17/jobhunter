@@ -19,7 +19,7 @@
  * row, which is the only stable internal identifier the rest of the
  * application uses.
  *
- * The helper does NOT depend on Commander, Inquirer, Playwright, or the
+ * The helper does NOT depend on Playwright or the
  * `openai` SDK. It only reaches into the persistence repositories.
  */
 

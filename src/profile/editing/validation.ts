@@ -7,7 +7,7 @@
  * either a normalized value or a list of human-readable issues.
  *
  * The function is pure: no IO, no prompts, no repository access. It is the
- * seam between the Inquirer adapter (which calls it on each input) and the
+ * seam between the editor adapter (which calls it on each input) and the
  * state-machine reducer (which trusts its `ok: true` verdict).
  *
  * Validation must NOT throw — callers branch on `ok`.
@@ -316,7 +316,7 @@ export function validateOverrideValue(
  * Helper: validate that a value matches the year-month shape or null.
  * Exposed so the reducer (which trusts editor input for some fast paths)
  * can re-check. The reducer currently does not call this directly — the
- * Inquirer adapter does — but the helper is exported for completeness.
+ * editor adapter does — but the helper is exported for completeness.
  */
 export function isValidYearMonthOrNull(value: unknown): boolean {
   if (value === null) return true;

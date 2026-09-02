@@ -21,8 +21,8 @@ export interface RetryAttemptSummary {
 /**
  * Base class for every error raised by the profile-extraction pipeline.
  *
- * Every subclass maps to exit code 5 (`ExitCode.OpenAIFailure`) at the CLI
- * boundary per .
+ * Every subclass maps to exit code 5 (`ExitCode.OpenAIFailure`) at
+ * the sidecar's HTTP error mapper per .
  *
  * `attempts` is populated by the retry policy (`runWithRetry`) when the
  * final attempt fails. Callers (Task 7's `ProfileExtractionService`) use

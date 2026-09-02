@@ -7,9 +7,9 @@ import {
 
 /**
  * Base class for every error raised by `LinkedInDiscoveryService`.
- * Subclasses pin a specific `ExitCode` so the CLI boundary
- * does not need an `instanceof` cascade. Per-card errors are NOT
- * represented here — they live on `SearchDiscoveryOutcome.errors[]`
+ * Subclasses pin a specific `ExitCode` so the sidecar's HTTP error
+ * mapper does not need an `instanceof` cascade. Per-card errors are
+ * NOT represented here — they live on `SearchDiscoveryOutcome.errors[]`
  * (see `src/linkedin/state.ts`) and on the `discoveryErrors` table.
  */
 export class LinkedInScraperError extends ApplicationError {

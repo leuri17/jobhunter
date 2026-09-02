@@ -72,8 +72,8 @@ import {
  * job.").
  *
  * Domain-boundary note (AGENTS.md §5, §9): this module imports only
- * `keyword-normalize.js` and `name-normalize.js`. It must not import
- * Commander, Inquirer, Playwright, Drizzle, OpenAI, or Pino. The
+ * `keyword-normalize.js` and `name-normalize.js`. It is a pure helper
+ * that does not depend on Playwright, Drizzle, OpenAI, or Pino. The
  * `tests/filter/boundaries.test.ts` guard enforces this.
  */
 

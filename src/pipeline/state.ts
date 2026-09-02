@@ -2,8 +2,8 @@
  * State vocabulary for  — pipeline orchestration
  *
  * The shapes below are the typed contract between the
- * orchestrator and the CLI renderer. Pure TypeScript types
- * — no runtime values, no I/O.
+ * orchestrator and the desktop pipeline-run renderer. Pure
+ * TypeScript types — no runtime values, no I/O.
  */
 export const PIPELINE_SCHEMA_VERSION = 1 as const;
 export type PipelineSchemaVersion = typeof PIPELINE_SCHEMA_VERSION;

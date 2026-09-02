@@ -1,8 +1,9 @@
 /**
- * Zod schemas for the `--json` output of `jobs reevaluate`
+ * Zod schemas for the JSON envelope produced by the
+ * `reevaluate` sidecar route.
  *
  * The schemas are the source of truth for the JSON contract — the
- * producer (service + CLI handler) trusts the service output, but
+ * producer (service + sidecar) trusts the service output, but
  * consumers + tests run `safeParse` against the schema to catch
  * regressions. Every payload carries `schemaVersion: 1` as the
  * first key so consumers can branch on version without parsing the

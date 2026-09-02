@@ -73,7 +73,7 @@ export interface ClassifyFiltersInput {
  * `classifyPaths` is pure on its input (the resolved directory shape).
  * It does NOT touch `fileSystem` — paths either resolve via
  * `resolvePlatformPaths` at the orchestrator boundary or throw `PathError`
- * (which the CLI maps to `InitPathsFailedError`).
+ * (which the sidecar maps to `InitPathsFailedError`).
  */
 export function classifyPaths(_input: ClassifyPathsInput): Promise<InitStepReport> {
   return Promise.resolve({

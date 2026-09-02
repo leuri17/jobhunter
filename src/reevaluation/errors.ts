@@ -57,17 +57,16 @@ export class ReevaluationError extends ApplicationError {
 }
 
 /**
- * Raised when a CLI argument, scope flag, or identifier is invalid
+ * Raised when a request payload, scope flag, or identifier is invalid
  * Maps to
  * `ExitCode.InvalidUsage` (2). The `code` field distinguishes the
- * failure mode so the CLI handler can produce precise stderr
- * messages:
+ * failure mode so the sidecar can produce precise error responses:
  *
- *   - `reevaluate_scope_conflict` — `--filters-only` + `--scores-only`
- *                                   OR `--job` + `--filters-only` +
- *                                   `--scores-only` (invalid combo).
- *   - `job_not_found`            — `--job <id>` resolved no row.
- *   - `job_not_complete`         — `--job <id>` resolved a partial /
+ *   - `reevaluate_scope_conflict` — `filters-only` + `scores-only`
+ *                                   OR `job` + `filters-only` +
+ *                                   `scores-only` (invalid combo).
+ *   - `job_not_found`            — `job <id>` resolved no row.
+ *   - `job_not_complete`         — `job <id>` resolved a partial /
  *                                   failed row.
  */
 export class ReevaluationValidationError extends ReevaluationError {

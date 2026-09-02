@@ -11,11 +11,12 @@
  *     editor's review view.
  *
  * The service depends on the repositories and the pure review helpers; it
- * never touches Commander, Inquirer, Playwright, Drizzle directly, or the
+ * never touches Playwright, Drizzle directly, or the
  * OpenAI SDK. It does NOT validate the stored `profileJson` against
  * `ProfessionalProfileSchema` itself — the caller's persistence boundary
  * already does that — but `show` rejects rows whose JSON fails Zod with
- * `InvalidProfilePayloadError` so the CLI can surface the failure cleanly.
+ * `InvalidProfilePayloadError` so the desktop app can surface the
+ * failure cleanly.
  */
 
 import { ProfessionalProfileSchema, type ProfessionalProfile } from './schema.js';

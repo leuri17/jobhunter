@@ -13,11 +13,11 @@ import {
  * Pure-helper tests for the Zod schemas in
  * `src/reevaluation/json-schemas.ts`.
  *
- * The schemas are the source of truth for the `--json` payload
+ * The schemas are the source of truth for the JSON payload
  * contract. These tests:
  *   - Build a representative fixture for every documented scope
  *     (`default`, `filters-only`, `scores-only`, `job`, plus
- *     `--dry-run` variants) and assert
+ *     `dryRun` variants) and assert
  *     `REEVALUATION_JSON_SCHEMA.safeParse(fixture).success === true`.
  *   - Pin the `schemaVersion` contract: missing field fails; `2`
  *     is rejected; only the literal `1` succeeds.
@@ -196,7 +196,7 @@ describe('REEVALUATION_JSON_SCHEMA', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accepts a --dry-run fixture (every action is "would-rerun")', () => {
+  it('accepts a dryRun fixture (every action is "would-rerun")', () => {
     const fixture = buildFixture({
       dryRun: true,
       filtersToReevaluate: [

@@ -10,7 +10,7 @@
  * 7) are documented in the  plan. The JSON schema in
  * `./json-schemas.ts` mirrors these literals via `z.union([...])`
  * adding a new scope or skip reason is a coordinated edit across this
- * file + the schema + the CLI handler.
+ * file + the schema + the sidecar route.
  *
  * No new state vocabulary is introduced outside this module.
  */
@@ -26,9 +26,9 @@ export const REEVALUATION_SCHEMA_VERSION = 1 as const;
 export type ReevaluationSchemaVersion = typeof REEVALUATION_SCHEMA_VERSION;
 
 /**
- * Re-evaluation scope vocabulary. The CLI handler maps
- * the documented flag set to one of these literals BEFORE calling the
- * service. The plan envelope + the `--json` output both carry the
+ * Re-evaluation scope vocabulary. The sidecar route maps
+ * the documented scope flag set to one of these literals BEFORE calling the
+ * service. The plan envelope + the JSON output both carry the
  * scope verbatim so consumers can branch on it.
  *
  * - `default`      — every complete job with a stale/missing filter OR
@@ -38,13 +38,13 @@ export type ReevaluationSchemaVersion = typeof REEVALUATION_SCHEMA_VERSION;
  *                    doesn't match an active filter result.
  * - `scores-only`  — every complete job with a current accepted
  *                    filter but no active successful score.
- * - `job`          — single-job mode (combined with `--filters-only`,
- *                    `--scores-only`, `--dry-run`, or no other flag).
+ * - `job`          — single-job mode (combined with `filters-only`,
+ *                    `scores-only`, `dry-run`, or no other flag).
  */
 export type ReevaluationScope = 'default' | 'filters-only' | 'scores-only' | 'job';
 
 /**
- * Action label for one `ReevaluationPlanEntry`. In `--dry-run` mode every action is `'would-rerun'`;
+ * Action label for one `ReevaluationPlanEntry`. In `dry-run` mode every action is `'would-rerun'`;
  * in live mode entries flip to `'reran'` or `'reused'` as the service
  * executes them.
  */
@@ -54,12 +54,12 @@ export type ReevaluationPlanAction = 'would-rerun' | 'reran' | 'reused';
  * Reason for a `ReevaluationSkippedEntry` (Decisions 6 + 7 +
  * ).
  *
- * - `filter_update_required` — `--scores-only` skipped a job because
+ * - `filter_update_required` — `scores-only` skipped a job because
  *   its current filter is stale or missing.
- * - `job_not_complete`       — `--job <id>` resolved a non-complete
- *   job (CLI handler translates to `ReevaluationValidationError`).
- * - `job_not_found`          — `--job <id>` resolved no row (CLI
- *   handler translates to `ReevaluationValidationError`).
+ * - `job_not_complete`       — `job <id>` resolved a non-complete
+ *   job (sidecar translates to `ReevaluationValidationError`).
+ * - `job_not_found`          — `job <id>` resolved no row (sidecar
+ *   translates to `ReevaluationValidationError`).
  */
 export type ReevaluationSkipReason =
   'filter_update_required' | 'job_not_complete' | 'job_not_found';
@@ -90,8 +90,8 @@ export interface ReevaluationSkippedEntry {
 }
 
 /**
- * Re-export of the `ScoringPlan` shape consumed by the `--json` output
- * for `--scores-only` / `--dry-run`.
+ * Re-export of the `ScoringPlan` shape consumed by the JSON output
+ * for `scores-only` / `dry-run` scopes.
  * The reevaluation module does NOT mutate this shape — the
  * `ScoringService.buildScoringPlan` builder produces it and
  * the reevaluation service carries it through verbatim. Re-exported
@@ -106,7 +106,7 @@ import type { ScoringPlan } from '../scoring/state.js';
  * fields mirror the per-section lengths + score-invalidation counts
  * so consumers do not have to re-aggregate. `scoringDeclinedByUser` is
  * `true` when the user was prompted for scoring confirmation and
- * declined (  — `--yes` bypasses the prompt).
+ * declined (  — `yes` bypasses the prompt).
  */
 export interface ReevaluationTotals {
   readonly filtersRerun: number;
@@ -122,12 +122,12 @@ export interface ReevaluationTotals {
  * is the consumer-facing contract; the per-job `fingerprint` is the
  * new filter fingerprint (or the reused one), and the `action`
  * labels describe what the service did (or would have done in
- * `--dry-run` mode — ).
+ * `dry-run` mode — ).
  *
- * `jobId` is `null` for every scope except `--job`, where it is the
- * CLI-supplied identifier verbatim. `scoringPlan` is `null` when no
- * OpenAI-scored work was produced (e.g. `--filters-only`, empty
- * `--dry-run`, or `--job` with a fully fresh score).
+ * `jobId` is `null` for every scope except `job`, where it is the
+ * caller-supplied identifier verbatim. `scoringPlan` is `null` when no
+ * OpenAI-scored work was produced (e.g. `filters-only`, empty
+ * `dry-run`, or `job` with a fully fresh score).
  */
 export interface ReevaluationPlan {
   readonly schemaVersion: typeof REEVALUATION_SCHEMA_VERSION;
@@ -152,23 +152,23 @@ export interface ReevaluationOutcome {
 }
 
 /**
- * The input shape passed by the CLI handler into
- * `ReevaluationService.execute`. The CLI handler maps the
- * Commander flag set onto the scope literal BEFORE calling the
+ * The input shape passed by the sidecar route into
+ * `ReevaluationService.execute`. The sidecar route maps the
+ * scope flag set onto the scope literal BEFORE calling the
  * service — the service only sees a fully validated input.
  *
  * - `scope`               — the four-value enum from this file.
- * - `dryRun`              — true when `--dry-run` was supplied.
+ * - `dryRun`              — true when `dry-run` was supplied.
  * - `confirmScoring`      — true when the service should prompt the
- *                           user before the scoring batch. The CLI
- *                           handler computes `!options.yes`; for
- *                           `--filters-only` / `--dry-run` scopes the
+ *                           user before the scoring batch. The sidecar
+ *                           route computes `!options.yes`; for
+ *                           `filters-only` / `dry-run` scopes the
  *                           service overrides this to `false` because
  *                           no OpenAI requests are produced.
- * - `jobId`               — internal job id for `--job` scope. The CLI
- *                           handler resolves the CLI identifier
- *                           (`job_<int>` or numeric LinkedIn
- *                           `sourceJobId`) via
+ * - `jobId`               — internal job id for `job` scope. The
+ *                           sidecar route resolves the caller
+ *                           identifier (`job_<int>` or numeric
+ *                           LinkedIn `sourceJobId`) via
  *                           `resolveJobIdentifier` and passes the
  *                           resolved integer id here. Ignored for
  *                           every other scope.

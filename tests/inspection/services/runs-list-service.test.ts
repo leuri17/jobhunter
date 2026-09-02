@@ -174,7 +174,7 @@ describe('RunsListService', () => {
 
   it('falls back to the default limit when the supplied limit is non-positive', async () => {
     // The service treats non-positive / non-integer limits as "use
-    // default" (defense-in-depth — the CLI handler validates the
+    // default" (defense-in-depth — the sidecar route validates the
     // input first). With only 3 seeded runs, the default 20 returns
     // all 3.
     const rows = await service.list({ limit: 0 });

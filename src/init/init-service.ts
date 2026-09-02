@@ -127,14 +127,16 @@ export class InitOrchestrator {
    * `SetupSummary`. The method NEVER throws for a step-level `failed`
    * outcome (those are returned as `InitStepReport` entries). The
    * method DOES throw typed `InitLifecycleError` subclasses for
-   * unrecoverable conditions (FS / DB / persistence). The CLI boundary
-   * maps typed errors to exit codes.
+   * unrecoverable conditions (FS / DB / persistence). The sidecar's
+   * HTTP error mapper translates typed errors to HTTP status responses.
    *
    * Cancellation (any `UserCancellation` subclass + `SearchCancelledError`)
    * is ALWAYS thrown — there is no in-band cancellation return shape.
    * The orchestrator catches cancellation uniformly, logs the partial
    * step failure via `logger.stepFail`, and rethrows the typed
-   * cancellation error for the CLI boundary (which maps it to exit 130).
+   * cancellation error for the sidecar's HTTP error mapper (which
+   * translates the `UserCancellation = 130` exit code to an HTTP
+   * status response).
    *
    * The `env` parameter is the source of truth for the `OPENAI_API_KEY`
    * presence check. The orchestrator combines `env` with
@@ -484,8 +486,9 @@ export class InitOrchestrator {
         if (status.kind === 'failed') {
           // Record the failure on the step (per-step failures surface as
           // SetupSummary entries; the orchestrator does NOT throw). The
-          // CLI maps the typed step failure via `formatInitSummary` and
-          // the operator can inspect the errorCode to decide what to do.
+          // sidecar renders the typed step failure via
+          // `formatInitSummary` and the operator can inspect the
+          // errorCode to decide what to do.
           logger.stepFail({
             stepId: 'extract',
             errorCode: status.errorCode,
@@ -733,9 +736,10 @@ export class InitOrchestrator {
         }
         if (error instanceof InitFiltersFailedError) throw error;
         // Preserve typed `ApplicationError` subclasses (e.g.
-        // `NoActiveProfileError` → exit 3) so the CLI boundary can
-        // map them to the documented exit codes. Only wrap unknown
-        // errors as `InitFiltersFailedError`.
+        // `NoActiveProfileError` → exit 3) so the sidecar's HTTP
+        // error mapper can translate them to documented HTTP
+        // responses. Only wrap unknown errors as
+        // `InitFiltersFailedError`.
         if (error instanceof ApplicationError) throw error;
         const message = error instanceof Error ? error.message : String(error);
         throw new InitFiltersFailedError(

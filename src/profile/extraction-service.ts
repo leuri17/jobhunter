@@ -18,7 +18,7 @@
  *
  * This module is application code: it imports the repository facade, the
  * OpenAI client interface (never the SDK), the Zod schemas, and the
- * post-processor. It does NOT import Commander, Inquirer, Playwright, the
+ * post-processor. It does NOT import Playwright, the
  * `openai` SDK, or Pino.
  */
 

@@ -9,7 +9,7 @@
  *
  * Domain boundary: this service imports `src/persistence/repositories/`
  * — the only module under `src/inspection/` allowed to do so. It does
- * not import Commander, Inquirer, Playwright, the `openai` SDK,
+ * not import Playwright, the `openai` SDK,
  * `drizzle-orm`, or Pino directly.
  */
 
@@ -64,10 +64,10 @@ export interface JobsListInput {
 }
 
 /**
- * Read-only service backing `jobs list <state> [--refinements]`.
+ * Read-only service backing the `jobs list` sidecar route.
  *
  * Returns the discriminated `JobListResult` envelope so
- * both the formatter and the CLI handler can
+ * both the formatter and the sidecar can
  * consume the shape uniformly.
  */
 export class JobsListService {
@@ -78,9 +78,9 @@ export class JobsListService {
    * documented refinements.
    *
    * Throws `InspectionValidationError` for invalid `limit`,
-   * `minScore`, or `--run` inputs (per ). The service
+   * `minScore`, or `run` inputs (per ). The service
    * treats the input as fail-fast — every invalid refinement is
-   * surfaced BEFORE any DB query so the CLI handler's exit code
+   * surfaced BEFORE any DB query so the sidecar's HTTP error
    * mapping (`InvalidUsage` = 2) is deterministic.
    */
   async list(input: JobsListInput): Promise<JobListResult> {
@@ -206,9 +206,9 @@ function validateInput(input: JobsListInput): ValidatedListInput {
     minScore = input.minScore;
   }
 
-  // `run` — the CLI handler resolves `--run` to a numeric `runId`
-  // via `parsePrefixedId(IDENTIFIER_PREFIXES.run)`. The service
-  // accepts the number directly; no extra parsing here.
+  // `run` — the sidecar route resolves the `run` identifier to a
+  // numeric `runId` via `parsePrefixedId(IDENTIFIER_PREFIXES.run)`.
+  // The service accepts the number directly; no extra parsing here.
   let runId: number | null = null;
   if (input.runId !== undefined) {
     runId = input.runId;
