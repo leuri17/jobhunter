@@ -1,7 +1,7 @@
 # JobHunter
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![CI](https://github.com/leuri17/jobhunter/actions/workflows/desktop-ci.yml/badge.svg)](https://github.com/leuri17/jobhunter/actions/workflows/desktop-ci.yml)
+[![CI](https://github.com/leuri17/jobhunter/actions/workflows/ci.yml/badge.svg)](https://github.com/leuri17/jobhunter/actions/workflows/ci.yml)
 [![Node >= 24.18.0](https://img.shields.io/badge/node-%3E%3D24.18.0-brightgreen)](.node-version)
 [![pnpm 11.18.0](https://img.shields.io/badge/pnpm-11.18.0-blue)](package.json)
 
