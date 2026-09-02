@@ -7,7 +7,7 @@
   "engines": {
     "node": ">=24.18.0 <25"
   },
-  "packageManager": "pnpm@11.18.0",
+  "packageManager": "pnpm@11.25.0",
   "scripts": {
     "typecheck": "pnpm -r run typecheck",
     "lint": "eslint .",

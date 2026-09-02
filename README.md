@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![CI](https://github.com/leuri17/jobhunter/actions/workflows/ci.yml/badge.svg)](https://github.com/leuri17/jobhunter/actions/workflows/ci.yml)
 [![Node >= 24.18.0](https://img.shields.io/badge/node-%3E%3D24.18.0-brightgreen)](.node-version)
-[![pnpm 11.18.0](https://img.shields.io/badge/pnpm-11.18.0-blue)](package.json)
+[![pnpm 11.25.0](https://img.shields.io/badge/pnpm-11.25.0-blue)](package.json)
 
 > Local-first desktop app that scrapes public LinkedIn job search
 > results, persists them locally, and ranks them with deterministic
@@ -30,7 +30,7 @@ public search pages, one to OpenAI for scoring).
 
 ### For developers (build from source)
 
-Requires Node 24.18.0+ and pnpm 11.18.0+.
+Requires Node 24.18.0+ and pnpm 11.25.0+.
 
 ```bash
 pnpm install
@@ -71,7 +71,7 @@ share the same contract.
 ## Development
 
 Requires Node.js `24.18.0` (pinned via `.node-version`), pnpm
-`11.18.0`, and a Rust toolchain for the Tauri shell.
+`11.25.0`, and a Rust toolchain for the Tauri shell.
 
 ```bash
 pnpm install --frozen-lockfile
