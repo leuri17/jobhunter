@@ -7,8 +7,8 @@ import { describe, expect, it } from 'vitest';
  * Domain-boundary guard for `src/scoring/` (,  Task 13).
  *
  * Granular mirror of `tests/extraction/boundaries.test.ts`. AGENTS.md
- * §5 / §9: domain code must not depend on Commander, Inquirer,
- * Drizzle, OpenAI, or runtime Pino. The scoring layer additionally
+ * §5 / §9: domain code must not depend on Drizzle, OpenAI, or runtime
+ * Pino. The scoring layer additionally
  * MAY import from `src/profile/openai/` (the OpenAI client surface
  * — the cross-module dependency is the seam for the pure transport
  * + registry design from Task 0).
@@ -45,7 +45,7 @@ import { describe, expect, it } from 'vitest';
  */
 const SCORING_DIR = join(process.cwd(), 'src', 'scoring');
 
-const BANNED_IMPORTS = ['commander', '@inquirer/prompts', 'drizzle-orm', 'openai', 'pino'] as const;
+const BANNED_IMPORTS = ['drizzle-orm', 'openai', 'pino'] as const;
 
 /**
  * `service.ts` is the ONLY file under `src/scoring/` that may import

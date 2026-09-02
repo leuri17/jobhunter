@@ -15,11 +15,8 @@ const BANNED = [
   /^import\s+(?!type\s).*from\s+['"]playwright['"]/m,
   /^import\s+(?!type\s).*from\s+['"]drizzle-orm['"]/m,
   /^import\s+(?!type\s).*from\s+['"]openai['"]/m,
-  /^import\s+(?!type\s).*from\s+['"]commander['"]/m,
   /^import\s+(?!type\s).*from\s+['"]pino['"]/m,
 ];
-
-const ALLOWED_INQUIRER = ['prompts-inquirer.ts'];
 
 describe('src/pipeline boundaries', () => {
   const files = readdirSync(PIPELINE_DIR).filter((f) => f.endsWith('.ts'));
@@ -33,17 +30,6 @@ describe('src/pipeline boundaries', () => {
         if (pattern.test(content)) {
           throw new Error(`${file} imports a banned package: ${pattern}`);
         }
-      }
-    });
-
-    it(`${file} does not import @inquirer/prompts except in the carve-out file`, () => {
-      if (ALLOWED_INQUIRER.includes(file)) return;
-      const path = join(PIPELINE_DIR, file);
-      const content = readFileSync(path, 'utf8');
-      if (/from\s+['"]@inquirer\/prompts['"]/.test(content)) {
-        throw new Error(
-          `${file} imports @inquirer/prompts; only ${ALLOWED_INQUIRER.join(',')} may.`,
-        );
       }
     });
   }

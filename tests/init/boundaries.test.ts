@@ -5,15 +5,9 @@ import { describe, expect, it } from 'vitest';
 /**
  * Domain-boundary guard for `src/init/`.
  *
- * AGENTS.md §5 / §9: domain code must not depend on Commander, Inquirer,
- * Playwright, Drizzle, OpenAI, or Pino. This test enumerates every `.ts` file
- * under `src/init/` and asserts that none of them import any of the banned
- * modules, with explicit allow-list carve-outs:
- *
- *   - `src/init/prompts-inquirer.ts` — default inquirer adapter
- *   - `src/init/cli-adapters.ts` — Legacy CLI-era prompt adapters,
- *     scheduled for removal with `@inquirer/prompts` in the A5
- *     follow-up. Same rationale as `prompts-inquirer.ts`.
+ * AGENTS.md §5 / §9: domain code must not depend on Playwright, Drizzle,
+ * OpenAI, or Pino. This test enumerates every `.ts` file under `src/init/`
+ * and asserts that none of them import any of the banned modules.
  *
  * Type-only `import type { ... } from 'pino'` is permitted via the literal
  * `RUNTIME_IMPORT_RE` regex below (Finding 14). If a future task needs
@@ -24,18 +18,11 @@ import { describe, expect, it } from 'vitest';
 const INIT_DIR = join(process.cwd(), 'src', 'init');
 
 const BANNED_IMPORTS = [
-  'commander',
-  '@inquirer/prompts',
   'playwright',
   'drizzle-orm',
   'openai',
   'pino',
 ] as const;
-
-const INQUIRER_ALLOW_LIST: ReadonlySet<string> = new Set([
-  'src/init/prompts-inquirer.ts',
-  'src/init/cli-adapters.ts',
-]);
 
 /**
  * Literal regex that distinguishes runtime `pino` imports from type-only
@@ -118,10 +105,6 @@ describe('src/init domain-boundary guard', () => {
       const rel = relativeFromCwd(absolute);
       const source = readFileSync(absolute, 'utf8');
       for (const banned of BANNED_IMPORTS) {
-        if (banned === '@inquirer/prompts' && INQUIRER_ALLOW_LIST.has(rel)) {
-          // Explicit carve-out: prompts-inquirer.ts is allowed to use Inquirer.
-          continue;
-        }
         if (banned === 'pino' && rel === 'src/init/log.ts') {
           // log.ts is allowed a TYPE-ONLY `import type { ... } from 'pino'`.
           // The runtime ban is enforced separately below.
@@ -130,14 +113,6 @@ describe('src/init domain-boundary guard', () => {
         expect(importMatches(source, banned), `${rel} must not import ${banned}`).toBe(false);
       }
     }
-  });
-
-  it('encodes the inquirer allow-list so prompts-inquirer.ts and cli-adapters.ts remain legal', () => {
-    // This test asserts the allow-list contains exactly the documented
-    // module(s). If a new task adds another carve-out it must update both
-    // INQUIRER_ALLOW_LIST and this test in the same change.
-    expect(INQUIRER_ALLOW_LIST.has('src/init/prompts-inquirer.ts')).toBe(true);
-    expect(INQUIRER_ALLOW_LIST.has('src/init/cli-adapters.ts')).toBe(true);
   });
 
   it('allows type-only `import type { ... } from "pino"` in src/init/log.ts', () => {
@@ -170,9 +145,6 @@ describe('src/init domain-boundary guard', () => {
     expect(files, 'src/init/init-service.ts must exist after ').toContain(absolute);
     const source = readFileSync(absolute, 'utf8');
     for (const banned of BANNED_IMPORTS) {
-      if (banned === '@inquirer/prompts' && INQUIRER_ALLOW_LIST.has('src/init/init-service.ts')) {
-        continue;
-      }
       expect(
         importMatches(source, banned),
         `src/init/init-service.ts must not import ${banned}`,
@@ -182,7 +154,8 @@ describe('src/init domain-boundary guard', () => {
 
   it('explicitly asserts src/init/init-service.ts does NOT call process.exit', () => {
     // The orchestrator NEVER calls `process.exit` (AGENTS.md §10). The
-    // CLI boundary owns exit-code mapping via `exitWithError`. The
+    // HTTP error mapper owns exit-code translation; the domain layer
+    // throws typed errors and lets the boundary convert them. The
     // `process.exitCode` property is a soft suggestion and is permitted.
     const absolute = join(INIT_DIR, 'init-service.ts');
     expect(listInitSourceFiles(INIT_DIR)).toContain(absolute);

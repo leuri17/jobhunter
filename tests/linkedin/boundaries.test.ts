@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
 /**
  * Domain-boundary guard for `src/linkedin/`.
  *
- * AGENTS.md §5 / §9: domain code must not depend on Commander, Inquirer,
- * Drizzle, OpenAI, or runtime Pino. The Playwright allow-list covers
+ * AGENTS.md §5 / §9: domain code must not depend on Drizzle, OpenAI, or
+ * runtime Pino. The Playwright allow-list covers
  * every file that imports Playwright (type-only OR runtime). The
  * `fake-session.ts` + `fake-page.ts` modules are exempt because they
  * have ZERO Playwright references — they only need to be reachable
@@ -34,8 +34,6 @@ import { describe, expect, it } from 'vitest';
 const LINKEDIN_DIR = join(process.cwd(), 'src', 'linkedin');
 
 const BANNED_IMPORTS = [
-  'commander',
-  '@inquirer/prompts',
   'drizzle-orm',
   'openai',
   'pino',

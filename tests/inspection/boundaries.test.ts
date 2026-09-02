@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
 /**
  * Domain-boundary guard for `src/inspection/`.
  *
- * AGENTS.md §5: domain code must not depend on Commander, Inquirer,
- * Drizzle, OpenAI, or runtime Pino. The inspection layer is split into:
+ * AGENTS.md §5: domain code must not depend on Drizzle, OpenAI, or
+ * runtime Pino. The inspection layer is split into:
  *   - `src/inspection/`              — pure helpers (columns, format,
  *                                     truncate, state, json-schemas,
  *                                     errors, index). No repository I/O.
@@ -15,7 +15,6 @@ import { describe, expect, it } from 'vitest';
  *                                     `src/persistence/repositories/`
  *                                     (the seam for repository I/O) but
  *                                     MUST NOT import `drizzle-orm`,
- *                                     `commander`, `@inquirer/prompts`,
  *                                     `openai`, runtime `pino`, or call
  *                                     `process.exit()`.
  *
@@ -54,16 +53,12 @@ interface BannedImport {
 }
 
 const BANNED_PURE_HELPERS: readonly BannedImport[] = [
-  { moduleName: 'commander', pattern: RUNTIME_IMPORT_RE('commander') },
-  { moduleName: '@inquirer/prompts', pattern: RUNTIME_IMPORT_RE('@inquirer/prompts') },
   { moduleName: 'drizzle-orm', pattern: RUNTIME_IMPORT_RE('drizzle-orm') },
   { moduleName: 'openai', pattern: RUNTIME_IMPORT_RE('openai') },
   { moduleName: 'pino', pattern: RUNTIME_IMPORT_RE('pino') },
 ];
 
 const BANNED_SERVICES: readonly BannedImport[] = [
-  { moduleName: 'commander', pattern: RUNTIME_IMPORT_RE('commander') },
-  { moduleName: '@inquirer/prompts', pattern: RUNTIME_IMPORT_RE('@inquirer/prompts') },
   { moduleName: 'drizzle-orm', pattern: RUNTIME_IMPORT_RE('drizzle-orm') },
   { moduleName: 'openai', pattern: RUNTIME_IMPORT_RE('openai') },
   { moduleName: 'pino', pattern: RUNTIME_IMPORT_RE('pino') },
