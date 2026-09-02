@@ -22,7 +22,6 @@
     "db:generate": "drizzle-kit generate --config drizzle.config.ts"
   },
   "dependencies": {
-    "@inquirer/prompts": "8.5.2",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.2",
     "openai": "7.4.0",
