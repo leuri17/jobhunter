@@ -38,7 +38,9 @@ pnpm --filter @jobhunter/ui build      # build the frontend
 cd desktop/tauri && cargo build        # build the Rust shell
 ```
 
-Launch via `cargo tauri dev` from `desktop/tauri`.
+Launch via `pnpm tauri:dev` (uses the JS `@tauri-apps/cli` shell; equivalent to
+`cd desktop/tauri && cargo tauri dev`). The Rust toolchain is still required
+under the hood — `@tauri-apps/cli` delegates to `cargo` for the actual build/run.
 
 ## Commands
 
@@ -48,6 +50,9 @@ Launch via `cargo tauri dev` from `desktop/tauri`.
 | `pnpm typecheck` | Typecheck every workspace |
 | `pnpm lint` | Lint all workspaces |
 | `pnpm format` | Format every workspace |
+| `pnpm tauri:dev` | Launch the full desktop app (Tauri shell + sidecar + UI hot reload) |
+| `pnpm tauri:build` | Build the desktop installers (`.deb`, `.AppImage`, `.dmg`, `.exe` — Rust toolchain required) |
+| `pnpm tauri:info` | Print Tauri environment + dependency diagnostics |
 
 The desktop app itself has no CLI; everything happens in the UI.
 
@@ -71,7 +76,10 @@ share the same contract.
 ## Development
 
 Requires Node.js `24.18.0` (pinned via `.node-version`), pnpm
-`11.25.0`, and a Rust toolchain for the Tauri shell.
+`11.25.0`, and a Rust toolchain for the Tauri shell
+(`rustup` + `cargo`; on Debian/Ubuntu: `apt install cargo rustc` or
+<https://rustup.rs/>; on macOS: `brew install rustup-init && rustup-init`; on
+Windows: WebView2 is preinstalled + `rustup` from <https://rustup.rs/>).
 
 ```bash
 pnpm install --frozen-lockfile
@@ -85,7 +93,11 @@ pnpm test
 pnpm --filter @jobhunter/ui build
 
 # Full desktop app — Rust shell + sidecar + UI hot reload.
-cargo tauri dev
+# Either of these works (the pnpm script wraps @tauri-apps/cli which
+# delegates to cargo under the hood — Rust toolchain is still required):
+pnpm tauri:dev
+# or, equivalently:
+cd desktop/tauri && cargo tauri dev
 ```
 
 ## Testing strategy
