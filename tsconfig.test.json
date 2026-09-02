@@ -2,7 +2,6 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
-    // Override the parent's "src" rootDir so test files and vitest configs outside src/ are still typechecked. The test project never emits.
     "rootDir": "."
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "vitest.live.config.ts"],
