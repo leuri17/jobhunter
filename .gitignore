@@ -39,3 +39,6 @@ desktop/tauri/target/
 # Tauri desktop
 desktop/ui/dist/
 desktop/sidecar/dist/
+
+# OpenCode working directory
+.opencode/
