@@ -30,7 +30,37 @@ public search pages, one to OpenAI for scoring).
 
 ### For developers (build from source)
 
-Requires Node 24.18.0+ and pnpm 11.25.0+.
+Requires Node 24.18.0+ and pnpm 11.25.0+ (see [Development](#development) for the
+full toolchain, including the Rust requirement for the Tauri shell).
+
+**Easiest — one command, everything in one window:**
+
+```bash
+pnpm install
+pnpm tauri:dev
+```
+
+`pnpm tauri:dev` starts the Rust shell, which auto-spawns the Node sidecar on
+`127.0.0.1:0` (OS-assigned) and reads back the chosen port. The Tauri webview
+discovers that port via IPC, so no manual port coordination is needed.
+
+**Frontend-only dev (faster UI iteration, no native window):**
+
+```bash
+pnpm install
+# Terminal 1 — start the sidecar on the dev port the UI expects.
+pnpm sidecar:dev
+
+# Terminal 2 — start Vite.
+pnpm --filter @jobhunter/ui dev
+```
+
+`pnpm sidecar:dev` pins `JOBHUNTER_SIDECAR_PORT=14231`, the same port the UI
+falls back to when no Tauri IPC is available (see
+`desktop/ui/src/lib/sidecar-url.ts`). If you want a different port, set
+`VITE_SIDECAR_PORT` in `.env.local` to match.
+
+**Production-style build (no Tauri dev server):**
 
 ```bash
 pnpm install
@@ -38,21 +68,22 @@ pnpm --filter @jobhunter/ui build      # build the frontend
 cd desktop/tauri && cargo build        # build the Rust shell
 ```
 
-Launch via `pnpm tauri:dev` (uses the JS `@tauri-apps/cli` shell; equivalent to
-`cd desktop/tauri && cargo tauri dev`). The Rust toolchain is still required
-under the hood — `@tauri-apps/cli` delegates to `cargo` for the actual build/run.
+Then `pnpm tauri:dev` or `cd desktop/tauri && cargo tauri dev` to launch.
 
 ## Commands
 
-| Command | What it does |
-| --- | --- |
-| `pnpm test` | Run all workspace tests (core + sidecar + ui) |
-| `pnpm typecheck` | Typecheck every workspace |
-| `pnpm lint` | Lint all workspaces |
-| `pnpm format` | Format every workspace |
-| `pnpm tauri:dev` | Launch the full desktop app (Tauri shell + sidecar + UI hot reload) |
-| `pnpm tauri:build` | Build the desktop installers (`.deb`, `.AppImage`, `.dmg`, `.exe` — Rust toolchain required) |
-| `pnpm tauri:info` | Print Tauri environment + dependency diagnostics |
+| Command              | What it does                                                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test`          | Run all workspace tests (core + sidecar + ui)                                                                                   |
+| `pnpm typecheck`     | Typecheck every workspace                                                                                                       |
+| `pnpm lint`          | Lint all workspaces                                                                                                             |
+| `pnpm format`        | Format every workspace                                                                                                          |
+| `pnpm tauri:dev`     | Launch the full desktop app (Rust shell + sidecar + UI hot reload)                                                              |
+| `pnpm tauri:build`   | Build the desktop installers (`.deb`, `.AppImage`, `.dmg`, `.exe` — Rust toolchain required)                                    |
+| `pnpm tauri:info`    | Print Tauri environment + dependency diagnostics                                                                                |
+| `pnpm sidecar:dev`   | Run the sidecar with watch mode on `127.0.0.1:14231` (use for UI-only dev)                                                      |
+| `pnpm sidecar:start` | Run the sidecar without watch mode on `127.0.0.1:14231` (stable local API)                                                      |
+| `pnpm sidecar:build` | Compile the sidecar's TypeScript to `dist/` (not currently used by Tauri at runtime — kept for future pre-bundled-sidecar flow) |
 
 The desktop app itself has no CLI; everything happens in the UI.
 
@@ -60,12 +91,12 @@ The desktop app itself has no CLI; everything happens in the UI.
 
 JobHunter is layered per `docs/architecture.md`:
 
-| Layer | Path | Owns |
-| --- | --- | --- |
-| Core library | `src/` | Domain logic, persistence, browser, scoring — pure modules |
-| Sidecar | `desktop/sidecar/` | Fastify HTTP server exposing the core library |
-| Tauri shell | `desktop/tauri/` | Window, menu, lifecycle, native notifications |
-| Frontend | `desktop/ui/` | React UI: dashboard, jobs, pipeline, runs, profile, settings |
+| Layer        | Path               | Owns                                                         |
+| ------------ | ------------------ | ------------------------------------------------------------ |
+| Core library | `src/`             | Domain logic, persistence, browser, scoring — pure modules   |
+| Sidecar      | `desktop/sidecar/` | Fastify HTTP server exposing the core library                |
+| Tauri shell  | `desktop/tauri/`   | Window, menu, lifecycle, native notifications                |
+| Frontend     | `desktop/ui/`      | React UI: dashboard, jobs, pipeline, runs, profile, settings |
 
 `process.exit` lives only in `desktop/sidecar/src/server.ts` (the sidecar's process entrypoint). The Tauri shell supervises and terminates the sidecar child process. The sidecar's HTTP error mapper translates typed errors into status codes + JSON envelopes and never exits the process.
 
@@ -88,17 +119,34 @@ pnpm lint
 pnpm test
 ```
 
-```bash
-# Frontend-only build (produces desktop/ui/dist/ for Tauri to bundle).
-pnpm --filter @jobhunter/ui build
+### Running the app in dev
 
-# Full desktop app — Rust shell + sidecar + UI hot reload.
-# Either of these works (the pnpm script wraps @tauri-apps/cli which
-# delegates to cargo under the hood — Rust toolchain is still required):
-pnpm tauri:dev
-# or, equivalently:
-cd desktop/tauri && cargo tauri dev
-```
+There are two ways to run the desktop app while developing:
+
+1. **Full app via Tauri** (recommended for most work) — `pnpm tauri:dev`. The
+   Rust shell starts, spawns the sidecar as a child process, and opens the
+   webview. The sidecar binds to an OS-assigned port and the webview learns
+   that port via Tauri IPC, so you never need to think about ports.
+
+2. **UI only** (fastest iteration on React components) — two terminals:
+
+   ```bash
+   # Terminal 1 — sidecar on the dev port
+   pnpm sidecar:dev
+
+   # Terminal 2 — Vite dev server for the UI
+   pnpm --filter @jobhunter/ui dev
+   ```
+
+   The UI talks to the sidecar at `http://127.0.0.1:14231` by default
+   (`VITE_SIDECAR_PORT` overrides). If you see "sidecar offline" in the
+   status pill, the sidecar in Terminal 1 isn't running, isn't on 14231, or
+   the Vite dev server is on a different host.
+
+   `pnpm sidecar:start` is the same as `pnpm sidecar:dev` but without the
+   `tsx watch` auto-restart — useful when you want a stable sidecar across
+   long-running UI sessions (e.g., a long pipeline run) where an
+   auto-restart would tear down state.
 
 ## Testing strategy
 
