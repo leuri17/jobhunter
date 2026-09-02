@@ -481,7 +481,7 @@ export const RunShowJsonSchema = z
 export type RunShowJsonPayload = z.infer<typeof RunShowJsonSchema>;
 
 // ---------------------------------------------------------------------------
-// `paths --json`
+// `/api/paths` JSON response
 // ---------------------------------------------------------------------------
 
 const PathsJsonSchema = z

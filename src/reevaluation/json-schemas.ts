@@ -138,7 +138,7 @@ const ReevaluationTotalsJsonSchema = z
   .strict();
 
 /**
- * The top-level `--json` payload. Mirrors
+ * The top-level JSON payload. Mirrors
  * `ReevaluationPlan` from `src/reevaluation/state.ts` field-for-field.
  *
  * The schema is `.strict()` — unknown fields are rejected. The
@@ -163,11 +163,11 @@ export const REEVALUATION_JSON_SCHEMA = z
   })
   .strict();
 
-/** Inferred TypeScript type for the `--json` payload. */
+/** Inferred TypeScript type for the JSON payload. */
 export type ReevaluationJsonPayload = z.infer<typeof REEVALUATION_JSON_SCHEMA>;
-/** Inferred TypeScript type for one plan entry in the `--json` output. */
+/** Inferred TypeScript type for one plan entry in the JSON output. */
 export type ReevaluationPlanEntryJson = z.infer<typeof ReevaluationPlanEntryJsonSchema>;
-/** Inferred TypeScript type for one skipped entry in the `--json` output. */
+/** Inferred TypeScript type for one skipped entry in the JSON output. */
 export type ReevaluationSkippedEntryJson = z.infer<typeof ReevaluationSkippedEntryJsonSchema>;
 /** Inferred TypeScript type for the inlined `ScoringPlan` JSON shape. */
 export type ScoringPlanJson = z.infer<typeof ScoringPlanJsonSchema>;

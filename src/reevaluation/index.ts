@@ -45,7 +45,7 @@ export {
   formatScoringPlanForReevaluation,
 } from './format.js';
 
-// Pure layer — Zod schemas for `--json` output.
+// Pure layer — Zod schemas for JSON output.
 export {
   REEVALUATION_JSON_SCHEMA,
   ScoringPlanJsonSchema,

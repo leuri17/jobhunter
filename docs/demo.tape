@@ -9,7 +9,3 @@ Set Padding 20
 Type "pnpm dev -- paths"
 Enter
 Sleep 2s
-
-Type "pnpm dev -- paths --json"
-Enter
-Sleep 1s

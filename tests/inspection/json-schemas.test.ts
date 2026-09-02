@@ -12,7 +12,7 @@ import {
  * Pure-helper tests for the Zod schemas in `src/inspection/json-schemas.ts`
  * (, Task 14, ).
  *
- * The schemas are the source of truth for the `--json` payload contract.
+ * The schemas are the source of truth for the JSON payload contract.
  * These tests:
  *   - Build a representative fixture for every top-level schema and assert
  *     `safeParse(fixture).success === true` (round-trip acceptance).
@@ -290,7 +290,7 @@ const runShowPayload = {
   diagnosticReferences: [],
 };
 
-/** Representative `paths --json` payload. */
+/** Representative JSON payload for `/api/paths`. */
 const pathsPayload = {
   schemaVersion: 1 as const,
   paths: {

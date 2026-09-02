@@ -16,7 +16,7 @@
  */
 
 /**
- * JSON schema version for every `--json` payload produced by the
+ * JSON schema version for every JSON payload produced by the
  * reevaluation module. Bumped on any payload shape change
  * so consumers can detect breaking changes via `schemaVersion`.
  * Mirrors `INSPECTION_SCHEMA_VERSION`, `PIPELINE_SCHEMA_VERSION`,

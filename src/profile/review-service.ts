@@ -7,7 +7,7 @@
  *     (or a status-filtered subset), ordered most-recent-first by id.
  *   - `show` resolves a profile CLI identifier via `resolveProfileVersionId`
  *     and returns the full payload (profile + warnings + conflicts +
- *     overrides + revisions) needed by `profile show --json` and by the
+ *     overrides + revisions) needed by the profile-show HTTP route and by the
  *     editor's review view.
  *
  * The service depends on the repositories and the pure review helpers; it

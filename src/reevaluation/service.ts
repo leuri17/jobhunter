@@ -12,7 +12,7 @@
  *   - `FilterApplyService.apply()`   — cache ledger for filter results
  *   - `ScoringService.scoreOne()`    — per-job scoring (with cache ledger)
  *   - `ScoringService.buildScoringPlan()` — builds the plan shown in
- *     the scoring confirmation prompt + the `--json` payload.
+ *     the scoring confirmation prompt + the JSON payload.
  *   - `PipelinePrompts.askScoringConfirmation()` — the user-facing
  *     gate before the scoring batch.
  *   - `Repositories.{jobs, filterConfigurations, filterResults,
