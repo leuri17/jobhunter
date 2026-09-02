@@ -70,3 +70,12 @@ export {
 
 // Logger facade.
 export { noopScoringLogger, pinoScoringLogger, type ScoringLogger } from './log.js';
+
+// Service layer — the scoring orchestrator (used by the reevaluation
+// service via a structural type, and re-exposed here so HTTP-sidecar
+// consumers can wire it up without reaching into the source file).
+export {
+  ScoringService,
+  type ScoringServiceConfig,
+  type ScoringServiceOptions,
+} from './service.js';

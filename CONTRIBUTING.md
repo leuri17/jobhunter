@@ -27,11 +27,19 @@ submit it as a PR.
 
 ## Development setup
 
-Requires Node.js `24.18.0` (pinned via `.node-version`) and pnpm `11.18.0`.
+Requires Node.js `24.18.0` (pinned via `.node-version`), pnpm
+`11.18.0`, and a Rust toolchain (for `cargo tauri dev` and the
+desktop shell build).
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm dev -- --help         # confirm CLI runs
+
+# Core + tests only — no desktop shell needed.
+pnpm typecheck
+pnpm test
+
+# Full desktop app — Rust shell + sidecar + UI hot reload.
+cargo tauri dev
 ```
 
 ## Architecture boundaries
@@ -40,31 +48,13 @@ The project enforces a few hard rules so it stays maintainable. These
 are checked by automated tests; do not relax them in a PR without first
 opening an issue:
 
-- **`process.exit` lives only in `src/cli.ts`.** Domain code throws typed
-  errors; the CLI maps them to exit codes via `exitWithError`.
+- **`process.exit` lives only in `desktop/sidecar/src/server.ts` (the sidecar's process entrypoint).** The Tauri shell supervises and terminates the sidecar child process. Domain code throws typed errors; the sidecar's HTTP error mapper translates them into HTTP status codes + JSON envelopes and never exits the process.
 - **Playwright's runtime import lives only in `src/linkedin/playwright-session.ts`.**
   Every other `src/linkedin/` file imports types only. This is enforced
   by `tests/linkedin/boundaries.test.ts`.
 - **No `any` in new code.** Strict TypeScript with `noUncheckedIndexedAccess`
   and `exactOptionalPropertyTypes` is on.
 - **Native ESM, NodeNext modules.** No CommonJS in new code.
-
-## Exit codes
-
-JobHunter uses a stable exit-code mapping so CI scripts can rely on it:
-
-| Code | Meaning               | Example triggers                                                       |
-| ---: | --------------------- | ---------------------------------------------------------------------- |
-|    0 | Success               | Any successful command.                                                |
-|    1 | Fatal                 | Unhandled error (e.g., uncaught throw that isn't an `ApplicationError`). |
-|    2 | Invalid usage         | Unknown option, missing argument, malformed identifier.                 |
-|    3 | Missing required      | `OPENAI_API_KEY` not set, no active approved profile, no active filter. |
-|    4 | LinkedIn blocked      | LinkedIn auth wall, captcha, or other access block. JobHunter stops.    |
-|    5 | OpenAI failure        | Scoring / extraction failed (auth, rate limit, server error).           |
-|  130 | User cancellation     | SIGINT (Ctrl-C) once = graceful cancel; twice = force exit.              |
-
-`--help` and `--version` exit 0. The full mapping lives in
-`src/errors/application-error.ts`.
 
 ## Verification
 
@@ -74,12 +64,18 @@ Run the full verification suite before opening a PR:
 pnpm typecheck
 pnpm lint
 pnpm format:check
-pnpm build
 pnpm test
 ```
 
+The desktop shell (Tauri Rust binary + UI bundle) is built separately;
+see the `desktop/` workspace and the Tauri build docs for that pipeline.
+
 Live LinkedIn tests require `pnpm exec playwright install chromium` and
 the `LINKEDIN_LIVE=1` opt-in. They are not part of normal CI.
+
+Run `tsc -p tsconfig.json --noEmit` from repo root to manually check
+the root config (covers `tests/` and the catch-all tsconfig). The
+`pnpm typecheck` script does not exercise the root config today.
 
 ## Pull requests
 

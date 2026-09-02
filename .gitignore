@@ -33,3 +33,9 @@ tests/acceptance/
 Thumbs.db
 .idea/
 .vscode/
+
+desktop/tauri/target/
+
+# Tauri desktop
+desktop/ui/dist/
+desktop/sidecar/dist/

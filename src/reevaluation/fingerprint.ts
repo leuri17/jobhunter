@@ -20,7 +20,7 @@
  * `node:crypto`, `src/filter/{fingerprint,schema,version,content-hash}.js`,
  * `src/scoring/{fingerprint,prompt,rubric}.js`, and `src/profile/hashing.js`
  * — all read-only helpers + small types. It does NOT import
- * `src/persistence/`, `src/cli/`, `src/linkedin/`, or `src/init/`.
+ * `src/persistence/`, `src/linkedin/`, or `src/init/`.
  */
 
 import { calculateFilterFingerprint } from '../filter/fingerprint.js';

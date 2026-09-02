@@ -1,20 +1,15 @@
 {
   "name": "jobhunter",
   "version": "0.1.0",
+  "description": "Local-first desktop app that scrapes public LinkedIn job search results, persists them locally, and ranks them with deterministic filters plus OpenAI scoring.",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=24.18.0 <25"
   },
   "packageManager": "pnpm@11.18.0",
-  "bin": {
-    "jobhunter": "dist/cli.js"
-  },
   "scripts": {
-    "dev": "tsx src/cli.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/cli.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "typecheck": "pnpm -r run typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -29,7 +24,6 @@
   "dependencies": {
     "@inquirer/prompts": "8.5.2",
     "better-sqlite3": "13.0.3",
-    "commander": "15.0.0",
     "drizzle-orm": "0.45.2",
     "openai": "7.4.0",
     "pdf-parse": "2.4.5",

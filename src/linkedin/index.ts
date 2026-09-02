@@ -9,6 +9,15 @@
 export { LinkedInDiscoveryService } from './discovery-service.js';
 export type { LinkedInDiscoveryServiceOptions, DiscoverInput } from './discovery-service.js';
 
+export { LinkedInExtractionService } from './extraction/service.js';
+export type {
+  LinkedInExtractionServiceOptions,
+  ExtractOneInput,
+  ExtractBatchInput,
+} from './extraction/service.js';
+
+export { createDefaultBrowserSession } from './browser-default.js';
+
 export {
   LINKEDIN_DISCOVERY_SCHEMA_VERSION,
   LINKEDIN_JOBS_SEARCH_HOST,

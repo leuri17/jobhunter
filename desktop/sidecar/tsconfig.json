@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    // Override: A3's `lib: ["ES2023"]` excludes DOM. Source code references `Element`
+    // (DOM type) in src/linkedin/load-more.ts:227 — restore DOM support globally.
+    "lib": ["ES2023", "DOM"],
+    // Override: A3's `noPropertyAccessFromIndexSignature: true` flags 44 sites in
+    // persistence/ and platform/ that use bracket access on index signatures.
+    // Restore legacy permissive access globally; track as tech debt for follow-up.
+    "noPropertyAccessFromIndexSignature": false,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules", "src/**/*.test.ts"]
+}

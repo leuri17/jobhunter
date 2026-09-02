@@ -6,7 +6,7 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default defineConfig([
   globalIgnores([
-    'dist/**',
+    '**/dist/**',
     'node_modules/**',
     'coverage/**',
     '.worktrees/**',
@@ -14,6 +14,7 @@ export default defineConfig([
     '.superpowers/**',
     'docs/**',
     'drizzle/**',
+    'desktop/tauri/target/**',
   ]),
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],

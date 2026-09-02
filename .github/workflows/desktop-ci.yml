@@ -1,0 +1,43 @@
+name: desktop-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.18.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version-file: '.node-version' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+  sidecar-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.18.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version-file: '.node-version' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @jobhunter/sidecar test
+
+  ui-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.18.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version-file: '.node-version' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @jobhunter/ui test

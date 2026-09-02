@@ -26,3 +26,8 @@ export {
   type DiagnosticOutcome,
   type DiagnosticFailure,
 } from './manager.js';
+
+export {
+  createDefaultDiagnosticManager,
+  type CreateDefaultDiagnosticManagerInput,
+} from './manager-default.js';

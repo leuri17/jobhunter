@@ -6,6 +6,7 @@ export {
   type DatabaseHandle,
   type InitializeDatabaseOptions,
 } from './database.js';
+export { resolveRepoRootForMigrations } from './resolve-migrations.js';
 export { schema, type Schema } from './schema.js';
 
 export { InvalidIdentifierError } from './identifier-errors.js';

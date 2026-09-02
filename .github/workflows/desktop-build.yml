@@ -1,0 +1,62 @@
+name: desktop-build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.18.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version-file: '.node-version' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @jobhunter/ui build
+      - uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: desktop/tauri
+          tagName: ${{ github.ref_name }}
+          releaseName: "JobHunter ${{ github.ref_name }}"
+          releaseBody: "Automated build"
+          releaseDraft: true
+          args: --target x86_64-unknown-linux-gnu
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.18.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version-file: '.node-version' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @jobhunter/ui build
+      - uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: desktop/tauri
+          tagName: ${{ github.ref_name }}
+          releaseName: "JobHunter ${{ github.ref_name }}"
+          releaseBody: "Automated build"
+          releaseDraft: true
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.18.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version-file: '.node-version' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @jobhunter/ui build
+      - uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: desktop/tauri
+          tagName: ${{ github.ref_name }}
+          releaseName: "JobHunter ${{ github.ref_name }}"
+          releaseBody: "Automated build"
+          releaseDraft: true

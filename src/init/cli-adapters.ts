@@ -1,10 +1,11 @@
 /**
- * CLI-only prompt adapters for the init orchestrator.
+ * Legacy CLI-only prompt adapters for the init orchestrator.
  *
  * These adapters isolate the inquirer-based prompts from the
- * orchestrator. They are imported ONLY by `src/cli.ts` and the test
- * file — they are NOT used inside `src/init/init-service.ts` (the
- * orchestrator consumes the structural interfaces, not the adapters).
+ * orchestrator. They survive pending the deferred A5 follow-up that
+ * will remove `@inquirer/prompts` and delete this file. They are NOT
+ * used inside `src/init/init-service.ts` (the orchestrator consumes
+ * the structural interfaces, not the adapters).
  */
 import { confirm as inquirerConfirm } from '@inquirer/prompts';
 import { defaultInquirerFilterPrompts } from '../filter/prompts-inquirer.js';

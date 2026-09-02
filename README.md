@@ -1,13 +1,13 @@
 # JobHunter
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![CI](https://github.com/leuri17/jobhunter/actions/workflows/ci.yml/badge.svg)](https://github.com/leuri17/jobhunter/actions/workflows/ci.yml)
+[![CI](https://github.com/leuri17/jobhunter/actions/workflows/desktop-ci.yml/badge.svg)](https://github.com/leuri17/jobhunter/actions/workflows/desktop-ci.yml)
 [![Node >= 24.18.0](https://img.shields.io/badge/node-%3E%3D24.18.0-brightgreen)](.node-version)
 [![pnpm 11.18.0](https://img.shields.io/badge/pnpm-11.18.0-blue)](package.json)
 
-> Local-first CLI that scrapes public LinkedIn job search results,
-> persists them locally, and ranks them with deterministic filters plus
-> OpenAI scoring.
+> Local-first desktop app that scrapes public LinkedIn job search
+> results, persists them locally, and ranks them with deterministic
+> filters plus OpenAI scoring.
 
 JobHunter helps one job seeker discover job listings on LinkedIn,
 apply their own deterministic filters, and rank the survivors against
@@ -16,67 +16,40 @@ is sent anywhere except your local SQLite database and the two
 outbound HTTP calls you explicitly authorize (one to LinkedIn's
 public search pages, one to OpenAI for scoring).
 
-## Demo
-
-A short terminal recording of the basic flow lives at
-[`docs/demo.gif`](./docs/demo.gif). The source tape is
-[`docs/demo.tape`](./docs/demo.tape); re-render with `vhs docs/demo.tape`.
-
 ## Quick start
 
+### For users (download a build)
+
+1. Download the latest installer for your platform from
+   [Releases](https://github.com/leuri17/jobhunter/releases):
+   - macOS: `JobHunter_x.y.z_aarch64.dmg`
+   - Windows: `JobHunter_x.y.z_x64-setup.exe`
+   - Linux: `JobHunter_x.y.z_amd64.AppImage` or `.deb`
+2. Drag to Applications (macOS) or run the installer (Windows/Linux).
+3. Set `OPENAI_API_KEY` in your environment before launching.
+
+### For developers (build from source)
+
+Requires Node 24.18.0+ and pnpm 11.18.0+.
+
 ```bash
-# Install dependencies (Node 24.18.0, pnpm 11.18.0).
 pnpm install
-
-# Initialize the database + write the default config.
-pnpm dev init
-
-# Configure your searches and locations interactively.
-pnpm dev configure search
-
-# Run the full pipeline (requires OPENAI_API_KEY in your env).
-pnpm dev run --yes
-
-# Inspect results as JSON.
-pnpm dev jobs list --json
-
-# See resolved OS-specific runtime paths.
-pnpm dev paths
+pnpm --filter @jobhunter/ui build      # build the frontend
+cd desktop/tauri && cargo build        # build the Rust shell
 ```
 
-`--help` exits 0 and prints the help text to stdout. SIGINT (Ctrl-C)
-once cancels the current run gracefully; twice force-exits. See
-[`docs/architecture.md`](./docs/architecture.md) for the full pipeline
-walkthrough.
+Launch via `cargo tauri dev` from `desktop/tauri`.
 
 ## Commands
 
-JobHunter's CLI is small and explicit. Run `pnpm dev --help` for
-the full list with descriptions; the most-used commands:
-
 | Command | What it does |
 | --- | --- |
-| `pnpm dev paths` | Print the resolved OS-specific runtime paths. |
-| `pnpm dev init` | Interactively initialize (paths, config, profile, filters). Resumable. |
-| `pnpm dev configure search` | Interactively configure LinkedIn search settings. |
-| `pnpm dev configure filters` | Interactively configure the global deterministic filter set. |
-| `pnpm dev profile import <path>` | Import one or two CV source files. |
-| `pnpm dev profile extract` | Extract a structured profile from imported sources via OpenAI. |
-| `pnpm dev profile list` | List every persisted profile version. |
-| `pnpm dev profile show <id>` | Print the review summary for a profile version. |
-| `pnpm dev profile approve <id>` | Approve a draft profile version. |
-| `pnpm dev profile reject <id>` | Reject a draft profile version. |
-| `pnpm dev profile edit <id>` | Interactively edit a draft profile version. |
-| `pnpm dev run` | Run the full discovery + extraction + filtering + scoring pipeline. |
-| `pnpm dev jobs list` | List jobs filtered by state and refinements. |
-| `pnpm dev jobs show <job-id>` | Print the full payload for a single job. |
-| `pnpm dev jobs reevaluate` | Reevaluate stored jobs (filters-only / scores-only / --job / --dry-run). |
-| `pnpm dev runs list` | List recent pipeline runs. |
-| `pnpm dev runs show <run-id>` | Print the full payload for a single run. |
+| `pnpm test` | Run all workspace tests (core + sidecar + ui) |
+| `pnpm typecheck` | Typecheck every workspace |
+| `pnpm lint` | Lint all workspaces |
+| `pnpm format` | Format every workspace |
 
-Most read-only commands accept `--json` to emit a single JSON document
-to stdout. Logs go to stderr. See [`docs/architecture.md`](./docs/architecture.md)
-for the JSON-envelope contract.
+The desktop app itself has no CLI; everything happens in the UI.
 
 ## Architecture
 
@@ -84,13 +57,12 @@ JobHunter is layered per `docs/architecture.md`:
 
 | Layer | Path | Owns |
 | --- | --- | --- |
-| CLI | `src/cli.ts` | Commander argument parsing + the only `process.exit` site |
-| Application | `src/<feature>/<service>.ts` | Orchestrators that compose domain logic with persistence and the browser |
-| Domain | `src/<feature>/` (pure modules) | Rules, parsers, validators |
-| Persistence | `src/persistence/` | Drizzle ORM + SQLite + repositories |
-| Browser | `src/linkedin/` | Playwright + LinkedIn DOM |
-| Diagnostics | `src/diagnostics/` | Capture strategies + artifact persistence |
-| Logging | `src/logging/` | Pino adapter; logs go to stderr |
+| Core library | `src/` | Domain logic, persistence, browser, scoring — pure modules |
+| Sidecar | `desktop/sidecar/` | Fastify HTTP server exposing the core library |
+| Tauri shell | `desktop/tauri/` | Window, menu, lifecycle, native notifications |
+| Frontend | `desktop/ui/` | React UI: dashboard, jobs, pipeline, runs, profile, settings |
+
+`process.exit` lives only in `desktop/sidecar/src/server.ts` (the sidecar's process entrypoint). The Tauri shell supervises and terminates the sidecar child process. The sidecar's HTTP error mapper translates typed errors into status codes + JSON envelopes and never exits the process.
 
 The scraper is built around a `BrowserSession` interface so the
 production Playwright implementation and the test `FakeBrowserSession`
@@ -98,33 +70,22 @@ share the same contract.
 
 ## Development
 
-Requires Node.js `24.18.0` (pinned via `.node-version`) and pnpm
-`11.18.0`.
+Requires Node.js `24.18.0` (pinned via `.node-version`), pnpm
+`11.18.0`, and a Rust toolchain for the Tauri shell.
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm dev --help            # confirm CLI runs
+pnpm typecheck
+pnpm lint
+pnpm test
 ```
 
 ```bash
-# Typecheck (production + test configs)
-pnpm typecheck
+# Frontend-only build (produces desktop/ui/dist/ for Tauri to bundle).
+pnpm --filter @jobhunter/ui build
 
-# Lint
-pnpm lint
-
-# Format check / apply
-pnpm format:check
-pnpm format
-
-# Build (tsc → dist/)
-pnpm build
-
-# Run the normal test suite
-pnpm test
-
-# Run live tests (opt-in; uses real LinkedIn)
-LINKEDIN_LIVE=1 pnpm test:live
+# Full desktop app — Rust shell + sidecar + UI hot reload.
+cargo tauri dev
 ```
 
 ## Testing strategy
@@ -153,8 +114,7 @@ selector changes in `src/linkedin/selectors.ts`.
 - Strict TypeScript with `noUncheckedIndexedAccess` and
   `exactOptionalPropertyTypes`. No `any` in new code.
 - Native ESM, NodeNext imports. No CommonJS.
-- `process.exit` lives only in `src/cli.ts`; domain code throws typed
-  errors that the CLI maps to exit codes.
+- `process.exit` lives only in `desktop/sidecar/src/server.ts` (the sidecar's process entrypoint). The Tauri shell supervises and terminates the sidecar child process. The sidecar's HTTP error mapper translates typed errors into status codes + JSON envelopes and never exits the process.
 - Runtime Playwright imports live only in
   `src/linkedin/playwright-session.ts`. Every other `src/linkedin/`
   file imports types only. Both rules are enforced by tests.
@@ -163,14 +123,16 @@ selector changes in `src/linkedin/selectors.ts`.
 
 - [`docs/architecture.md`](./docs/architecture.md) — canonical
   architecture reference.
+- [`docs/desktop.md`](./docs/desktop.md) — desktop build, bundle,
+  and ship instructions.
 - [`docs/responsible-use.md`](./docs/responsible-use.md) — LinkedIn
   Terms-of-Service posture and user responsibilities.
 
 ## Contributing
 
 Contributions welcome. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for
-dev setup, testing strategy, architecture boundaries, exit codes, and
-PR conventions.
+dev setup, testing strategy, architecture boundaries, and PR
+conventions.
 
 ## Security
 

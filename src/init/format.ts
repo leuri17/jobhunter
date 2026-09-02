@@ -1,9 +1,9 @@
 /**
  * Human-readable renderer for `SetupSummary` ( Minor h).
  *
- * Mirrors the existing `formatSummary` / `formatExtractSummary` helpers in
- * `src/cli.ts`. The output is deterministic (same input → same output)
- * and newline-terminated per the CLI's `<line>\n` writing convention.
+ * Output is deterministic (same input → same output) and
+ * newline-terminated per the desktop sidecar's `<line>\n` writing
+ * convention.
  *
  * Format:
  *   ```

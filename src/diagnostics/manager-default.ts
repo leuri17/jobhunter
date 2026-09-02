@@ -16,9 +16,9 @@ export interface CreateDefaultDiagnosticManagerInput {
 
 /**
  * Factory: create the default `DiagnosticManager` wired to the
- * operational config's `onScraperError` flags. Used by the CLI handler
- * (`src/cli.ts`). Tests inject their own manager via constructor
- * injection on the orchestrator.
+ * operational config's `onScraperError` flags. The desktop sidecar
+ * composes this at boot; tests inject their own manager via
+ * constructor injection on the orchestrator.
  */
 export function createDefaultDiagnosticManager(
   input: CreateDefaultDiagnosticManagerInput,

@@ -1,9 +1,9 @@
 /**
  * Public barrel for src/pipeline/.
  *
- * Re-exports the public surface that the CLI handler (src/cli.ts)
- * and the test harness consume. Internal helpers stay accessible
- * via their source paths.
+ * Re-exports the public surface that the desktop sidecar's HTTP
+ * routes and the test harness consume. Internal helpers stay
+ * accessible via their source paths.
  */
 
 export {

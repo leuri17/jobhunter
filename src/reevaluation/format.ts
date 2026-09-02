@@ -2,7 +2,7 @@
  * Human-readable formatters for .
  *
  * Pure formatters. NO imports from `src/persistence/`,
- * `src/cli/`, `src/linkedin/`, `src/profile/`, `src/filter/`,
+ * `src/linkedin/`, `src/profile/`, `src/filter/`,
  * `src/scoring/`, `src/inspection/`. The formatters operate on the
  * plain `ReevaluationPlan` row shape declared in `./state.ts`; the
  * service layer is responsible for the row → shape mapping.

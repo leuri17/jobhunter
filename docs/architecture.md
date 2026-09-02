@@ -1,11 +1,11 @@
 # Architecture
 
-JobHunter is a local CLI that helps one job seeker discover public job
-listings on LinkedIn, score them against their profile, and rank the
-top matches. This document explains the architecture in prose form. For
-setup and command reference, see [`README.md`](../README.md); for
-LinkedIn Terms-of-Service posture, see
-[`docs/responsible-use.md`](./responsible-use.md).
+JobHunter is a local desktop app that helps one job seeker discover
+public job listings on LinkedIn, score them against their profile,
+and rank the top matches. This document explains the architecture in
+prose form. For setup and command reference, see
+[`README.md`](../README.md); for LinkedIn Terms-of-Service posture,
+see [`docs/responsible-use.md`](./responsible-use.md).
 
 ## Design principles
 
@@ -22,19 +22,18 @@ LinkedIn Terms-of-Service posture, see
   caps. No parallelism by design.
 - **Strict typing.** TypeScript strict mode with `noUncheckedIndexedAccess`
   and `exactOptionalPropertyTypes`. Zod validates every external,
-  persisted, CLI, profile, filter, OpenAI, and JSON boundary.
+  persisted, profile, filter, OpenAI, and JSON boundary.
 
 ## Layered structure
 
 | Layer | Lives in | Owns |
 | --- | --- | --- |
-| CLI | `src/cli.ts` | Commander argument parsing; the only file that calls `process.exit`. |
-| Application | `src/<feature>/<service>.ts` | Orchestrators that compose domain logic with persistence and the browser. |
-| Domain | `src/<feature>/` (pure modules) | Rules, parsers, validators — no I/O. |
-| Persistence | `src/persistence/` | Drizzle ORM, SQLite, repositories, migrations. |
-| Browser | `src/linkedin/` | Playwright + LinkedIn DOM. |
-| Diagnostics | `src/diagnostics/` | Capture strategies + artifact persistence (operator-only, never sent off-machine). |
-| Logging | `src/logging/` | Pino adapter; log records go to stderr, never to stdout. |
+| Core | `src/<feature>/` | Domain logic, persistence, browser, scoring, logging, config, errors. Published as `@jobhunter/core`. |
+| Sidecar | `desktop/sidecar/` | Fastify HTTP + SSE server. Boots SQLite, applies migrations, mounts core services as routes, streams run progress to the UI. The only process that maps typed errors to HTTP status codes + JSON envelopes. |
+| Tauri shell | `desktop/tauri/` | Rust binary that launches the sidecar child process, hosts the webview, and exposes native bindings (filesystem, dialogs, OS paths). |
+| Frontend | `desktop/ui/` | React + TypeScript UI. Talks to the sidecar over loopback HTTP; receives run progress via SSE. |
+
+`process.exit` lives only in `desktop/sidecar/src/server.ts` (the sidecar's process entrypoint). The Tauri shell supervises and terminates the sidecar child process. The sidecar's HTTP error mapper translates typed errors into status codes + JSON envelopes and never exits the process.
 
 The scraper is built around a `BrowserSession` interface so the
 production Playwright implementation and the test `FakeBrowserSession`
@@ -42,7 +41,8 @@ share the same contract.
 
 ## Pipeline stages
 
-When you run `jobhunter run`, the orchestrator walks these stages in
+When you kick off a run from the UI (or, in early development, via a
+direct sidecar HTTP call), the orchestrator walks these stages in
 order:
 
 1. **Initialization.** Resolve the OS-specific paths, ensure directories
@@ -61,13 +61,16 @@ order:
 5. **Deterministic filtering.** Apply your local keyword, seniority, and
    language filters. No LLM involvement.
 6. **Scoring-plan confirmation.** Show what will be scored; ask for
-   confirmation unless `--yes`.
+   confirmation unless the request sets skip-confirmation, in which
+   case the sidecar skips the prompt via its HTTP `POST /api/pipeline/run`
+   confirmation handshake.
 7. **LLM scoring.** For each accepted job, send the profile + extracted
    job to OpenAI; parse the structured response with Zod; persist.
 8. **Ranking.** Apply the deterministic weighted-score formula; rank
    by descending score.
-9. **Terminal output.** Show the top N (default 20) in a human-readable
-   table or as a single JSON document with `--json`.
+9. **UI output.** Stream the top N (default 20) to the frontend over
+   SSE as they complete. The sidecar emits `application/json` responses
+   using the JSON envelope contract documented for its HTTP API.
 10. **Run finalization.** Persist the run summary with the configuration
     snapshot.
 
@@ -83,7 +86,7 @@ job-search pages. Concretely:
 - It scrapes one search at a time (sequential, never parallel).
 - It uses bounded timeouts and a retry cap (3 attempts per page).
 - It stops on LinkedIn-side blocks (auth wall, captcha) with a typed
-  `LinkedInBlocked` error and exit code 4. No bypass.
+  `LinkedInBlocked` error. No bypass.
 
 For full policy and user-facing responsibilities, see
 [`docs/responsible-use.md`](./responsible-use.md).
@@ -154,33 +157,20 @@ Foreign keys are enforced. Every migration is committed.
 
 Configuration is persisted in OS-specific JSON (`config.json`). The
 schema is Zod-validated and `.strict()` — unknown properties are
-rejected. The `OPENAI_API_KEY` is read from the environment, never
+rejected. The `OPENAI_API_KEY` is read from the environment the
+sidecar inherits when the Tauri shell launches it; it is never
 persisted.
 
 Defaults match what's documented in the schema; nothing is implicit.
-Use `jobhunter config show` to inspect the normalized configuration
-and `jobhunter config validate` to check it.
-
-## Exit codes
-
-| Code | Meaning |
-| ---: | --- |
-| 0 | Success |
-| 1 | Fatal (uncaught throw that isn't an `ApplicationError`) |
-| 2 | Invalid usage (unknown option, missing argument, malformed identifier) |
-| 3 | Missing required (`OPENAI_API_KEY`, no active profile, no active filter) |
-| 4 | LinkedIn blocked (auth wall, captcha, or other access block) |
-| 5 | OpenAI failure (scoring / extraction failed) |
-| 130 | User cancellation (SIGINT — graceful or forced) |
-
-`--help` and `--version` exit 0.
+The UI exposes a configuration view backed by the sidecar's
+`/config` endpoints (show + patch).
 
 ## Reliability invariants
 
 A handful of cross-cutting invariants are non-negotiable:
 
 - JSON stdout stays clean. Every log record goes to stderr; nothing
-  else writes to stdout during `--json` execution.
+  else writes to stdout during HTTP response emission (sidecar).
 - A single SIGINT triggers a graceful cancellation between pipeline
   steps; a second SIGINT force-exits.
 - One job's failure never terminates the whole run. Search-level or

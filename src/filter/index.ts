@@ -2,8 +2,8 @@
  * Public surface for the global deterministic filter engine.
  *
  * This barrel re-exports every public symbol from `src/filter/**`. The
- * CLI (`src/cli.ts`) consumes the filter engine through this barrel;
- * downstream tasks (, 014, 015, 017) import the orchestration
+ * desktop sidecar consumes the filter engine through this barrel;
+ * downstream tasks (Phase B / Phase E) import the orchestration
  * services (`FilterApplyService`, `ConfigureFiltersService`) from here.
  *
  * Module layout (the source files live next to this barrel):

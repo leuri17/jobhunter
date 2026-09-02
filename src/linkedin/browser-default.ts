@@ -3,7 +3,7 @@ import type { BrowserSession } from './browser-session.js';
 
 /**
  * Factory: create the default real Playwright browser session.
- * Used by the CLI handler (`src/cli.ts`). Tests inject a
+ * The desktop sidecar composes this at boot. Tests inject a
  * `FakeBrowserSession` via constructor injection on the orchestrator.
  */
 export function createDefaultBrowserSession(config: {

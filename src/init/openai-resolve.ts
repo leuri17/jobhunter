@@ -6,9 +6,9 @@
  * for the `extract` step). When present, returns a freshly
  * constructed `OpenAIClient` via `createDefaultOpenAIClient`.
  *
- * This helper is imported ONLY by `src/cli.ts` (and tests). The
- * orchestrator receives the constructed client (or `null`) via its
- * constructor — it does not invoke this helper itself.
+ * This helper is imported by the desktop sidecar's bootstrap and by
+ * tests. The orchestrator receives the constructed client (or `null`)
+ * via its constructor — it does not invoke this helper itself.
  */
 import { createDefaultOpenAIClient } from '../profile/openai/client.js';
 import type { OpenAIClient } from '../profile/openai/types.js';

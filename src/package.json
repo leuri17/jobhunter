@@ -1,0 +1,27 @@
+{
+  "name": "@jobhunter/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./pipeline": "./pipeline/index.ts",
+    "./persistence": "./persistence/index.ts",
+    "./linkedin": "./linkedin/index.ts",
+    "./scoring": "./scoring/index.ts",
+    "./profile": "./profile/index.ts",
+    "./filter": "./filter/index.ts",
+    "./search": "./search/index.ts",
+    "./config": "./config/index.ts",
+    "./logging": "./logging/index.ts",
+    "./platform": "./platform/index.ts",
+    "./errors": "./errors/index.ts",
+    "./diagnostics": "./diagnostics/index.ts",
+    "./reevaluation": "./reevaluation/index.ts",
+    "./inspection": "./inspection/index.ts",
+    "./init": "./init/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

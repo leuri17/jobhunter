@@ -93,21 +93,21 @@ export interface InitOrchestratorOptions {
   readonly paths: PlatformPaths;
   readonly repositories: Repositories;
   readonly fileSystem: FileSystem;
-  /** Injected by `src/cli.ts`; tests may supply a scripted or failing adapter. */
+  /** Injected by the desktop sidecar; tests may supply a scripted or failing adapter. */
   readonly prompts: InitPrompts;
-  /** Injected by `src/cli.ts` (or by tests); null when `OPENAI_API_KEY` is absent. */
+  /** Injected by the desktop sidecar (or by tests); null when `OPENAI_API_KEY` is absent. */
   readonly openaiClient: OpenAIClient | null;
-  /** Optional. Wired by the CLI to `defaultInquirerPrompts`; tests inject scripted. */
+  /** Optional. Wired by the sidecar to `defaultInquirerPrompts`; tests inject scripted. */
   readonly searchPrompts?: SearchPrompts;
-  /** Optional. Wired by the CLI to `defaultInquirerFilterPrompts`; tests inject scripted. */
+  /** Optional. Wired by the sidecar to `defaultInquirerFilterPrompts`; tests inject scripted. */
   readonly filterPrompts?: FilterPrompts;
-  /** Optional. Wired by the CLI to the inline approval-confirm prompt (mirrors `src/cli.ts:483-497`); tests inject scripted. */
+  /** Optional. Wired by the sidecar to the inline approval-confirm prompt; tests inject scripted. */
   readonly approvalPrompts?: ProfileApprovalPrompts;
-  /** Optional. Wired by the CLI to the inline rejection-confirm prompt (mirrors `src/cli.ts:516-526`); tests inject scripted. */
+  /** Optional. Wired by the sidecar to the inline rejection-confirm prompt; tests inject scripted. */
   readonly rejectionPrompts?: ProfileRejectionPrompts;
-  /** Optional. Wired by the CLI to `noopProfileImportLogger` or the production adapter; tests inject scripted. */
+  /** Optional. Wired by the sidecar to `noopProfileImportLogger` or the production adapter; tests inject scripted. */
   readonly importLogger?: ProfileImportLogger;
-  /** Optional. Wired by the CLI to `noopProfileExtractionLogger` or the production adapter; tests inject scripted. */
+  /** Optional. Wired by the sidecar to `noopProfileExtractionLogger` or the production adapter; tests inject scripted. */
   readonly extractionLogger?: ProfileExtractionLogger;
   /** Optional; defaults to `() => new Date()`. */
   readonly now?: () => Date;

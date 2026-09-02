@@ -11,8 +11,9 @@ import { describe, expect, it } from 'vitest';
  * modules, with explicit allow-list carve-outs:
  *
  *   - `src/init/prompts-inquirer.ts` — default inquirer adapter
- *   - `src/init/cli-adapters.ts` — CLI-only prompt adapters (imported
- *     ONLY by `src/cli.ts`); same rationale as `prompts-inquirer.ts`.
+ *   - `src/init/cli-adapters.ts` — Legacy CLI-era prompt adapters,
+ *     scheduled for removal with `@inquirer/prompts` in the A5
+ *     follow-up. Same rationale as `prompts-inquirer.ts`.
  *
  * Type-only `import type { ... } from 'pino'` is permitted via the literal
  * `RUNTIME_IMPORT_RE` regex below (Finding 14). If a future task needs
