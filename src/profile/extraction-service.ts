@@ -190,7 +190,7 @@ export class ProfileExtractionService {
    * Run the full extraction pipeline for the given source IDs. Returns a
    * discriminated-union `ProfileExtractionStatus` — never throws for
    * expected failures (every typed error is translated into a
-   * `kind: 'failed'` result so the CLI can render a structured response
+   * `kind: 'failed'` result so the sidecar can render a structured response
    * without an exception path).
    */
   async extract(sourceIds: readonly number[]): Promise<ProfileExtractionStatus> {

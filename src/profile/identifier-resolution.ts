@@ -30,7 +30,7 @@ import { InvalidProfileIdentifierError } from './errors.js';
 const PROFILE_ID_KEY = 'profile_';
 
 /**
- * Try to resolve a profile CLI identifier to its integer primary key.
+ * Try to resolve a profile identifier to its integer primary key.
  *
  * Order of resolution:
  *  1. `profile_<int>` form — parsed strictly, looked up via

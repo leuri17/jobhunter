@@ -181,9 +181,9 @@ export async function classifyConfig(input: ClassifyConfigInput): Promise<InitSt
 }
 
 /**
- * `classifyMigrations` is pure. The DB handle is owned by the CLI
- * boundary; this classifier only inspects the outcome recorded by the
- * orchestrator after `initializeDatabase` returns.
+ * `classifyMigrations` is pure. The DB handle is owned by the
+ * desktop sidecar; this classifier only inspects the outcome recorded by
+ * the orchestrator after `initializeDatabase` returns.
  */
 export function classifyMigrations(input: ClassifyMigrationsInput): InitStepReport {
   if (input.migrationsApplied) {

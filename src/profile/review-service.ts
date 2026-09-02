@@ -5,7 +5,7 @@
  *
  *   - `list` returns a flattened list of every persisted profile version
  *     (or a status-filtered subset), ordered most-recent-first by id.
- *   - `show` resolves a profile CLI identifier via `resolveProfileVersionId`
+ *   - `show` resolves a profile identifier via `resolveProfileVersionId`
  *     and returns the full payload (profile + warnings + conflicts +
  *     overrides + revisions) needed by the profile-show HTTP route and by the
  *     editor's review view.
@@ -72,7 +72,7 @@ export class ProfileReviewService {
 
   /**
    * Return every persisted profile version, optionally filtered by status.
-   * Order is most-recent-first (id DESC) so the CLI default output reads
+   * Order is most-recent-first (id DESC) so the default listing reads
    * naturally top-to-bottom.
    */
   async list(opts?: { status?: ProfileStatus }): Promise<readonly ProfileListEntry[]> {
@@ -95,7 +95,7 @@ export class ProfileReviewService {
   }
 
   /**
-   * Resolve the CLI identifier and assemble the full review payload.
+   * Resolve the profile identifier and assemble the full review payload.
    * Throws `InvalidProfileIdentifierError` for unknown / malformed ids and
    * `InvalidProfilePayloadError` if the stored JSON fails Zod validation.
    */

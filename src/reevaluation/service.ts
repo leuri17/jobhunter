@@ -241,7 +241,7 @@ export class ReevaluationService {
     }
     // 'skipped' / 'cancelled' keep the original action label
     // ('reran' set in selection) — the service surfaces the
-    // totals and the CLI decides how to render.
+    // totals and the sidecar route decides how to render them.
     void activeFilterContentHash; // parameter retained for symmetry + future audit
   }
 

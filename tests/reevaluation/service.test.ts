@@ -372,7 +372,7 @@ describe('ReevaluationService', () => {
   it('T7: scope "job" with jobId 99999999 (numeric) → defensive job_not_found', async () => {
     await insertCompleteJobForReeval(repositories, '111', pipelineRunId, searchExecutionId);
     // Service receives a pre-resolved numeric id; no LinkedIn
-    // resolution happens here (that's the CLI's job).
+    // resolution happens here (that's the sidecar's job).
     await expect(
       makeService().execute({
         scope: 'job',

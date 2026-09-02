@@ -583,7 +583,7 @@ export class JobRepository {
   }
 
   /**
-   * Resolve a job CLI identifier to its JobRow.
+   * Resolve a job identifier to its JobRow.
    *
    * Accepts:
    *   - `job_<int>`           → looked up via `findById` (canonical).

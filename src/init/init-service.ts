@@ -192,7 +192,7 @@ export class InitOrchestrator {
     logger.stepComplete({ stepId: 'directories', artifactId: null });
 
     // === step 3: migrations ===
-    // The DB handle is owned by the CLI; the orchestrator treats
+    // The DB handle is owned by the desktop sidecar; the orchestrator treats
     // `migrationsApplied: true` because `initializeDatabase` succeeded.
     stepReports['migrations'] = classifyMigrations({ migrationsApplied: true });
 
@@ -207,8 +207,8 @@ export class InitOrchestrator {
         error instanceof ValidationError ||
         error instanceof UnknownConfigError
       ) {
-        // Record the failure on the step but continue — the CLI can
-        // surface it via `nextStep: 'config'`.
+// Record the failure on the step but continue — the orchestrator
+          // surfaces it via `nextStep: 'config'`.
         stepReports['config'] = {
           id: 'config',
           status: 'failed',

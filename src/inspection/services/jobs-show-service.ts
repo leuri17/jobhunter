@@ -1,7 +1,7 @@
 /**
  * JobsShowService — read-side service for `jobs show <job-id>`
  *
- * Resolves the CLI identifier (either `job_<int>` or the numeric
+ * Resolves the job identifier (either `job_<int>` or the numeric
  * LinkedIn `sourceJobId`), fetches the full job row + discovery
  * history + latest active filter result + latest active score
  * result, and assembles the public `JobShowPayload` envelope.

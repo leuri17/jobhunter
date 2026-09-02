@@ -2,7 +2,7 @@
  * Public barrel for the OpenAI profile-extraction module.
  *
  * Every consumer that wants to operate against the extraction pipeline
- * (the CLI, tests, downstream apps) should import from here so the import
+ * (callers, tests, downstream apps) should import from here so the import
  * surface stays narrow and the dependency on the `openai` SDK never leaks
  * beyond `client.ts`.
  *

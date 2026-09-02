@@ -293,8 +293,8 @@ export interface RunListRow {
  * score counts + errors + cancellation state + diagnostic refs.
  *
  * `searchExecutions` references `SearchExecutionRow` from
- * `src/persistence/repositories/pipeline-runs.ts` so the CLI
- * handler can render it without a second repository lookup.
+ * `src/persistence/repositories/pipeline-runs.ts` so the sidecar
+ * can render it without a second repository lookup.
  */
 export interface RunShowPayload {
   readonly id: string;
