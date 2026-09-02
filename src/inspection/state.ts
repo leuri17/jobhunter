@@ -76,7 +76,7 @@ export type JobListRow =
   | JobListRowFilterErrors
   | JobListRowScoringErrors;
 
-/** `jobs list --all` row. */
+/** `all` (no filter) row. */
 export interface JobListRowAll {
   readonly state: 'all';
   readonly id: string;
@@ -92,7 +92,7 @@ export interface JobListRowAll {
   readonly firstDiscoveredAt: string;
 }
 
-/** `jobs list --scored` row. */
+/** row filtered to scored jobs. */
 export interface JobListRowScored {
   readonly state: 'scored';
   readonly id: string;
@@ -106,7 +106,7 @@ export interface JobListRowScored {
   readonly firstDiscoveredAt: string;
 }
 
-/** `jobs list --accepted` row. */
+/** row filtered to accepted jobs. */
 export interface JobListRowAccepted {
   readonly state: 'accepted';
   readonly id: string;
@@ -119,7 +119,7 @@ export interface JobListRowAccepted {
   readonly filteredAt: string;
 }
 
-/** `jobs list --rejected` row. */
+/** row filtered to rejected jobs. */
 export interface JobListRowRejected {
   readonly state: 'rejected';
   readonly id: string;
@@ -133,7 +133,7 @@ export interface JobListRowRejected {
   readonly filteredAt: string;
 }
 
-/** `jobs list --unscored` row. */
+/** row filtered to unscored jobs. */
 export interface JobListRowUnscored {
   readonly state: 'unscored';
   readonly id: string;
@@ -146,7 +146,7 @@ export interface JobListRowUnscored {
   readonly lastAttemptAt: string | null;
 }
 
-/** `jobs list --partial` row. */
+/** row filtered to partial jobs. */
 export interface JobListRowPartial {
   readonly state: 'partial';
   readonly id: string;
@@ -158,7 +158,7 @@ export interface JobListRowPartial {
   readonly discoveredAt: string;
 }
 
-/** `jobs list --failed` row. */
+/** row filtered to failed jobs. */
 export interface JobListRowFailed {
   readonly state: 'failed';
   readonly errorId: number;
@@ -170,7 +170,7 @@ export interface JobListRowFailed {
   readonly discoveredAt: string;
 }
 
-/** `jobs list --filter-errors` row. */
+/** row showing filter errors. */
 export interface JobListRowFilterErrors {
   readonly state: 'filter-errors';
   readonly id: string;
@@ -182,7 +182,7 @@ export interface JobListRowFilterErrors {
   readonly lastAttemptAt: string;
 }
 
-/** `jobs list --scoring-errors` row. */
+/** row showing scoring errors. */
 export interface JobListRowScoringErrors {
   readonly state: 'scoring-errors';
   readonly id: string;

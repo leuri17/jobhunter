@@ -1,7 +1,7 @@
 /**
  * JobsListService — read-side service for `jobs list`.
  *
- * Validates the CLI refinements (`limit`, `minScore`, `--run`), asks
+ * Validates the request refinements (`limit`, `minScore`, `runId`), asks
  * the repository for the matching JobRows (the SQL lives there so
  * the service stays thin), maps each row to the per-state
  * `JobListRow` discriminated-union variant, applies the documented
@@ -140,7 +140,7 @@ export class JobsListService {
 
   /**
    * Fetch the `failed` rows for the supplied refinements.
-   * `discoveryErrors` has no `--limit` surface (the table is small
+   * `discoveryErrors` has no `limit` parameter (the table is small
    * per run); we apply `limit` after the row fetch.
    *
    * `searchQuery` + `locationName` come from the joined
@@ -153,7 +153,7 @@ export class JobsListService {
   ): Promise<readonly JobListRowFailed[]> {
     const runId = validated.runId;
     if (runId === null) {
-      // Without `--run`, the failed state is empty (the table is
+      // Without `runId`, the failed state is empty (the table is
       // indexed by pipelineRunId; a global scan would require a
       // new repository method not in scope for ).
       return [];
@@ -179,7 +179,7 @@ function validateInput(input: JobsListInput): ValidatedListInput {
     if (!Number.isInteger(input.limit) || input.limit <= 0) {
       throw new InspectionValidationError(
         'jobs_list_invalid_limit',
-        `jobs list --limit must be a positive integer (received ${input.limit}).`,
+        `limit must be a positive integer (received ${input.limit}).`,
         { limit: input.limit },
       );
     }
@@ -192,14 +192,14 @@ function validateInput(input: JobsListInput): ValidatedListInput {
     if (typeof input.minScore !== 'number' || !Number.isFinite(input.minScore)) {
       throw new InspectionValidationError(
         'jobs_list_invalid_min_score',
-        `jobs list --min-score must be a number between 0 and 100 (received ${input.minScore}).`,
+        `minScore must be a number between 0 and 100 (received ${input.minScore}).`,
         { minScore: input.minScore },
       );
     }
     if (input.minScore < 0 || input.minScore > 100) {
       throw new InspectionValidationError(
         'jobs_list_invalid_min_score',
-        `jobs list --min-score must be between 0 and 100 (received ${input.minScore}).`,
+        `minScore must be between 0 and 100 (received ${input.minScore}).`,
         { minScore: input.minScore },
       );
     }

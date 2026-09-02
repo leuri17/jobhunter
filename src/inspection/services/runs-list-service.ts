@@ -27,7 +27,7 @@ export interface RunsListInput {
 }
 
 /**
- * Read-only service backing `runs list [--limit <n>]`.
+ * Read-only service backing the runs list endpoint.
  */
 export class RunsListService {
   constructor(private readonly repositories: Repositories) {}
