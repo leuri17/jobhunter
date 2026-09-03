@@ -23,6 +23,7 @@ test-results/
 # Internal agent artifacts (not tracked in the public repository)
 docs/tasks/
 docs/superpowers/
+docs/audit/
 tests/acceptance/
 
 # OpenCode read-allowlist (per-user, not tracked)
