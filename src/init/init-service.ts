@@ -1,6 +1,6 @@
 /**
  * `InitOrchestrator` — the application service that walks the 10
- * prerequisite steps for `jobhunter init`.
+ * prerequisite steps needed to set up the desktop app.
  *
  * The orchestrator NEVER re-implements prerequisite service logic — it
  * delegates via the existing barrels (`src/profile/index.js`,
@@ -9,8 +9,8 @@
  * not reach into their internals.
  *
  * Domain boundaries (AGENTS.md §5, §9): this module does NOT import
- * Commander, Inquirer, Playwright, Drizzle directly, the `openai` SDK,
- * or Pino directly. The `InitLogger` interface is the logging seam.
+ * Playwright, Drizzle directly, the `openai` SDK, or Pino directly.
+ * The `InitLogger` interface is the logging seam.
  */
 
 import { loadConfig } from '../config/loader.js';
@@ -82,11 +82,11 @@ import {
 } from './classify.js';
 
 /**
- * Prerequisite-prompt seams are OPTIONAL. The CLI handler (Task 9)
- * wires them to the production adapters; tests inject scripted or
- * failing adapters (Finding 2). When a prerequisite seam is omitted,
- * the orchestrator surfaces a typed `InitLifecycleError` (the field is
- * not optional in the plan, but in practice the CLI always supplies
+ * Prerequisite-prompt seams are OPTIONAL. The desktop sidecar wires
+ * them to the production adapters; tests inject scripted or failing
+ * adapters (Finding 2). When a prerequisite seam is omitted, the
+ * orchestrator surfaces a typed `InitLifecycleError` (the field is not
+ * optional in the plan, but in practice the sidecar always supplies
  * them so this branch is a defensive guard).
  */
 export interface InitOrchestratorOptions {
@@ -97,9 +97,9 @@ export interface InitOrchestratorOptions {
   readonly prompts: InitPrompts;
   /** Injected by the desktop sidecar (or by tests); null when `OPENAI_API_KEY` is absent. */
   readonly openaiClient: OpenAIClient | null;
-  /** Optional. Wired by the sidecar to `defaultInquirerPrompts`; tests inject scripted. */
+  /** Optional. Wired by the sidecar to the search prompts adapter; tests inject scripted. */
   readonly searchPrompts?: SearchPrompts;
-  /** Optional. Wired by the sidecar to `defaultInquirerFilterPrompts`; tests inject scripted. */
+  /** Optional. Wired by the sidecar to the filter prompts adapter; tests inject scripted. */
   readonly filterPrompts?: FilterPrompts;
   /** Optional. Wired by the sidecar to the inline approval-confirm prompt; tests inject scripted. */
   readonly approvalPrompts?: ProfileApprovalPrompts;
@@ -127,14 +127,16 @@ export class InitOrchestrator {
    * `SetupSummary`. The method NEVER throws for a step-level `failed`
    * outcome (those are returned as `InitStepReport` entries). The
    * method DOES throw typed `InitLifecycleError` subclasses for
-   * unrecoverable conditions (FS / DB / persistence). The CLI boundary
-   * maps typed errors to exit codes.
+   * unrecoverable conditions (FS / DB / persistence). The sidecar's
+   * HTTP error mapper translates typed errors to HTTP status responses.
    *
    * Cancellation (any `UserCancellation` subclass + `SearchCancelledError`)
    * is ALWAYS thrown — there is no in-band cancellation return shape.
    * The orchestrator catches cancellation uniformly, logs the partial
    * step failure via `logger.stepFail`, and rethrows the typed
-   * cancellation error for the CLI boundary (which maps it to exit 130).
+   * cancellation error for the sidecar's HTTP error mapper (which
+   * translates the `UserCancellation = 130` exit code to an HTTP
+   * status response).
    *
    * The `env` parameter is the source of truth for the `OPENAI_API_KEY`
    * presence check. The orchestrator combines `env` with
@@ -190,7 +192,7 @@ export class InitOrchestrator {
     logger.stepComplete({ stepId: 'directories', artifactId: null });
 
     // === step 3: migrations ===
-    // The DB handle is owned by the CLI; the orchestrator treats
+    // The DB handle is owned by the desktop sidecar; the orchestrator treats
     // `migrationsApplied: true` because `initializeDatabase` succeeded.
     stepReports['migrations'] = classifyMigrations({ migrationsApplied: true });
 
@@ -205,8 +207,8 @@ export class InitOrchestrator {
         error instanceof ValidationError ||
         error instanceof UnknownConfigError
       ) {
-        // Record the failure on the step but continue — the CLI can
-        // surface it via `nextStep: 'config'`.
+// Record the failure on the step but continue — the orchestrator
+          // surfaces it via `nextStep: 'config'`.
         stepReports['config'] = {
           id: 'config',
           status: 'failed',
@@ -484,8 +486,9 @@ export class InitOrchestrator {
         if (status.kind === 'failed') {
           // Record the failure on the step (per-step failures surface as
           // SetupSummary entries; the orchestrator does NOT throw). The
-          // CLI maps the typed step failure via `formatInitSummary` and
-          // the operator can inspect the errorCode to decide what to do.
+          // sidecar renders the typed step failure via
+          // `formatInitSummary` and the operator can inspect the
+          // errorCode to decide what to do.
           logger.stepFail({
             stepId: 'extract',
             errorCode: status.errorCode,
@@ -535,7 +538,7 @@ export class InitOrchestrator {
       const latestDraftForApproval = refreshedVersions.find((row) => row.status === 'draft');
       if (latestDraftForApproval === undefined) {
         // No draft to approve. Return partial summary (the operator must
-        // run `jobhunter profile extract` first).
+        // extract a profile draft from the Profile page first).
         stepReports['approvedProfile'] = approvedReport;
         logger.stepComplete({ stepId: 'approvedProfile', artifactId: null });
         return this.buildSummary(stepReports, false, opts);
@@ -733,9 +736,10 @@ export class InitOrchestrator {
         }
         if (error instanceof InitFiltersFailedError) throw error;
         // Preserve typed `ApplicationError` subclasses (e.g.
-        // `NoActiveProfileError` → exit 3) so the CLI boundary can
-        // map them to the documented exit codes. Only wrap unknown
-        // errors as `InitFiltersFailedError`.
+        // `NoActiveProfileError` → exit 3) so the sidecar's HTTP
+        // error mapper can translate them to documented HTTP
+        // responses. Only wrap unknown errors as
+        // `InitFiltersFailedError`.
         if (error instanceof ApplicationError) throw error;
         const message = error instanceof Error ? error.message : String(error);
         throw new InitFiltersFailedError(

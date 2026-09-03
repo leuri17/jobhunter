@@ -48,8 +48,8 @@ import { type ProfessionalProfile } from '../profile/schema.js';
  * Domain-boundary note (AGENTS.md §5, §9): this module imports only
  * `node:crypto`, `src/filter/version.js`, `src/filter/content-hash.js`,
  * `src/filter/schema.js`, and `src/profile/schema.js` (for the
- * `ProfessionalProfile` type). It does not import Commander, Inquirer,
- * Playwright, Drizzle, OpenAI, or Pino. The
+ * `ProfessionalProfile` type). It is a pure helper that does not
+ * depend on Playwright, Drizzle, OpenAI, or Pino. The
  * `tests/filter/boundaries.test.ts` guard enforces this.
  */
 

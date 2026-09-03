@@ -19,9 +19,9 @@ import {
  *   - Default scope + 2 filter reruns + 1 score rerun + 1 skip →
  *     totals `{ filtersRerun: 2, scoresRerun: 1, scoresInvalidated: 0,
  *     skipped: 1, scoringDeclinedByUser: false }`.
- *   - `--dry-run` scope + 2 filter reruns → `dryRun: true`, action
+ *   - `dryRun: true` scope + 2 filter reruns → `dryRun: true`, action
  *     labels are `'would-rerun'`.
- *   - `--scores-only` scope + scoring plan passed → `scoringPlan !== null`.
+ *   - `scores-only` scope + scoring plan passed → `scoringPlan !== null`.
  *   - Empty inputs → `totals: { filtersRerun: 0, scoresRerun: 0,
  *     scoresInvalidated: 0, skipped: 0, scoringDeclinedByUser: false }`.
  */
@@ -126,7 +126,7 @@ describe('buildReevaluationPlan', () => {
     });
   });
 
-  it('--dry-run scope: 2 filter reruns → dryRun: true, action labels are "would-rerun"', () => {
+  it('dryRun scope: 2 filter reruns → dryRun: true, action labels are "would-rerun"', () => {
     const filterEntries = [makeFilterEntry(1, 'would-rerun'), makeFilterEntry(2, 'would-rerun')];
 
     const plan = buildReevaluationPlan({
@@ -152,7 +152,7 @@ describe('buildReevaluationPlan', () => {
     });
   });
 
-  it('--scores-only scope + scoring plan passed → scoringPlan !== null', () => {
+  it('scores-only scope + scoring plan passed → scoringPlan !== null', () => {
     const scoreEntries = [makeScoreEntry(1, 'reran')];
 
     const plan = buildReevaluationPlan({
@@ -172,7 +172,7 @@ describe('buildReevaluationPlan', () => {
     expect(plan.totals.scoresRerun).toBe(1);
   });
 
-  it('--scores-only with a reused entry → counts only non-reused entries', () => {
+  it('scores-only with a reused entry → counts only non-reused entries', () => {
     const scoreEntries = [
       makeScoreEntry(1, 'reran'),
       makeScoreEntry(2, 'reused'),
@@ -218,7 +218,7 @@ describe('buildReevaluationPlan', () => {
     });
   });
 
-  it('--job scope: jobId carries through verbatim', () => {
+  it('job scope: jobId carries through verbatim', () => {
     const filterEntries = [makeFilterEntry(42, 'reran')];
     const plan = buildReevaluationPlan({
       scope: 'job',
@@ -272,7 +272,7 @@ describe('buildReevaluationPlan', () => {
     expect(plan.totals.scoresRerun).toBe(1);
   });
 
-  it('--dry-run with a numeric LinkedIn sourceJobId is preserved verbatim', () => {
+  it('dryRun with a numeric LinkedIn sourceJobId is preserved verbatim', () => {
     const filterEntries: ReevaluationPlanEntry[] = [
       {
         jobId: 'job_7',

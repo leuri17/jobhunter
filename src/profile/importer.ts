@@ -21,7 +21,7 @@ import { detectSourceTypeFromPath, mimeTypeFor } from './source-types.js';
  * One imported source as returned by `ProfileImportService.importSources`.
  *
  * `path` is the OS-native absolute path produced by `path.resolve(rawPath)`:
- * forward slashes on POSIX, backslashes on Windows. The CLI summary
+ * forward slashes on POSIX, backslashes on Windows. The summary
  * renders only the basename by splitting on both separators, but `path`
  * itself is preserved verbatim. Downstream extraction operates on the
  * stored copy (`storedPath`) rather than this original path.

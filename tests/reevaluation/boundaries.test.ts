@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
 /**
  * Domain-boundary guard for `src/reevaluation/` (, AGENTS.md §5 + §9).
  *
- * AGENTS.md §5: domain code must not depend on Commander, Inquirer,
- * Playwright, the `openai` SDK, or runtime `pino`. The reevaluation
+ * AGENTS.md §5: domain code must not depend on Playwright, the `openai`
+ * SDK, or runtime `pino`. The reevaluation
  * layer is split into:
  *   - Pure layer: `src/reevaluation/{state,errors,plan,format,json-schemas,index}.ts`.
  *     No repository I/O, no service composition, no OpenAI calls.
@@ -55,8 +55,6 @@ interface BannedImport {
 
 /** Banned packages for the WHOLE `src/reevaluation/` module (AGENTS.md §5 + §9). */
 const BANNED: readonly BannedImport[] = [
-  { moduleName: 'commander', pattern: RUNTIME_IMPORT_RE('commander') },
-  { moduleName: '@inquirer/prompts', pattern: RUNTIME_IMPORT_RE('@inquirer/prompts') },
   { moduleName: 'playwright', pattern: RUNTIME_IMPORT_RE('playwright') },
   { moduleName: 'openai', pattern: RUNTIME_IMPORT_RE('openai') },
   { moduleName: 'pino', pattern: RUNTIME_IMPORT_RE('pino') },

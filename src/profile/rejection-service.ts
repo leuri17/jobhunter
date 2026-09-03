@@ -13,11 +13,11 @@
  *   - rejected         → refuse with `InvalidProfileStateError`
  *
  * The user-cancellation seam is exposed via `ProfileRejectionPrompts` so
- * the CLI can drive the rejection confirmation prompt. The default CLI
- * wires this to an `@inquirer/confirm` adapter.
+ * the desktop shell can drive the rejection confirmation dialog. The
+ * default desktop adapter wires this to a confirmation component.
  *
  * The service depends on the repositories and the identifier-resolution
- * helper; it never touches Commander, Inquirer, Playwright, Drizzle
+ * helper; it never touches Playwright, Drizzle
  * directly, or the OpenAI SDK.
  */
 

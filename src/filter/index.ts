@@ -23,9 +23,6 @@
  *   fingerprint.ts                  → fingerprint composer (cache key)
  *   service.ts                      → FilterApplyService (cache ledger)
  *   prompts.ts                      → seam (interface + scripted test adapters)
- *   prompts-inquirer.ts             → Inquirer CLI adapter (the ONLY module
- *                                    under src/filter/ allowed to import
- *                                    @inquirer/prompts)
  *   configure-service.ts            → ConfigureFiltersService (interactive flow)
  */
 

@@ -24,4 +24,4 @@ body:
     id: impact
     attributes:
       label: Impact
-      description: Does this change user-visible behavior, the public CLI surface, or the JSON envelope contract? If yes, which?
+      description: Does this change user-visible behavior, the public HTTP / JSON envelope contract, or the UI? If yes, which?

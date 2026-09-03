@@ -464,7 +464,7 @@ export class PipelineOrchestrator {
       stats.scoringErrors += 1;
       throw new PipelinePrerequisiteError(
         'no_active_profile',
-        'No active approved profile. Run "jobhunter profile approve" before scoring.',
+        'No active approved profile. Approve a profile from the Profile page before scoring.',
       );
     }
     const profileVersion = {
@@ -546,21 +546,21 @@ export class PipelineOrchestrator {
     if (typeof openAiKey !== 'string' || openAiKey.length === 0) {
       throw new PipelineOpenAIKeyMissingError(
         'openai_api_key_missing',
-        'OPENAI_API_KEY environment variable is required to run the pipeline. Set it before invoking "jobhunter run".',
+        'OPENAI_API_KEY environment variable is required to run the pipeline. Set it in the Settings tab before starting a run.',
       );
     }
     const activeProfile = await this.repositories.profileVersions.findActiveApproved();
     if (activeProfile === null) {
       throw new PipelinePrerequisiteError(
         'no_active_profile',
-        'No active approved profile. Run "jobhunter init" or "jobhunter profile approve" before "jobhunter run".',
+        'No active approved profile. Run setup from the Setup Wizard or approve a profile from the Profile page before starting a run.',
       );
     }
     const activeFilter = await this.repositories.filterConfigurations.findActive();
     if (activeFilter === null) {
       throw new PipelinePrerequisiteError(
         'no_active_filter',
-        'No active filter configuration. Run "jobhunter configure filters" before "jobhunter run".',
+        'No active filter configuration. Open the Filters tab and save a configuration before starting a run.',
       );
     }
   }

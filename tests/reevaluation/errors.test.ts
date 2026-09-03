@@ -25,11 +25,11 @@ describe('Reevaluation errors', () => {
   it('ReevaluationValidationError has exitCode 2 (InvalidUsage)', () => {
     const error = new ReevaluationValidationError(
       'reevaluate_scope_conflict',
-      'Cannot combine --filters-only with --scores-only.',
+      'Cannot combine filters-only with scores-only.',
     );
     expect(error.exitCode).toBe(ExitCode.InvalidUsage);
     expect(error.code).toBe('reevaluate_scope_conflict');
-    expect(error.message).toContain('--filters-only');
+    expect(error.message).toContain('filters-only');
   });
 
   it('ReevaluationValidationError carries metadata', () => {

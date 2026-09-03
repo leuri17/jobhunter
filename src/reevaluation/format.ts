@@ -80,8 +80,8 @@ const REASON_COL_MAX = 24;
  * reevaluation formatters but is ignored because the pipeline
  * formatter does not consult terminal width.
  *
- * The CLI handler in  renders the scoring plan via this
- * function when the plan requires new OpenAI requests. The
+ * The sidecar route renders the scoring plan via this function
+ * when the plan requires new OpenAI requests. The
  * boundaries test excludes this single `src/pipeline/format.js`
  * import from the reevaluation-module ban.
  */

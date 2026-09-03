@@ -19,7 +19,7 @@
  * row, which is the only stable internal identifier the rest of the
  * application uses.
  *
- * The helper does NOT depend on Commander, Inquirer, Playwright, or the
+ * The helper does NOT depend on Playwright or the
  * `openai` SDK. It only reaches into the persistence repositories.
  */
 
@@ -30,7 +30,7 @@ import { InvalidProfileIdentifierError } from './errors.js';
 const PROFILE_ID_KEY = 'profile_';
 
 /**
- * Try to resolve a profile CLI identifier to its integer primary key.
+ * Try to resolve a profile identifier to its integer primary key.
  *
  * Order of resolution:
  *  1. `profile_<int>` form — parsed strictly, looked up via

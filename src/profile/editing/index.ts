@@ -2,10 +2,10 @@
  * Public surface for the profile editor.
  *
  * Re-exports the pure reducer, the prompts seam (interface + failing /
- * scripted test adapters + the default Inquirer adapter), and the field
- * validators the reducer relies on. Application services and the CLI
- * pull everything they need from this barrel; nothing else in the
- * project should reach into the individual files directly.
+ * scripted test adapters), and the field validators the reducer relies
+ * on. Application services pull everything they need from this barrel;
+ * nothing else in the project should reach into the individual files
+ * directly.
  */
 
 export {
@@ -58,16 +58,3 @@ export {
   type DiscardConfirmation,
   type DerivedOverrideRow,
 } from './prompts.js';
-
-export {
-  InquirerProfileEditorPrompts,
-  defaultInquirerEditorPrompts,
-  renderEditorPreview,
-  sectionLabels,
-  derivedFields,
-  clearSentinel,
-  skillCategories,
-  languageLevels,
-  seniorityLevels,
-  sectionKind,
-} from './prompts-inquirer.js';

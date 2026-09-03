@@ -12,7 +12,7 @@ import {
  * Pure-helper tests for the Zod schemas in `src/inspection/json-schemas.ts`
  * (, Task 14, ).
  *
- * The schemas are the source of truth for the `--json` payload contract.
+ * The schemas are the source of truth for the JSON payload contract.
  * These tests:
  *   - Build a representative fixture for every top-level schema and assert
  *     `safeParse(fixture).success === true` (round-trip acceptance).
@@ -290,7 +290,7 @@ const runShowPayload = {
   diagnosticReferences: [],
 };
 
-/** Representative `paths --json` payload. */
+/** Representative JSON payload for `/api/paths`. */
 const pathsPayload = {
   schemaVersion: 1 as const,
   paths: {
@@ -308,47 +308,47 @@ const pathsPayload = {
 // ---------------------------------------------------------------------------
 
 describe('JobListJsonSchema', () => {
-  it('accepts a representative fixture for the --all state', () => {
+  it('accepts a representative fixture for the allJobs state', () => {
     const result = JobListJsonSchema.safeParse(jobListEnvelope('all'));
     expect(result.success).toBe(true);
   });
 
-  it('accepts a representative fixture for the --scored state', () => {
+  it('accepts a representative fixture for the scoredJobs state', () => {
     const result = JobListJsonSchema.safeParse(jobListEnvelope('scored'));
     expect(result.success).toBe(true);
   });
 
-  it('accepts a representative fixture for the --accepted state', () => {
+  it('accepts a representative fixture for the acceptedJobs state', () => {
     const result = JobListJsonSchema.safeParse(jobListEnvelope('accepted'));
     expect(result.success).toBe(true);
   });
 
-  it('accepts a representative fixture for the --rejected state', () => {
+  it('accepts a representative fixture for the rejectedJobs state', () => {
     const result = JobListJsonSchema.safeParse(jobListEnvelope('rejected'));
     expect(result.success).toBe(true);
   });
 
-  it('accepts a representative fixture for the --unscored state', () => {
+  it('accepts a representative fixture for the unscoredJobs state', () => {
     const result = JobListJsonSchema.safeParse(jobListEnvelope('unscored'));
     expect(result.success).toBe(true);
   });
 
-  it('accepts a representative fixture for the --partial state', () => {
+  it('accepts a representative fixture for the partialJobs state', () => {
     const result = JobListJsonSchema.safeParse(jobListEnvelope('partial'));
     expect(result.success).toBe(true);
   });
 
-  it('accepts a representative fixture for the --failed state', () => {
+  it('accepts a representative fixture for the failedJobs state', () => {
     const result = JobListJsonSchema.safeParse(jobListEnvelope('failed'));
     expect(result.success).toBe(true);
   });
 
-  it('accepts a representative fixture for the --filter-errors state', () => {
+  it('accepts a representative fixture for the filter-errors state', () => {
     const result = JobListJsonSchema.safeParse(jobListEnvelope('filter-errors'));
     expect(result.success).toBe(true);
   });
 
-  it('accepts a representative fixture for the --scoring-errors state', () => {
+  it('accepts a representative fixture for the scoring-errors state', () => {
     const result = JobListJsonSchema.safeParse(jobListEnvelope('scoring-errors'));
     expect(result.success).toBe(true);
   });

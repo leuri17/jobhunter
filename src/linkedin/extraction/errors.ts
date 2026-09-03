@@ -11,8 +11,8 @@ import type { RequiredField } from './state.js';
 /**
  * Typed error family for the LinkedIn job-detail extraction layer
  *
- * Every subclass extends `LinkedInScraperError` so the CLI
- * boundary can map via the existing `exitWithError`. Per-job failures
+ * Every subclass extends `LinkedInScraperError` so the HTTP sidecar
+ * boundary can map via the shared exit-code translator. Per-job failures
  * are NOT thrown across the `extractOne` boundary — they are
  * surfaced via `ExtractionOutcome.kind: 'failed'` and persisted to
  * `extractionAttempts`. The orchestrator catches
@@ -26,7 +26,7 @@ import type { RequiredField } from './state.js';
 
 /**
  * Base class for every error raised by `LinkedInExtractionService`.
- * Subclasses pin a specific `code` so the CLI boundary does not need
+ * Subclasses pin a specific `code` so the HTTP boundary does not need
  * an `instanceof` cascade. Per-job errors are NOT represented here
  * they live on `ExtractionOutcome` and on the `extractionAttempts`
  * table (see `src/linkedin/extraction/state.ts`).

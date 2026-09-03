@@ -137,12 +137,12 @@ describe('formatReevaluationSummary', () => {
     expect(out).toContain('Scoring declined by user: no');
   });
 
-  it('--dry-run flag appears as "yes"', () => {
+  it('dryRun flag appears as "yes"', () => {
     const out = formatReevaluationSummary(basePlan({ dryRun: true }), 120);
     expect(out).toContain('Dry run: yes');
   });
 
-  it('--job scope + supplied jobId appears verbatim', () => {
+  it('scope "job" + supplied jobId appears verbatim', () => {
     const out = formatReevaluationSummary(
       basePlan({ scope: 'job', jobId: 'job_42', filtersToReevaluate: [entry(42, 'reran')] }),
       120,
@@ -151,12 +151,12 @@ describe('formatReevaluationSummary', () => {
     expect(out).toContain('Job ID: job_42');
   });
 
-  it('--job scope with numeric LinkedIn sourceJobId', () => {
+  it('scope "job" with numeric LinkedIn sourceJobId', () => {
     const out = formatReevaluationSummary(basePlan({ scope: 'job', jobId: '3857123456' }), 120);
     expect(out).toContain('Job ID: 3857123456');
   });
 
-  it('--scores-only + scoring declined → "yes"', () => {
+  it('scope "scores-only" + scoring declined → "yes"', () => {
     const out = formatReevaluationSummary(
       basePlan({
         scope: 'scores-only',
@@ -245,7 +245,7 @@ describe('formatReevaluationTable', () => {
     expect(out).not.toContain(ELLIPSIS);
   });
 
-  it('--dry-run entries use "would-rerun" as the action label', () => {
+  it('dryRun entries use "would-rerun" as the action label', () => {
     const plan = basePlan({
       filtersToReevaluate: [entry(1, 'would-rerun')],
       dryRun: true,

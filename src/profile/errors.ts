@@ -56,7 +56,7 @@ export class ProfileSourceStorageError extends ProfileImportError {
  * rejection lifecycle. Accepts an explicit exit
  * code so subclasses can pick the documented failure-class mapping.
  *
- * The subclass hierarchy mirrors the four failure surfaces the CLI can hit:
+ * The subclass hierarchy mirrors the four failure surfaces callers can hit:
  *   - invalid identifier / payload / state         → InvalidUsage (2)
  *   - unresolved blocking conflicts               → InvalidUsage (2)
  *   - user-cancelled approval / rejection         → UserCancellation (130)

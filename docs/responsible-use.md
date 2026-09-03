@@ -1,15 +1,16 @@
 # Responsible use
 
-JobHunter is a local CLI that helps one job seeker discover public job
-listings on LinkedIn. This document describes what JobHunter does, what
-it deliberately does not do, and the rules you agree to when you run it.
+JobHunter is a local desktop app that helps one job seeker discover
+public job listings on LinkedIn. This document describes what
+JobHunter does, what it deliberately does not do, and the rules you
+agree to when you run it.
 
 ## What JobHunter does
 
 - Reads **public, unauthenticated** LinkedIn job-search pages.
 - Scrapes sequentially with bounded timeouts and retries.
 - Stores everything locally in your operating-system-specific data
-  directory (run `jobhunter paths` to see the location).
+  directory (see the location shown in the Settings tab).
 - Never stores, prompts for, or transmits credentials.
 - Never logs in or reuses an authenticated session.
 - Extracts data from the public search-results page and, where needed,

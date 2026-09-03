@@ -11,7 +11,7 @@
  * Lifecycle ownership (per Plan  / Required Finding #1 in
  * the bounded remediation pass):
  *   - `launch()` / `close()` are owned by 's run-level
- *     orchestrator. The session is fresh per `jobhunter run`
+ *     orchestrator. The session is fresh per pipeline run
  *     invocation (one context, no persistent profile).
  *   - `openPage()` / `closePage()` are the per-search page lifecycle.
  *     The orchestrator wraps each `discover()` call in a
@@ -53,9 +53,9 @@ export interface PlaywrightBrowserSessionOptions {
 /**
  * Real-Playwright `BrowserSession` implementation. Pure state machine:
  * the `launched` flag + the active-page counters are the only mutable
- * state. The class never imports `pino`, `drizzle-orm`, `commander`,
- * `@inquirer/prompts`, or `openai` (per AGENTS.md §5 / §9 + the
- * `tests/linkedin/boundaries.test.ts` guard).
+ * state. The class never imports `pino`, `drizzle-orm`, or `openai`
+ * (per AGENTS.md §5 / §9 + the `tests/linkedin/boundaries.test.ts`
+ * guard).
  */
 export class PlaywrightBrowserSession implements BrowserSession {
   private browser: Browser | null = null;

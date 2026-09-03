@@ -214,7 +214,7 @@ export class ScoreResultRepository {
   /**
    * Flip every active `scoreResults` row for the supplied `jobId` to
    * `active = false`.
-   * Used by the reevaluation service after a `--filters-only` rerun
+   * Used by the reevaluation service after a `filters-only` rerun
    * produces a fingerprint that differs from the prior active filter
    * — every dependent score is now stale and must be re-derived.
    *

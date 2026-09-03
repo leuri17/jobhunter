@@ -13,8 +13,9 @@ import {
  *
  * The evaluator itself never throws — it records
  * `overallOutcome: 'error'` on the result row. These errors are
- * raised by the configuration, storage and CLI layers, and mapped to exit
- * codes at the CLI boundary (AGENTS.md §10).
+ * raised by the configuration, storage and sidecar layers, and the
+ * HTTP error mapper translates them to HTTP status responses
+ * (AGENTS.md §10).
  */
 export class FilterLifecycleError extends ApplicationError {
   constructor(
@@ -66,7 +67,7 @@ export class NoActiveProfileError extends FilterLifecycleError {
 
 /**
  * Raised when the user explicitly cancels an in-flight filter configuration
- * session via Inquirer (Discard / Exit actions, ).
+ * session via the editor (Discard / Exit actions, ).
  *
  * Exit code: `ExitCode.UserCancellation` (130).
  */

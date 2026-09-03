@@ -16,7 +16,7 @@
  * The `ID` column is always priority `0`; `Score` is always `1`;
  * `Title` is always `2`. The remaining priorities are assigned to
  * make the  drop order fall out naturally (e.g. for
- * `--scored`, `Location` and `First discovered` drop before
+ * For the scored view, `Location` and `First discovered` drop before
  * `Title` / `Company`).
  */
 
@@ -82,7 +82,7 @@ export const HEADERS_BY_STATE: Record<JobListState, readonly string[]> = {
  *
  * Invariants:
  *   - The ID column (index 0 in every state) is always priority `0`.
- *   - For `--scored`, `Score` is priority `1`; `Title` is `2`;
+ *   - For the scored view, `Score` is priority `1`; `Title` is `2`;
  *     `Company` is `3`; `Location` is `4`; `First discovered` is
  *     `5` — so a narrow terminal drops `Location` + `First discovered`
  *     before `Title` / `Company` (the  test).

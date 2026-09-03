@@ -29,7 +29,7 @@ describe('selectColumns + per-state headers + priorities', () => {
       expect(HEADERS_BY_STATE.all.length).toBe(9);
     });
 
-    it('contains the documented "--scored" header order', () => {
+    it('contains the documented "scored" header order', () => {
       expect(HEADERS_BY_STATE.scored).toEqual([
         'ID',
         'Score',
@@ -40,7 +40,7 @@ describe('selectColumns + per-state headers + priorities', () => {
       ]);
     });
 
-    it('contains the documented "--all" header order', () => {
+    it('contains the documented "all" header order', () => {
       expect(HEADERS_BY_STATE.all).toEqual([
         'ID',
         'Extraction',
@@ -62,7 +62,7 @@ describe('selectColumns + per-state headers + priorities', () => {
       }
     });
 
-    it('--scored: ID is priority 0, Score is 1, Title is 2, Company is 3, Location is 4, First discovered is 5', () => {
+    it('scored: ID is priority 0, Score is 1, Title is 2, Company is 3, Location is 4, First discovered is 5', () => {
       expect(PRIORITY_BY_STATE.scored).toEqual([0, 1, 2, 3, 4, 5]);
     });
 
@@ -74,13 +74,13 @@ describe('selectColumns + per-state headers + priorities', () => {
   });
 
   describe('selectColumns(state, 120)', () => {
-    it('returns all 6 columns for --scored at the default width', () => {
+    it('returns all 6 columns for the scored view at the default width', () => {
       const specs = selectColumns('scored', 120);
       expect(specs.map((s) => s.header)).toEqual(HEADERS_BY_STATE.scored);
       expect(specs).toHaveLength(6);
     });
 
-    it('returns all 9 columns for --all at the default width', () => {
+    it('returns all 9 columns for the allJobs view at the default width', () => {
       const specs = selectColumns('all', 120);
       expect(specs.map((s) => s.header)).toEqual(HEADERS_BY_STATE.all);
       expect(specs).toHaveLength(9);
@@ -97,13 +97,13 @@ describe('selectColumns + per-state headers + priorities', () => {
   });
 
   describe('priority drop', () => {
-    it('--scored at width 60 fits all 6 documented columns (sum of minWidths = 43)', () => {
+    it('scored at width 60 fits all 6 documented columns (sum of minWidths = 43)', () => {
       const specs = selectColumns('scored', 60);
       expect(specs.map((s) => s.header)).toEqual(HEADERS_BY_STATE.scored);
       expect(specs).toHaveLength(6);
     });
 
-    it('--scored at width 40 drops the lowest-priority column ("First discovered")', () => {
+    it('scored at width 40 drops the lowest-priority column ("First discovered")', () => {
       const specs = selectColumns('scored', 40);
       const headers = specs.map((s) => s.header);
       // First discovered (priority 5, width 16) is the first column dropped;
@@ -116,7 +116,7 @@ describe('selectColumns + per-state headers + priorities', () => {
       expect(headers).not.toContain('First discovered');
     });
 
-    it('--scored at width 25 drops "First discovered" + "Location" (priority 4 + 5)', () => {
+    it('scored at width 25 drops "First discovered" + "Location" (priority 4 + 5)', () => {
       const specs = selectColumns('scored', 25);
       const headers = specs.map((s) => s.header);
       // At width 25, the cumulative minWidth for the lowest-priority
@@ -130,13 +130,13 @@ describe('selectColumns + per-state headers + priorities', () => {
       expect(headers).not.toContain('First discovered');
     });
 
-    it('--scored at width 18 keeps only ID + Score + Title (drops Company, Location, First discovered)', () => {
+    it('scored at width 18 keeps only ID + Score + Title (drops Company, Location, First discovered)', () => {
       const specs = selectColumns('scored', 18);
       const headers = specs.map((s) => s.header);
       expect(headers).toEqual(['ID', 'Score', 'Title']);
     });
 
-    it('--scored at width 7 keeps only ID + Score', () => {
+    it('scored at width 7 keeps only ID + Score', () => {
       const specs = selectColumns('scored', 7);
       const headers = specs.map((s) => s.header);
       expect(headers).toEqual(['ID', 'Score']);
@@ -144,7 +144,7 @@ describe('selectColumns + per-state headers + priorities', () => {
   });
 
   describe('terminal_width_too_small', () => {
-    it('--scored at width 1 (cannot fit ID) throws InspectionValidationError', () => {
+    it('scored at width 1 (cannot fit ID) throws InspectionValidationError', () => {
       expect(() => selectColumns('scored', 1)).toThrow(InspectionValidationError);
     });
 

@@ -1,7 +1,7 @@
 import { readFile, writeFile, rename, mkdir, access, rm } from 'node:fs/promises';
 import type { FileSystem } from '@jobhunter/core/config';
 
-export const cliFileSystem: FileSystem = {
+export const sidecarFileSystem: FileSystem = {
   async readFile(path) { return readFile(path, 'utf8'); },
   async writeFile(path, contents) { await writeFile(path, contents, 'utf8'); },
   async rename(from, to) { await rename(from, to); },

@@ -3,8 +3,8 @@
  *
  * Re-exports the typed error hierarchy and stable exit-code mapping.
  * Domain code throws `ApplicationError` subclasses; the desktop shell
- * (and the sidecar's HTTP error mapper) translate them into exit codes
- * or HTTP status responses via this surface.
+ * (and the sidecar's HTTP error mapper) translate them into HTTP
+ * status responses via this surface.
  */
 
 export {

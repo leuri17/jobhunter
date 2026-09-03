@@ -19,7 +19,7 @@ describe('formatJobListTable', () => {
     expect(formatJobListTable('all', [], 80)).toBe('(no jobs)');
   });
 
-  it('renders --scored with the documented 6 columns', () => {
+  it('renders the scored view with the documented 6 columns', () => {
     const rows: readonly JobListRow[] = [
       {
         state: 'scored',
@@ -53,7 +53,7 @@ describe('formatJobListTable', () => {
     expect(lines.length).toBe(2);
   });
 
-  it('renders --all with the documented 9 columns', () => {
+  it('renders the allJobs view with the documented 9 columns', () => {
     const rows: readonly JobListRow[] = [
       {
         state: 'all',
@@ -78,7 +78,7 @@ describe('formatJobListTable', () => {
     expect(out).toContain('accepted');
   });
 
-  it('renders --failed with discovery_error_<id> ID format', () => {
+  it('renders the failedJobs view with discovery_error_<id> ID format', () => {
     const rows: readonly JobListRow[] = [
       {
         state: 'failed',
@@ -98,7 +98,7 @@ describe('formatJobListTable', () => {
     expect(out).toContain('card_unavailable');
   });
 
-  it('renders --partial with the documented 6 columns', () => {
+  it('renders the partialJobs view with the documented 6 columns', () => {
     const rows: readonly JobListRow[] = [
       {
         state: 'partial',
@@ -118,7 +118,7 @@ describe('formatJobListTable', () => {
     expect(out).toContain('description');
   });
 
-  it('adaptive truncation: --scored at width 40 drops "First discovered" but keeps the rest', () => {
+  it('adaptive truncation: the scored view at width 40 drops "First discovered" but keeps the rest', () => {
     const rows: readonly JobListRow[] = [
       {
         state: 'scored',
@@ -165,7 +165,7 @@ describe('formatJobListTable', () => {
     expect(out).toContain('\u2026');
   });
 
-  it('renders "—" (em-dash) for nullable fields in --scored', () => {
+  it('renders "—" (em-dash) for nullable fields in the scored view', () => {
     const rows: readonly JobListRow[] = [
       {
         state: 'scored',

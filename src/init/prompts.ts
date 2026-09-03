@@ -6,36 +6,36 @@
 export interface InitPrompts {
   /** Confirm resume from the first incomplete prerequisite. */
   askResume(input: { readonly nextStepLabel: string }): Promise<boolean>;
-  /**
-   * Collect 1 or 2 CV source file paths (PDF / Markdown / plain text).
-   * The orchestrator calls this BEFORE invoking `ProfileImportService`
-   * (Finding 1). The adapter returns 1 or 2 absolute paths; zero or
-   * three+ paths is a contract violation that the orchestrator surfaces
-   * as a `SetupSummary` step-level `failed` with `errorCode:
-   * 'invalid_source_paths'`. The default inquirer adapter asks for the
-   * first path (required), then offers an `@inquirer/confirm` for the
-   * second (optional).
-   */
+/**
+    * Collect 1 or 2 CV source file paths (PDF / Markdown / plain text).
+    * The orchestrator calls this BEFORE invoking `ProfileImportService`
+    * (Finding 1). The adapter returns 1 or 2 absolute paths; zero or
+    * three+ paths is a contract violation that the orchestrator surfaces
+    * as a `SetupSummary` step-level `failed` with `errorCode:
+    * 'invalid_source_paths'`. The default adapter asks for the first
+    * path (required), then offers a confirmation for the second
+    * (optional).
+    */
   askSourcePaths(input: { readonly existing: readonly string[] }): Promise<readonly string[]>;
   /**
-   * Confirm whether the user wants to edit the current draft through
-   * `jobhunter profile edit` before init offers to approve it. The
-   * orchestrator NEVER calls `ProfileEditingService.startEdit` directly
-   *
-   */
+    * Confirm whether the user wants to edit the current draft through
+    * the Profile editor before init offers to approve it. The
+    * orchestrator NEVER calls `ProfileEditingService.startEdit` directly
+    *
+    */
   askEditHandoff(input: {
     readonly draftProfileVersionId: number;
     readonly warnings: readonly string[];
   }): Promise<'edit_then_return' | 'approve_now' | 'reject' | 'exit_init'>;
   /**
-   * Print the final setup summary (the CLI handler owns the actual
-   * stdout write) and ask whether to exit cleanly. The orchestrator
-   * treats `false` as a SOFT exit — it returns the typed `SetupSummary`
-   * to the caller; the CLI prints it; exit 0. `confirmSummary: false`
-   * is NOT cancellation (Finding 5). Cancellation is signalled
-   * exclusively via `UserCancellation` subclasses thrown by the
-   * prerequisite services or `SearchCancelledError`.
-   */
+    * Print the final setup summary (the sidecar renders it) and ask
+    * whether to exit cleanly. The orchestrator treats `false` as a SOFT
+    * exit — it returns the typed `SetupSummary` to the caller; the
+    * sidecar prints it. `confirmSummary: false` is NOT cancellation
+    * (Finding 5). Cancellation is signalled exclusively via
+    * `UserCancellation` subclasses thrown by the prerequisite services
+    * or `SearchCancelledError`.
+    */
   confirmSummary(input: {
     readonly ready: boolean;
     readonly nextStep: string | null;

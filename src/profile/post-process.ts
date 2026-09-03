@@ -31,7 +31,7 @@ import {
  * `ExtractedProfile` into a canonical `ProfessionalProfile`.
  *
  * Pure domain module: depends only on `zod`, `node:crypto`, and the helper
- * modules in `src/profile/` (no Commander, Inquirer, Playwright, Drizzle,
+ * modules in `src/profile/` (no Playwright, Drizzle,
  * the `openai` SDK, or Pino).
  */
 
