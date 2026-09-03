@@ -19,7 +19,7 @@ describe('pipeline endpoints', () => {
   it('POST /api/pipeline/run returns 503 when OPENAI_API_KEY is missing', async () => {
     const res = await fetch(`${baseUrl}/api/pipeline/run`, { method: 'POST' });
     expect(res.status).toBe(503);
-    const body = await res.json() as {
+    const body = (await res.json()) as {
       schemaVersion: number;
       error: { code: string; message: string };
     };

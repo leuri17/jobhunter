@@ -17,12 +17,7 @@ import { describe, expect, it } from 'vitest';
 
 const INIT_DIR = join(process.cwd(), 'src', 'init');
 
-const BANNED_IMPORTS = [
-  'playwright',
-  'drizzle-orm',
-  'openai',
-  'pino',
-] as const;
+const BANNED_IMPORTS = ['playwright', 'drizzle-orm', 'openai', 'pino'] as const;
 
 /**
  * Literal regex that distinguishes runtime `pino` imports from type-only

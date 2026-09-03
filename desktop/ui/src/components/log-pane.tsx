@@ -23,7 +23,9 @@ export function LogPane({ lines, followTail = true }: LogPaneProps) {
         <span className="text-zinc-500">(no output yet)</span>
       ) : (
         lines.map((line, i) => (
-          <div key={i} className="whitespace-pre-wrap break-all">{line}</div>
+          <div key={i} className="whitespace-pre-wrap break-all">
+            {line}
+          </div>
         ))
       )}
     </div>

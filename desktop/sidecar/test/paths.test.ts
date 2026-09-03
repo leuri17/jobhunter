@@ -10,12 +10,14 @@ describe('GET /api/paths', () => {
     baseUrl = await server.listen();
   });
 
-  afterAll(async () => { await server.close(); });
+  afterAll(async () => {
+    await server.close();
+  });
 
   it('returns resolved paths', async () => {
     const res = await fetch(`${baseUrl}/api/paths`);
     expect(res.status).toBe(200);
-    const body = await res.json() as { schemaVersion: number; paths: Record<string, string> };
+    const body = (await res.json()) as { schemaVersion: number; paths: Record<string, string> };
     expect(body.schemaVersion).toBe(1);
     for (const key of ['config', 'data', 'logs', 'diagnostics', 'cache', 'profileSources']) {
       expect(typeof body.paths[key]).toBe('string');

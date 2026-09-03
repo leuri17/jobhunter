@@ -10,12 +10,14 @@ describe('profile endpoints', () => {
     baseUrl = await server.listen();
   });
 
-  afterAll(async () => { await server.close(); });
+  afterAll(async () => {
+    await server.close();
+  });
 
   it('GET /api/profile returns a list (possibly empty)', async () => {
     const res = await fetch(`${baseUrl}/api/profile`);
     expect(res.status).toBe(200);
-    const body = await res.json() as { schemaVersion: number; profiles: unknown[] };
+    const body = (await res.json()) as { schemaVersion: number; profiles: unknown[] };
     expect(body.schemaVersion).toBe(1);
     expect(Array.isArray(body.profiles)).toBe(true);
   });

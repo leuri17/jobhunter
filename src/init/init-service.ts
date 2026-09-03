@@ -207,8 +207,8 @@ export class InitOrchestrator {
         error instanceof ValidationError ||
         error instanceof UnknownConfigError
       ) {
-// Record the failure on the step but continue — the orchestrator
-          // surfaces it via `nextStep: 'config'`.
+        // Record the failure on the step but continue — the orchestrator
+        // surfaces it via `nextStep: 'config'`.
         stepReports['config'] = {
           id: 'config',
           status: 'failed',

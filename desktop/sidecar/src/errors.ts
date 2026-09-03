@@ -3,11 +3,16 @@ import { ApplicationError } from '@jobhunter/core/errors';
 export function statusFor(error: unknown): number {
   if (error instanceof ApplicationError) {
     switch (error.exitCode) {
-      case 2: return 400;
-      case 3: return 404;
-      case 4: return 409;
-      case 5: return 502;
-      default: return error.exitCode >= 100 && error.exitCode < 600 ? error.exitCode : 500;
+      case 2:
+        return 400;
+      case 3:
+        return 404;
+      case 4:
+        return 409;
+      case 5:
+        return 502;
+      default:
+        return error.exitCode >= 100 && error.exitCode < 600 ? error.exitCode : 500;
     }
   }
   return 500;

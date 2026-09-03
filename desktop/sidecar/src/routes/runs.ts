@@ -1,5 +1,10 @@
 import type { FastifyInstance } from 'fastify';
-import { RunsListService, RunsShowService, type RunListRow, type RunShowPayload } from '@jobhunter/core/inspection';
+import {
+  RunsListService,
+  RunsShowService,
+  type RunListRow,
+  type RunShowPayload,
+} from '@jobhunter/core/inspection';
 import { openDbHandle, createRepositories } from './db-helper.js';
 
 export async function registerRunsRoutes(app: FastifyInstance): Promise<void> {
@@ -11,7 +16,9 @@ export async function registerRunsRoutes(app: FastifyInstance): Promise<void> {
       const limit = req.query.limit !== undefined ? Number(req.query.limit) : 20;
       const rows: readonly RunListRow[] = await service.list({ limit });
       return { schemaVersion: 1, limit, returned: rows.length, runs: rows };
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   });
 
   app.get<{ Params: { id: string } }>('/api/runs/:id', async (req) => {
@@ -21,6 +28,8 @@ export async function registerRunsRoutes(app: FastifyInstance): Promise<void> {
       const service = new RunsShowService(repos);
       const payload: RunShowPayload = await service.show(req.params.id);
       return { schemaVersion: 1, ...payload };
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   });
 }

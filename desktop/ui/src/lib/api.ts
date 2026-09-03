@@ -19,12 +19,22 @@ import type {
 import type { ConfigPatch } from '@jobhunter/core/config';
 
 export class ApiError extends Error {
-  constructor(public readonly status: number, public readonly code: string, message: string) {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+  ) {
     super(message);
   }
 }
 
-export async function notifyPipelineComplete({ status, count }: { status: string; count: number }): Promise<void> {
+export async function notifyPipelineComplete({
+  status,
+  count,
+}: {
+  status: string;
+  count: number;
+}): Promise<void> {
   try {
     await invoke('notify_pipeline_complete', { status, count });
   } catch {
@@ -40,10 +50,16 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
   if (!res.ok) {
-    const errBody = await res.json().catch(() => ({ error: { code: 'unknown', message: res.statusText } })) as {
+    const errBody = (await res
+      .json()
+      .catch(() => ({ error: { code: 'unknown', message: res.statusText } }))) as {
       error?: { code?: string; message?: string };
     };
-    throw new ApiError(res.status, errBody.error?.code ?? 'unknown', errBody.error?.message ?? res.statusText);
+    throw new ApiError(
+      res.status,
+      errBody.error?.code ?? 'unknown',
+      errBody.error?.message ?? res.statusText,
+    );
   }
   return res.json() as Promise<T>;
 }
@@ -68,13 +84,17 @@ export const api = {
     return request<ListJobsResponse>('GET', `/api/jobs${qs ? `?${qs}` : ''}`);
   },
   getJob: (id: string) => request<GetJobResponse>('GET', `/api/jobs/${id}`),
-  reevaluateJobs: (body: { scope: string; jobId?: number; dryRun?: boolean; confirmScoring?: boolean }) =>
+  reevaluateJobs: (body: {
+    scope: string;
+    jobId?: number;
+    dryRun?: boolean;
+    confirmScoring?: boolean;
+  }) =>
     // Reevaluation plan shape isn't yet zod-narrowed; the sidecar returns the
     // service's `plan` field directly. Kept as `unknown` until Phase E adds
     // a typed schema for reevaluation outcomes.
     request<{ schemaVersion: 1; plan: unknown }>('POST', '/api/jobs/reevaluate', body),
-  listRuns: (limit = 20) =>
-    request<ListRunsResponse>('GET', `/api/runs?limit=${limit}`),
+  listRuns: (limit = 20) => request<ListRunsResponse>('GET', `/api/runs?limit=${limit}`),
   getRun: (id: string) => request<GetRunResponse>('GET', `/api/runs/${id}`),
   runPipeline: () => request<RunPipelineResponse>('POST', '/api/pipeline/run'),
   cancelPipeline: (runId: string) =>

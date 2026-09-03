@@ -15,12 +15,7 @@ import { describe, expect, it } from 'vitest';
 
 const FILTER_DIR = join(process.cwd(), 'src', 'filter');
 
-const BANNED_IMPORTS = [
-  'playwright',
-  'drizzle-orm',
-  'openai',
-  'pino',
-] as const;
+const BANNED_IMPORTS = ['playwright', 'drizzle-orm', 'openai', 'pino'] as const;
 
 function listFilterSourceFiles(dir: string): string[] {
   let entries: string[];

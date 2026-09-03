@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --color-background: oklch(0.145 0 0);
@@ -13,5 +13,10 @@
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
 }

@@ -1,6 +1,6 @@
 export interface SidecarEnv {
-  readonly port: number;          // 0 = OS-assigned
-  readonly host: string;          // always 127.0.0.1
+  readonly port: number; // 0 = OS-assigned
+  readonly host: string; // always 127.0.0.1
 }
 
 export function readEnv(env: NodeJS.ProcessEnv = process.env): SidecarEnv {

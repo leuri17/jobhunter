@@ -1,1 +1,12 @@
-{"default":{"identifier":"default","description":"Capability for the main window","local":true,"windows":["main"],"permissions":["core:default",{"identifier":"core:event:allow-listen","allow":[{"event":"sidecar://*"}]}]}}
+{
+  "default": {
+    "identifier": "default",
+    "description": "Capability for the main window",
+    "local": true,
+    "windows": ["main"],
+    "permissions": [
+      "core:default",
+      { "identifier": "core:event:allow-listen", "allow": [{ "event": "sidecar://*" }] }
+    ]
+  }
+}

@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 import {
-  ProfileImportService, ProfileExtractionService,
-  ProfileReviewService, ProfileApprovalService,
+  ProfileImportService,
+  ProfileExtractionService,
+  ProfileReviewService,
+  ProfileApprovalService,
   ProfileRejectionService,
   type OpenAIClient,
 } from '@jobhunter/core/profile';
@@ -25,10 +27,13 @@ export async function registerProfileRoutes(
     try {
       const repos = createRepositories(handle);
       const service = new ProfileReviewService(repos);
-      const status = req.query.status as 'draft' | 'approved' | 'rejected' | 'superseded' | undefined;
+      const status = req.query.status as
+        'draft' | 'approved' | 'rejected' | 'superseded' | undefined;
       const entries = await service.list(status === undefined ? undefined : { status });
       return { schemaVersion: 1, profiles: entries };
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   });
 
   app.get<{ Params: { id: string } }>('/api/profile/:id', async (req) => {
@@ -37,7 +42,9 @@ export async function registerProfileRoutes(
       const repos = createRepositories(handle);
       const service = new ProfileReviewService(repos);
       return await service.show(req.params.id);
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   });
 
   app.post('/api/profile/import', async (req, reply) => {
@@ -61,7 +68,9 @@ export async function registerProfileRoutes(
       }
       const result = await service.importSources(filePaths);
       reply.send({ schemaVersion: 1, ...result });
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   });
 
   app.post('/api/profile/extract', async (_req, reply) => {
@@ -73,7 +82,10 @@ export async function registerProfileRoutes(
       const client = opts.openaiClient ?? resolveOpenAiClientOrNull();
       if (client === null) {
         reply.status(503);
-        return { schemaVersion: 1, error: { code: 'openai_unavailable', message: 'OPENAI_API_KEY not set' } };
+        return {
+          schemaVersion: 1,
+          error: { code: 'openai_unavailable', message: 'OPENAI_API_KEY not set' },
+        };
       }
       const service = new ProfileExtractionService({
         repositories: repos,
@@ -82,7 +94,9 @@ export async function registerProfileRoutes(
       });
       const status = await service.extract(usable);
       return { schemaVersion: 1, status };
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   });
 
   app.post<{ Params: { id: string } }>('/api/profile/:id/approve', async (req) => {
@@ -94,7 +108,9 @@ export async function registerProfileRoutes(
         prompts: { confirmApprovalWithWarnings: async () => true },
       });
       return await service.approve(req.params.id);
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   });
 
   app.post<{ Params: { id: string } }>('/api/profile/:id/reject', async (req) => {
@@ -106,7 +122,9 @@ export async function registerProfileRoutes(
         prompts: { confirmRejection: async () => true },
       });
       return await service.reject(req.params.id);
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   });
 
   app.post<{ Params: { id: string }; Body: { profileJson?: unknown } }>(

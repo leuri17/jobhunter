@@ -34,10 +34,17 @@ function PipelinePage() {
       <h1 className="text-3xl font-bold">Pipeline</h1>
 
       <div className="flex gap-2 items-center">
-        <Button onClick={() => start.mutate()} disabled={start.isPending || events.status === 'running'}>
+        <Button
+          onClick={() => start.mutate()}
+          disabled={start.isPending || events.status === 'running'}
+        >
           {start.isPending ? 'starting…' : 'Run pipeline'}
         </Button>
-        <Button variant="destructive" onClick={() => cancel.mutate()} disabled={runId === null || events.status !== 'running'}>
+        <Button
+          variant="destructive"
+          onClick={() => cancel.mutate()}
+          disabled={runId === null || events.status !== 'running'}
+        >
           Cancel
         </Button>
         <span className="self-center text-sm text-zinc-400">status: {events.status}</span>

@@ -182,10 +182,7 @@ function JobsPage() {
 
       {selectedId !== null && (
         <div className="fixed inset-y-0 right-0 w-1/2 bg-zinc-900 border-l border-border p-6 overflow-auto">
-          <button
-            className="mb-4 text-sm"
-            onClick={() => setSelectedId(null)}
-          >
+          <button className="mb-4 text-sm" onClick={() => setSelectedId(null)}>
             close
           </button>
           <pre className="text-xs">{JSON.stringify(detail.data, null, 2)}</pre>

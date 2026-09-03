@@ -44,7 +44,11 @@ export async function registerJobsRoutes(
   app.get<{
     Querystring: {
       state?: JobListState;
-      limit?: string; minScore?: string; company?: string; location?: string; run?: string;
+      limit?: string;
+      minScore?: string;
+      company?: string;
+      location?: string;
+      run?: string;
     };
   }>('/api/jobs', async (req) => {
     const handle = await openDbHandle();
@@ -52,7 +56,8 @@ export async function registerJobsRoutes(
       const repos = createRepositories(handle);
       const service = new JobsListService(repos);
       const q = req.query;
-      const runId = q.run !== undefined ? Number.parseInt(q.run.replace(/^run_/, ''), 10) : undefined;
+      const runId =
+        q.run !== undefined ? Number.parseInt(q.run.replace(/^run_/, ''), 10) : undefined;
       const result = await service.list({
         state: q.state ?? 'scored',
         ...(q.limit !== undefined ? { limit: Number(q.limit) } : {}),
@@ -68,7 +73,9 @@ export async function registerJobsRoutes(
         returned: result.returned,
         jobs: result.rows,
       };
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   });
 
   app.get<{ Params: { id: string } }>('/api/jobs/:id', async (req) => {
@@ -78,7 +85,9 @@ export async function registerJobsRoutes(
       const service = new JobsShowService(repos);
       const payload = await service.show(req.params.id);
       return { schemaVersion: 1, ...payload };
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   });
 
   app.post<{ Body: ReevaluateBody }>('/api/jobs/reevaluate', async (req) => {
@@ -86,11 +95,18 @@ export async function registerJobsRoutes(
     try {
       const repos = createRepositories(handle);
       const filterApplyService = new FilterApplyService({ repositories: repos });
-      const client = opts.openaiClient ?? resolveOpenAiClientOrNull() ?? createDefaultOpenAIClient({ apiKey: '' });
+      const client =
+        opts.openaiClient ??
+        resolveOpenAiClientOrNull() ??
+        createDefaultOpenAIClient({ apiKey: '' });
       const scoringService = new ScoringService({
         repositories: repos,
         openaiClient: client,
-        config: { model: process.env['OPENAI_MODEL'] ?? 'gpt-5', reasoningEffort: 'medium', concurrency: 1 },
+        config: {
+          model: process.env['OPENAI_MODEL'] ?? 'gpt-5',
+          reasoningEffort: 'medium',
+          concurrency: 1,
+        },
       });
       const service = new ReevaluationService({
         repositories: repos,
@@ -105,21 +121,29 @@ export async function registerJobsRoutes(
         dryRun: req.body.dryRun ?? false,
         confirmScoring: req.body.confirmScoring ?? false,
         env: process.env,
-        ...(req.body.jobId !== undefined && req.body.jobId !== null ? { jobId: req.body.jobId } : {}),
+        ...(req.body.jobId !== undefined && req.body.jobId !== null
+          ? { jobId: req.body.jobId }
+          : {}),
       };
       const outcome = await service.execute(input);
       return { schemaVersion: 1 as const, plan: outcome.plan };
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   });
 }
 
 function consoleLogger(): import('pino').Logger {
   return {
-    info: (obj: unknown, msg?: string) => process.stderr.write(`[info] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-    warn: (obj: unknown, msg?: string) => process.stderr.write(`[warn] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-    error: (obj: unknown, msg?: string) => process.stderr.write(`[error] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
+    info: (obj: unknown, msg?: string) =>
+      process.stderr.write(`[info] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
+    warn: (obj: unknown, msg?: string) =>
+      process.stderr.write(`[warn] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
+    error: (obj: unknown, msg?: string) =>
+      process.stderr.write(`[error] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
     debug: () => undefined,
     trace: () => undefined,
-    fatal: (obj: unknown, msg?: string) => process.stderr.write(`[fatal] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
+    fatal: (obj: unknown, msg?: string) =>
+      process.stderr.write(`[fatal] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
   } as unknown as import('pino').Logger;
 }

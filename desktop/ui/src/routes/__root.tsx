@@ -19,16 +19,28 @@ function RootLayout() {
           <Link to="/jobs" className="hover:underline" activeProps={{ className: 'font-semibold' }}>
             Jobs
           </Link>
-          <Link to="/pipeline" className="hover:underline" activeProps={{ className: 'font-semibold' }}>
+          <Link
+            to="/pipeline"
+            className="hover:underline"
+            activeProps={{ className: 'font-semibold' }}
+          >
             Pipeline
           </Link>
           <Link to="/runs" className="hover:underline" activeProps={{ className: 'font-semibold' }}>
             Runs
           </Link>
-          <Link to="/profile" className="hover:underline" activeProps={{ className: 'font-semibold' }}>
+          <Link
+            to="/profile"
+            className="hover:underline"
+            activeProps={{ className: 'font-semibold' }}
+          >
             Profile
           </Link>
-          <Link to="/settings" className="hover:underline" activeProps={{ className: 'font-semibold' }}>
+          <Link
+            to="/settings"
+            className="hover:underline"
+            activeProps={{ className: 'font-semibold' }}
+          >
             Settings
           </Link>
         </nav>

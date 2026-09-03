@@ -12,7 +12,6 @@ profile-sources/
 playwright-report/
 test-results/
 
-.gitnexus/
 .worktrees/
 .superpowers/
 .slim/

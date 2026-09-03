@@ -58,7 +58,10 @@ export async function registerPipelineRoutes(
     const client = opts.openaiClient ?? resolveOpenAiClientOrNull();
     if (client === null) {
       reply.status(503);
-      return { schemaVersion: 1, error: { code: 'openai_unavailable', message: 'OPENAI_API_KEY is required' } };
+      return {
+        schemaVersion: 1,
+        error: { code: 'openai_unavailable', message: 'OPENAI_API_KEY is required' },
+      };
     }
 
     const runId = randomUUID();
@@ -74,41 +77,50 @@ export async function registerPipelineRoutes(
     const run = activeRuns.get(req.params.runId);
     if (run === undefined) {
       reply.status(404);
-      return { schemaVersion: 1, error: { code: 'pipeline_run_not_found', message: 'Run not found' } };
+      return {
+        schemaVersion: 1,
+        error: { code: 'pipeline_run_not_found', message: 'Run not found' },
+      };
     }
     run.controller.abort();
     run.status = 'cancelled';
     return { schemaVersion: 1, status: 'cancelling' };
   });
 
-  app.get<{ Params: { runId: string } }>('/api/pipeline/:runId/events', async (req, reply: FastifyReply) => {
-    const run = activeRuns.get(req.params.runId);
-    if (run === undefined) {
-      reply.status(404);
-      return { schemaVersion: 1, error: { code: 'pipeline_run_not_found', message: 'Run not found' } };
-    }
-    initSseHeaders(reply.raw);
-    reply.raw.write(`: connected to ${run.runId}\n\n`);
-
-    const interval = setInterval(() => {
-      // Drain any buffered logs first so tail logs from terminal transition
-      // are forwarded before the `done` event.
-      for (const line of run.logs.splice(0)) {
-        writeSseEvent(reply.raw, 'log', line);
+  app.get<{ Params: { runId: string } }>(
+    '/api/pipeline/:runId/events',
+    async (req, reply: FastifyReply) => {
+      const run = activeRuns.get(req.params.runId);
+      if (run === undefined) {
+        reply.status(404);
+        return {
+          schemaVersion: 1,
+          error: { code: 'pipeline_run_not_found', message: 'Run not found' },
+        };
       }
-      if (run.status === 'done' || run.status === 'failed' || run.status === 'cancelled') {
-        writeSseEvent(reply.raw, 'done', { status: run.status, result: run.result ?? null });
-        clearInterval(interval);
-        closeSse(reply.raw);
-        activeRuns.delete(run.runId);
-      } else {
-        writeSseEvent(reply.raw, 'heartbeat', { status: run.status });
-      }
-    }, 1000);
+      initSseHeaders(reply.raw);
+      reply.raw.write(`: connected to ${run.runId}\n\n`);
 
-    req.raw.on('close', () => clearInterval(interval));
-    return reply;
-  });
+      const interval = setInterval(() => {
+        // Drain any buffered logs first so tail logs from terminal transition
+        // are forwarded before the `done` event.
+        for (const line of run.logs.splice(0)) {
+          writeSseEvent(reply.raw, 'log', line);
+        }
+        if (run.status === 'done' || run.status === 'failed' || run.status === 'cancelled') {
+          writeSseEvent(reply.raw, 'done', { status: run.status, result: run.result ?? null });
+          clearInterval(interval);
+          closeSse(reply.raw);
+          activeRuns.delete(run.runId);
+        } else {
+          writeSseEvent(reply.raw, 'heartbeat', { status: run.status });
+        }
+      }, 1000);
+
+      req.raw.on('close', () => clearInterval(interval));
+      return reply;
+    },
+  );
 }
 
 async function runPipeline(
@@ -137,7 +149,9 @@ async function runPipeline(
         repositories,
       });
       const discoveryService = new LinkedInDiscoveryService({
-        repositories, browserSession, diagnosticManager,
+        repositories,
+        browserSession,
+        diagnosticManager,
         config: {
           navigationMs: loaded.config.scraper.timeouts.navigationMs,
           initialResultsMs: loaded.config.scraper.timeouts.initialResultsMs,
@@ -147,7 +161,9 @@ async function runPipeline(
         },
       });
       const extractionService = new LinkedInExtractionService({
-        repositories, browserSession, diagnosticManager,
+        repositories,
+        browserSession,
+        diagnosticManager,
         config: {
           navigationMs: loaded.config.scraper.timeouts.navigationMs,
           detailPanelMs: loaded.config.scraper.timeouts.detailPanelMs,
@@ -157,7 +173,8 @@ async function runPipeline(
       });
       const filterApplyService = new FilterApplyService({ repositories });
       const scoringService = new ScoringService({
-        repositories, openaiClient,
+        repositories,
+        openaiClient,
         config: {
           model: loaded.config.openai.jobScoring.model,
           reasoningEffort: loaded.config.openai.jobScoring.reasoningEffort,
@@ -165,8 +182,12 @@ async function runPipeline(
         },
       });
       const orchestrator = new PipelineOrchestrator({
-        repositories, browserSession,
-        discoveryService, extractionService, filterApplyService, scoringService,
+        repositories,
+        browserSession,
+        discoveryService,
+        extractionService,
+        filterApplyService,
+        scoringService,
         diagnosticManager,
         config: { rawConfig: loaded.config, hash: loaded.hash, schemaVersion: 1 },
         prompts: { askScoringConfirmation: async () => true },
@@ -187,7 +208,9 @@ async function runPipeline(
       setTimeout(() => {
         activeRuns.delete(runId);
       }, 60_000);
-    } finally { handle.close(); }
+    } finally {
+      handle.close();
+    }
   } catch (err) {
     process.stderr.write(`pipeline run ${runId} failed: ${String(err)}\n`);
     run.status = 'failed';
@@ -196,12 +219,16 @@ async function runPipeline(
 
 function consoleLogger(): import('pino').Logger {
   return {
-    info: (obj: unknown, msg?: string) => process.stderr.write(`[info] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-    warn: (obj: unknown, msg?: string) => process.stderr.write(`[warn] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-    error: (obj: unknown, msg?: string) => process.stderr.write(`[error] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
+    info: (obj: unknown, msg?: string) =>
+      process.stderr.write(`[info] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
+    warn: (obj: unknown, msg?: string) =>
+      process.stderr.write(`[warn] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
+    error: (obj: unknown, msg?: string) =>
+      process.stderr.write(`[error] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
     debug: () => undefined,
     trace: () => undefined,
-    fatal: (obj: unknown, msg?: string) => process.stderr.write(`[fatal] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
+    fatal: (obj: unknown, msg?: string) =>
+      process.stderr.write(`[fatal] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
   } as unknown as import('pino').Logger;
 }
 
@@ -213,11 +240,9 @@ function consoleLogger(): import('pino').Logger {
  * can render levels alongside the message text. The original stderr behavior
  * of {@link consoleLogger} (and pino's stdout behavior) is preserved.
  */
-function makeTeeLogger(
-  base: import('pino').Logger,
-  run: ActiveRun,
-): import('pino').Logger {
-  const tee = (level: 'info' | 'warn' | 'error' | 'fatal') =>
+function makeTeeLogger(base: import('pino').Logger, run: ActiveRun): import('pino').Logger {
+  const tee =
+    (level: 'info' | 'warn' | 'error' | 'fatal') =>
     (obj: unknown, msg?: string): void => {
       base[level](obj, msg);
       const payload = msg ?? (typeof obj === 'string' ? obj : JSON.stringify(obj));

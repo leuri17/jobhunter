@@ -10,7 +10,6 @@ export default defineConfig([
     'node_modules/**',
     'coverage/**',
     '.worktrees/**',
-    '.gitnexus/**',
     '.superpowers/**',
     'docs/**',
     'drizzle/**',

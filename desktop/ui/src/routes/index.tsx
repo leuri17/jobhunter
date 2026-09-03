@@ -85,7 +85,9 @@ function RunCard({ run }: { run: RunListRow }) {
         </div>
         <span className="rounded bg-zinc-800 px-2 py-1 text-xs">{run.status}</span>
       </div>
-      <div className="mt-2 text-sm">Scored <strong>{run.jobsScored}</strong> jobs</div>
+      <div className="mt-2 text-sm">
+        Scored <strong>{run.jobsScored}</strong> jobs
+      </div>
     </div>
   );
 }

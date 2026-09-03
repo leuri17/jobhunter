@@ -10,12 +10,14 @@ describe('config endpoints', () => {
     baseUrl = await server.listen();
   });
 
-  afterAll(async () => { await server.close(); });
+  afterAll(async () => {
+    await server.close();
+  });
 
   it('GET /api/config returns the loaded config', async () => {
     const res = await fetch(`${baseUrl}/api/config`);
     expect(res.status).toBe(200);
-    const body = await res.json() as { schemaVersion: number };
+    const body = (await res.json()) as { schemaVersion: number };
     expect(body.schemaVersion).toBe(1);
   });
 

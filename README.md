@@ -42,12 +42,12 @@ Launch via `cargo tauri dev` from `desktop/tauri`.
 
 ## Commands
 
-| Command | What it does |
-| --- | --- |
-| `pnpm test` | Run all workspace tests (core + sidecar + ui) |
-| `pnpm typecheck` | Typecheck every workspace |
-| `pnpm lint` | Lint all workspaces |
-| `pnpm format` | Format every workspace |
+| Command          | What it does                                  |
+| ---------------- | --------------------------------------------- |
+| `pnpm test`      | Run all workspace tests (core + sidecar + ui) |
+| `pnpm typecheck` | Typecheck every workspace                     |
+| `pnpm lint`      | Lint all workspaces                           |
+| `pnpm format`    | Format every workspace                        |
 
 The desktop app itself has no CLI; everything happens in the UI.
 
@@ -55,12 +55,12 @@ The desktop app itself has no CLI; everything happens in the UI.
 
 JobHunter is layered per `docs/architecture.md`:
 
-| Layer | Path | Owns |
-| --- | --- | --- |
-| Core library | `src/` | Domain logic, persistence, browser, scoring — pure modules |
-| Sidecar | `desktop/sidecar/` | Fastify HTTP server exposing the core library |
-| Tauri shell | `desktop/tauri/` | Window, menu, lifecycle, native notifications |
-| Frontend | `desktop/ui/` | React UI: dashboard, jobs, pipeline, runs, profile, settings |
+| Layer        | Path               | Owns                                                         |
+| ------------ | ------------------ | ------------------------------------------------------------ |
+| Core library | `src/`             | Domain logic, persistence, browser, scoring — pure modules   |
+| Sidecar      | `desktop/sidecar/` | Fastify HTTP server exposing the core library                |
+| Tauri shell  | `desktop/tauri/`   | Window, menu, lifecycle, native notifications                |
+| Frontend     | `desktop/ui/`      | React UI: dashboard, jobs, pipeline, runs, profile, settings |
 
 `process.exit` lives only in `desktop/sidecar/src/server.ts` (the sidecar's process entrypoint). The Tauri shell supervises and terminates the sidecar child process. The sidecar's HTTP error mapper translates typed errors into status codes + JSON envelopes and never exits the process.
 

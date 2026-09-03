@@ -60,7 +60,9 @@ async function main(): Promise<void> {
 
       // 5-second deadline for graceful close (race).
       const closePromise = server.close();
-      const timeout = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 5000));
+      const timeout = new Promise<'timeout'>((resolve) =>
+        setTimeout(() => resolve('timeout'), 5000),
+      );
       const result = await Promise.race([closePromise, timeout]);
       if (result === 'timeout') {
         process.stderr.write(`sidecar: graceful close timed out; forcing exit\n`);
@@ -73,8 +75,12 @@ async function main(): Promise<void> {
     }
   };
 
-  process.on('SIGTERM', () => { void shutdown('SIGTERM'); });
-  process.on('SIGINT', () => { void shutdown('SIGINT'); });
+  process.on('SIGTERM', () => {
+    void shutdown('SIGTERM');
+  });
+  process.on('SIGINT', () => {
+    void shutdown('SIGINT');
+  });
 }
 
 const isEntry = import.meta.url === `file://${process.argv[1]}`;

@@ -26,7 +26,11 @@ export function usePipelineEvents(runId: string | null): PipelineEvents {
       });
       es.addEventListener('done', async (ev) => {
         const data = JSON.parse((ev as MessageEvent).data) as { status: string; result: unknown };
-        setState((s) => ({ ...s, status: data.status as PipelineEvents['status'], result: data.result }));
+        setState((s) => ({
+          ...s,
+          status: data.status as PipelineEvents['status'],
+          result: data.result,
+        }));
         es?.close();
         // I1: fire system notification on terminal state
         if (data.status === 'done' || data.status === 'failed' || data.status === 'cancelled') {

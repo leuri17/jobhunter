@@ -12,7 +12,11 @@ describe('sse helpers', () => {
   });
 
   it('initSseHeaders sets 200, text/event-stream, no-cache', () => {
-    const res = { setHeader: (k: string, v: string) => { (res as Record<string, string>)[k] = v; } } as unknown as import('node:http').ServerResponse;
+    const res = {
+      setHeader: (k: string, v: string) => {
+        (res as Record<string, string>)[k] = v;
+      },
+    } as unknown as import('node:http').ServerResponse;
     initSseHeaders(res);
     const r = res as unknown as Record<string, string>;
     expect(r['Content-Type']).toBe('text/event-stream');
@@ -22,7 +26,11 @@ describe('sse helpers', () => {
 
   it('closeSse ends the stream', () => {
     let ended = false;
-    const res = { end: () => { ended = true; } } as unknown as import('node:http').ServerResponse;
+    const res = {
+      end: () => {
+        ended = true;
+      },
+    } as unknown as import('node:http').ServerResponse;
     closeSse(res);
     expect(ended).toBe(true);
   });

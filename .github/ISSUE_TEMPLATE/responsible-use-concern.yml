@@ -1,7 +1,7 @@
 name: Responsible-use concern
 description: Report a LinkedIn ToS concern or suspected misuse.
-title: "[Responsible-use]: "
-labels: ["responsible-use"]
+title: '[Responsible-use]: '
+labels: ['responsible-use']
 body:
   - type: markdown
     attributes:

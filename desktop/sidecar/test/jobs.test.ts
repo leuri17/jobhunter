@@ -10,12 +10,14 @@ describe('jobs endpoints', () => {
     baseUrl = await server.listen();
   });
 
-  afterAll(async () => { await server.close(); });
+  afterAll(async () => {
+    await server.close();
+  });
 
   it('GET /api/jobs returns a list (possibly empty)', async () => {
     const res = await fetch(`${baseUrl}/api/jobs?state=all&limit=10`);
     expect(res.status).toBe(200);
-    const body = await res.json() as { schemaVersion: number; jobs: unknown[] };
+    const body = (await res.json()) as { schemaVersion: number; jobs: unknown[] };
     expect(body.schemaVersion).toBe(1);
     expect(Array.isArray(body.jobs)).toBe(true);
   });

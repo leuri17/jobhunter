@@ -28,9 +28,7 @@ function SettingsPage() {
       <h1 className="text-3xl font-bold">Settings</h1>
 
       <section>
-        <h2 className="text-sm uppercase tracking-wide text-zinc-400 mb-2">
-          Search configuration
-        </h2>
+        <h2 className="text-sm uppercase tracking-wide text-zinc-400 mb-2">Search configuration</h2>
         {config.data === undefined ? (
           <p>loading…</p>
         ) : (
@@ -41,12 +39,10 @@ function SettingsPage() {
       </section>
 
       <section>
-        <h2 className="text-sm uppercase tracking-wide text-zinc-400 mb-2">
-          OpenAI key
-        </h2>
+        <h2 className="text-sm uppercase tracking-wide text-zinc-400 mb-2">OpenAI key</h2>
         <p className="text-sm text-zinc-400 mb-2">
-          In v1 the key is read from the <code>OPENAI_API_KEY</code> environment
-          variable. OS-keychain storage lands in a follow-up.
+          In v1 the key is read from the <code>OPENAI_API_KEY</code> environment variable.
+          OS-keychain storage lands in a follow-up.
         </p>
         <input
           type="password"
@@ -58,9 +54,7 @@ function SettingsPage() {
       </section>
 
       <section>
-        <h2 className="text-sm uppercase tracking-wide text-zinc-400 mb-2">
-          Resolved paths
-        </h2>
+        <h2 className="text-sm uppercase tracking-wide text-zinc-400 mb-2">Resolved paths</h2>
         {paths.data === undefined ? (
           <p>loading…</p>
         ) : (

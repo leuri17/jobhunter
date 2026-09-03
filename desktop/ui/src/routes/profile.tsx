@@ -95,18 +95,14 @@ function ProfilePage() {
               </div>
               <div className="flex gap-2">
                 <Button
-                  onClick={() =>
-                    approve.mutate(detail.data?.profile.id as unknown as string)
-                  }
+                  onClick={() => approve.mutate(detail.data?.profile.id as unknown as string)}
                   disabled={detail.data.status !== 'draft' || approve.isPending}
                 >
                   Approve
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={() =>
-                    reject.mutate(detail.data?.profile.id as unknown as string)
-                  }
+                  onClick={() => reject.mutate(detail.data?.profile.id as unknown as string)}
                   disabled={detail.data.status !== 'draft' || reject.isPending}
                 >
                   Reject
@@ -144,9 +140,7 @@ function ProfilePage() {
                     <li key={i} className="text-xs">
                       <span className="font-mono text-red-300">
                         {c.conflictType} @ {c.affectedField}
-                        {c.resolutionStatus !== 'unresolved'
-                          ? ` (${c.resolutionStatus})`
-                          : ''}:
+                        {c.resolutionStatus !== 'unresolved' ? ` (${c.resolutionStatus})` : ''}:
                       </span>{' '}
                       {c.explanation ?? '(no explanation)'}
                     </li>
@@ -157,9 +151,7 @@ function ProfilePage() {
 
             <section>
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm uppercase tracking-wide text-zinc-400">
-                  Profile JSON
-                </h2>
+                <h2 className="text-sm uppercase tracking-wide text-zinc-400">Profile JSON</h2>
                 <span className="text-xs text-zinc-500">
                   Editing not implemented in v1 (POST /api/profile/:id/edit → 501)
                 </span>

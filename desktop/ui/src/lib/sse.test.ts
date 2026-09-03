@@ -44,4 +44,3 @@ describe('usePipelineEvents', () => {
     expect(result.current.status).toBe('running');
   });
 });
-

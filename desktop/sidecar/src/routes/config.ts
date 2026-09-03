@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import {
-  loadConfig, updateConfig,
+  loadConfig,
+  updateConfig,
   OperationalConfigSchema,
-  type ConfigPatch, type UpdateOptions,
+  type ConfigPatch,
+  type UpdateOptions,
 } from '@jobhunter/core/config';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { ValidationError } from '@jobhunter/core/errors';
