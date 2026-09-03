@@ -13,7 +13,7 @@
 ## Verification
 
 <!-- Run and paste output of:
-     pnpm typecheck && pnpm lint && pnpm format:check && pnpm build && pnpm test
+     pnpm typecheck && pnpm lint && pnpm format:check && pnpm test
 -->
 
 ## Documentation

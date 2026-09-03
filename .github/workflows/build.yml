@@ -5,8 +5,16 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+# Default to least privilege. Build jobs override with `contents: write`
+# below because `tauri-apps/tauri-action@v1` creates the GitHub release.
+permissions:
+  contents: read
+
 jobs:
   build-linux:
+    # tauri-action creates a draft release; needs contents: write.
+    permissions:
+      contents: write
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v7
@@ -25,6 +33,9 @@ jobs:
           args: --target x86_64-unknown-linux-gnu
 
   build-macos:
+    # tauri-action creates a draft release; needs contents: write.
+    permissions:
+      contents: write
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
@@ -42,6 +53,9 @@ jobs:
           releaseDraft: true
 
   build-windows:
+    # tauri-action creates a draft release; needs contents: write.
+    permissions:
+      contents: write
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7

@@ -274,4 +274,57 @@ describe('JobRepository', () => {
   it('listComplete returns an empty array when no rows exist', async () => {
     expect(await jobRepo.listComplete()).toEqual([]);
   });
+
+  it('throws a UNIQUE constraint error when inserting a second job with the same sourceJobId', async () => {
+    const first = await jobRepo.recordNewJob({
+      job: {
+        sourceJobId: 'dup-1',
+        extractionStatus: 'complete',
+        firstDiscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+        lastRediscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+        createdTimestamp: '2026-08-05T10:00:00.000Z',
+        updatedTimestamp: '2026-08-05T10:00:00.000Z',
+      },
+      discoveryEvent: {
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
+        timestamp: '2026-08-05T10:00:00.000Z',
+        isNew: true,
+        currentExtractionState: 'complete',
+        extractionAttempted: true,
+        skipReason: null,
+      },
+    });
+    expect(first.jobId).toBeGreaterThan(0);
+
+    // Second insert with the same sourceJobId must be rejected by the
+    // `jobs_source_job_id_idx` UNIQUE constraint. Mirrors the
+    // `DuplicateSha256Error` pattern in `profile-sources.test.ts`.
+    await expect(
+      jobRepo.recordNewJob({
+        job: {
+          sourceJobId: 'dup-1',
+          extractionStatus: 'partial',
+          firstDiscoveryTimestamp: '2026-08-05T10:01:00.000Z',
+          lastRediscoveryTimestamp: '2026-08-05T10:01:00.000Z',
+          createdTimestamp: '2026-08-05T10:01:00.000Z',
+          updatedTimestamp: '2026-08-05T10:01:00.000Z',
+        },
+        discoveryEvent: {
+          jobId: 0,
+          pipelineRunId: 1,
+          searchExecutionId: searchId,
+          timestamp: '2026-08-05T10:01:00.000Z',
+          isNew: true,
+          currentExtractionState: 'partial',
+          extractionAttempted: true,
+          skipReason: null,
+        },
+      }),
+    ).rejects.toThrow(/UNIQUE constraint failed/i);
+
+    // The original row is still present and untouched.
+    expect(await jobRepo.findBySourceJobId('dup-1')).not.toBeNull();
+  });
 });
