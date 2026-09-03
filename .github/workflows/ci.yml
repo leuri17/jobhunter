@@ -6,14 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-# Dependabot's auto-generated PRs bump package.json but don't always regenerate
-# pnpm-lock.yaml, which makes the downstream `pnpm install --frozen-lockfile`
-# step fail with ERR_PNPM_OUTDATED_LOCKFILE. Granting `contents: write` lets
-# the workflow refresh + commit the lockfile back to the dependabot branch
-# (allowed by default for the dependabot[bot] actor).
-permissions:
-  contents: write
-
 jobs:
   core-tests:
     runs-on: ubuntu-latest
@@ -22,19 +14,6 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with: { node-version-file: '.node-version' }
-      - name: Refresh lockfile (dependabot PRs only)
-        if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
-        run: |
-          pnpm install --no-frozen-lockfile
-          git config user.name "dependabot[bot]"
-          git config user.email "dependabot[bot]@users.noreply.github.com"
-          git add pnpm-lock.yaml
-          if git diff --cached --quiet; then
-            echo "No lockfile changes to commit"
-          else
-            git commit -m "chore(deps): refresh pnpm-lock.yaml"
-            git push
-          fi
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
@@ -47,19 +26,6 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with: { node-version-file: '.node-version' }
-      - name: Refresh lockfile (dependabot PRs only)
-        if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
-        run: |
-          pnpm install --no-frozen-lockfile
-          git config user.name "dependabot[bot]"
-          git config user.email "dependabot[bot]@users.noreply.github.com"
-          git add pnpm-lock.yaml
-          if git diff --cached --quiet; then
-            echo "No lockfile changes to commit"
-          else
-            git commit -m "chore(deps): refresh pnpm-lock.yaml"
-            git push
-          fi
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @jobhunter/sidecar test
 
@@ -70,18 +36,5 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with: { node-version-file: '.node-version' }
-      - name: Refresh lockfile (dependabot PRs only)
-        if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
-        run: |
-          pnpm install --no-frozen-lockfile
-          git config user.name "dependabot[bot]"
-          git config user.email "dependabot[bot]@users.noreply.github.com"
-          git add pnpm-lock.yaml
-          if git diff --cached --quiet; then
-            echo "No lockfile changes to commit"
-          else
-            git commit -m "chore(deps): refresh pnpm-lock.yaml"
-            git push
-          fi
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @jobhunter/ui test
