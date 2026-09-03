@@ -14,7 +14,7 @@ import { loadConfig } from '@jobhunter/core/config';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { pinoPipelineLogger } from '@jobhunter/core/pipeline';
 import { openDbHandle, createRepositories } from './db-helper.js';
-import { cliFileSystem } from './fs-adapter.js';
+import { sidecarFileSystem } from './fs-adapter.js';
 import { initSseHeaders, writeSseEvent, closeSse } from '../sse.js';
 import { resolveOpenAiClientOrNull } from './openai-resolve.js';
 
@@ -125,7 +125,7 @@ async function runPipeline(
     const handle = await openDbHandle();
     try {
       const repositories = createRepositories(handle);
-      const loaded = await loadConfig(paths, cliFileSystem);
+      const loaded = await loadConfig(paths, sidecarFileSystem);
       const browserSession = createDefaultBrowserSession({
         navigationMs: loaded.config.scraper.timeouts.navigationMs,
         initialResultsMs: loaded.config.scraper.timeouts.initialResultsMs,
