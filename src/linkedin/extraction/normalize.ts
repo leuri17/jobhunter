@@ -8,8 +8,8 @@
  * race-condition #5: these CTAs appear in both the panel
  * description button and the dedicated page's truncated text).
  *
- * Per AGENTS.md §5 / §9: domain code does not import Commander,
- * Inquirer, Playwright, Drizzle directly, the `openai` SDK, or
+ * Per AGENTS.md §5 / §9: domain code does not import Playwright,
+ * Drizzle directly, the `openai` SDK, or
  * Pino directly. This file is a pure helper — it has no side
  * effects and no imports beyond the local type alias below.
  */

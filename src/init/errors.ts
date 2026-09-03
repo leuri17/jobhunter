@@ -7,9 +7,9 @@ import {
 
 /**
  * Base class for every error raised by the init lifecycle. Subclasses
- * pin a specific exit code so the CLI boundary needs no `instanceof`
- * cascade. Step-level `failed` outcomes are NOT represented here — they
- * live on `SetupSummary.steps[].errorCode`.
+ * pin a specific exit code so the sidecar's HTTP error mapper needs
+ * no `instanceof` cascade. Step-level `failed` outcomes are NOT
+ * represented here — they live on `SetupSummary.steps[].errorCode`.
  */
 export class InitLifecycleError extends ApplicationError {
   constructor(

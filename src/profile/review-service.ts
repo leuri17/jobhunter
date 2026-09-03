@@ -5,17 +5,18 @@
  *
  *   - `list` returns a flattened list of every persisted profile version
  *     (or a status-filtered subset), ordered most-recent-first by id.
- *   - `show` resolves a profile CLI identifier via `resolveProfileVersionId`
+ *   - `show` resolves a profile identifier via `resolveProfileVersionId`
  *     and returns the full payload (profile + warnings + conflicts +
- *     overrides + revisions) needed by `profile show --json` and by the
+ *     overrides + revisions) needed by the profile-show HTTP route and by the
  *     editor's review view.
  *
  * The service depends on the repositories and the pure review helpers; it
- * never touches Commander, Inquirer, Playwright, Drizzle directly, or the
+ * never touches Playwright, Drizzle directly, or the
  * OpenAI SDK. It does NOT validate the stored `profileJson` against
  * `ProfessionalProfileSchema` itself — the caller's persistence boundary
  * already does that — but `show` rejects rows whose JSON fails Zod with
- * `InvalidProfilePayloadError` so the CLI can surface the failure cleanly.
+ * `InvalidProfilePayloadError` so the desktop app can surface the
+ * failure cleanly.
  */
 
 import { ProfessionalProfileSchema, type ProfessionalProfile } from './schema.js';
@@ -71,7 +72,7 @@ export class ProfileReviewService {
 
   /**
    * Return every persisted profile version, optionally filtered by status.
-   * Order is most-recent-first (id DESC) so the CLI default output reads
+   * Order is most-recent-first (id DESC) so the default listing reads
    * naturally top-to-bottom.
    */
   async list(opts?: { status?: ProfileStatus }): Promise<readonly ProfileListEntry[]> {
@@ -94,7 +95,7 @@ export class ProfileReviewService {
   }
 
   /**
-   * Resolve the CLI identifier and assemble the full review payload.
+   * Resolve the profile identifier and assemble the full review payload.
    * Throws `InvalidProfileIdentifierError` for unknown / malformed ids and
    * `InvalidProfilePayloadError` if the stored JSON fails Zod validation.
    */

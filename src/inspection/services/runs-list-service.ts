@@ -27,7 +27,7 @@ export interface RunsListInput {
 }
 
 /**
- * Read-only service backing `runs list [--limit <n>]`.
+ * Read-only service backing the runs list endpoint.
  */
 export class RunsListService {
   constructor(private readonly repositories: Repositories) {}
@@ -39,8 +39,8 @@ export class RunsListService {
   }
 
   /**
-   * Validate + coerce the requested limit. The CLI handler does the
-   * primary validation; this is a defense-in-depth check.
+   * Validate + coerce the requested limit. The sidecar route does
+   * the primary validation; this is a defense-in-depth check.
    */
   private resolveLimit(rawLimit: number | undefined): number {
     if (rawLimit === undefined) return DEFAULT_RUNS_LIST_LIMIT;

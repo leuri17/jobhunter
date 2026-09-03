@@ -92,8 +92,8 @@ export class LinkedInDiscoveryService {
    * Execute the per-search sequence. Returns a
    * typed `SearchDiscoveryOutcome` on success / cancellation /
    * per-card errors. Throws `LinkedInScraperError` on unrecoverable
-   * per-search conditions; the caller catches + maps to
-   * exit codes.
+   * per-search conditions; the caller catches + the sidecar's
+   * HTTP error mapper translates them to status responses.
    */
   async discover(input: DiscoverInput): Promise<SearchDiscoveryOutcome> {
     const { run, searchExecution, signal } = input;

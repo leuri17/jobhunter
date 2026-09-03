@@ -73,7 +73,7 @@ export interface ClassifyFiltersInput {
  * `classifyPaths` is pure on its input (the resolved directory shape).
  * It does NOT touch `fileSystem` — paths either resolve via
  * `resolvePlatformPaths` at the orchestrator boundary or throw `PathError`
- * (which the CLI maps to `InitPathsFailedError`).
+ * (which the sidecar maps to `InitPathsFailedError`).
  */
 export function classifyPaths(_input: ClassifyPathsInput): Promise<InitStepReport> {
   return Promise.resolve({
@@ -181,9 +181,9 @@ export async function classifyConfig(input: ClassifyConfigInput): Promise<InitSt
 }
 
 /**
- * `classifyMigrations` is pure. The DB handle is owned by the CLI
- * boundary; this classifier only inspects the outcome recorded by the
- * orchestrator after `initializeDatabase` returns.
+ * `classifyMigrations` is pure. The DB handle is owned by the
+ * desktop sidecar; this classifier only inspects the outcome recorded by
+ * the orchestrator after `initializeDatabase` returns.
  */
 export function classifyMigrations(input: ClassifyMigrationsInput): InitStepReport {
   if (input.migrationsApplied) {

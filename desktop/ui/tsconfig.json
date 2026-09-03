@@ -9,11 +9,6 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "useDefineForClassFields": true,
-    // Override: base's `noPropertyAccessFromIndexSignature: true` flags 44
-    // sites in persistence/ and platform/ that the root and src/tsconfig
-    // already silence. Match that convention so the UI can import the
-    // zod-derived types from @jobhunter/core/* without surfacing those
-    // transitive violations in our tsc build.
     "noPropertyAccessFromIndexSignature": false,
     "types": ["vite/client", "node"],
     "paths": {

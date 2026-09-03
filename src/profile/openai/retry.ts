@@ -10,7 +10,7 @@ import {
  *
  * All four retry-shaping fields are optional; the function applies
  * standard defaults (`maxAttempts: 3`, `baseDelayMs: 500`,
- * `maxDelayMs: 8_000`, `jitter: 'full'`) so the CLI can wire up the
+ * `maxDelayMs: 8_000`, `jitter: 'full'`) so callers can wire up the
  * retry policy from a configuration object without duplicating the
  * defaults. Tests typically pass every field explicitly so the
  * behaviour is obvious.
@@ -31,7 +31,7 @@ import {
  *
  * Server-provided `retryAfterMs` (e.g. from a `Retry-After` header) is
  * honored once and clamped to `[0, maxDelayMs]` so a hostile or
- * misconfigured header cannot stall the CLI indefinitely.
+ * misconfigured header cannot stall callers indefinitely.
  */
 export interface RetryOptions {
   readonly maxAttempts?: number;
@@ -179,7 +179,7 @@ interface ComputeDelayInputs {
 function computeDelay(inputs: ComputeDelayInputs): number {
   if (inputs.retryAfterMs !== null) {
     // Clamp to [0, maxDelay] so a hostile or misconfigured Retry-After
-    // header cannot stall the CLI indefinitely.
+    // header cannot stall callers indefinitely.
     return Math.max(0, Math.min(inputs.retryAfterMs, inputs.maxDelay));
   }
 

@@ -49,9 +49,9 @@ import { NoActiveFilterConfigError } from './errors.js';
  *
  * Domain-boundary note (AGENTS.md §5, §9): this module imports only the
  * sibling `src/filter/*` modules and the `Repositories` facade from
- * `src/persistence/repositories/index.js`. It does not import Commander,
- * Inquirer, Playwright, Drizzle directly, OpenAI, or Pino. The
- * `tests/filter/boundaries.test.ts` guard enforces this.
+ * `src/persistence/repositories/index.js`. It is a pure helper that
+ * does not depend on Playwright, Drizzle directly, OpenAI, or Pino.
+ * The `tests/filter/boundaries.test.ts` guard enforces this.
  */
 
 export interface FilterApplyServiceOptions {

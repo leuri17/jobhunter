@@ -42,8 +42,8 @@
  * Domain-boundary note (AGENTS.md §5, §9): this module imports only the
  * sibling `src/filter/*` modules and the `Repositories` facade from
  * `src/persistence/repositories/index.js`. It does NOT import
- * `@inquirer/prompts`, Commander, Playwright, Drizzle directly, OpenAI,
- * or Pino. The `tests/filter/boundaries.test.ts` guard enforces this.
+ * Playwright, Drizzle directly, OpenAI, or Pino. The
+ * `tests/filter/boundaries.test.ts` guard enforces this.
  */
 
 import { type Repositories } from '../persistence/repositories/index.js';

@@ -1,8 +1,9 @@
 /**
- * Zod schemas for the `--json` output of `jobs reevaluate`
+ * Zod schemas for the JSON envelope produced by the
+ * `reevaluate` sidecar route.
  *
  * The schemas are the source of truth for the JSON contract — the
- * producer (service + CLI handler) trusts the service output, but
+ * producer (service + sidecar) trusts the service output, but
  * consumers + tests run `safeParse` against the schema to catch
  * regressions. Every payload carries `schemaVersion: 1` as the
  * first key so consumers can branch on version without parsing the
@@ -137,7 +138,7 @@ const ReevaluationTotalsJsonSchema = z
   .strict();
 
 /**
- * The top-level `--json` payload. Mirrors
+ * The top-level JSON payload. Mirrors
  * `ReevaluationPlan` from `src/reevaluation/state.ts` field-for-field.
  *
  * The schema is `.strict()` — unknown fields are rejected. The
@@ -162,11 +163,11 @@ export const REEVALUATION_JSON_SCHEMA = z
   })
   .strict();
 
-/** Inferred TypeScript type for the `--json` payload. */
+/** Inferred TypeScript type for the JSON payload. */
 export type ReevaluationJsonPayload = z.infer<typeof REEVALUATION_JSON_SCHEMA>;
-/** Inferred TypeScript type for one plan entry in the `--json` output. */
+/** Inferred TypeScript type for one plan entry in the JSON output. */
 export type ReevaluationPlanEntryJson = z.infer<typeof ReevaluationPlanEntryJsonSchema>;
-/** Inferred TypeScript type for one skipped entry in the `--json` output. */
+/** Inferred TypeScript type for one skipped entry in the JSON output. */
 export type ReevaluationSkippedEntryJson = z.infer<typeof ReevaluationSkippedEntryJsonSchema>;
 /** Inferred TypeScript type for the inlined `ScoringPlan` JSON shape. */
 export type ScoringPlanJson = z.infer<typeof ScoringPlanJsonSchema>;

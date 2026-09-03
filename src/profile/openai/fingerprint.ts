@@ -10,7 +10,7 @@ import { createHash } from 'node:crypto';
  * the extractor implementation version.
  *
  * Source hashes are sorted lexicographically inside the calculator so the
- * order of sources on the CLI does not affect the fingerprint.
+ * order of sources does not affect the fingerprint.
  */
 
 export const EXTRACTOR_IMPLEMENTATION_VERSION = '1.0.0';

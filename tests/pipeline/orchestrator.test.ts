@@ -161,11 +161,11 @@ describe('PipelineOrchestrator', () => {
     }
   });
 
-  // T7: --yes (confirmScoring: true) bypasses the prompt entirely.
-  it('T7: --yes bypasses the prompt', async () => {
+  // T7: confirmScoring=true bypasses the prompt entirely.
+  it('T7: confirmScoring=true bypasses the prompt', async () => {
     // Empty scripted prompts: if the orchestrator calls
     // askScoringConfirmation, the harness would throw
-    // "exhausted responses". Confirming --yes (confirmScoring: true)
+    // "exhausted responses". Confirming with confirmScoring=true
     // means the prompt is never invoked, so the run completes
     // without throwing.
     const yesHarness = buildRunHarness({

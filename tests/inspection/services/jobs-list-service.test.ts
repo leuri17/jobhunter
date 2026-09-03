@@ -171,7 +171,7 @@ describe('JobsListService', () => {
     harness.cleanup();
   });
 
-  it('returns the 2 scored jobs in score-DESC order for --scored', async () => {
+  it('returns the 2 scored jobs in score-DESC order for the scored view', async () => {
     const result = await service.list({ state: 'scored' });
     expect(result.state).toBe('scored');
     expect(result.rows).toHaveLength(2);
@@ -188,7 +188,7 @@ describe('JobsListService', () => {
     expect(result.returned).toBe(2);
   });
 
-  it('returns the unfiltered complete job for --unscored', async () => {
+  it('returns the unfiltered complete job for the unscored view', async () => {
     const result = await service.list({ state: 'unscored' });
     expect(result.state).toBe('unscored');
     expect(result.rows).toHaveLength(1);
@@ -198,7 +198,7 @@ describe('JobsListService', () => {
     }
   });
 
-  it('returns the partial job for --partial', async () => {
+  it('returns the partial job for the partialJobs view', async () => {
     const result = await service.list({ state: 'partial' });
     expect(result.state).toBe('partial');
     expect(result.rows).toHaveLength(1);
@@ -209,7 +209,7 @@ describe('JobsListService', () => {
     }
   });
 
-  it('filters --all by minScore to scored jobs >= 50', async () => {
+  it('filters the allJobs view by minScore to scored jobs >= 50', async () => {
     const result = await service.list({ state: 'all', minScore: 50 });
     // Both scored jobs (85 + 95) are >= 50; the unfiltered + partial
     // + failed rows are excluded by the minScore filter.
@@ -222,7 +222,7 @@ describe('JobsListService', () => {
     }
   });
 
-  it('filters --scored by case-insensitive substring match on company', async () => {
+  it('filters the scored view by case-insensitive substring match on company', async () => {
     const result = await service.list({ state: 'scored', company: 'example' });
     expect(result.rows).toHaveLength(2);
     // The repository's `LIKE` is ASCII case-insensitive in SQLite by
@@ -232,7 +232,7 @@ describe('JobsListService', () => {
     }
   });
 
-  it('caps --scored to exactly N rows when limit is set', async () => {
+  it('caps the scored view to exactly N rows when limit is set', async () => {
     const result = await service.list({ state: 'scored', limit: 1 });
     expect(result.rows).toHaveLength(1);
     expect(result.limit).toBe(1);
@@ -257,7 +257,7 @@ describe('JobsListService', () => {
     });
   });
 
-  it('scopes --scored to the supplied runId', async () => {
+  it('scopes the scored view to the supplied runId', async () => {
     // Insert a SECOND pipeline run + a scored job attached only to
     // that run. After scoping to runId=1, the second-run job must
     // not appear.
@@ -319,14 +319,14 @@ describe('JobsListService', () => {
     });
   });
 
-  it('--all returns all 5 jobs without refinements', async () => {
+  it('returns all 5 jobs without refinements for the allJobs view', async () => {
     const result = await service.list({ state: 'all' });
     // 5 jobs (complete-scored-x2 + complete-unscored + partial + failed).
     expect(result.rows).toHaveLength(5);
     expect(result.returned).toBe(5);
   });
 
-  it('--accepted returns only the 3 accepted jobs (Jobs 1, 2, 3)', async () => {
+  it('returns only the 3 accepted jobs (Jobs 1, 2, 3) for the acceptedJobs view', async () => {
     const result = await service.list({ state: 'accepted' });
     expect(result.rows).toHaveLength(3);
     for (const row of result.rows) {
@@ -334,12 +334,12 @@ describe('JobsListService', () => {
     }
   });
 
-  it('--filter-errors returns an empty array (no filter_errors rows in the fixture)', async () => {
+  it('returns an empty array (no filter_errors rows in the fixture) for the filter-errors view', async () => {
     const result = await service.list({ state: 'filter-errors' });
     expect(result.rows).toHaveLength(0);
   });
 
-  it('--scoring-errors returns an empty array (no failed score rows in the fixture)', async () => {
+  it('returns an empty array (no failed score rows in the fixture) for the scoring-errors view', async () => {
     const result = await service.list({ state: 'scoring-errors' });
     expect(result.rows).toHaveLength(0);
   });

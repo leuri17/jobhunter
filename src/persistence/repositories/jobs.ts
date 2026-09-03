@@ -583,7 +583,7 @@ export class JobRepository {
   }
 
   /**
-   * Resolve a job CLI identifier to its JobRow.
+   * Resolve a job identifier to its JobRow.
    *
    * Accepts:
    *   - `job_<int>`           → looked up via `findById` (canonical).
@@ -613,7 +613,7 @@ export class JobRepository {
 
   /**
    * Count of `discoveryErrors` rows for a single run. Used by the
-   * `--all` state (with `--run`) to surface a "this run had <n>
+   * the `all` state (with `runId`) to surface a "this run had <n>
    * discovery errors" hint without materialising every error row.
    */
   async discoveryErrorCountByRun(runId: number): Promise<number> {

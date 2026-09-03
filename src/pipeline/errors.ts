@@ -10,7 +10,7 @@ import {
  * Lifecycle errors are typed + exit-code-mapped. They cross the
  * orchestrator boundary only for unrecoverable conditions;
  * per-job or per-search errors are surfaced as `RunSummary`
- * counters and never reach the CLI boundary as thrown errors.
+ * counters and never reach the sidecar as thrown errors.
  */
 export class PipelineLifecycleError extends ApplicationError {
   constructor(

@@ -17,7 +17,7 @@ import { INIT_STEPS, type InitStepReport, type SetupSummary } from '../../src/in
  *      `failed` with `errorCode: 'config_invalid'`)
  *
  * The output must be deterministic (same input → same output) and
- * newline-terminated per the CLI's `<line>\n` writing convention.
+ * newline-terminated per the renderer's `<line>\n` writing convention.
  */
 
 /**

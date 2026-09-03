@@ -11,7 +11,7 @@
  *
  * The vocabulary is local to `src/init/` and does not leak into other
  * modules — it is consumed by the orchestrator, the classify helpers,
- * the CLI renderer, and the test surface.
+ * the desktop setup-summary renderer, and the test surface.
  */
 export type InitStepStatus = 'complete' | 'incomplete' | 'failed' | 'not_started';
 
@@ -53,7 +53,7 @@ export const INIT_STEPS: readonly InitStepId[] = [
 export const INIT_SCHEMA_VERSION = 1 as const;
 export type InitSchemaVersion = typeof INIT_SCHEMA_VERSION;
 
-/** Human-readable description for each step — used by the CLI renderer. */
+/** Human-readable description for each step — used by the desktop setup-summary renderer. */
 export const INIT_STEP_LABELS: Readonly<Record<InitStepId, string>> = {
   paths: 'Resolve OS-specific runtime paths',
   directories: 'Create required runtime directories',
@@ -84,8 +84,9 @@ export interface InitStepReport {
 }
 
 /**
- * Top-level summary emitted by the orchestrator. Printed to stdout by
- * the CLI handler. The `ready` flag is the  completion bit
+ * Top-level summary emitted by the orchestrator. Surfaced in the
+ * desktop Setup Wizard (and serialized as JSON via the sidecar
+ * route). The `ready` flag is the  completion bit
  * (derived, never persisted).
  */
 export interface SetupSummary {
@@ -93,9 +94,10 @@ export interface SetupSummary {
   readonly ready: boolean;
   readonly steps: readonly InitStepReport[];
   /**
-   * When `true`, the next prerequisite the user must address. The CLI
-   * surfaces this as "next: <label>". `null` when `ready === true` or
-   * the last attempted step reached the end of the list.
+   * When `true`, the next prerequisite the user must address. The
+   * desktop Setup Wizard surfaces this as "next: <label>". `null`
+   * when `ready === true` or the last attempted step reached the
+   * end of the list.
    */
   readonly nextStep: InitStepId | null;
   /**

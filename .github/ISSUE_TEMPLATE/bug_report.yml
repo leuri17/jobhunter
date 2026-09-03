@@ -8,13 +8,13 @@ body:
       value: |
         Thanks for taking the time to file a bug. Please fill in the
         sections below. Logs and diagnostics live under the OS-specific
-        paths shown by `jobhunter paths` (typically
+        paths shown in the Settings tab (typically
         `~/.local/state/jobhunter/logs/` on Linux).
   - type: input
     id: version
     attributes:
       label: JobHunter version
-      description: Output of `jobhunter --version` (or commit SHA if built from source).
+      description: The version shown in About (or commit SHA if built from source).
     validations:
       required: true
   - type: input
@@ -27,8 +27,8 @@ body:
   - type: input
     id: command
     attributes:
-      label: Command
-      description: The exact `jobhunter ...` command you ran.
+      label: Steps to reproduce
+      description: Describe the steps you took in the UI to trigger the bug.
     validations:
       required: true
   - type: textarea
@@ -47,4 +47,4 @@ body:
     id: logs
     attributes:
       label: Relevant logs
-      description: Paste the relevant snippet from the path shown by `jobhunter paths`.
+      description: Paste the relevant snippet from the Logs section in Settings.

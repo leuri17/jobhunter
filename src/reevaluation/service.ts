@@ -6,13 +6,13 @@
  * complete job, classifies each as filter-stale / score-stale /
  * already-current, executes the planned reruns (or no-op for the
  * dry-run path), and produces the structured `ReevaluationPlan`
- * envelope the CLI renders + serializes as JSON.
+ * envelope the sidecar renders + serializes as JSON.
  *
  * Composition:
  *   - `FilterApplyService.apply()`   — cache ledger for filter results
  *   - `ScoringService.scoreOne()`    — per-job scoring (with cache ledger)
  *   - `ScoringService.buildScoringPlan()` — builds the plan shown in
- *     the scoring confirmation prompt + the `--json` payload.
+ *     the scoring confirmation prompt + the JSON payload.
  *   - `PipelinePrompts.askScoringConfirmation()` — the user-facing
  *     gate before the scoring batch.
  *   - `Repositories.{jobs, filterConfigurations, filterResults,
@@ -25,8 +25,9 @@
  * `src/pipeline/`, and `src/persistence/`. The pure layer (state /
  * errors / plan / format / json-schemas / index / log) does NOT.
  *
- * The service NEVER calls `process.exit`. The CLI handler in
- *  owns the exit-code mapping via `exitWithError`.
+ * The service NEVER calls `process.exit`. The HTTP error mapper
+ * owns the exit-code translation; the domain layer throws typed
+ * errors and lets the boundary convert them.
  */
 
 import type { FilterApplyResult, FilterApplyInput } from '../filter/service.js';
@@ -240,7 +241,7 @@ export class ReevaluationService {
     }
     // 'skipped' / 'cancelled' keep the original action label
     // ('reran' set in selection) — the service surfaces the
-    // totals and the CLI decides how to render.
+    // totals and the sidecar route decides how to render them.
     void activeFilterContentHash; // parameter retained for symmetry + future audit
   }
 
@@ -253,7 +254,7 @@ export class ReevaluationService {
     if (configRow === null) {
       throw new PipelinePrerequisiteError(
         'no_active_filter',
-        'No active filter configuration. Run `jobhunter filters configure` before reevaluating.',
+        'No active filter configuration. Open the Filters tab in the desktop app before reevaluating.',
         { scope: input.scope },
       );
     }
@@ -270,7 +271,7 @@ export class ReevaluationService {
       if (profileVersion === null) {
         throw new PipelinePrerequisiteError(
           'no_active_profile',
-          'No active approved profile. Run `jobhunter profile approve` before reevaluating.',
+          'No active approved profile. Approve a profile from the Profile page before reevaluating.',
           { scope: input.scope },
         );
       }
@@ -296,14 +297,14 @@ export class ReevaluationService {
       if (input.jobId === undefined || input.jobId === null) {
         throw new ReevaluationValidationError(
           'job_not_found',
-          'No job identifier supplied to --job scope.',
+          'No job identifier supplied for the reevaluation scope.',
           { scope: input.scope },
         );
       }
       const job = allCompleteJobs.find((j) => j.id === input.jobId);
       if (job === undefined) {
         // Could be partial / failed (excluded by listComplete) or
-        // genuinely missing. The CLI has already validated for
+        // genuinely missing. The HTTP route has already validated for
         // partial/failed + not-found, so this is the defensive
         // double-check.
         throw new ReevaluationValidationError(
@@ -376,7 +377,7 @@ export class ReevaluationService {
           });
         }
       } else if (input.scope === 'scores-only' && filterOutcome !== 'accepted') {
-        // --scores-only with a non-accepted filter outcome (rejected,
+        // scores-only with a non-accepted filter outcome (rejected,
         // error, or stale/missing) — skip per
         // ("filter_update_required").
         skipped.push({

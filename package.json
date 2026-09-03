@@ -22,7 +22,6 @@
     "db:generate": "drizzle-kit generate --config drizzle.config.ts"
   },
   "dependencies": {
-    "@inquirer/prompts": "8.7.0",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.2",
     "openai": "7.8.0",
@@ -34,8 +33,8 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/better-sqlite3": "9.6.0",
-    "@types/node": "24.13.3",
-    "@vitest/coverage-v8": "4.1.11",
+    "@types/node": "26.4.0",
+    "@vitest/coverage-v8": "4.1.10",
     "drizzle-kit": "0.31.10",
     "eslint": "10.9.1",
     "eslint-config-prettier": "10.1.8",

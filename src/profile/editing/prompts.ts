@@ -1,12 +1,12 @@
 /**
  * Editor prompts interface and test-only adapters.
  *
- * The state-machine reducer in `state-machine.ts` is pure and prompts-free.
- * The interactive editor in `prompts-inquirer.ts` is the only module allowed
- * to import `@inquirer/prompts`. This module defines the seam between the
- * two: `ProfileEditorPrompts` is the interface every adapter implements,
- * and the two test-only adapters below give integration tests full control
- * over what the editor "asks the user".
+ * The state-machine reducer in `state-machine.ts` is pure and
+ * prompts-free. This module defines the seam between the service and
+ * the sidecar-wired production adapter: `ProfileEditorPrompts` is the
+ * interface every adapter implements, and the test-only adapters below
+ * give integration tests full control over what the editor "asks the
+ * user".
  *
  * The two test adapters mirror the `createFailingPrompts` /
  * scripted-recorder pattern used by `src/search/prompts.ts`:

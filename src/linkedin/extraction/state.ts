@@ -3,8 +3,8 @@
  * The shapes below are the typed contract
  * between `service.ts` and 's pipeline orchestrator.
  *
- * Per AGENTS.md §5 / §9: domain code does not import Commander,
- * Inquirer, Playwright, Drizzle directly, the `openai` SDK, or
+ * Per AGENTS.md §5 / §9: domain code does not import Playwright,
+ * Drizzle directly, the `openai` SDK, or
  * Pino directly. This file is a pure vocabulary module — it has
  * no side effects and no imports beyond the single constant below.
  *

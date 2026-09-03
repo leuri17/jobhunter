@@ -58,7 +58,7 @@ export { truncateWithEllipsis } from './truncate.js';
 // Pure layer — human-readable formatters.
 export { formatJobListTable, formatJobShow, formatRunListTable, formatRunShow } from './format.js';
 
-// Pure layer — Zod schemas for `--json` output.
+// Pure layer — Zod schemas for JSON output.
 export {
   JobListJsonSchema,
   JobListRowJsonSchema,

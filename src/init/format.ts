@@ -39,8 +39,8 @@ export function formatInitSummary(summary: SetupSummary): string {
   }
   lines.push(`ready: ${summary.ready ? 'yes' : 'no'}`);
   lines.push(`next: ${summary.nextStep ?? 'none'}`);
-  // Trailing newline so the CLI's `process.stdout.write(${result}\n)`
-  // emits a single trailing newline and the shell sees a complete line.
+  // Trailing newline so consumers rendering the summary get a single
+  // trailing newline.
   return `${lines.join('\n')}\n`;
 }
 

@@ -63,8 +63,8 @@ export class InspectionValidationError extends InspectionError {
  * Raised when a referenced row (job, run) is unknown or the
  * identifier is malformed. Mirrors `InvalidProfileIdentifierError`'s
  * `InvalidUsage` mapping. The error code distinguishes
- * "identifier is malformed" from "row does not exist" so the CLI
- * handler can produce precise stderr messages.
+ * "identifier is malformed" from "row does not exist" so the sidecar
+ * can produce precise error responses.
  */
 export class InspectionNotFoundError extends InspectionError {
   constructor(

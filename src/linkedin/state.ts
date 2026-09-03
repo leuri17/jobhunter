@@ -6,8 +6,8 @@
  * TypeScript types (no runtime values, no I/O), so this file has no
  * side effects and no imports beyond the single type import below.
  *
- * Per AGENTS.md §5 / §9: domain code does not import Commander, Inquirer,
- * Playwright, Drizzle directly, the `openai` SDK, or Pino directly. This
+ * Per AGENTS.md §5 / §9: domain code does not import Playwright,
+ * Drizzle directly, the `openai` SDK, or Pino directly. This
  * file is a pure vocabulary module — it imports only a type from the
  * persistence barrel.
  *

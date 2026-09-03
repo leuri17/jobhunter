@@ -6,7 +6,7 @@ import { ApplicationError, ExitCode } from '../errors/application-error.js';
  * Every subclass extends `ScoringError`, which extends
  * `ApplicationError`. The base class pins the exit code to
  * `ExitCode.OpenAIFailure = 5` so a scoring-layer failure surfaces
- * a single, predictable exit status at the CLI boundary.
+ * a single, predictable HTTP response at the sidecar boundary.
  *
  * Per-job failures are NOT thrown across the `scoreOne` boundary
  * they are surfaced as `ScoringOutcome.kind: 'failed'` and persisted

@@ -5,13 +5,9 @@ import { describe, expect, it } from 'vitest';
 /**
  * Domain-boundary guard for `src/filter/`.
  *
- * AGENTS.md §5 / §9: domain code must not depend on Commander, Inquirer,
- * Playwright, Drizzle, OpenAI, or Pino. This test enumerates every `.ts` file
- * under `src/filter/` and asserts that none of them import any of the banned
- * modules, with a single explicit allow-list carve-out:
- *
- *   - `src/filter/prompts-inquirer.ts` is the ONE module permitted to import
- *     `@inquirer/prompts` (CLI prompts delegation, introduced in Task 10).
+ * AGENTS.md §5 / §9: domain code must not depend on Playwright, Drizzle,
+ * OpenAI, or Pino. This test enumerates every `.ts` file under `src/filter/`
+ * and asserts that none of them import any of the banned modules.
  *
  * If a future task needs another carving, the allow-list must be extended
  * explicitly and the extension justified in that task's description.
@@ -20,15 +16,11 @@ import { describe, expect, it } from 'vitest';
 const FILTER_DIR = join(process.cwd(), 'src', 'filter');
 
 const BANNED_IMPORTS = [
-  'commander',
-  '@inquirer/prompts',
   'playwright',
   'drizzle-orm',
   'openai',
   'pino',
 ] as const;
-
-const INQUIRER_ALLOW_LIST: ReadonlySet<string> = new Set(['src/filter/prompts-inquirer.ts']);
 
 function listFilterSourceFiles(dir: string): string[] {
   let entries: string[];
@@ -85,26 +77,15 @@ describe('src/filter domain-boundary guard', () => {
     expect(files.length).toBeGreaterThan(0);
   });
 
-  it('every .ts file under src/filter/ avoids the banned imports (with carve-out)', () => {
+  it('every .ts file under src/filter/ avoids the banned imports', () => {
     const files = listFilterSourceFiles(FILTER_DIR);
     for (const absolute of files) {
       const rel = relativeFromCwd(absolute);
       const source = readFileSync(absolute, 'utf8');
       for (const banned of BANNED_IMPORTS) {
-        if (banned === '@inquirer/prompts' && INQUIRER_ALLOW_LIST.has(rel)) {
-          // Explicit carve-out: prompts-inquirer.ts is allowed to use Inquirer.
-          continue;
-        }
         expect(importMatches(source, banned), `${rel} must not import ${banned}`).toBe(false);
       }
     }
-  });
-
-  it('encodes the inquirer allow-list so prompts-inquirer.ts remains legal', () => {
-    // This test asserts the allow-list contains exactly the documented
-    // module(s). If a new task adds another carve-out it must update both
-    // INQUIRER_ALLOW_LIST and this test in the same change.
-    expect(INQUIRER_ALLOW_LIST.has('src/filter/prompts-inquirer.ts')).toBe(true);
   });
 
   it('explicitly scans src/filter/evaluate.ts (Task 6) for banned imports', () => {
@@ -116,9 +97,6 @@ describe('src/filter domain-boundary guard', () => {
     expect(listFilterSourceFiles(FILTER_DIR)).toContain(absolute);
     const source = readFileSync(absolute, 'utf8');
     for (const banned of BANNED_IMPORTS) {
-      if (banned === '@inquirer/prompts' && INQUIRER_ALLOW_LIST.has('src/filter/evaluate.ts')) {
-        continue;
-      }
       expect(
         importMatches(source, banned),
         `src/filter/evaluate.ts must not import ${banned}`,

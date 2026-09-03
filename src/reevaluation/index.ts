@@ -1,7 +1,7 @@
 /**
  * Public barrel for `src/reevaluation/`.
  *
- * Re-exports the public surface that the CLI handler and
+ * Re-exports the public surface that the sidecar routes and
  * the test harness consume. Internal helpers stay accessible via
  * their source paths.
  *
@@ -45,7 +45,7 @@ export {
   formatScoringPlanForReevaluation,
 } from './format.js';
 
-// Pure layer — Zod schemas for `--json` output.
+// Pure layer — Zod schemas for JSON output.
 export {
   REEVALUATION_JSON_SCHEMA,
   ScoringPlanJsonSchema,

@@ -2,10 +2,10 @@
  * ProfileEditingService — application service for  / .
  *
  * The service runs the interactive profile-edit session. It glues the
- * pure state machine (`reduce`) to the prompt adapter (default
- * `InquirerProfileEditorPrompts`, fake `FailingProfileEditorPrompts`, or
- * the `ScriptedProfileEditorPrompts` used by tests) and persists the
- * result through the `Repositories` facade.
+ * pure state machine (`reduce`) to the prompt adapter (a sidecar-wired
+ * production adapter, fake `FailingProfileEditorPrompts`, or the
+ * `ScriptedProfileEditorPrompts` used by tests) and persists the result
+ * through the `Repositories` facade.
  *
  * Lifecycle:
  *
@@ -27,8 +27,7 @@
  *
  * The service depends only on the repositories, identifier-resolution,
  * the pure state-machine helpers, and the typed lifecycle errors. It
- * never touches Commander, Inquirer, Playwright, Drizzle directly, or
- * the openai SDK.
+ * never touches Playwright, Drizzle directly, or the openai SDK.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -218,7 +217,7 @@ export class ProfileEditingService {
     if (section === 'review' || section === 'warnings') {
       const review = await this.prompts.showReview({
         state,
-        rendered: '(rendered review omitted in service; CLI adapter uses renderReviewSummary)',
+        rendered: '(rendered review omitted in service; editor adapter uses renderReviewSummary)',
       });
       if (review.kind === 'back') {
         return { kind: 'back' };
@@ -306,7 +305,7 @@ export class ProfileEditingService {
     if (result.kind === 'reorder') {
       // The user picks reorder; the adapter surfaces which two ids. For
       // brevity here we record a single placeholder — the real flow lives
-      // in the CLI adapter. The reducer will not accept this anyway
+      // in the editor adapter. The reducer will not accept this anyway
       // without `entityIdA` / `entityIdB`, so we return null and the
       // session continues on the menu.
       return null;
@@ -314,10 +313,10 @@ export class ProfileEditingService {
     if (result.kind === 'add' || result.kind === 'edit' || result.kind === 'delete') {
       // Real collection edits require the adapter to surface more
       // information (entry shape, patch fields, delete confirmation).
-      // The CLI layer wraps these flows; the service surfaces a no-op
+      // The editor layer wraps these flows; the service surfaces a no-op
       // operation here so the menu loop continues while leaving the
-      // concrete collection edit flows for the dedicated CLI follow-up
-      // in the real implementation. Tests use the scripted adapter.
+      // concrete collection edit flows for the dedicated sidecar
+      // follow-up in the real implementation. Tests use the scripted adapter.
       return null;
     }
     return null;

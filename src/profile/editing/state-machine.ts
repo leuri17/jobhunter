@@ -2,7 +2,7 @@
  * Pure reducer for the profile editor.
  *
  * `reduce(state, op)` is a pure function: it never mutates `state`, never
- * touches the database, and never calls Inquirer / OpenAI / Playwright.
+ * touches the database, and never calls the editor adapter / OpenAI / Playwright.
  * The only IO side-effect (writing profile_revisions / derived_overrides)
  * happens in `ProfileEditingService.saveDraft`, which walks the
  * `pendingRevisions` array after the reducer is done.

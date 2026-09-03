@@ -1,11 +1,11 @@
 /**
  * Public barrel for `src/init/`. Re-exports every public symbol from
- * the init layer so external consumers (CLI, tests) can pull from a
- * single import path.
+ * the init layer so external consumers (desktop sidecar, tests) can
+ * pull from a single import path.
  *
- * Domain boundaries: this module does not import Commander, Inquirer,
- * Playwright, Drizzle directly, or Pino directly. The InitLogger is
- * reached via the `./log.js` adapter.
+ * Domain boundaries: this module does not import Playwright,
+ * Drizzle directly, or Pino directly. The InitLogger is reached via
+ * the `./log.js` adapter.
  */
 export {
   INIT_STEPS,
@@ -54,8 +54,6 @@ export {
 } from './classify.js';
 
 export { createFailingInitPrompts, ScriptedInitPrompts, type InitPrompts } from './prompts.js';
-
-export { defaultInquirerInitPrompts } from './prompts-inquirer.js';
 
 export { noopInitLogger, pinoInitLogger, type InitLogger } from './log.js';
 
