@@ -26,9 +26,9 @@ beforeEach(() => {
 });
 
 describe('usePipelineEvents', () => {
-  it('passes the resolved sidecarBaseUrl() (not the Promise) to EventSource', async () => {
+  it('passes the resolved sidecar URL (not the Promise) to EventSource', async () => {
     const { result } = renderHook(() => usePipelineEvents('run_xyz'));
-    // The hook's effect schedules a microtask via await sidecarBaseUrl().
+    // The hook's effect schedules a microtask via await resolveSidecar().
     // Flush microtasks + pending state updates.
     await act(async () => {
       await Promise.resolve();

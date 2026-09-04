@@ -1,12 +1,14 @@
 # desktop/ui/
 
 ## Responsibility
+
 Frontend UI sub-package (`@jobhunter/ui`, private, ESM) of the desktop workspace. Owns the
 web bundle rendered inside the Tauri window: it is the HTTP client and SSE consumer for the
 Node.js sidecar, renders pipeline output (runs, jobs, profile, config), and reaches the
 native shell through `@tauri-apps/api` IPC for notifications and sidecar port discovery.
 
 ## Design
+
 Thin manifest + `tsconfig.json`; all architecture lives under `src/`. React 19 SPA with
 `@tanstack/react-router` for routing and `@tanstack/react-query` for server state;
 `react-hook-form` + `@hookform/resolvers` + `zod` for forms/validation; `radix-ui` +
@@ -18,18 +20,25 @@ with the sidecar. `tsconfig.json` extends `../../tsconfig.base.json`, is `noEmit
 `@/*` -> `./src/*` path alias; `include` is limited to `src`.
 
 ## Flow
+
 `vite` (dev) or `tsc -b && vite build` (`build`) produces the static bundle; Tauri serves it
 over the `custom-protocol` asset scheme in production and via the Vite dev server locally.
-At runtime pages call `src/lib/api.ts` -> `sidecarBaseUrl()` -> `fetch` against
+At runtime pages call `src/lib/api.ts` -> `resolveSidecar()` -> `fetch` against
 `desktop/sidecar/` routes (`/api/health`, `/api/config`, `/api/profile/*`, `/api/jobs/*`,
 `/api/runs/*`, `/api/pipeline/*`), with non-2xx responses normalized into `ApiError`.
 Streaming pipeline progress arrives through `src/lib/sse.ts` (`EventSource` on
 `/api/pipeline/:runId/events`); terminal events invoke the Tauri command
-`notify_pipeline_complete`. Verification scripts: `typecheck` (`tsc -b --noEmit`), `test`
-(`vitest run` on happy-dom), `test:e2e` (`playwright test`), `preview` (`vite preview`).
+`notify_pipeline_complete`. The root layout additionally renders `<SidecarBanner />` from
+`src/components/sidecar-banner.tsx` when the resolver hit the fallback port and
+`useSidecarReachability()` (TanStack Query ping with 5 s cache) reports the sidecar
+unreachable — see issue #31 / audit B4-B-L4.6. Verification scripts: `typecheck`
+(`tsc -b --noEmit`), `test` (`vitest run` on happy-dom), `test:e2e` (`playwright test`),
+`preview` (`vite preview`).
 
 ## Integration
+
 Sub-maps:
+
 - [src/](desktop/ui/src/codemap.md) — entry (`main.tsx`), `router.tsx`, routes, components
 - [src/lib/](desktop/ui/src/lib/codemap.md) — API client, SSE hook, query client, types
 
