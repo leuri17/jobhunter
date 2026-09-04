@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { sidecarBaseUrl } from './sidecar-url';
+import { resolveSidecar } from './sidecar-url';
 import type {
   ApproveProfileResponse,
   CancelPipelineResponse,
@@ -43,7 +43,7 @@ export async function notifyPipelineComplete({
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const baseUrl = await sidecarBaseUrl();
+  const baseUrl = (await resolveSidecar()).url;
   const res = await fetch(`${baseUrl}${path}`, {
     method,
     headers: body === undefined ? {} : { 'Content-Type': 'application/json' },

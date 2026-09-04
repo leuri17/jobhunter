@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { sidecarBaseUrl } from './sidecar-url';
+import { resolveSidecar } from './sidecar-url';
 import { notifyPipelineComplete } from './api';
 
 export interface PipelineEvents {
@@ -17,7 +17,7 @@ export function usePipelineEvents(runId: string | null): PipelineEvents {
     let es: EventSource | null = null;
     setState({ status: 'running', lines: [], result: null });
     (async () => {
-      const baseUrl = await sidecarBaseUrl();
+      const baseUrl = (await resolveSidecar()).url;
       if (cancelled) return;
       es = new EventSource(`${baseUrl}/api/pipeline/${runId}/events`);
       es.addEventListener('log', (ev) => {
