@@ -12,6 +12,7 @@
 export {
   LOG_LEVELS,
   createLogger,
+  DEFAULT_REDACT_PATHS,
   type LogLevel,
   type LoggerOptions,
   type Logger,

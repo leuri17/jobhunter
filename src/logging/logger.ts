@@ -41,7 +41,7 @@ export interface LoggerDestinations {
   readonly stderr?: Writable;
 }
 
-const DEFAULT_REDACT_PATHS: readonly string[] = [
+export const DEFAULT_REDACT_PATHS: readonly string[] = [
   'OPENAI_API_KEY',
   'apiKey',
   'openaiApiKey',

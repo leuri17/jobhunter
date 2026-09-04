@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { pino, type Logger as PinoLogger } from 'pino';
 import { JobsListService, JobsShowService, type JobListState } from '@jobhunter/core/inspection';
 import {
   ReevaluationService,
@@ -14,7 +15,7 @@ import { resolveOpenAiClientOrNull } from './openai-resolve.js';
 
 export interface JobsRouteOptions {
   readonly openaiClient?: OpenAIClient;
-  readonly rootLogger?: import('pino').Logger;
+  readonly rootLogger?: PinoLogger;
 }
 
 /**
@@ -41,6 +42,10 @@ export async function registerJobsRoutes(
   app: FastifyInstance,
   opts: JobsRouteOptions = {},
 ): Promise<void> {
+  // Resolve once per registration. Silent fallback matches the server's
+  // own silent fallback for tests that build a server without a logger.
+  const rootLogger: PinoLogger = opts.rootLogger ?? pino({ level: 'silent' });
+
   app.get<{
     Querystring: {
       state?: JobListState;
@@ -114,7 +119,7 @@ export async function registerJobsRoutes(
         scoringService,
         prompts: { askScoringConfirmation: async () => req.body.confirmScoring ?? false },
         scoringConcurrency: 1,
-        logger: pinoReevaluationLogger(opts.rootLogger ?? consoleLogger()),
+        logger: pinoReevaluationLogger(rootLogger),
       });
       const input: ReevaluationExecuteInput = {
         scope: req.body.scope,
@@ -131,19 +136,4 @@ export async function registerJobsRoutes(
       handle.close();
     }
   });
-}
-
-function consoleLogger(): import('pino').Logger {
-  return {
-    info: (obj: unknown, msg?: string) =>
-      process.stderr.write(`[info] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-    warn: (obj: unknown, msg?: string) =>
-      process.stderr.write(`[warn] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-    error: (obj: unknown, msg?: string) =>
-      process.stderr.write(`[error] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-    debug: () => undefined,
-    trace: () => undefined,
-    fatal: (obj: unknown, msg?: string) =>
-      process.stderr.write(`[fatal] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-  } as unknown as import('pino').Logger;
 }
