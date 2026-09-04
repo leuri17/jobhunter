@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply } from 'fastify';
+import { pino, type Logger as PinoLogger } from 'pino';
 import { PipelineOrchestrator, type PipelineRunResult } from '@jobhunter/core/pipeline';
 import {
   LinkedInDiscoveryService,
@@ -47,13 +48,17 @@ export function abortAllActiveRuns(): number {
 
 export interface PipelineRouteOptions {
   readonly openaiClient?: OpenAIClient;
-  readonly rootLogger?: import('pino').Logger;
+  readonly rootLogger?: PinoLogger;
 }
 
 export async function registerPipelineRoutes(
   app: FastifyInstance,
   opts: PipelineRouteOptions = {},
 ): Promise<void> {
+  // Resolve once per registration. Silent fallback matches the server's
+  // own silent fallback for tests that build a server without a logger.
+  const rootLogger: PinoLogger = opts.rootLogger ?? pino({ level: 'silent' });
+
   app.post('/api/pipeline/run', async (_req, reply) => {
     const client = opts.openaiClient ?? resolveOpenAiClientOrNull();
     if (client === null) {
@@ -68,7 +73,7 @@ export async function registerPipelineRoutes(
     const controller = new AbortController();
     activeRuns.set(runId, { runId, controller, logs: [], status: 'running' });
 
-    void runPipeline(runId, controller, client, opts.rootLogger);
+    void runPipeline(runId, controller, client, rootLogger);
     reply.status(202);
     return { schemaVersion: 1, runId };
   });
@@ -127,7 +132,7 @@ async function runPipeline(
   runId: string,
   controller: AbortController,
   openaiClient: OpenAIClient,
-  rootLogger?: import('pino').Logger,
+  rootLogger: PinoLogger,
 ): Promise<void> {
   const run = activeRuns.get(runId);
   if (run === undefined) return;
@@ -194,7 +199,7 @@ async function runPipeline(
         confirmScoring: true,
         env: process.env,
         applicationVersion: '0.1.0-desktop',
-        logger: pinoPipelineLogger(makeTeeLogger(rootLogger ?? consoleLogger(), run)),
+        logger: pinoPipelineLogger(makeTeeLogger(rootLogger, run)),
         cancelSignal: controller.signal,
       });
       const result = await orchestrator.run({});
@@ -217,30 +222,16 @@ async function runPipeline(
   }
 }
 
-function consoleLogger(): import('pino').Logger {
-  return {
-    info: (obj: unknown, msg?: string) =>
-      process.stderr.write(`[info] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-    warn: (obj: unknown, msg?: string) =>
-      process.stderr.write(`[warn] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-    error: (obj: unknown, msg?: string) =>
-      process.stderr.write(`[error] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-    debug: () => undefined,
-    trace: () => undefined,
-    fatal: (obj: unknown, msg?: string) =>
-      process.stderr.write(`[fatal] ${msg ?? ''} ${JSON.stringify(obj)}\n`),
-  } as unknown as import('pino').Logger;
-}
-
 /**
  * Wrap a base logger so every emitted line is also appended to the run's
  * SSE ring buffer (capped at {@link LOG_RING_BUFFER_MAX} entries).
  *
  * Each captured line is prefixed with `[<level>]` so the frontend's LogPane
- * can render levels alongside the message text. The original stderr behavior
- * of {@link consoleLogger} (and pino's stdout behavior) is preserved.
+ * can render levels alongside the message text. The base logger's behavior
+ * (pino's structured output, plus the sidecar's silent-fallback in tests)
+ * is preserved.
  */
-function makeTeeLogger(base: import('pino').Logger, run: ActiveRun): import('pino').Logger {
+function makeTeeLogger(base: PinoLogger, run: ActiveRun): PinoLogger {
   const tee =
     (level: 'info' | 'warn' | 'error' | 'fatal') =>
     (obj: unknown, msg?: string): void => {
