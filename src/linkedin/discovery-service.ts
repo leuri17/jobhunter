@@ -27,6 +27,7 @@ import type { Page } from 'playwright';
 import { DiagnosticManager } from '../diagnostics/manager.js';
 
 import type { Repositories } from '../persistence/repositories/index.js';
+import type { JobRow } from '../persistence/repositories/jobs.js';
 import type { SearchExecutionRow } from '../persistence/repositories/pipeline-runs.js';
 import type { SearchDiscoveryOutcome } from './state.js';
 import {
@@ -165,6 +166,17 @@ export class LinkedInDiscoveryService {
       const errors: SearchDiscoveryOutcome['errors'][number][] = [];
       const now = this.now().toISOString();
 
+      // Batch the dedup lookup: one SELECT for the whole card set
+      // (Closes #24). The no-ID path below doesn't touch the map;
+      // cards without a `sourceJobId` are filtered out before the query
+      // so the DB is never asked about them.
+      const sourceJobIds = cards.flatMap((c) => (c.sourceJobId ? [c.sourceJobId] : []));
+      const existingById = new Map<string, JobRow>();
+      if (sourceJobIds.length > 0) {
+        const existingRows = await this.repositories.jobs.findBySourceJobIds(sourceJobIds);
+        for (const row of existingRows) existingById.set(row.sourceJobId, row);
+      }
+
       for (const card of cards) {
         if (signal.aborted) break;
 
@@ -195,7 +207,7 @@ export class LinkedInDiscoveryService {
           continue;
         }
 
-        const existing = await this.repositories.jobs.findBySourceJobId(card.sourceJobId);
+        const existing = existingById.get(card.sourceJobId) ?? null;
         if (existing !== null) {
           existingJobs += 1;
           const skipReason = this.skipReasonForExisting(existing.extractionStatus);
