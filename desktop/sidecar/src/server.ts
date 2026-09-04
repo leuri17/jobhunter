@@ -1,4 +1,5 @@
 import Fastify, { FastifyInstance } from 'fastify';
+import cors from '@fastify/cors';
 import { pino, type Logger as PinoLogger } from 'pino';
 import { readEnv, type SidecarEnv } from './env.js';
 import { statusFor, envelopeFor } from './errors.js';
@@ -47,6 +48,20 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
   // pre-built loggers and uses the default base logger; a `cast` keeps
   // the downstream types stable without losing type information.
   const app = Fastify({ loggerInstance: rootLogger }) as unknown as FastifyInstance;
+
+  // CORS for the two legitimate caller origins: the Tauri webview
+  // (`tauri://localhost`) and the Vite dev server during local development
+  // (`http://localhost:<port>`). Whitelist-as-regex keeps this strict —
+  // anything not matching falls through to Fastify's default (no CORS
+  // header), so a browser with a non-allowlisted origin sees the
+  // request fail the CORS check the same way it would on any
+  // non-CORS-aware server. Audit flagged this as A.5.1/B2-M2
+  // (originally "defense in depth"); turned out to be a functional bug
+  // — see issue #91.
+  await app.register(cors, {
+    origin: /^(http:\/\/localhost(:\d+)?|tauri:\/\/localhost)$/,
+    credentials: true,
+  });
 
   app.setErrorHandler((error, _req, reply) => {
     reply.status(statusFor(error)).send(envelopeFor(error));
