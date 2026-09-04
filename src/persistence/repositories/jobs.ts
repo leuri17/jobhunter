@@ -267,6 +267,30 @@ export class JobRepository {
     return row === undefined ? null : jobRowFromRecord(row);
   }
 
+  /**
+   * Batch lookup: every job row whose `sourceJobId` is in the supplied
+   * set. Used by `LinkedInDiscoveryService` to replace N per-card
+   * `findBySourceJobId` round-trips with a single `inArray` SELECT +
+   * in-memory `Map` lookup (Closes #24).
+   *
+   * Returns an empty array without a DB round-trip when
+   * `sourceJobIds` is empty (Drizzle's `inArray` rejects empty inputs,
+   * and there is nothing to look up anyway).
+   *
+   * Ordering is not guaranteed; the caller keys by `sourceJobId`. The
+   * `jobs_source_job_id_idx` UNIQUE constraint guarantees at most one
+   * row per key, so a `Map<string, JobRow>` is the natural consumer.
+   */
+  async findBySourceJobIds(sourceJobIds: readonly string[]): Promise<JobRow[]> {
+    if (sourceJobIds.length === 0) return [];
+    const rows = this.ctx.db
+      .select()
+      .from(jobs)
+      .where(inArray(jobs.sourceJobId, sourceJobIds))
+      .all();
+    return rows.map(jobRowFromRecord);
+  }
+
   async findById(id: number): Promise<JobRow | null> {
     const rows = this.ctx.db.select().from(jobs).where(eq(jobs.id, id)).all();
     const row = rows[0];
