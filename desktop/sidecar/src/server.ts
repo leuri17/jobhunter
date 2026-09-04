@@ -49,13 +49,6 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
   const app = Fastify({ loggerInstance: rootLogger }) as unknown as FastifyInstance;
 
   app.setErrorHandler((error, _req, reply) => {
-    // TEMPORARY diagnostic for issue #88: jobs.test.ts > GET /api/jobs returns 500 in CI but
-    // passes locally. Captures the actual exception stack to stderr so the next failing CI run
-    // prints the cause. REMOVE this stderr.write block when #88 is diagnosed and fixed — the
-    // same PR that lands the actual fix should drop this block. The setErrorHandler itself stays.
-    process.stderr.write(
-      `[sidecar-error] ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`,
-    );
     reply.status(statusFor(error)).send(envelopeFor(error));
   });
 
