@@ -51,7 +51,7 @@ Runtime baseline: Node `>=24.18.0 <25`, ESM-only (`"type": "module"`), pnpm `11.
 | `drizzle/` | Generated SQL migrations and Drizzle Kit metadata (`out` target of `drizzle.config.ts`). | [View Map](drizzle/codemap.md) |
 | `desktop/` | Desktop application workspace: Tauri shell + sidecar + UI. | — |
 | `desktop/sidecar/` | `@jobhunter/sidecar`: Fastify 5 HTTP bridge exposing core capabilities to the UI; run via `tsx`. | [View Map](desktop/sidecar/codemap.md) |
-| `desktop/sidecar/src/` | Server bootstrap (`src/server.ts`), plugin registration (`@fastify/cors`, `@fastify/multipart`), and shared handlers. | [View Map](desktop/sidecar/src/codemap.md) |
+| `desktop/sidecar/src/` | Server bootstrap (`src/server.ts`), multipart upload handler (`@fastify/multipart`, mounted in the profile route), and shared handlers (error mapper, SSE, route registration helpers). | [View Map](desktop/sidecar/src/codemap.md) |
 | `desktop/sidecar/src/routes/` | HTTP route modules mapping endpoints onto `@jobhunter/core` subpaths. | [View Map](desktop/sidecar/src/routes/codemap.md) |
 | `desktop/ui/` | `@jobhunter/ui`: React 19 + Vite frontend with TanStack Router/Query, Radix UI, Tailwind CSS v4; Vitest + Playwright tests. | [View Map](desktop/ui/codemap.md) |
 | `desktop/ui/src/lib/` | UI utilities: sidecar API client, query setup, and shared helpers. | [View Map](desktop/ui/src/lib/codemap.md) |

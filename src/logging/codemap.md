@@ -44,8 +44,7 @@ reevaluation events and enforces the event-name convention.
   `src/scoring/log.ts`, `src/linkedin/log.ts`,
   `src/linkedin/extraction/log.ts`, `src/init/log.ts` — each defines
   its own domain logger port wrapping the shared `Logger`.
-- Runtime wiring: `src/init/log.ts` constructs the `Logger` (calls
-  `createLogger`) and pipes it through DI to the orchestrator/sidecar.
+- Runtime wiring: the production logger is constructed in `desktop/sidecar/src/server.ts:createSidecarRootLogger`, which builds a `pino.Logger` directly with `DEFAULT_REDACT_PATHS` and a validated `LOG_LEVEL` from the environment. The domain `createLogger()` factory has no production caller — only its own test exercises it. Subsystem modules (`src/init/log.ts`, `src/pipeline/log.ts`, etc.) receive a `Logger` via type-only import and adapt it per-domain.
 - `src/reevaluation/log.ts` defines the `ReevaluationLogger` port;
   `pinoReevaluationLogger` is the only adapter bridging that port to
   the runtime Pino client, mirroring `pinoPipelineLogger` /
