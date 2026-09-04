@@ -1,4 +1,4 @@
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import { pino, type Logger as PinoLogger } from 'pino';
 import { readEnv, type SidecarEnv } from './env.js';
@@ -34,6 +34,31 @@ export function createSidecarRootLogger(env: NodeJS.ProcessEnv = process.env): P
   });
 }
 
+/**
+ * Adapt a pino.Logger to Fastify's `FastifyBaseLogger` so the Fastify
+ * factory infers `FastifyInstance<..., FastifyBaseLogger, ...>` rather
+ * than the wider `FastifyInstance<..., pino.Logger, ...>`. The latter
+ * drifts from the `FastifyBaseLogger` the route registrations expect
+ * (pino's `BaseLogger` requires `msgPrefix`, which `FastifyBaseLogger`
+ * does not declare), which is why a direct return-type assignment
+ * fails to typecheck. We expose only the FastifyBaseLogger surface;
+ * the underlying pino instance is preserved for callers that still
+ * need a full `pino.Logger` (the sidecar's pipeline routes).
+ */
+function asFastifyBaseLogger(p: PinoLogger): FastifyBaseLogger {
+  return {
+    level: p.level,
+    info: p.info.bind(p),
+    error: p.error.bind(p),
+    debug: p.debug.bind(p),
+    fatal: p.fatal.bind(p),
+    warn: p.warn.bind(p),
+    trace: p.trace.bind(p),
+    silent: p.silent.bind(p),
+    child: (bindings, options) => asFastifyBaseLogger(p.child(bindings, options)),
+  };
+}
+
 export interface BuildServerOptions {
   readonly env: SidecarEnv;
   readonly rootLogger?: PinoLogger;
@@ -41,13 +66,10 @@ export interface BuildServerOptions {
 
 export async function buildServer(opts: BuildServerOptions): Promise<FastifyInstance> {
   const rootLogger: PinoLogger = opts.rootLogger ?? pino({ level: 'silent' });
-  // Passing a pre-constructed pino.Logger to Fastify leaks the logger's
-  // generic into `FastifyInstance<..., Logger, ...>`, which then refuses
-  // to match the `FastifyInstance<..., FastifyBaseLogger, ...>` that
-  // route registrations expect. `loggerInstance` is the v5 API for
-  // pre-built loggers and uses the default base logger; a `cast` keeps
-  // the downstream types stable without losing type information.
-  const app = Fastify({ loggerInstance: rootLogger }) as unknown as FastifyInstance;
+  // `loggerInstance` accepts FastifyBaseLogger; the adapter keeps the
+  // underlying pino instance intact for downstream route handlers that
+  // need the full pino API (see `makeTeeLogger` in routes/pipeline.ts).
+  const app = Fastify({ loggerInstance: asFastifyBaseLogger(rootLogger) });
 
   // CORS for the two legitimate caller origins: the Tauri webview
   // (`tauri://localhost`) and the Vite dev server during local development
