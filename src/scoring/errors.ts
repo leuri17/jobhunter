@@ -1,4 +1,5 @@
 import { ApplicationError, ExitCode } from '../errors/application-error.js';
+import { RetryableOpenAIError } from '../profile/openai/errors.js';
 
 /**
  * Typed error family for the scoring layer.
@@ -52,8 +53,29 @@ export interface ScoringInvalidStructuredOutputMetadata {
   readonly validationError: string;
 }
 
-/** Retryable once per  — OpenAI returned JSON that failed Zod validation. */
-export class ScoringInvalidStructuredOutputError extends ScoringError {
+/**
+ * Retryable once per  — OpenAI returned JSON that failed Zod validation.
+ *
+ * Implements the `RetryableOpenAIError` marker so `runWithRetry`
+ * classifies this error outside the `ProfileExtractionError` hierarchy
+ * (the scoring layer keeps its own error taxonomy). The
+ * `correctiveRetry` flag opts the error into the "retryable once"
+ * budget that the retry policy enforces for structured-output
+ * failures — a second invalid payload aborts the call instead of
+ * burning the full attempt budget. The semantic `code` passed to the
+ * `ApplicationError` base stays as `scoring_invalid_structured_output`
+ * for logs and persistence; the retry policy reads the same field
+ * via the marker.
+ */
+export class ScoringInvalidStructuredOutputError
+  extends ScoringError
+  implements RetryableOpenAIError
+{
+  // Opt into the "retryable once" budget. See `RetryableOpenAIError`
+  // and `OpenAIInvalidOutputError` for the same pattern on the
+  // profile-extraction side.
+  readonly correctiveRetry = true;
+
   constructor(metadata: ScoringInvalidStructuredOutputMetadata, cause?: Error) {
     super(
       'scoring_invalid_structured_output',

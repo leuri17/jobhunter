@@ -7,6 +7,10 @@ import {
   ProfileExtractionError,
 } from '../../../src/profile/openai/errors.js';
 import {
+  ScoringInvalidStructuredOutputError,
+  ScoringPersistenceError,
+} from '../../../src/scoring/errors.js';
+import {
   runWithRetry,
   type AttemptRecord,
   type RetryOptions,
@@ -337,5 +341,89 @@ describe('runWithRetry', () => {
     expect(sleepCallsA).toEqual(sleepCallsB);
     expect(sleepCallsA[0]).toBeGreaterThanOrEqual(0);
     expect(sleepCallsA[0]).toBeLessThanOrEqual(500);
+  });
+
+  // Regression tests for issue #18 / audit B1-H5: the documented
+  // "retryable once" corrective retry was dead code because
+  // `runWithRetry` only classified `ProfileExtractionError`. These
+  // tests prove the `RetryableOpenAIError` marker covers
+  // `ScoringInvalidStructuredOutputError` (out of the
+  // `ProfileExtractionError` hierarchy) and applies the
+  // corrective-once budget to it.
+
+  it('retries ScoringInvalidStructuredOutputError once and then aborts', async () => {
+    let calls = 0;
+    await expect(
+      runWithRetry(async () => {
+        calls += 1;
+        throw new ScoringInvalidStructuredOutputError({
+          attemptNumber: calls,
+          validationError: 'categoryScores.technicalSkills.score must be <= 100',
+        });
+      }, baseOptions()),
+    ).rejects.toBeInstanceOf(ScoringInvalidStructuredOutputError);
+
+    // Corrective-once: initial call + exactly one retry, then abort.
+    expect(calls).toBe(2);
+  });
+
+  it('does not retry non-invalid-output ScoringError subclasses', async () => {
+    // ScoringPersistenceError carries the same `code: string` shape and
+    // would satisfy the marker structurally, but its code is not in
+    // OPENAI_RETRYABLE_ERROR_CODES, so the retry policy must abort on
+    // first attempt.
+    let calls = 0;
+    await expect(
+      runWithRetry(async () => {
+        calls += 1;
+        throw new ScoringPersistenceError({
+          table: 'scoreResults',
+          operation: 'insert',
+        });
+      }, baseOptions()),
+    ).rejects.toBeInstanceOf(ScoringPersistenceError);
+
+    expect(calls).toBe(1);
+  });
+
+  it('succeeds on the second attempt when ScoringInvalidStructuredOutputError fires once', async () => {
+    // The classification must classify the error as retryable so the
+    // second attempt fires; this is the path that was previously dead.
+    let calls = 0;
+    const result = await runWithRetry(async () => {
+      calls += 1;
+      if (calls === 1) {
+        throw new ScoringInvalidStructuredOutputError({
+          attemptNumber: 1,
+          validationError: 'invalid_json',
+        });
+      }
+      return 'ok';
+    }, baseOptions());
+
+    expect(result.value).toBe('ok');
+    expect(result.attempts).toHaveLength(2);
+    expect(result.attempts[0]?.succeeded).toBe(false);
+    // The semantic code recorded on the failed attempt is the scoring
+    // code, not the OpenAI invalid-output code — the marker preserves
+    // the layer's vocabulary for logs and persistence.
+    expect(result.attempts[0]?.errorCode).toBe('scoring_invalid_structured_output');
+    expect(result.attempts[1]?.succeeded).toBe(true);
+  });
+
+  it('does not retry a generic Error even though ScoringError is retryable-once', async () => {
+    // Sanity check: the marker is structural on `code: string`. A bare
+    // Error has no `code` field, so it must be invisible to the
+    // classifier and abort on first attempt — matching the existing
+    // behavior for plain throws.
+    let calls = 0;
+    await expect(
+      runWithRetry(async () => {
+        calls += 1;
+        throw new Error('boom');
+      }, baseOptions()),
+    ).rejects.toThrow('boom');
+
+    expect(calls).toBe(1);
   });
 });

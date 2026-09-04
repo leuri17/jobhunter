@@ -19,6 +19,26 @@ export interface RetryAttemptSummary {
 }
 
 /**
+ * Marker interface for errors that `runWithRetry` should classify.
+ *
+ * Implementations expose the OpenAI-side error `code` so the retry
+ * policy can match it against `OPENAI_RETRYABLE_ERROR_CODES`, and an
+ * optional `correctiveRetry` flag that opts into the "retryable once"
+ * budget reserved for structured-output failures (a second invalid
+ * payload aborts the call).
+ *
+ * `ProfileExtractionError` and its subclasses already satisfy this
+ * interface via the inherited `code` field; `OpenAIInvalidOutputError`
+ * sets `correctiveRetry: true`. Other OpenAI-driven modules (e.g.
+ * scoring) opt in by implementing the interface on the relevant
+ * subclass — see `ScoringInvalidStructuredOutputError`.
+ */
+export interface RetryableOpenAIError {
+  readonly code: string;
+  readonly correctiveRetry?: boolean;
+}
+
+/**
  * Base class for every error raised by the profile-extraction pipeline.
  *
  * Every subclass maps to exit code 5 (`ExitCode.OpenAIFailure`) at
@@ -28,8 +48,12 @@ export interface RetryAttemptSummary {
  * final attempt fails. Callers (Task 7's `ProfileExtractionService`) use
  * `caught.attempts?.length` to record the attempt count on the persisted
  * `openai_request_metadata` row.
+ *
+ * Implements `RetryableOpenAIError` via the inherited `code` field so
+ * the retry policy can classify any subclass without an `instanceof`
+ * chain that has to know about every OpenAI-driven module.
  */
-export class ProfileExtractionError extends ApplicationError {
+export class ProfileExtractionError extends ApplicationError implements RetryableOpenAIError {
   readonly attempts?: readonly RetryAttemptSummary[];
 
   constructor(
@@ -93,6 +117,12 @@ export class OpenAINetworkError extends OpenAITransientError {
  * See `runWithRetry` in `./retry.ts` for the corrective-retry budget.
  */
 export class OpenAIInvalidOutputError extends OpenAITransientError {
+  // Opt into the "retryable once" budget. The retry policy treats any
+  // error with `correctiveRetry: true` as eligible for exactly one
+  // additional attempt before aborting; a second structured-output
+  // failure aborts the call without burning the full attempt budget.
+  readonly correctiveRetry = true;
+
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
     super(
       'openai_invalid_output',
@@ -179,6 +209,13 @@ export class ProfileExtractionSourceUnusableError extends ProfileExtractionError
  * Set of string codes means the retry policy does not need `instanceof` and
  * can classify errors raised by the OpenAI SDK adapter or by the retry
  * policy itself consistently.
+ *
+ * `scoring_invalid_structured_output` is included so the scoring layer's
+ * `ScoringInvalidStructuredOutputError` (which lives outside the
+ * `ProfileExtractionError` hierarchy) is classified as retryable-once.
+ * The error class declares `correctiveRetry: true` via the
+ * `RetryableOpenAIError` marker so the policy also enforces the
+ * single-permitted retry budget for it.
  */
 export const OPENAI_RETRYABLE_ERROR_CODES: ReadonlySet<string> = new Set([
   'openai_rate_limit',
@@ -186,4 +223,5 @@ export const OPENAI_RETRYABLE_ERROR_CODES: ReadonlySet<string> = new Set([
   'openai_timeout',
   'openai_network_error',
   'openai_invalid_output',
+  'scoring_invalid_structured_output',
 ]);
