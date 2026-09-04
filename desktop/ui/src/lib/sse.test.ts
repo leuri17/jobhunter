@@ -1,6 +1,17 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+
+// Mock the sidecar-url module so we control the resolved URL.
+// We don't care about the sidecar URL semantics here — only that the
+// hook receives a non-Promise string and threads it into EventSource.
+vi.mock('./sidecar-url.js', () => ({
+  resolveSidecar: vi.fn(() =>
+    Promise.resolve({ url: 'http://127.0.0.1:54321', isFallback: false }),
+  ),
+  pingSidecar: vi.fn(() => Promise.resolve(true)),
+}));
+
 import { usePipelineEvents } from './sse.js';
 
 // Mock EventSource so the test can capture the URL it was constructed with.
@@ -39,7 +50,7 @@ describe('usePipelineEvents', () => {
     expect(url).toBeDefined();
     expect(url).not.toContain('[object Promise]');
     expect(url).toContain('/api/pipeline/run_xyz/events');
-    expect(url!.startsWith('http://127.0.0.1:')).toBe(true);
+    expect(url!.startsWith('http://127.0.0.1:54321')).toBe(true);
     // The state should have transitioned to running.
     expect(result.current.status).toBe('running');
   });

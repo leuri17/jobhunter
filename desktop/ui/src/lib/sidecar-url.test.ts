@@ -40,22 +40,22 @@ describe('resolveSidecar', () => {
     });
   });
 
-  it('marks isFallback when invoke rejects and env is unset', async () => {
+  it('marks isFallback when invoke rejects and env is unset (empty URL — Vite proxy catches /api/*)', async () => {
     mockedInvoke.mockRejectedValueOnce(new Error('not running under Tauri'));
     vi.stubEnv('VITE_SIDECAR_PORT', '');
     const result = await resolveSidecar();
     expect(result).toEqual<SidecarResolution>({
-      url: 'http://127.0.0.1:14231',
+      url: '',
       isFallback: true,
     });
   });
 
-  it('treats invoke returning null as a fallback signal', async () => {
+  it('treats invoke returning null as a fallback signal (empty URL — Vite proxy catches /api/*)', async () => {
     mockedInvoke.mockResolvedValueOnce(null as unknown as number);
     vi.stubEnv('VITE_SIDECAR_PORT', '');
     const result = await resolveSidecar();
     expect(result.isFallback).toBe(true);
-    expect(result.url).toBe('http://127.0.0.1:14231');
+    expect(result.url).toBe('');
   });
 });
 
