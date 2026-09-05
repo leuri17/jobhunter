@@ -412,6 +412,7 @@ export const filterResults = sqliteTable(
   },
   (t) => ({
     fingerprintIdx: index('filter_results_fingerprint_idx').on(t.fingerprint),
+    pipelineRunIdIdx: index('filter_results_pipeline_run_id_idx').on(t.pipelineRunId),
     activeJobIdx: index('filter_results_active_job_idx').on(t.jobId, t.active),
     activeUnique: uniqueIndex('filter_results_active_idx')
       .on(t.jobId)
