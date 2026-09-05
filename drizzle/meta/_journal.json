@@ -22,6 +22,13 @@
       "when": 1786643471110,
       "tag": "0002_noisy_madame_web",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788569899839,
+      "tag": "0003_sour_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }
