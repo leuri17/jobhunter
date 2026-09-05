@@ -407,9 +407,14 @@ export class JobRepository {
    * an event alongside every job row.
    *
    * "Most recent" is defined as the highest `id` (monotonically
-   * increasing via the SQLite auto-increment primary key). The
-   * query is bounded by `LIMIT 1` so it's O(1) on the indexed
-   * `(pipelineRunId, searchExecutionId)` composite + the auto-id.
+   * increasing via the SQLite auto-increment primary key).
+   *
+   * Indexed access: `discovery_events_job_id_idx` (single column on
+   * jobId) narrows the candidate set to rows for the supplied job;
+   * the searchExecutionId filter and id sort are then applied in
+   * memory and capped by `LIMIT 1`. A future
+   * `(jobId, searchExecutionId)` composite (tracked separately) would
+   * make the lookup O(log n) on the index alone.
    */
   async findLatestDiscoveryEventByJobAndSearch(
     jobId: number,

@@ -324,6 +324,7 @@ export const discoveryEvents = sqliteTable(
   },
   (t) => ({
     runSearchIdx: index('discovery_events_run_search_idx').on(t.pipelineRunId, t.searchExecutionId),
+    jobIdIdx: index('discovery_events_job_id_idx').on(t.jobId),
   }),
 );
 
