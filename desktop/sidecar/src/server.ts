@@ -1,6 +1,13 @@
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
-import { pino, type Logger as PinoLogger } from 'pino';
+import {
+  pino,
+  transport,
+  destination,
+  multistream,
+  type Logger as PinoLogger,
+  type StreamEntry,
+} from 'pino';
 import { readEnv, type SidecarEnv } from './env.js';
 import { statusFor, envelopeFor } from './errors.js';
 import { registerPathsRoute } from './routes/paths.js';
@@ -9,7 +16,17 @@ import { registerProfileRoutes } from './routes/profile.js';
 import { registerJobsRoutes } from './routes/jobs.js';
 import { registerRunsRoutes } from './routes/runs.js';
 import { registerPipelineRoutes, abortAllActiveRuns } from './routes/pipeline.js';
-import { DEFAULT_REDACT_PATHS, LOG_LEVELS, type LogLevel } from '@jobhunter/core/logging';
+import {
+  DEFAULT_REDACT_PATHS,
+  LOG_LEVELS,
+  type LogLevel,
+} from '@jobhunter/core/logging';
+import {
+  loadConfig,
+  type FileSystem,
+  type LoadedConfig,
+} from '@jobhunter/core/config';
+import type { PlatformPaths } from '@jobhunter/core/platform';
 
 function readLogLevel(env: NodeJS.ProcessEnv = process.env): LogLevel {
   const raw = env['LOG_LEVEL'] ?? 'info';
@@ -20,11 +37,14 @@ function readLogLevel(env: NodeJS.ProcessEnv = process.env): LogLevel {
 }
 
 /**
- * Construct the sidecar's root pino logger with the standard redaction
- * list applied. `createLogger` from `@jobhunter/core/logging` returns a
- * domain `Logger` interface; the sidecar's HTTP routes consume a raw
- * `pino.Logger`, so we build pino directly with the same redaction
- * paths the core uses.
+ * Construct the sidecar's root pino logger from environment variables only.
+ * `createLogger` from `@jobhunter/core/logging` returns a domain `Logger`
+ * interface; the sidecar's HTTP routes consume a raw `pino.Logger`, so we
+ * build pino directly with the same redaction paths the core uses.
+ *
+ * For config-aware logger construction (which honors
+ * `config.logging.{level, prettyTerminal, filePath}`), use
+ * `createSidecarRootLoggerFromConfig` instead.
  */
 export function createSidecarRootLogger(env: NodeJS.ProcessEnv = process.env): PinoLogger {
   return pino({
@@ -59,13 +79,111 @@ function asFastifyBaseLogger(p: PinoLogger): FastifyBaseLogger {
   };
 }
 
+export interface ResolvedLogConfig {
+  readonly level: LogLevel;
+  readonly prettyTerminal: boolean;
+  readonly filePath: string | undefined;
+}
+
+/**
+ * Merge a possibly-null loaded config with the environment to resolve the
+ * sidecar's logger settings. The precedence is: config value when present,
+ * otherwise the env value (for `level`), otherwise a sensible default
+ * (`prettyTerminal: false`, `filePath: undefined`). Returning a single
+ * flat shape keeps the pino-construction logic below linear and easy to
+ * reason about.
+ */
+export function resolveLogConfig(
+  processEnv: NodeJS.ProcessEnv,
+  loaded: LoadedConfig | null,
+): ResolvedLogConfig {
+  const cfg = loaded?.config.logging;
+  return {
+    level: (cfg?.level ?? readLogLevel(processEnv)) as LogLevel,
+    prettyTerminal: cfg?.prettyTerminal ?? false,
+    filePath: cfg?.filePath,
+  };
+}
+
+/**
+ * Build the sidecar's root pino logger honoring the merged
+ * {@link ResolvedLogConfig}. Routes the stdout stream through the
+ * `pino-pretty` worker transport when `prettyTerminal` is true and adds
+ * an append-mode file destination when `filePath` is set. Both are
+ * optional and stack on top of the standard redaction list.
+ */
+export function createSidecarRootLoggerFromConfig(
+  processEnv: NodeJS.ProcessEnv,
+  loaded: LoadedConfig | null,
+): PinoLogger {
+  const { level, prettyTerminal, filePath } = resolveLogConfig(processEnv, loaded);
+  const streams: StreamEntry[] = [];
+
+  if (prettyTerminal) {
+    // pino.transport spawns a worker thread; the returned stream is
+    // cleaned up automatically when the process exits.
+    streams.push({
+      stream: transport({
+        target: 'pino-pretty',
+        options: { colorize: true, translateTime: 'SYS:standard', ignore: 'pid,hostname' },
+      }),
+    });
+  } else {
+    streams.push({ stream: process.stdout });
+  }
+
+  if (filePath !== undefined) {
+    // destination with sync:false and mkdir:true creates the parent
+    // directory if missing and writes asynchronously for throughput.
+    streams.push({ stream: destination({ dest: filePath, sync: false, mkdir: true }) });
+  }
+
+  return pino(
+    {
+      level,
+      base: { component: 'sidecar' },
+      redact: { paths: [...DEFAULT_REDACT_PATHS], censor: '[Redacted]' },
+    },
+    multistream(streams),
+  );
+}
+
 export interface BuildServerOptions {
   readonly env: SidecarEnv;
   readonly rootLogger?: PinoLogger;
+  /**
+   * When provided, the sidecar calls `loadConfig(paths, fileSystem)` at
+   * startup and honors `config.logging.{level, prettyTerminal, filePath}`
+   * for the root logger. If `loadConfig` throws (corrupt file, I/O error,
+   * validation failure), the sidecar falls back to the env-only logger
+   * constructed by {@link createSidecarRootLogger} so a malformed user
+   * config never crashes the boot.
+   */
+  readonly paths?: PlatformPaths;
+  readonly processEnv?: NodeJS.ProcessEnv;
+  readonly fileSystem?: FileSystem;
+}
+
+async function resolveRootLogger(opts: BuildServerOptions): Promise<PinoLogger> {
+  if (opts.rootLogger !== undefined) return opts.rootLogger;
+  if (opts.paths === undefined) {
+    // No config plumbing requested — keep the legacy env-only path. This
+    // is what every existing sidecar test exercises.
+    return pino({ level: 'silent' });
+  }
+  const processEnv = opts.processEnv ?? process.env;
+  // Config load failure: fall back to env-only logger rather than crash
+  // the server. We deliberately swallow the error here; the caller's UX
+  // requirement (acceptance criteria #3) is "don't crash the boot."
+  const loaded = await loadConfig(opts.paths, opts.fileSystem).catch(
+    (): null => null,
+  );
+  if (loaded === null) return createSidecarRootLogger(processEnv);
+  return createSidecarRootLoggerFromConfig(processEnv, loaded);
 }
 
 export async function buildServer(opts: BuildServerOptions): Promise<FastifyInstance> {
-  const rootLogger: PinoLogger = opts.rootLogger ?? pino({ level: 'silent' });
+  const rootLogger = await resolveRootLogger(opts);
   // `loggerInstance` accepts FastifyBaseLogger; the adapter keeps the
   // underlying pino instance intact for downstream route handlers that
   // need the full pino API (see `makeTeeLogger` in routes/pipeline.ts).
@@ -109,8 +227,15 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
 
 async function main(): Promise<void> {
   const env = readEnv();
-  const rootLogger = createSidecarRootLogger();
-  const server = await buildServer({ env, rootLogger });
+  // Resolve platform paths at boot so the sidecar can read the user's
+  // operational config from disk and honor config.logging.{level,
+  // prettyTerminal, filePath}. See buildServer's `paths` option for the
+  // fallback semantics when config is missing or malformed.
+  const { resolvePlatformPaths, createDefaultPlatformAdapter } = await import(
+    '@jobhunter/core/platform'
+  );
+  const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
+  const server = await buildServer({ env, paths, processEnv: process.env });
   await server.listen({ port: env.port, host: env.host });
   const address = server.server.address();
   const port = typeof address === 'object' && address !== null ? address.port : 0;
