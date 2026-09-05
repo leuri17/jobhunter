@@ -22,9 +22,6 @@ import {
 const silentEnv = (): NodeJS.ProcessEnv => ({ LOG_LEVEL: 'silent' });
 
 const minimalPaths = (configPath: string): PlatformPaths => {
-  // Build a synthetic PlatformPaths that points only `config.file` at the
-  // supplied path; loadConfig only reads `config.file('config.json')`,
-  // so the rest of the slots can be minimal stubs.
   const directory = path.dirname(configPath);
   return {
     config: { directory, file: () => configPath },
@@ -37,10 +34,9 @@ const minimalPaths = (configPath: string): PlatformPaths => {
 };
 
 /**
- * In-memory FileSystem fake so we can drive loadConfig with deterministic
- * content without writing temp files. Sufficient for parse + validation
- * paths; persistence (rename, mkdir, removeFile) are left as no-ops since
- * loadConfig doesn't need them.
+ * In-memory FileSystem fake so tests can drive loadConfig with deterministic
+ * content without writing temp files. Persistence methods are no-ops since
+ * loadConfig doesn't exercise them.
  */
 const memoryFileSystem = (configContent: string): FileSystem => {
   const files = new Map<string, string>(configContent === '' ? [] : [['mem://config.json', configContent]]);
@@ -120,8 +116,6 @@ describe('resolveLogConfig', () => {
 describe('createSidecarRootLoggerFromConfig', () => {
   it('returns a usable logger for the null-config path', () => {
     const logger = createSidecarRootLoggerFromConfig({ LOG_LEVEL: 'silent' }, null);
-    // Smoke: the function should not throw, and the logger should be
-    // usable. We can't observe the level from the public API.
     expect(() => logger.info({ event: 'smoke' }, 'hi')).not.toThrow();
   });
 
@@ -139,8 +133,6 @@ describe('createSidecarRootLoggerFromConfig', () => {
       hash: 'h',
       path: '/x',
     };
-    // Construction should not throw; the destination will create the
-    // missing parent directory on first write.
     const logger = createSidecarRootLoggerFromConfig(silentEnv(), config);
     expect(typeof logger.info).toBe('function');
   });
@@ -170,9 +162,6 @@ describe('buildServer with config plumbing', () => {
   it('still works when no paths are provided (legacy env-only behavior)', async () => {
     const server = await buildServer({ env: { port: 0, host: '127.0.0.1' } });
     try {
-      // We haven't called listen(), so server.server.address() returns
-      // null; the assertion below checks that the server object is
-      // a usable FastifyInstance instead.
       expect(typeof server.inject).toBe('function');
       expect(typeof server.close).toBe('function');
     } finally {
@@ -210,23 +199,6 @@ describe('buildServer with config plumbing', () => {
     }
   });
 
-  it('boots with valid config containing filePath', async () => {
-    // The wiring of config.logging.filePath is exercised by the unit
-    // tests of createSidecarRootLoggerFromConfig above (which
-    // constructs without booting it). Driving filePath via buildServer
-    // creates a pino destination whose lifetime outlives the test —
-    // its buffered writes race with afterEach's rmSync. Skip the
-    // boot here to keep the suite deterministic.
-    expect(typeof buildServer).toBe('function');
-  });
-
-  // Note: prettyTerminal:true spawns a pino-pretty worker thread whose
-  // teardown is owned by the process exit, not by Fastify's lifecycle.
-  // Exercising the path through buildServer races with afterEach's
-  // rmSync. The integration is covered by the unit tests for
-  // createSidecarRootLoggerFromConfig above, which observe construction
-  // without booting the server.
-
   it('honors config.logging.level over env LOG_LEVEL', async () => {
     const configPath = path.join(tmpDir, 'config.json');
     const config: OperationalConfig = {
@@ -234,17 +206,12 @@ describe('buildServer with config plumbing', () => {
       logging: { level: 'trace', prettyTerminal: false },
     };
     writeConfig(configPath, config);
-    // processEnv sets a level that would suppress trace; the config
-    // should win for the actual logger construction.
     const server = await buildServer({
       env: { port: 0, host: '127.0.0.1' },
       paths: minimalPaths(configPath),
       processEnv: { LOG_LEVEL: 'silent' },
     });
     try {
-      // The app instance should have its logger configured with the
-      // resolved level. We can probe via the Fastify logger's level
-      // property.
       expect((server.log as unknown as { level: string }).level).toBe('trace');
     } finally {
       await server.close();
@@ -254,7 +221,6 @@ describe('buildServer with config plumbing', () => {
 
 describe('memoryFileSystem fake (sanity)', () => {
   it('round-trips valid config through loadConfig-shaped flow', async () => {
-    // Quick sanity check on the fake: read a stored config back out.
     const fs = memoryFileSystem(JSON.stringify(DEFAULT_OPERATIONAL_CONFIG));
     expect(await fs.pathExists('mem://config.json')).toBe(true);
     const read = await fs.readFile('mem://config.json');
