@@ -1,0 +1,1 @@
+CREATE INDEX `score_results_pipeline_run_overall_score_idx` ON `score_results` (`pipeline_run_id`,`overall_score`);

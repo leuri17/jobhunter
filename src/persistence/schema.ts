@@ -454,6 +454,10 @@ export const scoreResults = sqliteTable(
     fingerprintIdx: index('score_results_fingerprint_idx').on(t.fingerprint),
     activeJobIdx: index('score_results_active_job_idx').on(t.jobId, t.active),
     overallScoreIdx: index('score_results_overall_score_idx').on(t.overallScore),
+    pipelineRunOverallScoreIdx: index('score_results_pipeline_run_overall_score_idx').on(
+      t.pipelineRunId,
+      t.overallScore,
+    ),
     activeUnique: uniqueIndex('score_results_active_idx')
       .on(t.jobId)
       .where(sql`active = 1`),
