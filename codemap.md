@@ -46,7 +46,7 @@ Runtime baseline: Node `>=24.18.0 <25`, ESM-only (`"type": "module"`), pnpm `11.
 | `src/inspection/` | Read-only inspection surface over persisted runs and jobs. | [View Map](src/inspection/codemap.md) |
 | `src/inspection/services/` | Query/aggregation services backing inspection views. | [View Map](src/inspection/services/codemap.md) |
 | `src/errors/` | Typed error hierarchy and error classification. | [View Map](src/errors/codemap.md) |
-| `src/logging/` | Structured logging via `pino` (`pino-pretty` in development). | [View Map](src/logging/codemap.md) |
+| `src/logging/` | Structured logging via `pino` (JSON output to stdout; pretty-printing is a future, currently-unwired config option). | [View Map](src/logging/codemap.md) |
 | `src/platform/` | Platform/OS abstractions: paths, filesystem, and process concerns. | [View Map](src/platform/codemap.md) |
 | `drizzle/` | Generated SQL migrations and Drizzle Kit metadata (`out` target of `drizzle.config.ts`). | [View Map](drizzle/codemap.md) |
 | `desktop/` | Desktop application workspace: Tauri shell + sidecar + UI. | — |
