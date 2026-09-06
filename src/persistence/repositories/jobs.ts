@@ -298,6 +298,25 @@ export class JobRepository {
   }
 
   /**
+   * Batch lookup: every job row whose primary key is in the supplied
+   * set. Used by `PipelineOrchestrator.runExtraction` to replace the
+   * per-event `findById` N+1 with one `inArray` SELECT + in-memory
+   * `Map` lookup (Closes #53).
+   *
+   * Returns an empty array without a DB round-trip when `ids` is empty
+   * (Drizzle's `inArray` rejects empty inputs, and there is nothing
+   * to look up anyway).
+   *
+   * Ordering is not guaranteed; the caller keys by primary `id`. The
+   * `jobs` table's PK guarantees at most one row per id.
+   */
+  async findByIds(ids: readonly number[]): Promise<JobRow[]> {
+    if (ids.length === 0) return [];
+    const rows = this.ctx.db.select().from(jobs).where(inArray(jobs.id, [...ids])).all();
+    return rows.map(jobRowFromRecord);
+  }
+
+  /**
    * Read-only: every job row whose `extractionStatus === 'complete'`
    * Used by `jobs reevaluate`
    * selection — partial / failed rows are excluded because their
