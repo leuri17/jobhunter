@@ -69,19 +69,28 @@ class FakePage {
         return 0;
       },
       first: () => this.locator(selector),
-      all: async (): Promise<Locator[]> => {
+      /**
+       * Mirror Playwright's `Locator.evaluateAll` for the card-list
+       * selector. The production code path now drives a single CDP
+       * round-trip that walks the matched elements, reads each
+       * anchor's `data-occludable-job-id` and `href`, and returns
+       * the parsed attr pairs. The fake executes the same callback
+       * against linkedom-built elements so attribute semantics
+       * (case-insensitive name lookups, missing attrs → null,
+       * `querySelector` returning the first matching descendant)
+       * match what real Chromium returns.
+       */
+      evaluateAll: async <R, _E>(pageFunction: (nodes: Element[]) => R): Promise<R> => {
         const ids = this.currentSnapshot().cardIds;
-        return ids.map((id) => makeStubLocator(id));
-      },
-      elementHandle: async () => {
-        // Return a single stub card so the loop's first iteration sees
-        // the snapshot's first ID. The subsequent iterations rely on
-        // `.all()` which returns per-card locators with the right IDs.
-        const ids = this.currentSnapshot().cardIds;
-        const id = ids[0] ?? '000000';
-        return makeFakeElementHandle(
-          `<li class="jobs-search-results__list-item"><a href="/jobs/view/${id}/" data-occludable-job-id="${id}">${id}</a></li>`,
-        );
+        const html = ids
+          .map(
+            (id) =>
+              `<li class="jobs-search-results__list-item"><a href="/jobs/view/${id}/" data-occludable-job-id="${id}">${id}</a></li>`,
+          )
+          .join('');
+        const { document } = parseHTML(`<html><body>${html}</body></html>`);
+        const nodes = Array.from(document.querySelectorAll('li')) as Element[];
+        return pageFunction(nodes);
       },
       click: async (opts?: { timeout?: number }): Promise<void> => {
         void opts;
@@ -93,66 +102,6 @@ class FakePage {
       },
       waitFor: async (): Promise<void> => undefined,
     } as unknown as Locator;
-  };
-}
-
-function makeStubLocator(id: string): Locator {
-  return {
-    count: async (): Promise<number> => 1,
-    first: () => makeStubLocator(id),
-    all: async (): Promise<Locator[]> => [makeStubLocator(id)],
-    elementHandle: async () =>
-      makeFakeElementHandle(
-        `<li class="jobs-search-results__list-item"><a href="/jobs/view/${id}/" data-occludable-job-id="${id}">${id}</a></li>`,
-      ),
-    click: async (): Promise<void> => undefined,
-    waitFor: async (): Promise<void> => undefined,
-  } as unknown as Locator;
-}
-
-/**
- * Build a minimal element handle exposing the `getAttribute` /
- * `querySelector` surface that `parseCardJobId` consumes. The fake
- * is backed by linkedom so attribute lookups reflect real DOM
- * semantics. `parseCardJobId` expects the element to be a card
- * `<li>` containing an inner `<a>`; the caller wraps the anchor in
- * a `<li>` before invoking `makeFakeElementHandle`.
- */
-function makeFakeElementHandle(html: string): {
-  readonly outerHTML: string;
-  readonly getAttribute: (name: string) => string | null;
-  readonly querySelector: (selector: string) => {
-    getAttribute: (name: string) => string | null;
-    querySelector: (selector: string) => null;
-  } | null;
-  readonly evaluate: <T>(fn: (e: { outerHTML: string }) => T) => Promise<T>;
-} {
-  const { document } = parseHTML(`<html><body>${html}</body></html>`);
-  const body = document.querySelector('body');
-  const element = body?.firstElementChild ?? null;
-  const getAttribute = (name: string): string | null => {
-    if (element === null) return null;
-    return element.getAttribute(name);
-  };
-  const querySelector = (
-    selector: string,
-  ): {
-    getAttribute: (name: string) => string | null;
-    querySelector: (selector: string) => null;
-  } | null => {
-    if (element === null) return null;
-    const nested = element.querySelector(selector);
-    if (nested === null) return null;
-    return {
-      getAttribute: (name: string) => nested.getAttribute(name),
-      querySelector: () => null,
-    };
-  };
-  return {
-    outerHTML: html,
-    getAttribute,
-    querySelector,
-    evaluate: async <T>(fn: (e: { outerHTML: string }) => T): Promise<T> => fn({ outerHTML: html }),
   };
 }
 

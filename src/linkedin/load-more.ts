@@ -15,6 +15,13 @@
  *  — soft warning; the search has still produced
  * `totalCardsDiscovered`).
  *
+ * Each iteration issues ONE CDP round-trip to read every card's
+ * anchor attributes (`data-occludable-job-id`, `href`) via
+ * `page.locator(...).evaluateAll(...)`. The previous implementation
+ * resolved per-card locators and called `locator.elementHandle()`
+ * per card — N+1 round-trips per iteration that became the
+ * single biggest Playwright-side cost on long lists (audit H14).
+ *
  * Imports `Page` and `Locator` as TYPES only — runtime Playwright
  * values flow through `BrowserSession` in .  exercises
  * this module via inline fakes in `tests/linkedin/load-more.test.ts`.
@@ -22,8 +29,6 @@
 import type { Page, Locator } from 'playwright';
 
 import { LINKEDIN_SELECTORS } from './selectors.js';
-import { parseCardJobId } from './card-id.js';
-import type { CardIdDocument, MinimalElement } from './card-id.js';
 import type { DiscoveredCard, LoadMoreOutcome, LoadMoreState } from './state.js';
 import { createLoadMoreState } from './state.js';
 
@@ -63,7 +68,6 @@ export async function discoverAllCards(
   const maxIterations = opts.maxIterations ?? DEFAULT_MAX_ITERATIONS;
   const scrollDelayMs = opts.scrollDelayMs ?? Math.max(1, Math.floor(opts.initialResultsMs / 4));
   const idToCard = new Map<string, DiscoveredCard>();
-  const document = createDocumentShim(page);
 
   while (state.iteration < maxIterations) {
     if (opts.signal?.aborted === true) {
@@ -78,12 +82,12 @@ export async function discoverAllCards(
       };
     }
 
-    const cardLocators = await page.locator(LINKEDIN_SELECTORS.cards.listItem).all();
-    const anchorLocators =
-      cardLocators.length > 0
-        ? cardLocators
-        : await page.locator(LINKEDIN_SELECTORS.cards.listItemAlt).all();
-    const discoveredThisIteration = await collectCards(anchorLocators, idToCard, document);
+    const primaryLocator = page.locator(LINKEDIN_SELECTORS.cards.listItem);
+    const activeLocator =
+      (await primaryLocator.count()) > 0
+        ? primaryLocator
+        : page.locator(LINKEDIN_SELECTORS.cards.listItemAlt);
+    const discoveredThisIteration = await collectCards(activeLocator, idToCard);
     void discoveredThisIteration;
 
     if (await isEndOfResults(page)) {
@@ -161,8 +165,12 @@ export async function discoverAllCards(
 const DEFAULT_MAX_ITERATIONS = 200;
 
 /**
- * Walk the current iteration's card locators, parse each one's ID via
- * `parseCardJobId`, and record it in `idToCard` (first-seen wins).
+ * One CDP round-trip per iteration: read every card's anchor attrs
+ * (`data-occludable-job-id`, `href`) via `evaluateAll` and parse each
+ * to a `sourceJobId` client-side. Replaces the prior per-card
+ * `locator.elementHandle()` + `parseCardJobId(element, document)`
+ * pattern that drove hundreds of protocol round-trips per search on
+ * long lists (audit H14).
  *
  *  deviation: `sourceJobId` may be `null` when the anchor has
  * neither `data-occludable-job-id` nor a parseable `/jobs/view/<digits>/`
@@ -170,19 +178,26 @@ const DEFAULT_MAX_ITERATIONS = 200;
  * can write a `discoveryErrors` row.
  */
 async function collectCards(
-  locators: readonly Locator[],
+  parentLocator: Locator,
   idToCard: Map<string, DiscoveredCard>,
-  document: CardIdDocument,
 ): Promise<number> {
+  const attrs = await parentLocator.evaluateAll<CardAnchorAttrs[], Element>((nodes) => {
+    return nodes.map((node) => {
+      const anchor = node.querySelector('a');
+      if (anchor === null) {
+        return { occludable: null, href: null };
+      }
+      return {
+        occludable: anchor.getAttribute('data-occludable-job-id'),
+        href: anchor.getAttribute('href'),
+      };
+    });
+  });
+
   let added = 0;
   let index = 0;
-  for (const locator of locators) {
-    const element = await locator.elementHandle();
-    if (element === null) {
-      index += 1;
-      continue;
-    }
-    const id = parseCardJobId(coerceElement(element), document);
+  for (const { occludable, href } of attrs) {
+    const id = parseSourceJobIdFromAnchor(occludable, href);
     // Use a unique placeholder key for null-id cards so the Map can
     // dedup them across iterations without colliding with real ids.
     const key = id ?? `__null__:${index}:${idToCard.size}`;
@@ -200,52 +215,28 @@ async function collectCards(
   return added;
 }
 
-/**
- * Construct a minimal `CardIdDocument` adapter from a Playwright `Page`.
- * `parseCardJobId` calls `document.querySelector` only when the element
- * has no anchor inside; we approximate this with `page.locator(...).first().elementHandle()`.
- */
-function createDocumentShim(page: Page): CardIdDocument {
-  return {
-    querySelector: (_selector: string) => {
-      void page;
-      // The per-card anchor is already inside each list-item locator;
-      // `parseCardJobId` only reaches this fallback when the card itself
-      // is anchor-less — rare in practice. Returning `null` here is
-      // safe (parser returns `null` on miss).
-      return null;
-    },
-  };
+interface CardAnchorAttrs {
+  readonly occludable: string | null;
+  readonly href: string | null;
 }
 
 /**
- * Walk a Playwright element handle through the `MinimalElement`
- * adapter that `parseCardJobId` expects. Element handles expose the
- * same `getAttribute` / `querySelector` surface for our purposes.
+ * Pure parser for the two attributes that `parseCardJobId` (in
+ * `card-id.ts`) inspects. Mirrors its logic so the production path
+ * can decode the bulk-extracted attrs client-side without a second
+ * round-trip. Kept inline rather than exported because the browser-
+ * side `evaluateAll` callback re-uses the same rule on its side of
+ * the protocol boundary.
  */
-function coerceElement(handle: {
-  readonly evaluate?: (fn: (e: Element) => unknown) => Promise<unknown>;
-}): MinimalElement {
-  // We use `evaluate` to read attributes via a runtime-side script.
-  // For 's `FakePage` elements (which expose `getAttribute` /
-  // `querySelector` directly) the cast is straightforward. We expose
-  // a proxy that delegates to `evaluate` only when those methods are
-  // missing on the handle — keeps 's fakes simple while still
-  // working with real Playwright handles in .
-  const candidate = handle as unknown as Partial<MinimalElement>;
-  if (
-    typeof candidate.getAttribute === 'function' &&
-    typeof candidate.querySelector === 'function'
-  ) {
-    return candidate as MinimalElement;
+function parseSourceJobIdFromAnchor(occludable: string | null, href: string | null): string | null {
+  if (occludable !== null) {
+    return occludable;
   }
-  return {
-    getAttribute: (name: string) => {
-      void name;
-      return null;
-    },
-    querySelector: (_selector: string) => null,
-  };
+  if (href === null) {
+    return null;
+  }
+  const match = /\/jobs\/view\/(\d+)/.exec(href);
+  return match?.[1] ?? null;
 }
 
 /** True when the explicit end-of-results sentinel is visible. */
