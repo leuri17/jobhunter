@@ -106,7 +106,14 @@ function JobsPage() {
   const reeval = useMutation({
     mutationFn: (jobId: number) =>
       api.reevaluateJobs({ scope: 'job', jobId, confirmScoring: false }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['jobs'] }),
+    onSuccess: () => {
+      // The reeval result is visible on both /jobs (this page) and
+      // /runs (the per-run jobsScored count). Invalidate both keys so
+      // navigating to /runs reflects the new count without a manual
+      // remount.
+      void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      void queryClient.invalidateQueries({ queryKey: ['runs'] });
+    },
   });
 
   return (

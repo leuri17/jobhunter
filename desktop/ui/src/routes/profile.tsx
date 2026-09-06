@@ -36,8 +36,13 @@ function ProfilePage() {
   const approve = useMutation({
     mutationFn: (id: string) => api.approveProfile(id),
     onSuccess: () => {
+      // Approving changes the active profile that the scoring
+      // fingerprints key on, so the jobs list and the runs list
+      // (which shows jobsScored per run) both need to refresh.
       void queryClient.invalidateQueries({ queryKey: ['profiles'] });
       void queryClient.invalidateQueries({ queryKey: ['profile', selectedId] });
+      void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      void queryClient.invalidateQueries({ queryKey: ['runs'] });
     },
   });
   const reject = useMutation({
@@ -45,6 +50,8 @@ function ProfilePage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['profiles'] });
       void queryClient.invalidateQueries({ queryKey: ['profile', selectedId] });
+      void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      void queryClient.invalidateQueries({ queryKey: ['runs'] });
     },
   });
 

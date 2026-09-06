@@ -1,6 +1,6 @@
 import { createRoute } from '@tanstack/react-router';
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { usePipelineEvents } from '@/lib/sse';
 import { LogPane } from '@/components/log-pane';
@@ -20,13 +20,25 @@ export const Route = createRoute({
 function PipelinePage() {
   const [runId, setRunId] = useState<string | null>(null);
   const events = usePipelineEvents(runId);
+  const queryClient = useQueryClient();
 
   const start = useMutation({
     mutationFn: api.runPipeline,
-    onSuccess: (data) => setRunId(data.runId),
+    onSuccess: (data) => {
+      setRunId(data.runId);
+      // The new run shows up on /runs immediately; refresh the runs
+      // list so navigating there doesn't show a stale 'last seen at'.
+      void queryClient.invalidateQueries({ queryKey: ['runs'] });
+    },
   });
   const cancel = useMutation({
     mutationFn: () => api.cancelPipeline(runId as unknown as string),
+    onSuccess: () => {
+      // Cancel transitions the run to 'cancelled' and updates
+      // jobsScored on the run record. Refresh the runs list so
+      // /runs reflects the new status without a manual remount.
+      void queryClient.invalidateQueries({ queryKey: ['runs'] });
+    },
   });
 
   return (
