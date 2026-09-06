@@ -45,8 +45,13 @@ export interface BuildReevaluationPlanInput {
  *                              selected job that needed a filter
  *                              rerun, regardless of action label).
  *   - `scoresRerun`          — count of `scoreEntries` whose action
- *                              is NOT `'reused'` (a `'reused'` entry
- *                              did not trigger an OpenAI call).
+ *                              is NOT `'reused'` AND NOT `'failed'`
+ *                              (a `'reused'` entry did not trigger an
+ *                              OpenAI call; a `'failed'` entry ran but
+ *                              produced no result, audit B1-H3).
+ *   - `scoresFailed`         — count of `scoreEntries` whose action
+ *                              IS `'failed'` (per-job scoring or
+ *                              persistence error during the live rerun).
  *   - `scoresInvalidated`    — sum of `scoreInvalidated` across
  *                              BOTH `filterEntries` AND `scoreEntries`
  *                              (the filter rerun can invalidate
@@ -61,7 +66,10 @@ export interface BuildReevaluationPlanInput {
  */
 export function buildReevaluationPlan(input: BuildReevaluationPlanInput): ReevaluationPlan {
   const filtersRerun = input.filterEntries.length;
-  const scoresRerun = input.scoreEntries.filter((e) => e.action !== 'reused').length;
+  const scoresFailed = input.scoreEntries.filter((e) => e.action === 'failed').length;
+  const scoresRerun = input.scoreEntries.filter(
+    (e) => e.action !== 'reused' && e.action !== 'failed',
+  ).length;
   const scoresInvalidated =
     input.filterEntries.filter((e) => e.scoreInvalidated).length +
     input.scoreEntries.filter((e) => e.scoreInvalidated).length;
@@ -79,6 +87,7 @@ export function buildReevaluationPlan(input: BuildReevaluationPlanInput): Reeval
       filtersRerun,
       scoresRerun,
       scoresInvalidated,
+      scoresFailed,
       skipped: input.skipped.length,
       scoringDeclinedByUser: input.scoringDeclinedByUser,
     },

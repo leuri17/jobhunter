@@ -21,8 +21,13 @@
  * so consumers can detect breaking changes via `schemaVersion`.
  * Mirrors `INSPECTION_SCHEMA_VERSION`, `PIPELINE_SCHEMA_VERSION`,
  * `LINKEDIN_SCORING_SCHEMA_VERSION`.
+ *
+ * Version history:
+ *   1 — initial release
+ *   2 — added `scoresFailed` to `totals`; per-entry `action` may now
+ *       carry `'failed'` (was previously always reported as `'reran'`)
  */
-export const REEVALUATION_SCHEMA_VERSION = 1 as const;
+export const REEVALUATION_SCHEMA_VERSION = 2 as const;
 export type ReevaluationSchemaVersion = typeof REEVALUATION_SCHEMA_VERSION;
 
 /**
@@ -46,9 +51,11 @@ export type ReevaluationScope = 'default' | 'filters-only' | 'scores-only' | 'jo
 /**
  * Action label for one `ReevaluationPlanEntry`. In `dry-run` mode every action is `'would-rerun'`;
  * in live mode entries flip to `'reran'` or `'reused'` as the service
- * executes them.
+ * executes them. `'failed'` records a per-job scoring/persistence
+ * error during the live rerun phase (audit B1-H3) so the row is not
+ * silently reported as successful.
  */
-export type ReevaluationPlanAction = 'would-rerun' | 'reran' | 'reused';
+export type ReevaluationPlanAction = 'would-rerun' | 'reran' | 'reused' | 'failed';
 
 /**
  * Reason for a `ReevaluationSkippedEntry` (Decisions 6 + 7 +
@@ -112,6 +119,7 @@ export interface ReevaluationTotals {
   readonly filtersRerun: number;
   readonly scoresRerun: number;
   readonly scoresInvalidated: number;
+  readonly scoresFailed: number;
   readonly skipped: number;
   readonly scoringDeclinedByUser: boolean;
 }

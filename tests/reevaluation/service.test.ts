@@ -894,7 +894,7 @@ describe('ReevaluationService', () => {
     expect(outcome.plan.totals.scoresRerun).toBe(0);
   });
 
-  it('flags score-failed via action: "reran" with the failure logged', async () => {
+  it('flags score-failed via action: "failed" with the failure logged', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -919,7 +919,37 @@ describe('ReevaluationService', () => {
     });
 
     expect(outcome.plan.jobsToScore).toHaveLength(1);
-    expect(outcome.plan.jobsToScore[0]?.action).toBe('reran');
+    expect(outcome.plan.jobsToScore[0]?.action).toBe('failed');
+  });
+
+  it('regression: OPENAI_TIMEOUT per-job failure → action: "failed", totals reflect partial-failure', async () => {
+    const jobId = await insertCompleteJobForReeval(
+      repositories,
+      '222',
+      pipelineRunId,
+      searchExecutionId,
+    );
+    const freshFp = await computeFilterFpForJob(jobId);
+    await insertActiveFilterResultForReeval(repositories, {
+      jobId,
+      fingerprint: freshFp,
+      overallOutcome: 'accepted',
+      filterConfigVersionId: filterConfigId,
+      profileVersionId,
+    });
+    fakeScoring.queueOutcomeForJob(jobId, makeFakeFailedOutcome(jobId, 'OPENAI_TIMEOUT'));
+
+    const outcome = await makeService().execute({
+      scope: 'scores-only',
+      dryRun: false,
+      confirmScoring: false,
+      env: { OPENAI_API_KEY: 'test-key' },
+    });
+
+    expect(outcome.plan.jobsToScore).toHaveLength(1);
+    expect(outcome.plan.jobsToScore[0]?.action).toBe('failed');
+    expect(outcome.plan.totals.scoresRerun).toBe(0);
+    expect(outcome.plan.totals.scoresFailed).toBe(1);
   });
 
   it('treats scope="job" without jobId as job_not_found', async () => {

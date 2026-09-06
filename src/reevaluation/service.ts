@@ -234,10 +234,11 @@ export class ReevaluationService {
         overallScore: scoreOutcome.overallScore ?? 0,
       });
     } else if (scoreOutcome.kind === 'failed') {
-      entry.action = 'reran';
+      entry.action = 'failed';
       this.logger.reevaluationScoreFail({
         jobId: job.id,
         errorCode: scoreOutcome.errorCode ?? 'unknown',
+        errorMessage: scoreOutcome.errorMessage ?? 'unknown',
       });
     }
     // 'skipped' / 'cancelled' keep the original action label
@@ -494,12 +495,11 @@ export class ReevaluationService {
         } catch (error) {
           // Per-job error isolation (mirrors `PipelineOrchestrator.runScoring`):
           // a single job's failure must NOT abort the rest of the
-          // batch. The entry stays as `action: 'reran'` (the selection
-          // phase planned to rerun the score). This handles the
-          // documented MVP limitation where the reevaluation service
-          // uses a sentinel `pipelineRunId: 0` when no real pipeline
-          // run is in scope (the score FK constraint surfaces as a
-          // foreign-key violation).
+          // batch. The entry is marked `action: 'failed'` (not
+          // `'reran'`) so the run-level history surfaces the
+          // partial-failure count (audit B1-H3) instead of reporting
+          // the job as successfully re-scored.
+          //
           // Use instanceof ApplicationError rather than the duck-typed
           // `'code' in error` check: a non-ApplicationError with a
           // `.code` field (e.g. a raw OpenAI SDK error object) would
@@ -507,10 +507,13 @@ export class ReevaluationService {
           // reeval history record and the UI's status badges.
           const errorCode =
             error instanceof ApplicationError ? error.code : 'reeval_score_failure';
-          entry.action = 'reran';
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          entry.action = 'failed';
           this.logger.reevaluationScoreFail({
             jobId: job.id,
             errorCode,
+            errorMessage,
           });
         }
       }
