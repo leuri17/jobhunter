@@ -2,6 +2,11 @@ import {
   SCORING_STRUCTURED_OUTPUT_JSON_SCHEMA,
   SCORING_STRUCTURED_OUTPUT_SCHEMA_VERSION,
 } from '../../scoring/schema.js';
+import {
+  ApplicationError,
+  ExitCode,
+  type ApplicationErrorMetadata,
+} from '../../errors/application-error.js';
 import { STRUCTURED_OUTPUT_SCHEMA } from './prompt.js';
 import { STRUCTURED_OUTPUT_SCHEMA_VERSION } from './structured-output.js';
 
@@ -51,15 +56,19 @@ export const RESPONSE_SCHEMA_NAMES: readonly string[] = Object.keys(RESPONSE_SCH
  * is a configuration error (a developer passed a wrong name) — it is
  * NOT a runtime OpenAI failure, so the retry policy does not apply.
  */
-export class UnknownResponseSchemaError extends Error {
-  public readonly responseSchemaName: string;
-
-  constructor(responseSchemaName: string) {
+export class UnknownResponseSchemaError extends ApplicationError {
+  constructor(
+    responseSchemaName: string,
+    metadata: ApplicationErrorMetadata = {},
+    cause?: Error,
+  ) {
     super(
+      'unknown_response_schema',
       `Unknown response schema name: "${responseSchemaName}". Known names: ${RESPONSE_SCHEMA_NAMES.join(', ')}.`,
+      ExitCode.InvalidUsage,
+      { responseSchemaName, ...metadata },
+      cause,
     );
-    this.name = 'UnknownResponseSchemaError';
-    this.responseSchemaName = responseSchemaName;
   }
 }
 
@@ -69,19 +78,21 @@ export class UnknownResponseSchemaError extends Error {
  * usually means a stale request payload was built before a schema bump
  * and must be rebuilt.
  */
-export class ResponseSchemaVersionMismatchError extends Error {
-  public readonly responseSchemaName: string;
-  public readonly expectedVersion: number;
-  public readonly actualVersion: number;
-
-  constructor(responseSchemaName: string, expectedVersion: number, actualVersion: number) {
+export class ResponseSchemaVersionMismatchError extends ApplicationError {
+  constructor(
+    responseSchemaName: string,
+    expectedVersion: number,
+    actualVersion: number,
+    metadata: ApplicationErrorMetadata = {},
+    cause?: Error,
+  ) {
     super(
+      'response_schema_version_mismatch',
       `Response schema "${responseSchemaName}" version mismatch: expected ${expectedVersion}, got ${actualVersion}.`,
+      ExitCode.InvalidUsage,
+      { responseSchemaName, expectedVersion, actualVersion, ...metadata },
+      cause,
     );
-    this.name = 'ResponseSchemaVersionMismatchError';
-    this.responseSchemaName = responseSchemaName;
-    this.expectedVersion = expectedVersion;
-    this.actualVersion = actualVersion;
   }
 }
 

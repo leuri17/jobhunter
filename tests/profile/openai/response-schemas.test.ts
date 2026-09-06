@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { ApplicationError } from '../../../src/errors/application-error.js';
 import {
   RESPONSE_SCHEMA_NAMES,
   RESPONSE_SCHEMA_REGISTRY,
@@ -61,7 +62,11 @@ describe('getResponseSchema', () => {
       getResponseSchema('NoSuchSchema', 1);
     } catch (error) {
       expect(error).toBeInstanceOf(UnknownResponseSchemaError);
-      expect((error as UnknownResponseSchemaError).responseSchemaName).toBe('NoSuchSchema');
+      expect(error).toBeInstanceOf(ApplicationError);
+      expect((error as UnknownResponseSchemaError).code).toBe('unknown_response_schema');
+      expect((error as UnknownResponseSchemaError).metadata).toEqual({
+        responseSchemaName: 'NoSuchSchema',
+      });
       expect((error as UnknownResponseSchemaError).message).toContain('ExtractedProfile');
       expect((error as UnknownResponseSchemaError).message).toContain('ScoringStructuredOutput');
     }
@@ -75,10 +80,14 @@ describe('getResponseSchema', () => {
       getResponseSchema('ExtractedProfile', 999);
     } catch (error) {
       expect(error).toBeInstanceOf(ResponseSchemaVersionMismatchError);
+      expect(error).toBeInstanceOf(ApplicationError);
       const mismatch = error as ResponseSchemaVersionMismatchError;
-      expect(mismatch.responseSchemaName).toBe('ExtractedProfile');
-      expect(mismatch.expectedVersion).toBe(STRUCTURED_OUTPUT_SCHEMA_VERSION);
-      expect(mismatch.actualVersion).toBe(999);
+      expect(mismatch.code).toBe('response_schema_version_mismatch');
+      expect(mismatch.metadata).toEqual({
+        responseSchemaName: 'ExtractedProfile',
+        expectedVersion: STRUCTURED_OUTPUT_SCHEMA_VERSION,
+        actualVersion: 999,
+      });
     }
   });
 
