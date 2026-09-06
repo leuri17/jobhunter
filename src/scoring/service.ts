@@ -16,6 +16,7 @@ import {
 import { SCORING_PROMPT_VERSION, buildScoringPrompt } from './prompt.js';
 import { isJobEligibleForScoring } from './eligibility.js';
 import { buildScoringPlan, type BuildScoringPlanInput } from './plan.js';
+import { ApplicationError } from '../errors/index.js';
 import { ScoringHardStopError, ScoringInvalidStructuredOutputError } from './errors.js';
 import { noopScoringLogger, type ScoringLogger } from './log.js';
 import {
@@ -335,10 +336,13 @@ export class ScoringService {
           errorMessage: 'Aborted before completion.',
         });
       }
+      // Use instanceof ApplicationError rather than the duck-typed
+      // `'code' in error` check: any plain object or third-party
+      // library error with a `.code` field would otherwise flow
+      // through as an application-defined error code and pollute the
+      // history report + UI status badges.
       const errorCode =
-        cause instanceof Error && 'code' in cause
-          ? (cause as { code: string }).code
-          : 'openai_unknown_failure';
+        cause instanceof ApplicationError ? cause.code : 'openai_unknown_failure';
       this.logger.scoringFail({ jobId: input.job.id, errorCode });
       return makeOutcome({
         job: input.job,

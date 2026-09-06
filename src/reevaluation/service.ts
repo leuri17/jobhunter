@@ -37,6 +37,7 @@ import type { Repositories } from '../persistence/repositories/index.js';
 import type { ScoreOneInput } from '../scoring/service.js';
 import type { ScoringOutcome, ScoringPlan } from '../scoring/state.js';
 import type { BuildScoringPlanInput } from '../scoring/plan.js';
+import { ApplicationError } from '../errors/index.js';
 import { PipelinePrerequisiteError } from '../pipeline/errors.js';
 import type { PipelinePrompts } from '../pipeline/prompts.js';
 import { buildReevaluationPlan } from './plan.js';
@@ -499,10 +500,13 @@ export class ReevaluationService {
           // uses a sentinel `pipelineRunId: 0` when no real pipeline
           // run is in scope (the score FK constraint surfaces as a
           // foreign-key violation).
+          // Use instanceof ApplicationError rather than the duck-typed
+          // `'code' in error` check: a non-ApplicationError with a
+          // `.code` field (e.g. a raw OpenAI SDK error object) would
+          // otherwise leak its library-specific code into the
+          // reeval history record and the UI's status badges.
           const errorCode =
-            error instanceof Error && 'code' in error
-              ? (error as { code: string }).code
-              : 'reeval_score_failure';
+            error instanceof ApplicationError ? error.code : 'reeval_score_failure';
           entry.action = 'reran';
           this.logger.reevaluationScoreFail({
             jobId: job.id,
