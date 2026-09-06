@@ -13,9 +13,11 @@ import {
 import {
   OpenAIAuthenticationError,
   OpenAIBillingError,
+  OpenAIEmptyResponseError,
   OpenAINetworkError,
   OpenAIInvalidRequestError,
   OpenAIRateLimitError,
+  OpenAIRefusalError,
   OpenAIPermissionError,
   OpenAIServerError,
   OpenAITimeoutError,
@@ -92,12 +94,28 @@ export function createDefaultOpenAIClient(options: {
         });
 
         const choice = completion.choices[0];
+        const refusalText = choice?.message?.refusal ?? '';
         const rawJsonText = choice?.message?.content ?? '';
         const usage = completion.usage;
         const tokenUsage =
           usage === null || usage === undefined
             ? null
             : { promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens };
+
+        // The OpenAI API returns HTTP 200 on refusal; the model signals
+        // the decline via `choices[0].message.refusal`. Surface it as a
+        // typed error before the caller can mistake an empty
+        // `rawJsonText` for a legitimate (but empty) extraction.
+        if (refusalText.trim().length > 0) {
+          throw new OpenAIRefusalError(refusalText);
+        }
+        if (rawJsonText.trim().length === 0) {
+          // Some models emit `content: ""` on refusal-like behaviour
+          // without populating `refusal`, or when truncation /
+          // content-filter removes the completion. The caller cannot
+          // parse this as structured output, so fail loud.
+          throw new OpenAIEmptyResponseError();
+        }
 
         return { rawJsonText, tokenUsage };
       } catch (error) {

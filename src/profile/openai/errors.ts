@@ -190,6 +190,37 @@ export class ProfileExtractionInputTooLargeError extends ProfileExtractionError 
 }
 
 /**
+ * The model declined the request via the structured `refusal` field on
+ * the chat-completion message. Retrying won't change a policy decision,
+ * so this is non-retryable. The full refusal text is preserved in
+ * `refusalText` so the caller can surface it (or persist it for audit)
+ * verbatim.
+ */
+export class OpenAIRefusalError extends ProfileExtractionError {
+  readonly refusalText: string;
+
+  constructor(refusalText: string, metadata: ApplicationErrorMetadata = {}, cause?: Error) {
+    super('openai_refusal', 'OpenAI declined the request.', metadata, cause);
+    this.refusalText = refusalText;
+  }
+}
+
+/**
+ * The model returned an HTTP 200 but produced no structured content
+ * (`choices[0].message.content` was empty or whitespace). Some models
+ * emit an empty body on refusal-like behaviour without populating the
+ * `refusal` field, or when truncation / content-filter removes the
+ * completion. The caller cannot parse this as structured output, so we
+ * surface it as a typed error instead of passing an empty string up
+ * the stack.
+ */
+export class OpenAIEmptyResponseError extends ProfileExtractionError {
+  constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
+    super('openai_empty_response', 'OpenAI returned an empty structured-output body.', metadata, cause);
+  }
+}
+
+/**
  * Raised when one or more required sources have unusable extracted text
  * (e.g. OCR-only images with no text). The extraction cannot proceed.
  */

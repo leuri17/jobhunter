@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   OpenAIAuthenticationError,
   OpenAIBillingError,
+  OpenAIEmptyResponseError,
   OpenAINetworkError,
   OpenAIInvalidRequestError,
   OpenAIRateLimitError,
+  OpenAIRefusalError,
   OpenAIServerError,
   OpenAIUnsupportedModelError,
   ProfileExtractionError,
@@ -356,5 +358,80 @@ describe('createDefaultOpenAIClient', () => {
     }
     expect(caught).toBe(preserved);
     expect(caught).toBeInstanceOf(ProfileExtractionError);
+  });
+
+  it('raises OpenAIRefusalError when the model returns a refusal', async () => {
+    // The OpenAI SDK returns HTTP 200 on refusal; the model signals the
+    // decline via `choices[0].message.refusal` (with `content: null`).
+    // The client must surface this as a typed `OpenAIRefusalError`
+    // instead of letting the caller parse an empty body as a real
+    // extraction.
+    fakeCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: { content: null, refusal: 'I cannot help with that request.' },
+          finish_reason: 'stop',
+          index: 0,
+        },
+      ],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
+    expect(rejected).toBeInstanceOf(OpenAIRefusalError);
+    expect(rejected).toBeInstanceOf(ProfileExtractionError);
+    // Refusals are policy decisions — retrying won't help, so the error
+    // must NOT carry the corrective-retry marker.
+    expect((rejected as OpenAIRefusalError).refusalText).toBe('I cannot help with that request.');
+    expect((rejected as ProfileExtractionError).code).toBe('openai_refusal');
+  });
+
+  it('raises OpenAIEmptyResponseError when the model returns an empty content', async () => {
+    // Some models emit `content: ""` on refusal-like behaviour without
+    // populating the `refusal` field, or when truncation /
+    // content-filter removes the completion. The client must fail loud
+    // instead of returning an empty string that would later fail Zod
+    // validation as a generic `OpenAIInvalidOutputError`.
+    fakeCreate.mockResolvedValueOnce({
+      choices: [
+        { message: { content: '', refusal: null }, finish_reason: 'content_filter', index: 0 },
+      ],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
+    expect(rejected).toBeInstanceOf(OpenAIEmptyResponseError);
+    expect(rejected).toBeInstanceOf(ProfileExtractionError);
+    expect((rejected as OpenAIEmptyResponseError).code).toBe('openai_empty_response');
+  });
+
+  it('raises OpenAIEmptyResponseError when the completion is missing choices', async () => {
+    // Defensive: an SDK response with no `choices` array should be
+    // treated identically to an empty content, not surfaced as `{}` or
+    // `null` upstream.
+    fakeCreate.mockResolvedValueOnce({
+      choices: [],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(OpenAIEmptyResponseError);
+  });
+
+  it('treats a whitespace-only content as empty', async () => {
+    // Trimming guards against models that emit only whitespace (e.g.
+    // a single newline) which `rawJsonText` validation would otherwise
+    // surface as a misleading Zod failure.
+    fakeCreate.mockResolvedValueOnce({
+      choices: [
+        { message: { content: '   \n  ', refusal: null }, finish_reason: 'stop', index: 0 },
+      ],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(OpenAIEmptyResponseError);
   });
 });
