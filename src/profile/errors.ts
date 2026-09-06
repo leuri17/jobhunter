@@ -74,37 +74,67 @@ export class ProfileLifecycleError extends ApplicationError {
 }
 
 export class InvalidProfileIdentifierError extends ProfileLifecycleError {
-  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
-    super(code, message, ExitCode.InvalidUsage, metadata);
+  constructor(
+    code: string,
+    message: string,
+    metadata: ApplicationErrorMetadata = {},
+    cause?: Error,
+  ) {
+    super(code, message, ExitCode.InvalidUsage, metadata, cause);
   }
 }
 
 export class InvalidProfilePayloadError extends ProfileLifecycleError {
-  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
-    super(code, message, ExitCode.InvalidUsage, metadata);
+  constructor(
+    code: string,
+    message: string,
+    metadata: ApplicationErrorMetadata = {},
+    cause?: Error,
+  ) {
+    super(code, message, ExitCode.InvalidUsage, metadata, cause);
   }
 }
 
 export class InvalidProfileStateError extends ProfileLifecycleError {
-  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
-    super(code, message, ExitCode.InvalidUsage, metadata);
+  constructor(
+    code: string,
+    message: string,
+    metadata: ApplicationErrorMetadata = {},
+    cause?: Error,
+  ) {
+    super(code, message, ExitCode.InvalidUsage, metadata, cause);
   }
 }
 
 export class BlockingConflictsUnresolvedError extends ProfileLifecycleError {
-  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
-    super(code, message, ExitCode.InvalidUsage, metadata);
+  constructor(
+    code: string,
+    message: string,
+    metadata: ApplicationErrorMetadata = {},
+    cause?: Error,
+  ) {
+    super(code, message, ExitCode.InvalidUsage, metadata, cause);
   }
 }
 
 export class UserCancelledApprovalError extends ProfileLifecycleError {
-  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
-    super(code, message, ExitCode.UserCancellation, metadata);
+  constructor(
+    code: string,
+    message: string,
+    metadata: ApplicationErrorMetadata = {},
+    cause?: Error,
+  ) {
+    super(code, message, ExitCode.UserCancellation, metadata, cause);
   }
 }
 
 export class UserCancelledRejectionError extends ProfileLifecycleError {
-  constructor(code: string, message: string, metadata: ApplicationErrorMetadata = {}) {
-    super(code, message, ExitCode.UserCancellation, metadata);
+  constructor(
+    code: string,
+    message: string,
+    metadata: ApplicationErrorMetadata = {},
+    cause?: Error,
+  ) {
+    super(code, message, ExitCode.UserCancellation, metadata, cause);
   }
 }
