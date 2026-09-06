@@ -151,17 +151,18 @@ export class RunsShowService {
       return { complete: 0, partial: 0, failed: 0, total: 0 };
     }
     const jobIds = [...new Set(events.map((e) => e.jobId))];
-    // Resolve each job's `extractionStatus` via the repository's
-    // `findById`. The MVP's job volume per run is bounded (≤ a few
-    // hundred) so a per-id query is acceptable; the alternative
-    // would be a dedicated repository method (not in scope for ).
-    const rows = await Promise.all(jobIds.map((id) => this.repositories.jobs.findById(id)));
+    // One inArray(jobs.id, ids) SELECT + in-memory Map lookup instead of
+    // N parallel `findById` round-trips (audit B3-C.1.10). For an
+    // N-event run we now issue a single DB round-trip regardless of N.
+    const rows = await this.repositories.jobs.findByIds(jobIds);
+    const rowById = new Map<number, (typeof rows)[number]>(rows.map((r) => [r.id, r]));
     let completeCount = 0;
     let partialCount = 0;
     let failedCount = 0;
     let missingCount = 0;
-    for (const r of rows) {
-      if (r === null) {
+    for (const id of jobIds) {
+      const r = rowById.get(id);
+      if (r === undefined) {
         missingCount++;
         continue;
       }
