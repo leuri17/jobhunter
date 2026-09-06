@@ -80,4 +80,10 @@ describe('LogConfigError', () => {
     expect(error.exitCode).toBe(ExitCode.Fatal);
     expect(error.metadata).toEqual({ level: 'verbose' });
   });
+
+  it('forwards the optional cause to Error', () => {
+    const cause = new Error('underlying config parse failure');
+    const error = new LogConfigError('invalid_level', 'bad level', { level: 'verbose' }, cause);
+    expect(error.cause).toBe(cause);
+  });
 });
