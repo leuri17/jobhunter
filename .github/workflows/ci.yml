@@ -105,14 +105,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
-      - uses: dtolnay/rust-toolchain@e544a7c0e4562848827d0c95a314ece3f1e763c7  # stable
-      - name: Cache cargo registry
-        uses: actions/cache@0057852bfaa89a2c0916a3ed38fe7f8b3dbaf3fb  # v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('desktop/tauri/Cargo.lock') }}
+      - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-audit
         run: cargo install --locked cargo-audit
       - name: Run cargo audit (advisory)
