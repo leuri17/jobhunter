@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
  * `PLAYWRIGHT_SMOKE` env var so it does not run in normal CI.
  *
  * To run this smoke test:
- *   PLAYWRIGHT_SMOKE=1 pnpm test tests/linkedin/helpers/playwright-route-session.smoke.test.ts
+ *   PLAYWRIGHT_SMOKE=1 pnpm test tests/live/linkedin/helpers/playwright-route-session.smoke.test.ts
  *
  * Prerequisites:
  *   - `pnpm exec playwright install chromium` (one-shot per machine)

@@ -32,7 +32,7 @@ export interface PlaywrightExtractionRouteSessionOptions {
  * WITHOUT live network access.
  *
  * Mirrors the  `PlaywrightRouteSession`
- * (`tests/linkedin/helpers/playwright-route-session.ts:35`) but
+ * (`tests/live/linkedin/helpers/playwright-route-session.ts:35`) but
  * serves two fixtures instead of one.
  *
  * The routes are installed on the first `launch()` call; subsequent

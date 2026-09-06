@@ -18,8 +18,8 @@
 
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import { PlaywrightBrowserSession } from '../../src/linkedin/playwright-session.js';
-import { noopLinkedInScraperLogger } from '../../src/linkedin/log.js';
+import { PlaywrightBrowserSession } from '../../../src/linkedin/playwright-session.js';
+import { noopLinkedInScraperLogger } from '../../../src/linkedin/log.js';
 
 const ENABLED = process.env['PLAYWRIGHT_SMOKE'] === '1';
 
