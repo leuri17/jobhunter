@@ -1,0 +1,1 @@
+CREATE INDEX `filter_results_pipeline_run_id_idx` ON `filter_results` (`pipeline_run_id`);
