@@ -8,6 +8,8 @@
     {
       "identifier": "core:event:allow-listen",
       "allow": [{ "event": "sidecar://*" }]
-    }
+    },
+    "allow-sidecar-port",
+    "allow-notify-pipeline-complete"
   ]
 }

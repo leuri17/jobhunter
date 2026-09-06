@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-notify-pipeline-complete"
+description = "Enables the notify_pipeline_complete command without any pre-configured scope."
+commands.allow = ["notify_pipeline_complete"]
+
+[[permission]]
+identifier = "deny-notify-pipeline-complete"
+description = "Denies the notify_pipeline_complete command without any pre-configured scope."
+commands.deny = ["notify_pipeline_complete"]
