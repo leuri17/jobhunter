@@ -88,6 +88,7 @@ export function pinoReevaluationLogger(pino: Logger): ReevaluationLogger {
           event: 'reevaluation.score.fail',
           jobId: String(input.jobId),
           errorCode: input.errorCode,
+          errorMessage: input.errorMessage,
         },
         'reevaluation.score.fail',
       ),

@@ -121,6 +121,7 @@ describe('buildReevaluationPlan', () => {
       filtersRerun: 2,
       scoresRerun: 1,
       scoresInvalidated: 0,
+      scoresFailed: 0,
       skipped: 1,
       scoringDeclinedByUser: false,
     });
@@ -147,6 +148,7 @@ describe('buildReevaluationPlan', () => {
       filtersRerun: 2,
       scoresRerun: 0,
       scoresInvalidated: 0,
+      scoresFailed: 0,
       skipped: 0,
       scoringDeclinedByUser: false,
     });
@@ -213,6 +215,7 @@ describe('buildReevaluationPlan', () => {
       filtersRerun: 0,
       scoresRerun: 0,
       scoresInvalidated: 0,
+      scoresFailed: 0,
       skipped: 0,
       scoringDeclinedByUser: false,
     });

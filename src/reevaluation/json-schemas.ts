@@ -25,7 +25,7 @@
 import { z } from 'zod';
 
 /** The literal schema version. Mirrors `REEVALUATION_SCHEMA_VERSION`. */
-const REEVALUATION_SCHEMA_VERSION_LITERAL = z.literal(1);
+const REEVALUATION_SCHEMA_VERSION_LITERAL = z.literal(2);
 
 /**
  * The seven `ScoringCategory` values from `src/scoring/types.ts`.
@@ -99,7 +99,12 @@ const ReevaluationPlanEntryJsonSchema = z
     jobId: z.string(),
     internalId: z.number().int(),
     sourceJobId: z.string(),
-    action: z.union([z.literal('would-rerun'), z.literal('reran'), z.literal('reused')]),
+    action: z.union([
+      z.literal('would-rerun'),
+      z.literal('reran'),
+      z.literal('reused'),
+      z.literal('failed'),
+    ]),
     fingerprint: z.string(),
     scoreInvalidated: z.boolean(),
   })
@@ -132,6 +137,7 @@ const ReevaluationTotalsJsonSchema = z
     filtersRerun: z.number().int().nonnegative(),
     scoresRerun: z.number().int().nonnegative(),
     scoresInvalidated: z.number().int().nonnegative(),
+    scoresFailed: z.number().int().nonnegative(),
     skipped: z.number().int().nonnegative(),
     scoringDeclinedByUser: z.boolean(),
   })

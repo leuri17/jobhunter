@@ -64,10 +64,12 @@ export interface ReevaluationLogger {
 
   /**
    * Emitted per `jobsToScore` entry when `ScoringService.scoreOne()`
-   * returned `kind: 'failed'`. `errorCode` is the surfaced error
-   * code (`openai_timeout`, `openai_unknown_failure`, etc.).
+   * thrown or returned `kind: 'failed'`. `errorCode` is the surfaced
+   * error code (`openai_timeout`, `openai_unknown_failure`, etc.);
+   * `errorMessage` is the human-readable error message so operators
+   * can root-cause without a debugger (audit B1-H3).
    */
-  reevaluationScoreFail(input: { jobId: number; errorCode: string }): void;
+  reevaluationScoreFail(input: { jobId: number; errorCode: string; errorMessage: string }): void;
 
   /**
    * Emitted when the user was prompted for scoring confirmation and

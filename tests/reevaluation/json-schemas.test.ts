@@ -73,6 +73,7 @@ function buildFixture(overrides: Record<string, unknown> = {}): Record<string, u
       filtersRerun: 0,
       scoresRerun: 0,
       scoresInvalidated: 0,
+      scoresFailed: 0,
       skipped: 0,
       scoringDeclinedByUser: false,
     },
@@ -108,6 +109,7 @@ describe('REEVALUATION_JSON_SCHEMA', () => {
         filtersRerun: 1,
         scoresRerun: 1,
         scoresInvalidated: 0,
+        scoresFailed: 0,
         skipped: 0,
         scoringDeclinedByUser: false,
       },
@@ -133,6 +135,7 @@ describe('REEVALUATION_JSON_SCHEMA', () => {
         filtersRerun: 1,
         scoresRerun: 0,
         scoresInvalidated: 1,
+        scoresFailed: 0,
         skipped: 0,
         scoringDeclinedByUser: false,
       },
@@ -159,6 +162,7 @@ describe('REEVALUATION_JSON_SCHEMA', () => {
         filtersRerun: 0,
         scoresRerun: 1,
         scoresInvalidated: 0,
+        scoresFailed: 0,
         skipped: 0,
         scoringDeclinedByUser: false,
       },
@@ -238,6 +242,7 @@ describe('REEVALUATION_JSON_SCHEMA', () => {
         filtersRerun: 0,
         scoresRerun: 0,
         scoresInvalidated: 0,
+        scoresFailed: 0,
         skipped: 1,
         scoringDeclinedByUser: false,
       },
@@ -254,8 +259,8 @@ describe('REEVALUATION_JSON_SCHEMA', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects schemaVersion: 2 (only literal 1 is accepted)', () => {
-    const fixture = buildFixture({ schemaVersion: 2 });
+  it('rejects schemaVersion: 1 (only literal 2 is accepted after B1-H3 fix)', () => {
+    const fixture = buildFixture({ schemaVersion: 1 });
     const result = REEVALUATION_JSON_SCHEMA.safeParse(fixture);
     expect(result.success).toBe(false);
   });
@@ -316,6 +321,7 @@ describe('REEVALUATION_JSON_SCHEMA', () => {
         filtersRerun: -1,
         scoresRerun: 0,
         scoresInvalidated: 0,
+        scoresFailed: 0,
         skipped: 0,
         scoringDeclinedByUser: false,
       },
