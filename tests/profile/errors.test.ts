@@ -95,4 +95,19 @@ describe('Profile lifecycle errors', () => {
     expect(error.message).toBe('gone');
     expect(error.metadata).toMatchObject({ input: 'profile_9' });
   });
+
+  it('forwards the optional cause to Error for every lifecycle subclass', () => {
+    const cause = new Error('underlying zod failure');
+    const cases = [
+      new InvalidProfileIdentifierError('a', 'b', {}, cause),
+      new InvalidProfilePayloadError('a', 'b', {}, cause),
+      new InvalidProfileStateError('a', 'b', {}, cause),
+      new BlockingConflictsUnresolvedError('a', 'b', {}, cause),
+      new UserCancelledApprovalError('a', 'b', {}, cause),
+      new UserCancelledRejectionError('a', 'b', {}, cause),
+    ];
+    for (const error of cases) {
+      expect(error.cause).toBe(cause);
+    }
+  });
 });
