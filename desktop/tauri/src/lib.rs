@@ -6,6 +6,17 @@ use sidecar::{spawn_sidecar, stop_sidecar};
 use tauri::Manager;
 use tauri_plugin_notification::NotificationExt;
 
+/// Bring the existing `main` window forward. Extracted from the
+/// single-instance plugin callback so the call site stays readable and
+/// the body is unit-testable with a mocked `AppHandle`.
+pub fn bring_main_window_forward<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
 /// Port the sidecar bound to; populated by `run()` and queried via Tauri IPC.
 #[derive(Default, Clone, Copy)]
 pub struct SidecarPort(pub u16);
@@ -86,14 +97,9 @@ pub fn run() {
             // rather than spawning a duplicate process that would fail to
             // bind the sidecar port.
             //
-            // The window is labelled `main` (see `tauri.conf.json`); Tauri
-            // uses `main` as the default label for the lone entry in
-            // `app.windows[]`, but we set it explicitly for clarity.
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
+            // The body lives in `bring_main_window_forward` so it can be
+            // unit-tested with a mocked AppHandle.
+            bring_main_window_forward(app);
         }))
         .plugin(tauri_plugin_notification::init())
         .manage(SidecarPort(port))
