@@ -83,11 +83,8 @@ export async function discoverAllCards(
     }
 
     const primaryLocator = page.locator(LINKEDIN_SELECTORS.cards.listItem);
-    const activeLocator =
-      (await primaryLocator.count()) > 0
-        ? primaryLocator
-        : page.locator(LINKEDIN_SELECTORS.cards.listItemAlt);
-    const discoveredThisIteration = await collectCards(activeLocator, idToCard);
+    const altLocator = page.locator(LINKEDIN_SELECTORS.cards.listItemAlt);
+    const discoveredThisIteration = await collectCards(primaryLocator, altLocator, idToCard);
     void discoveredThisIteration;
 
     if (await isEndOfResults(page)) {
@@ -165,6 +162,25 @@ export async function discoverAllCards(
 const DEFAULT_MAX_ITERATIONS = 200;
 
 /**
+ * Pure browser-side fn: walk each matched `<li>`, find the inner
+ * `<a>`, and return the two attributes `parseCardJobId` inspects.
+ * Hoisted to a module-level constant so both `evaluateAll` call sites
+ * (primary + alt selector) reuse the same callback without re-
+ * allocating the closure on every iteration of the outer loop.
+ */
+const collectCardAnchorAttrs = (nodes: Element[]): CardAnchorAttrs[] =>
+  nodes.map((node) => {
+    const anchor = node.querySelector('a');
+    if (anchor === null) {
+      return { occludable: null, href: null };
+    }
+    return {
+      occludable: anchor.getAttribute('data-occludable-job-id'),
+      href: anchor.getAttribute('href'),
+    };
+  });
+
+/**
  * One CDP round-trip per iteration: read every card's anchor attrs
  * (`data-occludable-job-id`, `href`) via `evaluateAll` and parse each
  * to a `sourceJobId` client-side. Replaces the prior per-card
@@ -172,27 +188,30 @@ const DEFAULT_MAX_ITERATIONS = 200;
  * pattern that drove hundreds of protocol round-trips per search on
  * long lists (audit H14).
  *
+ * The selector is resolved exactly once per iteration: the primary
+ * selector first; the alt selector only fires when the primary
+ * yields no cards. The redundant `.count()` probe that the
+ * pre-#63 code used to decide between primary and alt is gone —
+ * an empty `evaluateAll` result is the cheapest possible "empty"
+ * signal in Playwright (audit B3-C.3.2).
+ *
  *  deviation: `sourceJobId` may be `null` when the anchor has
  * neither `data-occludable-job-id` nor a parseable `/jobs/view/<digits>/`
  * href. We preserve those cards in the output so the orchestrator
  * can write a `discoveryErrors` row.
  */
 async function collectCards(
-  parentLocator: Locator,
+  primaryLocator: Locator,
+  altLocator: Locator,
   idToCard: Map<string, DiscoveredCard>,
 ): Promise<number> {
-  const attrs = await parentLocator.evaluateAll<CardAnchorAttrs[], Element>((nodes) => {
-    return nodes.map((node) => {
-      const anchor = node.querySelector('a');
-      if (anchor === null) {
-        return { occludable: null, href: null };
-      }
-      return {
-        occludable: anchor.getAttribute('data-occludable-job-id'),
-        href: anchor.getAttribute('href'),
-      };
-    });
-  });
+  const primaryAttrs = await primaryLocator.evaluateAll<CardAnchorAttrs[], Element>(
+    collectCardAnchorAttrs,
+  );
+  const attrs =
+    primaryAttrs.length > 0
+      ? primaryAttrs
+      : await altLocator.evaluateAll<CardAnchorAttrs[], Element>(collectCardAnchorAttrs);
 
   let added = 0;
   let index = 0;
