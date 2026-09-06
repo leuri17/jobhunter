@@ -50,6 +50,18 @@ function PipelinePage() {
         <span className="self-center text-sm text-zinc-400">status: {events.status}</span>
       </div>
 
+      {events.error !== null && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          data-testid="sse-error"
+          className="rounded border border-red-900 bg-red-950 px-4 py-3 text-sm text-red-100"
+        >
+          <p className="font-semibold mb-1">Live event stream failed</p>
+          <p className="text-red-200">{events.error.message}</p>
+        </div>
+      )}
+
       <LogPane lines={events.lines} />
 
       {events.result !== null && (
