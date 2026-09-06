@@ -467,6 +467,9 @@ export const scoreResults = sqliteTable(
       t.pipelineRunId,
       t.overallScore,
     ),
+    pipelineRunActiveSuccessScoreIdx: index(
+      'score_results_pipeline_run_active_success_score_idx',
+    ).on(t.pipelineRunId, t.active, t.success, t.overallScore),
     activeUnique: uniqueIndex('score_results_active_idx')
       .on(t.jobId)
       .where(sql`active = 1`),
