@@ -43,6 +43,13 @@
       "when": 1788696210385,
       "tag": "0005_misty_komodo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788696260010,
+      "tag": "0006_superb_patriot",
+      "breakpoints": true
     }
   ]
 }
