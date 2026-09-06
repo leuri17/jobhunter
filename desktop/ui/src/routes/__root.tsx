@@ -1,4 +1,5 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { StatusPill } from '@/components/status-pill';
 import { SidecarBanner } from '@/components/sidecar-banner';
 import { useSidecarReachability } from '@/lib/sidecar-reachability';
@@ -6,7 +7,10 @@ import { useSidecarReachability } from '@/lib/sidecar-reachability';
 // Root layout: persistent sidebar + content area. StatusPill surfaces
 // periodic /api/health from the queryClient; SidecarBanner is a blocking
 // overlay that fires when the sidecar URL resolver falls back to a port
-// nothing is bound to (issue #31 / audit B4-B-L4.6).
+// nothing is bound to (issue #31 / audit B4-B-L4.6). The <Outlet/>
+// is wrapped in an ErrorBoundary so a render-throw inside any route
+// falls back to a local <RetryPanel/> instead of unmounting the whole
+// webview (audit C2 / B-L4.2).
 export const Route = createRootRoute({
   component: RootLayout,
 });
@@ -64,7 +68,9 @@ function RootLayout() {
           </div>
         </aside>
         <main className="flex-1 overflow-auto">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
