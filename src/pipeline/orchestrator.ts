@@ -539,9 +539,15 @@ export class PipelineOrchestrator {
 
   private async computeTopN(runId: number, limit: number): Promise<readonly TopNRow[]> {
     const rows = await this.repositories.scoreResults.topByRun(runId, limit);
+    // Batch the JobRow fetch into a single inArray(jobs.id, ids) SELECT +
+    // in-memory Map lookup instead of issuing one findById per TopN row
+    // (audit B3-C.1.4). A LIMIT 20 TopN issues 20 sequential single-row
+    // SELECTs today; the batched path is one round-trip.
+    const fetched = await this.repositories.jobs.findByIds(rows.map((r) => r.jobId));
+    const jobById = new Map(fetched.map((job) => [job.id, job]));
     const out: TopNRow[] = [];
     for (const row of rows) {
-      const job = await this.repositories.jobs.findById(row.jobId);
+      const job = jobById.get(row.jobId);
       out.push({
         jobId: row.jobId,
         sourceJobId: row.jobId.toString(),
