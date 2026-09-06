@@ -12,6 +12,36 @@ import { openDbHandle, createRepositories } from './db-helper.js';
 import { resolveOpenAiClientOrNull } from './openai-resolve.js';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 
+// MIME types accepted by the profile-source extractor. The schema's
+// `sourceType` enum is `pdf | markdown | plain_text` (see
+// `src/persistence/schema.ts`), so the allowlist mirrors that
+// subset. Any other mimetype is rejected at the route boundary
+// with a 4xx — the body is never written to disk.
+const ALLOWED_PROFILE_MIME_TYPES: ReadonlySet<string> = new Set([
+  'application/pdf',
+  'text/markdown',
+  'text/plain',
+]);
+
+// Multipart registration limits for /api/profile/import. The sidecar
+// currently consumes only the filename (Phase D desktop UI passes
+// absolute paths), but the registration is the only line of defence
+// for any future handler that reads the body. Bound the surface
+// area now so a future PR that does consume the body inherits a
+// sane default.
+const PROFILE_MULTIPART_LIMITS = {
+  // The importer's `importSources` cap is 2 (see
+  // src/profile/import-service.ts); mirror that here.
+  files: 2,
+  // 10 MiB per file. Down from the previous 50 MiB blanket cap.
+  fileSize: 10 * 1024 * 1024,
+  // Cap the field-name and field-value sizes so a malicious
+  // `parts()` consumer can't be DoS'd by a 50 MiB field name.
+  fieldNameSize: 200,
+  fieldSize: 64 * 1024,
+  fields: 20,
+} as const;
+
 export interface ProfileRouteOptions {
   readonly openaiClient?: OpenAIClient;
 }
@@ -20,7 +50,7 @@ export async function registerProfileRoutes(
   app: FastifyInstance,
   opts: ProfileRouteOptions = {},
 ): Promise<void> {
-  await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
+  await app.register(multipart, { limits: PROFILE_MULTIPART_LIMITS });
 
   app.get<{ Querystring: { status?: string } }>('/api/profile', async (req) => {
     const handle = await openDbHandle();
@@ -56,15 +86,33 @@ export async function registerProfileRoutes(
       const parts = req.parts();
       const filePaths: string[] = [];
       for await (const part of parts) {
-        if (part.type === 'file' && typeof part.filename === 'string') {
-          // v1 limitation: this endpoint accepts the filename only, not the file
-          // body. The desktop UI (Phase D) currently passes absolute paths that
-          // already exist on disk. Real browser uploads (multipart with file
-          // bodies) are deferred; when added, this handler must consume
-          // part.file via pipeline() or toBuffer() to avoid silent data loss.
-          // Tracked in .slim/deepwork/progress.md.
-          filePaths.push(part.filename);
+        if (part.type !== 'file' || typeof part.filename !== 'string') {
+          continue;
         }
+        if (part.mimetype === undefined || !ALLOWED_PROFILE_MIME_TYPES.has(part.mimetype)) {
+          // Reject the request before any body is written. Don't echo
+          // the offending filename or mimetype in the response — both
+          // can be attacker-controlled and are not actionable for the
+          // legitimate caller.
+          reply.status(415);
+          reply.send({
+            schemaVersion: 1,
+            error: {
+              code: 'unsupported_profile_mime_type',
+              message:
+                'Profile source must be a PDF, Markdown, or plain-text file. ' +
+                'Check the file extension and try again.',
+            },
+          });
+          return;
+        }
+        // v1 limitation: this endpoint accepts the filename only, not the file
+        // body. The desktop UI (Phase D) currently passes absolute paths that
+        // already exist on disk. Real browser uploads (multipart with file
+        // bodies) are deferred; when added, this handler must consume
+        // part.file via pipeline() or toBuffer() to avoid silent data loss.
+        // Tracked in .slim/deepwork/progress.md.
+        filePaths.push(part.filename);
       }
       const result = await service.importSources(filePaths);
       reply.send({ schemaVersion: 1, ...result });
