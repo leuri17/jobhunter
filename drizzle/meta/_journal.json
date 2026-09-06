@@ -29,6 +29,13 @@
       "when": 1788569859425,
       "tag": "0003_quick_violations",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788696073862,
+      "tag": "0004_wakeful_darwin",
+      "breakpoints": true
     }
   ]
 }
