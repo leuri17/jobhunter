@@ -26,7 +26,7 @@ public search pages, one to OpenAI for scoring).
    - Windows: `JobHunter_x.y.z_x64-setup.exe`
    - Linux: `JobHunter_x.y.z_amd64.AppImage` or `.deb`
 2. Drag to Applications (macOS) or run the installer (Windows/Linux).
-3. Set `OPENAI_API_KEY` in your environment before launching.
+3. Set `OPENAI_API_KEY` in your environment before launching. (See [docs/env.md](./docs/env.md) for the full env-var map.)
 
 ### For developers (build from source)
 
@@ -125,6 +125,8 @@ selector changes in `src/linkedin/selectors.ts`.
   architecture reference.
 - [`docs/desktop.md`](./docs/desktop.md) — desktop build, bundle,
   and ship instructions.
+- [`docs/env.md`](./docs/env.md) — environment variables (build-time
+  vs runtime, dev vs production, test gating).
 - [`docs/responsible-use.md`](./docs/responsible-use.md) — LinkedIn
   Terms-of-Service posture and user responsibilities.
 
