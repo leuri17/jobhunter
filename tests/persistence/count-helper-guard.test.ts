@@ -5,7 +5,7 @@
  * issue #64 (B3-C.4.7) and was a measurable perf cost on the
  * runs-show page when `discovery_errors` accumulated.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 
 describe('persistence count helper guard', () => {
@@ -23,7 +23,7 @@ describe('persistence count helper guard', () => {
           '!dist',
           '-g',
           '!drizzle',
-          '\.all\(\)\.length',
+          '.all\\(\\).length',
           'src/persistence/repositories',
         ],
         { encoding: 'utf8' },
