@@ -14,6 +14,42 @@ fn parses_ready_line_extracts_port() {
     assert_eq!(parse_ready_line("READY 12345"), Some(12345));
     assert_eq!(parse_ready_line("READY 0"), Some(0));
     assert_eq!(parse_ready_line("READY 65535"), Some(65535));
+    // Leading zeros are accepted and the numeric value is what counts
+    // (u16::from_str parses the digits regardless of leading zeros).
+    // Document the choice — the sidecar's contract is decimal, and
+    // `READY 01234` and `READY 1234` are both valid forms of port 1234.
+    assert_eq!(parse_ready_line("READY 01234"), Some(1234));
+    assert_eq!(parse_ready_line("READY 00000"), Some(0));
+}
+
+#[test]
+fn parse_ready_line_rejects_u16_overflow() {
+    // Just-over-u16-max boundary. The function uses u16::from_str which
+    // rejects 65536. Lock the contract here so a future refactor to a
+    // wider type doesn't silently widen the port range.
+    assert_eq!(parse_ready_line("READY 65536"), None);
+    // The legacy test used 99999; the new test pins the precise
+    // boundary at 65535 (last accepted) / 65536 (first rejected).
+    assert_eq!(parse_ready_line("READY 65535"), Some(65535));
+}
+
+#[test]
+fn parse_ready_line_rejects_leading_whitespace_and_unrelated_inputs() {
+    // The parser applies `.trim()` to the post-prefix digits, so
+    // trailing whitespace is accepted (the contract is forgiving on
+    // this side — see src/sidecar.rs:9). Document the choice: the
+    // caller can hand the raw stdout line to parse_ready_line
+    // without trimming first.
+    assert_eq!(parse_ready_line("READY 12345\n"), Some(12345));
+    assert_eq!(parse_ready_line("READY 12345 "), Some(12345));
+    assert_eq!(parse_ready_line("READY 12345\t"), Some(12345));
+    // Leading whitespace before the literal "READY " prefix is NOT
+    // stripped — the parser does an exact strip_prefix match. This is
+    // a defensive guard: a line with leading whitespace is a malformed
+    // handshake and must not be accepted.
+    assert_eq!(parse_ready_line(" READY 12345"), None);
+    // Sanity: an empty post-prefix is still rejected.
+    assert_eq!(parse_ready_line("READY \n"), None);
 }
 
 #[test]
