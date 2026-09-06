@@ -1,0 +1,1 @@
+CREATE INDEX `filter_results_filter_config_version_id_idx` ON `filter_results` (`filter_config_version_id`);
