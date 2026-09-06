@@ -31,12 +31,16 @@
  */
 
 import type { FilterApplyResult, FilterApplyInput } from '../filter/service.js';
-import type { FilterOutcome } from '../persistence/repositories/filter-results.js';
+import type {
+  FilterOutcome,
+  FilterResultRow,
+} from '../persistence/repositories/filter-results.js';
 import type { JobRow } from '../persistence/repositories/jobs.js';
 import type { Repositories } from '../persistence/repositories/index.js';
 import type { ScoreOneInput } from '../scoring/service.js';
 import type { ScoringOutcome, ScoringPlan } from '../scoring/state.js';
 import type { BuildScoringPlanInput } from '../scoring/plan.js';
+import type { ScoreResultRow } from '../persistence/repositories/score-results.js';
 import { ApplicationError } from '../errors/index.js';
 import { PipelinePrerequisiteError } from '../pipeline/errors.js';
 import type { PipelinePrompts } from '../pipeline/prompts.js';
@@ -323,16 +327,78 @@ export class ReevaluationService {
     const jobsToScore: MutablePlanEntry[] = [];
     const skipped: ReevaluationSkippedEntry[] = [];
 
+    // Pre-pass: compute every job's filter fingerprint once, then
+    // batch the filter probe into a single inArray(jobs.id, ids)
+    // SELECT. Replaces the per-job findActiveByJob N+1 with two
+    // round-trips total for the filter side (audit B3-C.1.6).
+    const filterFpByJobId = new Map<number, string>();
     for (const job of targetJobs) {
-      const filterFp = computeFilterFingerprintForJob(
-        job,
-        configRow.configJson,
-        profileVersion?.profileJson ?? null,
+      filterFpByJobId.set(
+        job.id,
+        computeFilterFingerprintForJob(
+          job,
+          configRow.configJson,
+          profileVersion?.profileJson ?? null,
+        ),
       );
-      const filterResult = await this.repositories.filterResults.findActiveByJob(job.id, filterFp);
-      const filterStale = filterResult === null;
+    }
+    const filterRows = await this.repositories.filterResults.findActiveByJobIn(
+      targetJobs.map((j) => j.id),
+    );
+    const filterRowByJobId = new Map<number, FilterResultRow>(
+      filterRows.map((r) => [r.jobId, r]),
+    );
+
+    // Pre-pass: collect score probes for jobs whose filter is fresh
+    // AND accepted AND a profile is active. The batched score probe
+    // collapses N per-job findActiveByJob calls into one round-trip.
+    // Fingerprint match is done in memory against the precomputed
+    // scoreFpByJobId map (same pattern as the filter side).
+    const scoreProbes: ReadonlyArray<{ readonly jobId: number; readonly fingerprint: string }> =
+      profileVersion === null
+        ? []
+        : targetJobs.flatMap((job) => {
+            const filterRow = filterRowByJobId.get(job.id);
+            const filterFp = filterFpByJobId.get(job.id);
+            if (filterRow === undefined || filterFp === undefined) return [];
+            if (filterRow.fingerprint !== filterFp) return [];
+            if (filterRow.overallOutcome !== 'accepted') return [];
+            const profileRow = profileVersion;
+            return [
+              {
+                jobId: job.id,
+                fingerprint: computeScoreFingerprintForJob(
+                  job,
+                  profileRow.id,
+                  profileRow.contentHash,
+                  {},
+                  REEVALUATION_SCORING_MODEL,
+                  REEVALUATION_SCORING_REASONING_EFFORT,
+                ),
+              },
+            ];
+          });
+    const scoreRows = await this.repositories.scoreResults.findActiveByJobIn(
+      scoreProbes.map((p) => p.jobId),
+    );
+    const scoreRowByJobId = new Map<number, ScoreResultRow>(
+      scoreRows.map((r) => [r.jobId, r]),
+    );
+    const scoreFpByJobId = new Map<number, string>(
+      scoreProbes.map((p) => [p.jobId, p.fingerprint]),
+    );
+
+    for (const job of targetJobs) {
+      const filterFp = filterFpByJobId.get(job.id);
+      if (filterFp === undefined) {
+        // Defensive: filterFpByJobId is populated for every job in the
+        // pre-pass above. Missing entries indicate a logic bug.
+        continue;
+      }
+      const filterRow = filterRowByJobId.get(job.id);
+      const filterStale = filterRow === undefined || filterRow.fingerprint !== filterFp;
       const filterOutcome: FilterOutcome | null =
-        filterResult === null ? null : filterResult.overallOutcome;
+        filterStale || filterRow === undefined ? null : filterRow.overallOutcome;
 
       const rerunFilter =
         filterStale &&
@@ -352,17 +418,12 @@ export class ReevaluationService {
 
       // Score-side selection: only consider jobs whose filter is fresh + accepted.
       if (filterOutcome === 'accepted' && profileVersion !== null) {
-        const profileRow = profileVersion;
-        const scoreFp = computeScoreFingerprintForJob(
-          job,
-          profileRow.id,
-          profileRow.contentHash,
-          {},
-          REEVALUATION_SCORING_MODEL,
-          REEVALUATION_SCORING_REASONING_EFFORT,
-        );
-        const scoreRow = await this.repositories.scoreResults.findActiveByJob(job.id, scoreFp);
-        const scoreStale = scoreRow === null;
+        // scoreFpByJobId was populated for every job in the scoreProbes
+        // pre-pass when filterOutcome === 'accepted' AND profileVersion
+        // !== null, which is exactly this branch's entry condition.
+        const scoreFp = scoreFpByJobId.get(job.id)!;
+        const scoreRow = scoreRowByJobId.get(job.id);
+        const scoreStale = scoreRow === undefined || scoreRow.fingerprint !== scoreFp;
 
         const shouldConsiderScoring =
           input.scope === 'default' || input.scope === 'scores-only' || input.scope === 'job';

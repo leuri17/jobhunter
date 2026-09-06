@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { filterResults } from '../schema.js';
@@ -119,6 +119,35 @@ export class FilterResultRepository {
       .all();
     const row = rows[0];
     return row === undefined ? null : rowFromRecord(row);
+  }
+
+  /**
+   * Batch lookup: every active filter result row for the supplied jobIds.
+   * Used by `ReevaluationService.buildPlan` to replace the per-job
+   * `findActiveByJob` N+1 with one `inArray` SELECT + in-memory
+   * fingerprint filter (Closes #56).
+   *
+   * Returns an empty array without a DB round-trip when `jobIds` is
+   * empty (Drizzle's `inArray` rejects empty inputs).
+   *
+   * Ordering is not guaranteed. The caller keys by primary `jobId`.
+   * The `filter_results_active_idx` partial unique constraint
+   * `(jobId) WHERE active = 1` guarantees at most one row per
+   * jobId, so each `jobId` appears at most once in the result.
+   *
+   * Fingerprint match is left to the caller: every returned row
+   * carries its `fingerprint` field, and the service compares it
+   * against the per-job computed fingerprint to decide cache hit
+   * vs cache miss.
+   */
+  async findActiveByJobIn(jobIds: readonly number[]): Promise<FilterResultRow[]> {
+    if (jobIds.length === 0) return [];
+    const rows = this.ctx.db
+      .select()
+      .from(filterResults)
+      .where(and(inArray(filterResults.jobId, [...jobIds]), eq(filterResults.active, true)))
+      .all();
+    return rows.map(rowFromRecord);
   }
 
   async findById(id: number): Promise<FilterResultRow | null> {
