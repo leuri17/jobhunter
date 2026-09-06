@@ -21,6 +21,9 @@ tokio = { version = "1", features = ["process", "io-util", "macros", "rt-multi-t
 once_cell = "1"
 libc = "0.2"
 
+[dev-dependencies]
+tauri = { version = "2", features = ["test"] }
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
