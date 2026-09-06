@@ -89,10 +89,12 @@ jobs:
       - run: pnpm --filter @jobhunter/ui test
 
   cargo-audit:
-    # Gates on any new RUSTSEC advisory via `./scripts/cargo-audit.sh`,
-    # which carries an explicit allowlist of the 17 transitive advisories
-    # pulled in by tauri 2.11.5. The allowlist is the source of truth —
-    # update it there, not here.
+    # Gates on real risk via `./scripts/cargo-audit.sh`. The script
+    # parses cargo-audit's JSON output and blocks only on vulnerabilities
+    # + unsound advisories. The 17 transitive advisories pulled in by
+    # tauri 2.11.5 are allowlisted at the script level; new
+    # unmaintained advisories surface in the workflow log but don't
+    # fail the build.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
