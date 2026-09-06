@@ -1,0 +1,1 @@
+CREATE INDEX `discovery_events_job_id_idx` ON `discovery_events` (`job_id`);
