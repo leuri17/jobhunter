@@ -409,12 +409,12 @@ export class JobRepository {
    * "Most recent" is defined as the highest `id` (monotonically
    * increasing via the SQLite auto-increment primary key).
    *
-   * Indexed access: `discovery_events_job_id_idx` (single column on
-   * jobId) narrows the candidate set to rows for the supplied job;
-   * the searchExecutionId filter and id sort are then applied in
-   * memory and capped by `LIMIT 1`. A future
-   * `(jobId, searchExecutionId)` composite (tracked separately) would
-   * make the lookup O(log n) on the index alone.
+   * Indexed access: `discovery_events_job_id_search_execution_id_idx`
+   * (composite on `(jobId, searchExecutionId)`) resolves the WHERE
+   * pair directly; the `id`-desc sort and `LIMIT 1` then apply on top
+   * of the matching prefix. The legacy `discovery_events_job_id_idx`
+   * single-column index is retained for callers that filter only on
+   * `jobId` (e.g. `listDiscoveryEventsByJob`).
    */
   async findLatestDiscoveryEventByJobAndSearch(
     jobId: number,

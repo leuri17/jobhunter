@@ -84,6 +84,22 @@ describe('persistence schema', () => {
     expect(unique?.config.unique, 'jobs_source_job_id_idx must be unique').toBe(true);
   });
 
+  it('declares a composite (jobId, searchExecutionId) index on discovery_events', () => {
+    const config = getTableConfig(table('discovery_events'));
+    const composite = config.indexes.find(
+      (idx) => idx.config.name === 'discovery_events_job_id_search_execution_id_idx',
+    );
+    expect(composite, 'composite index on (jobId, searchExecutionId) must exist').toBeDefined();
+    expect(composite?.config.unique, 'composite index must be non-unique').toBe(false);
+    // `getTableConfig` returns columns by their SQL identifier; verify
+    // both members are present so a future edit can't silently drop one.
+    const columnNames = new Set(
+      (composite?.config.columns ?? []).map((c) => (c as { name?: string }).name ?? ''),
+    );
+    expect(columnNames.has('job_id')).toBe(true);
+    expect(columnNames.has('search_execution_id')).toBe(true);
+  });
+
   it('declares foreign-key relationships from extraction_attempts to job/run/search', () => {
     const config = getTableConfig(table('extraction_attempts'));
     const fkTargets = config.foreignKeys.map((fk) => {
