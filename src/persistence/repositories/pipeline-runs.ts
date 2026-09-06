@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
@@ -364,39 +364,39 @@ export class PipelineRunRepository {
   }
 
   private async countDiscoveryErrorsByRun(runId: number): Promise<number> {
-    const rows = this.ctx.db
-      .select({ id: discoveryErrors.id })
+    const row = this.ctx.db
+      .select({ n: count() })
       .from(discoveryErrors)
       .where(eq(discoveryErrors.pipelineRunId, runId))
-      .all();
-    return rows.length;
+      .get();
+    return row?.n ?? 0;
   }
 
   private async countDiagnosticArtifactsByRun(runId: number): Promise<number> {
-    const rows = this.ctx.db
-      .select({ id: diagnosticArtifacts.id })
+    const row = this.ctx.db
+      .select({ n: count() })
       .from(diagnosticArtifacts)
       .where(eq(diagnosticArtifacts.pipelineRunId, runId))
-      .all();
-    return rows.length;
+      .get();
+    return row?.n ?? 0;
   }
 
   private async countActiveFilterResultsByRun(runId: number): Promise<number> {
-    const rows = this.ctx.db
-      .select({ id: filterResults.id })
+    const row = this.ctx.db
+      .select({ n: count() })
       .from(filterResults)
       .where(and(eq(filterResults.pipelineRunId, runId), eq(filterResults.active, true)))
-      .all();
-    return rows.length;
+      .get();
+    return row?.n ?? 0;
   }
 
   private async countActiveScoreResultsByRun(runId: number): Promise<number> {
-    const rows = this.ctx.db
-      .select({ id: scoreResults.id })
+    const row = this.ctx.db
+      .select({ n: count() })
       .from(scoreResults)
       .where(and(eq(scoreResults.pipelineRunId, runId), eq(scoreResults.active, true)))
-      .all();
-    return rows.length;
+      .get();
+    return row?.n ?? 0;
   }
 }
 

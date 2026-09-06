@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, like } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, like } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
@@ -646,12 +646,12 @@ export class JobRepository {
    * discovery errors" hint without materialising every error row.
    */
   async discoveryErrorCountByRun(runId: number): Promise<number> {
-    const rows = this.ctx.db
-      .select({ id: discoveryErrors.id })
+    const row = this.ctx.db
+      .select({ n: count() })
       .from(discoveryErrors)
       .where(eq(discoveryErrors.pipelineRunId, runId))
-      .all();
-    return rows.length;
+      .get();
+    return row?.n ?? 0;
   }
 
   // -------------------------------------------------------------------------
