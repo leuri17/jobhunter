@@ -72,8 +72,17 @@ function computeAppliedTags(
     let hash: string;
     try {
       hash = hashMigrationFile(folder, entry.tag);
-    } catch {
-      continue;
+    } catch (cause) {
+      // A missing or unreadable migration file is a hard error, not a
+      // silent skip. Silently continuing (the prior behaviour) would
+      // under-report `appliedMigrations` and let an operator trust a
+      // short list as if all migrations had applied.
+      throw new MigrationError(
+        'migration_file_unreadable',
+        `Cannot read migration file for journal entry ${entry.tag} at ${folder}`,
+        { folder, tag: entry.tag },
+        cause instanceof Error ? cause : undefined,
+      );
     }
     if (!before.has(hash) && after.has(hash)) {
       applied.push(entry.tag);

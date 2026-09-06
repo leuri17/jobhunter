@@ -98,4 +98,67 @@ describe('runMigrations', () => {
     expect((caught as { code: string }).code).toBe('migration_apply_failed');
     expect((caught as { exitCode: number }).exitCode).toBe(1);
   });
+
+  it('throws when the journal references a missing migration file (no silent skip)', () => {
+    // The journal declares 0000_present + 0000_missing but only
+    // 0000_present.sql exists on disk. Pre-fix the loop silently
+    // skipped the missing entry, returning a short `appliedMigrations`
+    // list as if all migrations had applied. Now the failure is
+    // surfaced as a typed MigrationError — either by drizzle's migrate
+    // (when the file is missing before the run) or by computeAppliedTags
+    // (when the file disappears after the run). The user-facing
+    // contract is: the error is not silent.
+    const missingFolder = join(directory, 'missing-file');
+    mkdirSync(missingFolder, { recursive: true });
+    mkdirSync(join(missingFolder, 'meta'), { recursive: true });
+    writeFileSync(join(missingFolder, '0000_present.sql'), 'SELECT 1;');
+    writeFileSync(
+      join(missingFolder, 'meta', '_journal.json'),
+      JSON.stringify({
+        version: '7',
+        dialect: 'sqlite',
+        entries: [
+          { idx: 0, version: '7', when: 0, tag: '0000_present', breakpoints: true },
+          { idx: 1, version: '7', when: 1, tag: '0000_missing', breakpoints: true },
+        ],
+      }),
+    );
+    let caught: unknown;
+    try {
+      runMigrations(connection, { migrationsFolder: missingFolder });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(Error);
+    // The error is either migration_apply_failed (drizzle's migrate
+    // throws before computeAppliedTags runs) or migration_file_unreadable
+    // (computeAppliedTags throws). Both are typed MigrationErrors; both
+    // exit code 1; both surface the failure rather than silently
+    // returning a short list.
+    const code = (caught as { code: string }).code;
+    expect(['migration_apply_failed', 'migration_file_unreadable']).toContain(code);
+    expect((caught as { exitCode: number }).exitCode).toBe(1);
+  });
+
+  it('reports appliedMigrations for every tag that successfully moved absent → present', () => {
+    // Two valid migrations on a fresh DB. Both should be reported.
+    const happyFolder = join(directory, 'happy');
+    mkdirSync(happyFolder, { recursive: true });
+    mkdirSync(join(happyFolder, 'meta'), { recursive: true });
+    writeFileSync(join(happyFolder, '0000_one.sql'), 'CREATE TABLE t1 (id INTEGER PRIMARY KEY);');
+    writeFileSync(join(happyFolder, '0001_two.sql'), 'CREATE TABLE t2 (id INTEGER PRIMARY KEY);');
+    writeFileSync(
+      join(happyFolder, 'meta', '_journal.json'),
+      JSON.stringify({
+        version: '7',
+        dialect: 'sqlite',
+        entries: [
+          { idx: 0, version: '7', when: 0, tag: '0000_one', breakpoints: true },
+          { idx: 1, version: '7', when: 1, tag: '0001_two', breakpoints: true },
+        ],
+      }),
+    );
+    const report = runMigrations(connection, { migrationsFolder: happyFolder });
+    expect(report.appliedMigrations).toEqual(['0000_one', '0001_two']);
+  });
 });
