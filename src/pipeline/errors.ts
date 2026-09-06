@@ -2,6 +2,7 @@ import {
   ApplicationError,
   ExitCode,
   type ApplicationErrorMetadata,
+  type ExitCodeValue,
 } from '../errors/application-error.js';
 
 /**
@@ -11,6 +12,9 @@ import {
  * orchestrator boundary only for unrecoverable conditions;
  * per-job or per-search errors are surfaced as `RunSummary`
  * counters and never reach the sidecar as thrown errors.
+ *
+ * Subclasses can override the exit code by passing an explicit value
+ * as the fourth positional argument; the default is {@link ExitCode.Fatal}.
  */
 export class PipelineLifecycleError extends ApplicationError {
   constructor(
@@ -18,8 +22,9 @@ export class PipelineLifecycleError extends ApplicationError {
     message: string,
     metadata: ApplicationErrorMetadata = {},
     cause?: Error,
+    exitCode: ExitCodeValue = ExitCode.Fatal,
   ) {
-    super(code, message, ExitCode.Fatal, metadata, cause);
+    super(code, message, exitCode, metadata, cause);
   }
 }
 
@@ -27,7 +32,7 @@ export class PipelineLifecycleError extends ApplicationError {
  * Thrown when a prerequisite (config / active profile / active filter
  * config) is missing or invalid before the run starts.
  *
- * Exit code: 3 (MissingRequired) — per .
+ * Exit code: 3 (MissingRequired).
  */
 export class PipelinePrerequisiteError extends PipelineLifecycleError {
   constructor(
@@ -36,9 +41,7 @@ export class PipelinePrerequisiteError extends PipelineLifecycleError {
     metadata: ApplicationErrorMetadata = {},
     cause?: Error,
   ) {
-    super(code, message, metadata, cause);
-    // Override exit code to 3 (MissingRequired).
-    (this as { exitCode: number }).exitCode = ExitCode.MissingRequired;
+    super(code, message, metadata, cause, ExitCode.MissingRequired);
   }
 }
 
