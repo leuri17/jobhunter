@@ -89,19 +89,10 @@ jobs:
       - run: pnpm --filter @jobhunter/ui test
 
   cargo-audit:
-    # Audit the Tauri shell's Rust dependency graph. Runs weekly via
-    # Dependabot (added in the same change) and on every push to main /
-    # every PR.
-    #
-    # Currently advisory-only: the audit logs findings but does not
-    # gate the build. The current dependency graph has 17 unmaintained /
-    # unsound advisories (mostly transitive through tauri /
-    # tauri-plugin-*), which the team needs to triage before flipping
-    # to `--deny warnings`. The job's run step is `cargo audit --json`
-    # + plain `cargo audit`, both with `|| true`, so the warnings
-    # surface in the workflow log without failing CI. Replace with
-    # `cargo audit --deny warnings` once the underlying advisories
-    # are addressed.
+    # Gates on any new RUSTSEC advisory via `./scripts/cargo-audit.sh`,
+    # which carries an explicit allowlist of the 17 transitive advisories
+    # pulled in by tauri 2.11.5. The allowlist is the source of truth —
+    # update it there, not here.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
@@ -114,8 +105,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-audit
         run: cargo install --locked cargo-audit
-      - name: Run cargo audit (advisory)
-        working-directory: desktop/tauri
-        run: |
-          cargo audit --json > audit.json || true
-          cargo audit || true
+      - name: Run cargo audit
+        run: ./scripts/cargo-audit.sh
