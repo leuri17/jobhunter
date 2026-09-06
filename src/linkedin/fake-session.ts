@@ -9,7 +9,7 @@
  *
  * The fake is intentionally minimal: it does NOT simulate
  * `context.route()` (use the real-Playwright helper in
- * `tests/linkedin/helpers/playwright-route-session.ts` —  — for
+ * `tests/live/linkedin/helpers/playwright-route-session.ts` —  — for
  * HTTP-shape fidelity tests). It DOES enforce the
  * `BrowserCapacityExceededError` contract for the fallback page,
  * since that's a load-bearing invariant.

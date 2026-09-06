@@ -11,7 +11,7 @@ import { LINKEDIN_SELECTORS } from '../../src/linkedin/selectors.js';
  * serves a fixed list of card-count snapshots and answers `click()` on
  * the load-more button with the next snapshot.  will exercise
  * `discoverAllCards` against real Playwright via
- * `tests/linkedin/helpers/playwright-route-session.ts`.
+ * `tests/live/linkedin/helpers/playwright-route-session.ts`.
  */
 
 interface Snapshot {

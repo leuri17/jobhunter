@@ -10,7 +10,7 @@
  *   - `FakeBrowserSession` (`fake-session.ts`) — pure-Node test helper.
  *     No Playwright import. Used for the `BrowserSession` interface
  *     contract tests in `tests/linkedin/browser-session.test.ts`.
- *   - `tests/linkedin/helpers/playwright-route-session.ts`
+ *   - `tests/live/linkedin/helpers/playwright-route-session.ts`
  *     real Playwright + `context.route()` interception against saved
  *     HTML fixtures for the integration tests.
  *
