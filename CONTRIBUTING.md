@@ -28,15 +28,21 @@ submit it as a PR.
 ## Development setup
 
 Requires Node.js `24.18.0` (pinned via `.node-version`), pnpm
-`11.18.0`, and a Rust toolchain (for `cargo tauri dev` and the
-desktop shell build).
+`11.25.0` (pinned via `package.json#packageManager`), and a Rust
+toolchain (for `cargo tauri dev` and the desktop shell build).
 
 ```bash
 pnpm install --frozen-lockfile
 
-# Core + tests only — no desktop shell needed.
+# Core tests only — the `tests/` tree (no sidecar or UI).
 pnpm typecheck
 pnpm test
+
+# Sidecar HTTP-shape tests.
+pnpm --filter @jobhunter/sidecar test
+
+# UI unit tests.
+pnpm --filter @jobhunter/ui test
 
 # Full desktop app — Rust shell + sidecar + UI hot reload.
 cargo tauri dev

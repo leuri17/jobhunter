@@ -44,7 +44,9 @@ Launch via `cargo tauri dev` from `desktop/tauri`.
 
 | Command          | What it does                                  |
 | ---------------- | --------------------------------------------- |
-| `pnpm test`      | Run all workspace tests (core + sidecar + ui) |
+| `pnpm test`      | Run core tests (the `tests/` tree only)       |
+| `pnpm --filter @jobhunter/sidecar test` | Run sidecar HTTP-shape tests |
+| `pnpm --filter @jobhunter/ui test`     | Run UI unit tests            |
 | `pnpm typecheck` | Typecheck every workspace                     |
 | `pnpm lint`      | Lint all workspaces                           |
 | `pnpm format`    | Format every workspace                        |
