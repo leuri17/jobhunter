@@ -1,0 +1,44 @@
+name: Documentation
+description: Report a problem with JobHunter's documentation.
+title: '[Documentation]: '
+labels: ['documentation']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for issues about the documentation, not
+        application bugs. Pick the doc path that needs attention and
+        describe whether it is wrong, outdated, missing, or unclear.
+
+        Codemap lives in the project root as `codemap.md`; folder
+        codemaps live alongside the source under `<folder>/codemap.md`.
+  - type: input
+    id: affected-doc
+    attributes:
+      label: Affected documentation
+      description: One or more of `README.md`, `docs/architecture.md`, `docs/responsible-use.md`, `docs/audit/AUDIT_REPORT.md`, `CONTRIBUTING.md`, `codemap.md`, or a `<folder>/codemap.md`. Comma-separate multiple paths.
+    validations:
+      required: true
+  - type: textarea
+    id: issue-type
+    attributes:
+      label: Issue type
+      description: Is the doc wrong (says X, should say Y), outdated (was accurate but drifted), missing (no doc exists where one should), or unclear (correct but ambiguous)?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-change
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other ways to phrase or structure the fix; other docs that need to change in lockstep.
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Which readers are affected? Does the change have to land before a code change, or can it follow?
