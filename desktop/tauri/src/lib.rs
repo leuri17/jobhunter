@@ -1,3 +1,4 @@
+pub mod notification;
 pub mod sidecar;
 
 use std::sync::Mutex;
@@ -34,34 +35,17 @@ fn sidecar_port(state: tauri::State<SidecarPort>) -> u16 {
 /// the SSE `done` event arrives from `desktop/sidecar/src/routes/pipeline.ts`.
 /// `status` is the run's terminal status (`done` | `failed` | `cancelled`);
 /// `count` is the number of jobs discovered (only meaningful for `done`).
+///
+/// The (title, body) computation lives in `notification::notification_payload_for`
+/// so the 4-branch status mapping + the singular/plural inflection can be
+/// unit-tested independently of the Tauri AppHandle (audit B4-B-L4.7 / H19).
 #[tauri::command]
 fn notify_pipeline_complete(
     app: tauri::AppHandle,
     status: String,
     count: u32,
 ) -> Result<(), String> {
-    let (title, body) = match status.as_str() {
-        "done" => (
-            "Pipeline complete".to_string(),
-            format!(
-                "Found {count} new job{} matching your profile.",
-                if count == 1 { "" } else { "s" }
-            ),
-        ),
-        "failed" => (
-            "Pipeline failed".to_string(),
-            "The discovery pipeline encountered an error. Check the runs tab for details."
-                .to_string(),
-        ),
-        "cancelled" => (
-            "Pipeline cancelled".to_string(),
-            "The discovery pipeline was cancelled before completion.".to_string(),
-        ),
-        other => (
-            "Pipeline update".to_string(),
-            format!("Pipeline status: {other}."),
-        ),
-    };
+    let (title, body) = notification::notification_payload_for(&status, count);
 
     app.notification()
         .builder()
