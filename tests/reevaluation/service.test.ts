@@ -729,8 +729,10 @@ describe('ReevaluationService', () => {
   // -----------------------------------------------------------------
   // T18: scope 'filters-only' + 'scores-only' → sidecar route error.
   // -----------------------------------------------------------------
-  it.skip('T18: scope conflict → sidecar route throws ReevaluationValidationError(reevaluate_scope_conflict)', () =>
-    undefined);
+  // See #109 for the deferred-work ticket.
+  it.todo(
+    'T18: scope conflict → sidecar route throws ReevaluationValidationError(reevaluate_scope_conflict)',
+  );
 
   // -----------------------------------------------------------------
   // T19: Missing active filter config → no_active_filter.

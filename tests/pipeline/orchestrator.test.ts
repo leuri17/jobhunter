@@ -223,7 +223,8 @@ describe('PipelineOrchestrator', () => {
   // field set (title/company/location/description).  can wire
   // a richer fake-page fixture (e.g. with a title anchor and a
   // description container) to enable this test.
-  it.skip('T9: scoring hard-stop → status completed_with_errors', async () => undefined);
+  // See #109 for the deferred-work ticket.
+  it.todo('T9: scoring hard-stop → status completed_with_errors');
 
   // T10: scraper error in one search continues with the next.
   it('T10: scraper error in one search continues', async () => {
@@ -273,7 +274,8 @@ describe('PipelineOrchestrator', () => {
   // extraction service never writes a 'complete' JobRow. A
   // dedicated test would need to bypass the extraction step or
   // provide a working panel-parser DOM mock.
-  it.skip('T11: existing complete job is skipped', async () => undefined);
+  // See #109 for the deferred-work ticket.
+  it.todo('T11: existing complete job is skipped');
 
   // T12: createRunWithSearches is transactional — exactly 1
   // pipeline_run + N search_executions for an N-entry matrix.
