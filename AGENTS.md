@@ -14,6 +14,7 @@ For deep work on a specific folder, also read that folder's `codemap.md`.
 - **Ask, don't infer.** When a decision has a real fork, use the `question` tool with the recommendation as option 1. Don't ask bare yes/no — explain what is recommended and why.
 - **Branch-per-issue, PR-per-issue.** Multi-fix workflows get one branch per issue (`fix/<N>-<slug>`), one PR per issue. Don't cluster related issues into one PR even when they touch the same file — the user reviews them individually.
 - **Follow the PR template.** Use `.github/PULL_REQUEST_TEMPLATE.md` when creating a PR; fill in every section (Summary, Files changed, Tests, Verification, Documentation, Known limitations, Linked issues) and link the issue with `Closes #N` or `Refs #N`.
+- **Follow the issue templates.** When opening a new issue, choose the right template from `.github/ISSUE_TEMPLATE/` (`bug_report.yml` / `feature_request.yml` / `documentation.yml` / `responsible-use-concern.yml`), use the matching title prefix (`[Bug]:` / `[Feature]:` / `[Documentation]:` / `[Responsible-use]:`), and fill in every required section.
 - **Wait for user review before merging.** Create the PR, the user closes it. Never auto-merge.
 - **Update docs inline during fixes.** When a fix changes user-visible behavior, `README.md` / `docs/architecture.md` / `CONTRIBUTING.md` updates go in the same PR.
 - **Direct push to `main` is OK for housekeeping only** — gitignore updates, codemap updates, AGENTS.md itself. Code changes go through a branch + PR.
