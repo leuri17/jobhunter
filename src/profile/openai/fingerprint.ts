@@ -14,7 +14,7 @@ import { createHash } from 'node:crypto';
  */
 
 export const EXTRACTOR_IMPLEMENTATION_VERSION = '1.0.0';
-export const PROFILE_EXTRACTION_PROMPT_VERSION = 'profile-extraction-prompt@v1';
+export const PROFILE_EXTRACTION_PROMPT_VERSION = 'profile-extraction-prompt@v2';
 
 export interface ExtractionFingerprintInputs {
   readonly sourceHashes: readonly string[];

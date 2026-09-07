@@ -123,7 +123,7 @@ export interface ProfileExtractionPromptInput {
 
 /**
  * Versioned profile-extraction prompt (, prompt version
- * `profile-extraction-prompt@v1`).
+ * `profile-extraction-prompt@v2`).
  *
  * Returns the `systemMessage` and `userMessage` that the OpenAI SDK
  * adapter sends to the model. The system message instructs the model
