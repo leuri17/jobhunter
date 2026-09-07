@@ -39,6 +39,12 @@ function buildStructuredOutputSchema(): Record<string, unknown> {
  * Touched fields:
  * - `skills.items.properties.category` — required, type `[string, null]`, enum `[..., null]`
  * - `languages.items.properties.level` — required, type `[string, null]`, enum `[..., null]`
+ *
+ * Zod 4.5+'s `toJSONSchema()` runs a `compactTypeUnion` post-pass in
+ * `finalize()` that already emits `type: ['string','null']` for bare
+ * `.nullable().optional()` strings, so the `type` rewrite below is
+ * defensive (idempotent under either projection). The `required` push
+ * remains the load-bearing step.
  */
 function applyStrictModeAdjustments(schema: Record<string, unknown>): void {
   const properties = schema['properties'] as Record<string, unknown> | undefined;
@@ -84,7 +90,14 @@ function applyStrictModeAdjustments(schema: Record<string, unknown>): void {
  * missing `level`.
  */
 function makeNullableStringWithNullEnum(field: Record<string, unknown>): void {
-  if (field['type'] === 'string') {
+  // Idempotent under both zod <4.5 (`type: 'string'`) and zod >=4.5
+  // (`type: ['string', 'null']` from the `compactTypeUnion` post-pass).
+  if (
+    field['type'] === 'string' ||
+    (Array.isArray(field['type']) &&
+      field['type'].includes('string') &&
+      field['type'].includes('null'))
+  ) {
     field['type'] = ['string', 'null'];
   }
   const enumValue = field['enum'];
