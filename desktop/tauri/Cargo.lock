@@ -1870,15 +1870,20 @@ dependencies = [
 name = "jobhunter-desktop"
 version = "0.1.0"
 dependencies = [
+ "gtk",
  "libc",
  "once_cell",
+ "raw-window-handle",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-notification",
  "tauri-plugin-single-instance",
+ "tauri-runtime",
+ "tauri-utils",
  "tokio",
+ "url",
 ]
 
 [[package]]
