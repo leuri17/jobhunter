@@ -11,6 +11,7 @@ import {
   OpenAIServerError,
   OpenAIUnsupportedModelError,
   ProfileExtractionError,
+  ProfileExtractionRefusalError,
 } from '../../../src/profile/openai/errors.js';
 
 import type { OpenAIExtractionRequest } from '../../../src/profile/openai/types.js';
@@ -105,7 +106,7 @@ describe('createDefaultOpenAIClient', () => {
 
   it('returns null tokenUsage when the upstream omits usage', async () => {
     fakeCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: '{}' }, finish_reason: 'stop', index: 0 }],
+      choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop', index: 0 }],
       usage: null,
     });
 
@@ -117,7 +118,7 @@ describe('createDefaultOpenAIClient', () => {
 
   it('passes apiKey and timeout into the OpenAI SDK constructor', async () => {
     fakeCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: '{}' }, finish_reason: 'stop', index: 0 }],
+      choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop', index: 0 }],
       usage: null,
     });
 
@@ -127,7 +128,7 @@ describe('createDefaultOpenAIClient', () => {
 
   it('passes request.messages through to the OpenAI SDK unchanged', async () => {
     fakeCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: '{}' }, finish_reason: 'stop', index: 0 }],
+      choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop', index: 0 }],
       usage: null,
     });
 
@@ -147,7 +148,7 @@ describe('createDefaultOpenAIClient', () => {
 
   it('passes max_completion_tokens to the SDK when the request sets it', async () => {
     fakeCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: '{}' }, finish_reason: 'stop', index: 0 }],
+      choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop', index: 0 }],
       usage: null,
     });
 
@@ -160,7 +161,7 @@ describe('createDefaultOpenAIClient', () => {
 
   it('omits max_completion_tokens from the SDK call when the request does not set it', async () => {
     fakeCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: '{}' }, finish_reason: 'stop', index: 0 }],
+      choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop', index: 0 }],
       usage: null,
     });
 
@@ -173,7 +174,7 @@ describe('createDefaultOpenAIClient', () => {
 
   it('looks up the response schema in RESPONSE_SCHEMA_REGISTRY and sends it to the SDK', async () => {
     fakeCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: '{}' }, finish_reason: 'stop', index: 0 }],
+      choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop', index: 0 }],
       usage: null,
     });
 
@@ -433,5 +434,131 @@ describe('createDefaultOpenAIClient', () => {
 
     const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
     await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(OpenAIEmptyResponseError);
+  });
+});
+
+describe('createDefaultOpenAIClient — refusal detector (audit B2-M8)', () => {
+  it('raises ProfileExtractionRefusalError when the raw content contains a default refusal marker', async () => {
+    // Pre-fix this would have returned the refusal text as a successful
+    // (but empty) extraction; post-fix it surfaces as a typed refusal
+    // so the retry classifier (`runWithRetry`'s correctiveRetry
+    // budget) can pick it up.
+    fakeCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: 'I cannot help with that request.',
+            refusal: null,
+          },
+          finish_reason: 'stop',
+          index: 0,
+        },
+      ],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
+    expect(rejected).toBeInstanceOf(ProfileExtractionRefusalError);
+    expect(rejected).toBeInstanceOf(ProfileExtractionError);
+    expect((rejected as ProfileExtractionRefusalError).code).toBe('profile_extraction_refusal');
+    // Refusal detection is retryable-once (correctiveRetry = true)
+    // — the model may not refuse next time, so a single corrective
+    // retry is appropriate.
+    expect((rejected as ProfileExtractionRefusalError).correctiveRetry).toBe(true);
+    // The reason + matched marker are surfaced in the metadata so
+    // operators can audit which phrase tripped the detector.
+    const metadata = (rejected as ProfileExtractionError).metadata as Record<string, unknown>;
+    expect(metadata['reason']).toBe('refusal_marker');
+    expect(metadata['matchedMarker']).toBe('I cannot');
+  });
+
+  it('raises ProfileExtractionRefusalError when the raw content is `{}`', async () => {
+    // An empty JSON object is a strong refusal signal — the upstream
+    // model filled the content slot but emitted no data.
+    fakeCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{}', refusal: null }, finish_reason: 'stop', index: 0 }],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
+    expect(rejected).toBeInstanceOf(ProfileExtractionRefusalError);
+    const metadata = (rejected as ProfileExtractionError).metadata as Record<string, unknown>;
+    expect(metadata['reason']).toBe('empty_json_object');
+  });
+
+  it('honours a custom marker list passed via `refusal.markers`', async () => {
+    fakeCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: 'Custom refusal phrase XYZ',
+            refusal: null,
+          },
+          finish_reason: 'stop',
+          index: 0,
+        },
+      ],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({
+      apiKey: 'sk-test',
+      refusal: {
+        refusalMarkers: ['Custom refusal phrase XYZ'],
+        flagEmptyBodies: false,
+      },
+    });
+    const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
+    expect(rejected).toBeInstanceOf(ProfileExtractionRefusalError);
+    const metadata = (rejected as ProfileExtractionError).metadata as Record<string, unknown>;
+    expect(metadata['matchedMarker']).toBe('Custom refusal phrase XYZ');
+  });
+
+  it('does NOT raise a refusal when the custom marker list is empty (and content is non-empty)', async () => {
+    fakeCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: 'I cannot help with that request.',
+            refusal: null,
+          },
+          finish_reason: 'stop',
+          index: 0,
+        },
+      ],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({
+      apiKey: 'sk-test',
+      refusal: { refusalMarkers: [], flagEmptyBodies: true },
+    });
+    // No refusal-marker match — the model returned a refusal-like
+    // string, but the (deliberately empty) custom marker list opts
+    // out of the refusal scan. Empty-body detection is still on.
+    const result = await client.extract(REQUEST);
+    expect(result.rawJsonText).toBe('I cannot help with that request.');
+  });
+
+  it('lets a valid non-empty response through unchanged', async () => {
+    fakeCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: '{"basics":{"headline":"Senior Engineer"}}',
+            refusal: null,
+          },
+          finish_reason: 'stop',
+          index: 0,
+        },
+      ],
+      usage: null,
+    });
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const result = await client.extract(REQUEST);
+    expect(result.rawJsonText).toBe('{"basics":{"headline":"Senior Engineer"}}');
   });
 });
