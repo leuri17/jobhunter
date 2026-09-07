@@ -23,8 +23,8 @@ describe('extract version constants', () => {
     expect(EXTRACTOR_IMPLEMENTATION_VERSION).toBe('1.0.0');
   });
 
-  it('exports PROFILE_EXTRACTION_PROMPT_VERSION = profile-extraction-prompt@v1', () => {
-    expect(PROFILE_EXTRACTION_PROMPT_VERSION).toBe('profile-extraction-prompt@v1');
+  it('exports PROFILE_EXTRACTION_PROMPT_VERSION = profile-extraction-prompt@v2', () => {
+    expect(PROFILE_EXTRACTION_PROMPT_VERSION).toBe('profile-extraction-prompt@v2');
   });
 });
 
@@ -78,7 +78,7 @@ describe('calculateExtractionFingerprint', () => {
     const baseline = calculateExtractionFingerprint(baseInputs());
     const next = calculateExtractionFingerprint({
       ...baseInputs(),
-      promptVersion: 'profile-extraction-prompt@v2',
+      promptVersion: 'profile-extraction-prompt@v3',
     });
     expect(next).not.toBe(baseline);
   });

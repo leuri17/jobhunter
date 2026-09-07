@@ -7,7 +7,7 @@ import type {
 } from '../../../src/profile/openai/types.js';
 
 const REQUEST: OpenAIExtractionRequest = {
-  promptVersion: 'profile-extraction-prompt@v1',
+  promptVersion: 'profile-extraction-prompt@v2',
   model: 'gpt-5.6-sol',
   reasoningEffort: 'medium',
   responseSchemaName: 'ExtractedProfile',
