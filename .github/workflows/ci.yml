@@ -15,6 +15,20 @@ permissions:
   contents: write
 
 jobs:
+  secrets:
+    # Fail fast on planted secrets before tests run. Dedicated job so
+    # the gitleaks checkout (fetch-depth: 0) is scoped here and does
+    # not change the behavior of the test jobs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        with:
+          fetch-depth: 0
+      - name: Detect secrets with gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7  # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   core-tests:
     runs-on: ubuntu-latest
     steps:
