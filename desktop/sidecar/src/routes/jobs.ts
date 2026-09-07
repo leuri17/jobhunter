@@ -8,7 +8,11 @@ import {
 } from '@jobhunter/core/reevaluation';
 import { FilterApplyService } from '@jobhunter/core/filter';
 import { ScoringService } from '@jobhunter/core/scoring';
-import { createDefaultOpenAIClient, type OpenAIClient } from '@jobhunter/core/profile';
+import {
+  createDefaultOpenAIClient,
+  type DefaultOpenAIClientRefusalOptions,
+  type OpenAIClient,
+} from '@jobhunter/core/profile';
 import { pinoReevaluationLogger } from '@jobhunter/core/logging';
 import { openDbHandle, createRepositories } from './db-helper.js';
 import { resolveOpenAiClientOrNull } from './openai-resolve.js';
@@ -16,6 +20,7 @@ import { resolveOpenAiClientOrNull } from './openai-resolve.js';
 export interface JobsRouteOptions {
   readonly openaiClient?: OpenAIClient;
   readonly rootLogger?: PinoLogger;
+  readonly refusal?: DefaultOpenAIClientRefusalOptions;
 }
 
 /**
@@ -102,7 +107,7 @@ export async function registerJobsRoutes(
       const filterApplyService = new FilterApplyService({ repositories: repos });
       const client =
         opts.openaiClient ??
-        resolveOpenAiClientOrNull() ??
+        resolveOpenAiClientOrNull(opts.refusal) ??
         createDefaultOpenAIClient({ apiKey: '' });
       const scoringService = new ScoringService({
         repositories: repos,

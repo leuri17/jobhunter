@@ -10,7 +10,7 @@ import {
 import { FilterApplyService } from '@jobhunter/core/filter';
 import { ScoringService } from '@jobhunter/core/scoring';
 import { createDefaultDiagnosticManager } from '@jobhunter/core/diagnostics';
-import { type OpenAIClient } from '@jobhunter/core/profile';
+import { type DefaultOpenAIClientRefusalOptions, type OpenAIClient } from '@jobhunter/core/profile';
 import { loadConfig } from '@jobhunter/core/config';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { pinoPipelineLogger } from '@jobhunter/core/pipeline';
@@ -49,6 +49,7 @@ export function abortAllActiveRuns(): number {
 export interface PipelineRouteOptions {
   readonly openaiClient?: OpenAIClient;
   readonly rootLogger?: PinoLogger;
+  readonly refusal?: DefaultOpenAIClientRefusalOptions;
 }
 
 export async function registerPipelineRoutes(
@@ -60,7 +61,7 @@ export async function registerPipelineRoutes(
   const rootLogger: PinoLogger = opts.rootLogger ?? pino({ level: 'silent' });
 
   app.post('/api/pipeline/run', async (_req, reply) => {
-    const client = opts.openaiClient ?? resolveOpenAiClientOrNull();
+    const client = opts.openaiClient ?? resolveOpenAiClientOrNull(opts.refusal);
     if (client === null) {
       reply.status(503);
       return {

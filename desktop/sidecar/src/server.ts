@@ -16,16 +16,14 @@ import { registerProfileRoutes } from './routes/profile.js';
 import { registerJobsRoutes } from './routes/jobs.js';
 import { registerRunsRoutes } from './routes/runs.js';
 import { registerPipelineRoutes, abortAllActiveRuns } from './routes/pipeline.js';
-import {
-  DEFAULT_REDACT_PATHS,
-  LOG_LEVELS,
-  type LogLevel,
-} from '@jobhunter/core/logging';
+import { DEFAULT_REDACT_PATHS, LOG_LEVELS, type LogLevel } from '@jobhunter/core/logging';
 import {
   loadConfig,
+  resolveRefusalDetection,
   type FileSystem,
   type LoadedConfig,
 } from '@jobhunter/core/config';
+import type { DefaultOpenAIClientRefusalOptions } from '@jobhunter/core/profile';
 import type { PlatformPaths } from '@jobhunter/core/platform';
 
 function readLogLevel(env: NodeJS.ProcessEnv = process.env): LogLevel {
@@ -147,19 +145,30 @@ export interface BuildServerOptions {
   readonly fileSystem?: FileSystem;
 }
 
-async function resolveRootLogger(opts: BuildServerOptions): Promise<PinoLogger> {
+async function resolveRootLogger(
+  opts: BuildServerOptions,
+  loadedOverride: LoadedConfig | null,
+): Promise<PinoLogger> {
   if (opts.rootLogger !== undefined) return opts.rootLogger;
   if (opts.paths === undefined) return pino({ level: 'silent' });
   const processEnv = opts.processEnv ?? process.env;
-  const loaded = await loadConfig(opts.paths, opts.fileSystem).catch(
-    (): null => null,
-  );
+  const loaded =
+    loadedOverride ?? (await loadConfig(opts.paths, opts.fileSystem).catch((): null => null));
   if (loaded === null) return createSidecarRootLogger(processEnv);
   return createSidecarRootLoggerFromConfig(processEnv, loaded);
 }
 
 export async function buildServer(opts: BuildServerOptions): Promise<FastifyInstance> {
-  const rootLogger = await resolveRootLogger(opts);
+  // Load `config.json` once at boot and reuse for both logger and
+  // refusal-detection derivation — keeps the I/O on a single pass
+  // and guarantees the two derivations agree when the file fails
+  // to parse (both fall back to defaults in lockstep).
+  const loaded: LoadedConfig | null =
+    opts.paths === undefined
+      ? null
+      : await loadConfig(opts.paths, opts.fileSystem).catch((): null => null);
+  const rootLogger = await resolveRootLogger(opts, loaded);
+  const refusal: DefaultOpenAIClientRefusalOptions = resolveRefusalDetection(loaded);
   const app = Fastify({ loggerInstance: asFastifyBaseLogger(rootLogger) });
 
   // CORS for the two legitimate caller origins: the Tauri webview
@@ -187,22 +196,21 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
 
   await registerConfigRoutes(app);
 
-  await registerProfileRoutes(app);
+  await registerProfileRoutes(app, { refusal });
 
-  await registerJobsRoutes(app, { rootLogger });
+  await registerJobsRoutes(app, { rootLogger, refusal });
 
   await registerRunsRoutes(app);
 
-  await registerPipelineRoutes(app, { rootLogger });
+  await registerPipelineRoutes(app, { rootLogger, refusal });
 
   return app;
 }
 
 async function main(): Promise<void> {
   const env = readEnv();
-  const { resolvePlatformPaths, createDefaultPlatformAdapter } = await import(
-    '@jobhunter/core/platform'
-  );
+  const { resolvePlatformPaths, createDefaultPlatformAdapter } =
+    await import('@jobhunter/core/platform');
   const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
   const server = await buildServer({ env, paths, processEnv: process.env });
   await server.listen({ port: env.port, host: env.host });
