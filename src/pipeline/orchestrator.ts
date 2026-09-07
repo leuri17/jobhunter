@@ -302,15 +302,24 @@ export class PipelineOrchestrator {
       page = await this.browserSession.openPage(searchExecution.generatedUrl);
 
       // Re-fetch the canonical JobRows for the jobs discovered in
-      // this search. The discovery events only carry the `jobId`.
+      // this search. The discovery events only carry the `jobId`;
+      // batch the lookup into a single `inArray` SELECT + in-memory
+      // Map walk instead of issuing one `findById` per event
+      // (audit B3-C.1.2).
+      const searchEvents = events.filter((e) => e.searchExecutionId === searchExecution.id);
+      const dedupedIds = Array.from(new Set(searchEvents.map((e) => e.jobId)));
+      const fetched = await this.repositories.jobs.findByIds(dedupedIds);
+      const rowById = new Map<number, (typeof fetched)[number]>(
+        fetched.map((row) => [row.id, row]),
+      );
       const jobRows: {
         id: number;
         sourceJobId: string;
         extractionStatus: 'complete' | 'partial' | 'failed';
       }[] = [];
-      for (const ev of events.filter((e) => e.searchExecutionId === searchExecution.id)) {
-        const row = await this.repositories.jobs.findById(ev.jobId);
-        if (row === null) continue;
+      for (const ev of searchEvents) {
+        const row = rowById.get(ev.jobId);
+        if (row === undefined) continue;
         jobRows.push({
           id: row.id,
           sourceJobId: row.sourceJobId,

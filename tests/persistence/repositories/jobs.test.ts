@@ -408,4 +408,138 @@ describe('JobRepository', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.sourceJobId).toBe('present');
   });
+
+  it('findByIds returns the same rows as per-card findById calls', async () => {
+    // Insert three jobs with distinct `sourceJobId` values so the PK
+    // ids are non-overlapping. The batched path must yield exactly the
+    // same set (and content) as the per-card PK lookups — Closes #53.
+    const sourceJobIds = ['batch-pk-1', 'batch-pk-2', 'batch-pk-3'];
+    const insertedIds: number[] = [];
+    for (const sourceJobId of sourceJobIds) {
+      const recorded = await jobRepo.recordNewJob({
+        job: {
+          sourceJobId,
+          extractionStatus: 'complete',
+          firstDiscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+          lastRediscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+          createdTimestamp: '2026-08-05T10:00:00.000Z',
+          updatedTimestamp: '2026-08-05T10:00:00.000Z',
+        },
+        discoveryEvent: {
+          jobId: 0,
+          pipelineRunId: 1,
+          searchExecutionId: searchId,
+          timestamp: '2026-08-05T10:00:00.000Z',
+          isNew: true,
+          currentExtractionState: 'complete',
+          extractionAttempted: true,
+          skipReason: null,
+        },
+      });
+      insertedIds.push(recorded.jobId);
+    }
+
+    // Per-card baseline: one `findById` per id.
+    const perCard = new Map<number, Awaited<ReturnType<typeof jobRepo.findById>>>();
+    for (const id of insertedIds) {
+      perCard.set(id, await jobRepo.findById(id));
+    }
+
+    // Batched lookup under test.
+    const batched = await jobRepo.findByIds(insertedIds);
+
+    expect(batched).toHaveLength(perCard.size);
+    const batchedIds = new Set(batched.map((r) => r.id));
+    expect(batchedIds).toEqual(new Set(insertedIds));
+
+    // Every row is byte-for-byte equal to the per-card lookup.
+    for (const row of batched) {
+      const baseline = perCard.get(row.id);
+      expect(baseline).not.toBeNull();
+      expect(row).toEqual(baseline);
+    }
+  });
+
+  it('findByIds returns an empty array for an empty input (no DB query)', async () => {
+    expect(await jobRepo.findByIds([])).toEqual([]);
+  });
+
+  it('findByIds omits ids that do not exist (no error, no row)', async () => {
+    const recorded = await jobRepo.recordNewJob({
+      job: {
+        sourceJobId: 'findbyids-present',
+        extractionStatus: 'partial',
+        firstDiscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+        lastRediscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+        createdTimestamp: '2026-08-05T10:00:00.000Z',
+        updatedTimestamp: '2026-08-05T10:00:00.000Z',
+      },
+      discoveryEvent: {
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
+        timestamp: '2026-08-05T10:00:00.000Z',
+        isNew: true,
+        currentExtractionState: 'partial',
+        extractionAttempted: true,
+        skipReason: null,
+      },
+    });
+
+    const rows = await jobRepo.findByIds([recorded.jobId, 99_999, 99_998]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe(recorded.jobId);
+  });
+
+  it('findByIds returns rows in PK order only by coincidence (caller keys by id)', async () => {
+    // The repo makes no ordering guarantee; callers key by primary id.
+    // Lock the choice with a sanity check that two consecutive
+    // calls return the same set regardless of insertion order.
+    const recorded1 = await jobRepo.recordNewJob({
+      job: {
+        sourceJobId: 'order-a',
+        extractionStatus: 'complete',
+        firstDiscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+        lastRediscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+        createdTimestamp: '2026-08-05T10:00:00.000Z',
+        updatedTimestamp: '2026-08-05T10:00:00.000Z',
+      },
+      discoveryEvent: {
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
+        timestamp: '2026-08-05T10:00:00.000Z',
+        isNew: true,
+        currentExtractionState: 'complete',
+        extractionAttempted: true,
+        skipReason: null,
+      },
+    });
+    const recorded2 = await jobRepo.recordNewJob({
+      job: {
+        sourceJobId: 'order-b',
+        extractionStatus: 'complete',
+        firstDiscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+        lastRediscoveryTimestamp: '2026-08-05T10:00:00.000Z',
+        createdTimestamp: '2026-08-05T10:00:00.000Z',
+        updatedTimestamp: '2026-08-05T10:00:00.000Z',
+      },
+      discoveryEvent: {
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
+        timestamp: '2026-08-05T10:00:00.000Z',
+        isNew: true,
+        currentExtractionState: 'complete',
+        extractionAttempted: true,
+        skipReason: null,
+      },
+    });
+
+    const a = await jobRepo.findByIds([recorded1.jobId, recorded2.jobId]);
+    const b = await jobRepo.findByIds([recorded2.jobId, recorded1.jobId]);
+    expect(new Set(a.map((r) => r.id))).toEqual(new Set(b.map((r) => r.id)));
+    expect(a).toHaveLength(2);
+    expect(b).toHaveLength(2);
+  });
 });
