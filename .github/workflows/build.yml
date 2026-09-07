@@ -31,6 +31,11 @@ jobs:
           releaseBody: 'Automated build'
           releaseDraft: true
           args: --target x86_64-unknown-linux-gnu
+      - name: Generate SBOM
+        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3  # v0.24.2
+        with:
+          format: cyclonedx-json
+          artifact-name: sbom-cyclonedx-${{ runner.os }}-${{ github.ref_name }}.json
 
   build-macos:
     # tauri-action creates a draft release; needs contents: write.
@@ -51,6 +56,11 @@ jobs:
           releaseName: 'JobHunter ${{ github.ref_name }}'
           releaseBody: 'Automated build'
           releaseDraft: true
+      - name: Generate SBOM
+        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3  # v0.24.2
+        with:
+          format: cyclonedx-json
+          artifact-name: sbom-cyclonedx-${{ runner.os }}-${{ github.ref_name }}.json
 
   build-windows:
     # tauri-action creates a draft release; needs contents: write.
@@ -71,3 +81,8 @@ jobs:
           releaseName: 'JobHunter ${{ github.ref_name }}'
           releaseBody: 'Automated build'
           releaseDraft: true
+      - name: Generate SBOM
+        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3  # v0.24.2
+        with:
+          format: cyclonedx-json
+          artifact-name: sbom-cyclonedx-${{ runner.os }}-${{ github.ref_name }}.json
