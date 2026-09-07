@@ -46,11 +46,18 @@ single orchestrator:
 1. **Prerequisites** — resolve active filter config, active approved
    profile (when scope requires), and `OPENAI_API_KEY` (when not
    dry-run); throw `PipelinePrerequisiteError` on miss.
-2. **Selection** — for each complete job, compute current
-   filter/score fingerprints and probe
-   `filterResults.findActiveByJob` / `scoreResults.findActiveByJob`;
-   partition into `filtersToReevaluate`, `jobsToScore`, or
-   `skipped` (with `ReevaluationSkipReason`).
+2. **Selection** — pre-pass + per-job loop (audit B3-C.1.6):
+   1. compute every job's filter fingerprint in-memory once;
+   2. single batched `filterResults.findActiveByJobIn(jobIds)` probe;
+   3. for jobs with fresh+accepted filters AND an active profile,
+      collect score probes and run a single
+      `scoreResults.findActiveByJobIn(jobIds)` probe;
+   4. walk `targetJobs` against the in-memory
+      `filterRowByJobId` / `scoreRowByJobId` Maps and partition into
+      `filtersToReevaluate`, `jobsToScore`, or `skipped` (with
+      `ReevaluationSkipReason`).
+   2 round-trips total for the selection phase regardless of N
+   (was 2N sequential single-PK lookups).
 3. **Plan** — call `ScoringService.buildScoringPlan` for the score
    batch and `buildReevaluationPlan` (pure aggregator) to assemble the
    envelope with `totals`.
@@ -90,9 +97,11 @@ single orchestrator:
   - `src/profile/hashing.js` + `src/profile/schema.js`.
 - **Persists via** `Repositories` from
   `src/persistence/repositories/index.js`:
-  `filterResults.findActiveByJob` (cache probe) plus writes through
-  `FilterApplyService.apply`; `scoreResults.findActiveByJob` (probe)
-  + `scoreResults.invalidateActiveByJob` (flip on filter rerun) +
+  `filterResults.findActiveByJobIn(jobIds)` (batched cache probe, one
+  `inArray(jobs.id, ids)` SELECT) plus writes through
+  `FilterApplyService.apply`; `scoreResults.findActiveByJobIn(jobIds)`
+  (batched probe) + `scoreResults.invalidateActiveByJob` (flip on
+  filter rerun) +
   writes through `ScoringService.scoreOne`; `jobs.listComplete` for
   the selection universe; `filterConfigurations.findActive` and
   `profileVersions.findActiveApproved` for active state.

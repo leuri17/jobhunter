@@ -50,7 +50,7 @@ subfolder.
    `OverlayUndismissableError` on first undismissable overlay.
 5. `loadMoreResults(page, opts)` (alias for `discoverAllCards`) — bounded iterations,
    `maxNoProgressAttempts`, `AbortSignal` check, returns `{ cards, outcome }`.
-6. Per-card dedup: `jobs.findBySourceJobId` → existing → `recordDiscoveryEvent`; new →
+6. Per-card dedup: `jobs.findBySourceJobIds` (one batched `inArray(sourceJobId, ids)` SELECT for all parsed sourceJobIds) → existing → `recordDiscoveryEvent`; new →
    `recordNewJob` (atomic jobs + event insert, `extractionStatus: 'failed'` placeholder later
    promoted by `Repositories.jobs.updateExtraction`); null-ID → `recordDiscoveryError` with
    truncated metadata.

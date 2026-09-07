@@ -80,10 +80,10 @@ them.
      partition without a per-row SELECT.
    Each short-circuits on empty input (no DB round-trip). Ordering
    is not guaranteed; callers key by primary `id`.
-6. **SHA-256 deduplication**: `ProfileSourceRepository.insert` is strict
+7. **SHA-256 deduplication**: `ProfileSourceRepository.insert` is strict
   INSERT-OR-ERROR — dedup is owned upstream by `ProfileImportService` via
   `findBySha256`; bypassing it raises `DuplicateSha256Error`.
-7. Sync `db.transaction` callbacks are mandatory because better-sqlite3
+8. Sync `db.transaction` callbacks are mandatory because better-sqlite3
    rejects Promise returns; async sub-repository methods are awaited *after*
    the surrounding transaction returns.
 
