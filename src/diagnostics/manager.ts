@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { BrowserContext, Page } from 'playwright';
 import type { Repositories } from '../persistence/repositories/index.js';
 import type { PlatformPaths } from '../platform/paths.js';
+import { formatError } from '../logging/format-error.js';
 
 import {
   CurrentUrlCapture,
@@ -140,9 +141,19 @@ export class DiagnosticManager {
         const persisted = await this.persist(result, input.scope, timestamp, description);
         artifactIds.push(persisted);
       } catch (cause) {
-        const message = cause instanceof Error ? cause.message : String(cause);
+        // Audit H2 / B1-H2: preserve the human-readable message on
+        // the DiagnosticFailure (backwards-compatible string
+        // contract) but also pass the full SerialisedError to the
+        // onError hook so the cause chain + code + metadata round-
+        // trip through any logger that consumes the failure.
+        const errorDetails = formatError(cause);
+        const message = errorDetails.message;
         failures.push({ artifactType: type, code: 'capture_failed', message });
-        this.onError?.({ code: 'capture_failed', message, metadata: { artifactType: type, scope: input.scope } });
+        this.onError?.({
+          code: 'capture_failed',
+          message,
+          metadata: { artifactType: type, scope: input.scope, error: errorDetails },
+        });
         await this.recordFailure(input.scope, type, 'capture_failed', message, timestamp);
       }
     }
@@ -222,11 +233,16 @@ export class DiagnosticManager {
         description: this.redactor.redactString(`${type}: ${message}`),
       });
     } catch (cause) {
-      const innerMessage = cause instanceof Error ? cause.message : String(cause);
+      // Audit H2 / B1-H2: keep the string for the typed
+      // `failure_record_failed` event and pass the SerialisedError
+      // alongside so the onError hook's logger can emit the cause
+      // chain + code + metadata.
+      const errorDetails = formatError(cause);
+      const innerMessage = errorDetails.message;
       this.onError?.({
         code: 'failure_record_failed',
         message: innerMessage,
-        metadata: { artifactType: type, originalCode: code },
+        metadata: { artifactType: type, originalCode: code, error: errorDetails },
       });
     }
   }

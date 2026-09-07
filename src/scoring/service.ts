@@ -18,6 +18,7 @@ import { isJobEligibleForScoring } from './eligibility.js';
 import { buildScoringPlan, type BuildScoringPlanInput } from './plan.js';
 import { ApplicationError } from '../errors/index.js';
 import { ScoringHardStopError, ScoringInvalidStructuredOutputError } from './errors.js';
+import { formatError } from '../logging/format-error.js';
 import { noopScoringLogger, type ScoringLogger } from './log.js';
 import {
   LINKEDIN_SCORING_SCHEMA_VERSION,
@@ -341,8 +342,14 @@ export class ScoringService {
       // library error with a `.code` field would otherwise flow
       // through as an application-defined error code and pollute the
       // history report + UI status badges.
-      const errorCode =
-        cause instanceof ApplicationError ? cause.code : 'openai_unknown_failure';
+      const errorCode = cause instanceof ApplicationError ? cause.code : 'openai_unknown_failure';
+      // Audit H2 / B1-H2: persist the top-level message on the
+      // outcome (backwards-compatible string contract) but compute
+      // the full SerialisedError so the cause chain + code + metadata
+      // are available to any logger that consumes the failure (the
+      // pino error serializer registered in `createLogger` handles
+      // the chain; see tests/logging/logger.test.ts).
+      const errorDetails = formatError(cause);
       this.logger.scoringFail({ jobId: input.job.id, errorCode });
       return makeOutcome({
         job: input.job,
@@ -353,7 +360,7 @@ export class ScoringService {
         fields: null,
         attempted: true,
         errorCode,
-        errorMessage: cause instanceof Error ? cause.message : String(cause),
+        errorMessage: errorDetails.message,
       });
     }
 
