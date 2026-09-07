@@ -25,6 +25,7 @@ import { PipelinePrerequisiteError, PipelineOpenAIKeyMissingError } from './erro
 import { buildConfigSnapshot } from './normalize.js';
 import { noopPipelineLogger, type PipelineLogger } from './log.js';
 import type { PipelinePrompts } from './prompts.js';
+import { formatError } from '../logging/format-error.js';
 
 export interface PipelineRunInput {
   readonly startTimestamp?: string;
@@ -198,7 +199,7 @@ export class PipelineOrchestrator {
       }
     } catch (cause) {
       stats.status = 'failed';
-      stats.cancellationReason = cause instanceof Error ? cause.message : String(cause);
+      stats.cancellationReason = formatError(cause).message;
       throw cause;
     } finally {
       await this.browserSession.close();
@@ -282,7 +283,7 @@ export class PipelineOrchestrator {
       await this.discoveryService.discover({ run, searchExecution, signal });
     } catch (error) {
       const code = error instanceof LinkedInScraperError ? error.code : 'search_unexpected_error';
-      const message = error instanceof Error ? error.message : String(error);
+      const message = formatError(error).message;
       stats.searchErrors.push({ code, message });
       this.logger.searchFail({
         searchId: searchExecution.id,
@@ -302,7 +303,10 @@ export class PipelineOrchestrator {
     // can reuse the already-fetched JobRows instead of issuing a
     // redundant findById per complete-outcome job (audit B3-C.1.3).
     // Initialised empty; populated by the batched fetch inside try.
-    let fetchedByJobId!: Map<number, Awaited<ReturnType<typeof this.repositories.jobs.findByIds>>[number]>;
+    let fetchedByJobId!: Map<
+      number,
+      Awaited<ReturnType<typeof this.repositories.jobs.findByIds>>[number]
+    >;
     try {
       page = await this.browserSession.openPage(searchExecution.generatedUrl);
 
@@ -364,7 +368,7 @@ export class PipelineOrchestrator {
     } catch (error) {
       const code =
         error instanceof LinkedInScraperError ? error.code : 'extraction_unexpected_error';
-      const message = error instanceof Error ? error.message : String(error);
+      const message = formatError(error).message;
       stats.searchErrors.push({ code, message });
       this.logger.searchFail({
         searchId: searchExecution.id,
@@ -411,7 +415,7 @@ export class PipelineOrchestrator {
         } catch (error) {
           stats.filterErrors += 1;
           stats.failedExtractions += 1;
-          const message = error instanceof Error ? error.message : String(error);
+          const message = formatError(error).message;
           this.logger.searchFail({
             searchId: searchExecution.id,
             errorCode: 'filter_apply_failed',

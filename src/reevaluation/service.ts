@@ -31,10 +31,7 @@
  */
 
 import type { FilterApplyResult, FilterApplyInput } from '../filter/service.js';
-import type {
-  FilterOutcome,
-  FilterResultRow,
-} from '../persistence/repositories/filter-results.js';
+import type { FilterOutcome, FilterResultRow } from '../persistence/repositories/filter-results.js';
 import type { JobRow } from '../persistence/repositories/jobs.js';
 import type { Repositories } from '../persistence/repositories/index.js';
 import type { ScoreOneInput } from '../scoring/service.js';
@@ -56,6 +53,7 @@ import {
 import { computeFilterFingerprintForJob, computeScoreFingerprintForJob } from './fingerprint.js';
 import { ReevaluationValidationError } from './errors.js';
 import { noopReevaluationLogger, type ReevaluationLogger } from './log.js';
+import { formatError } from '../logging/format-error.js';
 
 /**
  * The model + reasoning-effort strings used by the scoring fingerprint
@@ -345,9 +343,7 @@ export class ReevaluationService {
     const filterRows = await this.repositories.filterResults.findActiveByJobIn(
       targetJobs.map((j) => j.id),
     );
-    const filterRowByJobId = new Map<number, FilterResultRow>(
-      filterRows.map((r) => [r.jobId, r]),
-    );
+    const filterRowByJobId = new Map<number, FilterResultRow>(filterRows.map((r) => [r.jobId, r]));
 
     // Pre-pass: collect score probes for jobs whose filter is fresh
     // AND accepted AND a profile is active. The batched score probe
@@ -381,9 +377,7 @@ export class ReevaluationService {
     const scoreRows = await this.repositories.scoreResults.findActiveByJobIn(
       scoreProbes.map((p) => p.jobId),
     );
-    const scoreRowByJobId = new Map<number, ScoreResultRow>(
-      scoreRows.map((r) => [r.jobId, r]),
-    );
+    const scoreRowByJobId = new Map<number, ScoreResultRow>(scoreRows.map((r) => [r.jobId, r]));
     const scoreFpByJobId = new Map<number, string>(
       scoreProbes.map((p) => [p.jobId, p.fingerprint]),
     );
@@ -566,10 +560,8 @@ export class ReevaluationService {
           // `.code` field (e.g. a raw OpenAI SDK error object) would
           // otherwise leak its library-specific code into the
           // reeval history record and the UI's status badges.
-          const errorCode =
-            error instanceof ApplicationError ? error.code : 'reeval_score_failure';
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
+          const errorCode = error instanceof ApplicationError ? error.code : 'reeval_score_failure';
+          const errorMessage = formatError(error).message;
           entry.action = 'failed';
           this.logger.reevaluationScoreFail({
             jobId: job.id,

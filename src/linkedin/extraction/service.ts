@@ -63,6 +63,7 @@ import {
 import { computeExtractionStatus } from './status.js';
 
 import { eq } from 'drizzle-orm';
+import { formatError } from '../../logging/format-error.js';
 
 /**
  * Constructor options for `LinkedInExtractionService`
@@ -477,7 +478,7 @@ export class LinkedInExtractionService {
           fields: { title: null, company: null, location: null, description: null },
           attemptedMethods: [],
           errorCode: 'extract_one_threw',
-          errorMessage: error instanceof Error ? error.message : String(error),
+          errorMessage: formatError(error).message,
           artifactIds: [],
         });
       }

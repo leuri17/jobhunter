@@ -5,6 +5,7 @@ import {
   type RetryAttemptSummary,
   type RetryableOpenAIError,
 } from './errors.js';
+import { formatError } from '../../logging/format-error.js';
 
 /**
  * Configuration for `runWithRetry`.
@@ -118,7 +119,7 @@ export async function runWithRetry<T>(
       lastError = error;
 
       const errorCode = isRetryableOpenAIError(error) ? error.code : null;
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = formatError(error).message;
       const retryAfterMs = error instanceof OpenAITransientError ? error.retryAfterMs : null;
       const isRetryable = errorCode !== null && OPENAI_RETRYABLE_ERROR_CODES.has(errorCode);
       const isInvalidOutput = isRetryableOpenAIError(error) && error.correctiveRetry === true;

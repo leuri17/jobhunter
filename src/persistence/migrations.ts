@@ -7,6 +7,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
 import type { DatabaseConnection } from './connection.js';
 import { MigrationError } from './errors.js';
+import { formatError } from '../logging/format-error.js';
 
 export interface RunMigrationsOptions {
   readonly migrationsFolder: string;
@@ -126,7 +127,7 @@ export function runMigrations(
 }
 
 function wrapFailure(migrationsFolder: string, cause: unknown): MigrationError {
-  const message = cause instanceof Error ? cause.message : String(cause);
+  const message = formatError(cause).message;
   return new MigrationError(
     'migration_apply_failed',
     `Failed to apply migrations from ${migrationsFolder}: ${message}`,

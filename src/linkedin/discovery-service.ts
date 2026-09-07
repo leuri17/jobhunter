@@ -45,6 +45,7 @@ import { navigateWithTimeout } from './navigation.js';
 import { truncateAvailableMetadata } from './truncate-metadata.js';
 import type { BrowserSession } from './browser-session.js';
 import { noopLinkedInScraperLogger, type LinkedInScraperLogger } from './log.js';
+import { formatError } from '../logging/format-error.js';
 
 export interface LinkedInDiscoveryServiceOptions {
   readonly repositories: Repositories;
@@ -367,7 +368,7 @@ export class LinkedInDiscoveryService {
       this.logger.searchFail({
         searchId: String(input.searchExecution.id),
         errorCode: 'diagnostic_capture_failed',
-        message: cause instanceof Error ? cause.message : String(cause),
+        message: formatError(cause).message,
       });
     }
 

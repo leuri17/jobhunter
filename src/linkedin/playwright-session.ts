@@ -25,6 +25,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { BrowserCapacityExceededError, BrowserLaunchError } from './errors.js';
 import type { BrowserSession } from './browser-session.js';
 import { noopLinkedInScraperLogger, type LinkedInScraperLogger } from './log.js';
+import { formatError } from '../logging/format-error.js';
 
 /** Minimal subset of Playwright's `chromium` namespace we touch. */
 type ChromiumLike = {
@@ -115,7 +116,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
         this.logger.searchFail({
           searchId: 'session',
           errorCode: 'context_close_failed',
-          message: cause instanceof Error ? cause.message : String(cause),
+          message: formatError(cause).message,
         });
       }
       this.context = null;
@@ -127,7 +128,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
         this.logger.searchFail({
           searchId: 'session',
           errorCode: 'browser_close_failed',
-          message: cause instanceof Error ? cause.message : String(cause),
+          message: formatError(cause).message,
         });
       }
       this.browser = null;
@@ -175,7 +176,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
       this.logger.cardError({
         searchId: 'session',
         errorCode: 'page_close_failed',
-        message: cause instanceof Error ? cause.message : String(cause),
+        message: formatError(cause).message,
       });
     }
   }

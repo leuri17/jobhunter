@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { PathError } from '../errors/application-error.js';
 import type { PlatformAdapter } from './platform.js';
+import { formatError } from '../logging/format-error.js';
 
 export interface PlatformPathSlot {
   readonly directory: string;
@@ -150,7 +151,7 @@ export async function ensureDirectory(
   try {
     await mkdir(directory, { recursive: true });
   } catch (cause) {
-    const message = cause instanceof Error ? cause.message : String(cause);
+    const message = formatError(cause).message;
     throw new PathError(
       'directory_create_failed',
       `Failed to create ${category} directory at ${directory}: ${message}`,

@@ -16,6 +16,7 @@ import { InvalidArgumentCountError, SourceUnreadableError } from './errors.js';
 import { hashFileContents, hashString } from './hashing.js';
 import { normalizeExtractedText } from './text-normalize.js';
 import { detectSourceTypeFromPath, mimeTypeFor } from './source-types.js';
+import { formatError } from '../logging/format-error.js';
 
 /**
  * One imported source as returned by `ProfileImportService.importSources`.
@@ -208,7 +209,7 @@ export class ProfileImportService {
     } catch (cause) {
       this.logger.error(
         { event: 'profile_source_copy_failed', sourceId: insertedId, path: absolutePath },
-        `Failed to copy source file to storage: ${cause instanceof Error ? cause.message : String(cause)}`,
+        `Failed to copy source file to storage: ${formatError(cause).message}`,
       );
       await this.repositories.profileSources.updateExtraction(insertedId, {
         extractedTextHash: '',
