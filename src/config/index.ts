@@ -18,6 +18,8 @@ export {
 
 export { loadConfig, type LoadedConfig } from './loader.js';
 
+export { resolveRefusalDetection } from './refusal.js';
+
 export {
   updateConfig,
   type ConfigPatch,
