@@ -302,7 +302,7 @@ export class PipelineOrchestrator {
     // can reuse the already-fetched JobRows instead of issuing a
     // redundant findById per complete-outcome job (audit B3-C.1.3).
     // Initialised empty; populated by the batched fetch inside try.
-    let fetchedByJobId = new Map<number, Awaited<ReturnType<typeof this.repositories.jobs.findByIds>>[number]>();
+    let fetchedByJobId!: Map<number, Awaited<ReturnType<typeof this.repositories.jobs.findByIds>>[number]>;
     try {
       page = await this.browserSession.openPage(searchExecution.generatedUrl);
 
