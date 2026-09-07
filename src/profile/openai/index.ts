@@ -56,7 +56,7 @@ export {
 } from './response-schemas.js';
 
 // Production client (the only module that imports the `openai` SDK).
-export { createDefaultOpenAIClient } from './client.js';
+export { createDefaultOpenAIClient, type DefaultOpenAIClientRefusalOptions } from './client.js';
 
 // Test double.
 export { FakeOpenAIClient, type FakeOpenAIClientScript } from './fake-client.js';

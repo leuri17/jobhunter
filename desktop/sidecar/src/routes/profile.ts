@@ -6,6 +6,7 @@ import {
   ProfileReviewService,
   ProfileApprovalService,
   ProfileRejectionService,
+  type DefaultOpenAIClientRefusalOptions,
   type OpenAIClient,
 } from '@jobhunter/core/profile';
 import { openDbHandle, createRepositories } from './db-helper.js';
@@ -44,6 +45,7 @@ const PROFILE_MULTIPART_LIMITS = {
 
 export interface ProfileRouteOptions {
   readonly openaiClient?: OpenAIClient;
+  readonly refusal?: DefaultOpenAIClientRefusalOptions;
 }
 
 export async function registerProfileRoutes(
@@ -127,7 +129,7 @@ export async function registerProfileRoutes(
       const repos = createRepositories(handle);
       const sources = await repos.profileSources.list();
       const usable = sources.filter((s) => s.textExtractionStatus === 'success').map((s) => s.id);
-      const client = opts.openaiClient ?? resolveOpenAiClientOrNull();
+      const client = opts.openaiClient ?? resolveOpenAiClientOrNull(opts.refusal);
       if (client === null) {
         reply.status(503);
         return {
