@@ -408,4 +408,197 @@ describe('JobRepository', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.sourceJobId).toBe('present');
   });
+
+  // ---------------------------------------------------------------------
+  // Coverage tests for methods not exercised by the suite above. Each
+  // test targets one under-covered method so a future regression (e.g.
+  // a renamed column, an accidentally-removed WHERE clause) is caught
+  // by the test that actually covers that code path. The vitest-coverage
+  // gate (`vitest.config.ts`) enforces per-file thresholds on
+  // `src/persistence/repositories/`; these tests close that gap.
+  // ---------------------------------------------------------------------
+
+  const FIXTURE_TS = '2026-08-05T10:00:00.000Z';
+  async function seedJobAndEvent(sourceJobId: string): Promise<{ jobId: number }> {
+    const recorded = await jobRepo.recordNewJob({
+      job: {
+        sourceJobId,
+        extractionStatus: 'complete',
+        firstDiscoveryTimestamp: FIXTURE_TS,
+        lastRediscoveryTimestamp: FIXTURE_TS,
+        createdTimestamp: FIXTURE_TS,
+        updatedTimestamp: FIXTURE_TS,
+      },
+      discoveryEvent: {
+        jobId: 0,
+        pipelineRunId: 1,
+        searchExecutionId: searchId,
+        timestamp: FIXTURE_TS,
+        isNew: true,
+        currentExtractionState: 'complete',
+        extractionAttempted: true,
+        skipReason: null,
+      },
+    });
+    return { jobId: recorded.jobId };
+  }
+
+  it('findBySourceJobId returns the job row for a registered sourceJobId', async () => {
+    await seedJobAndEvent('find-1');
+    const row = await jobRepo.findBySourceJobId('find-1');
+    expect(row?.sourceJobId).toBe('find-1');
+    expect(row?.extractionStatus).toBe('complete');
+    expect(await jobRepo.findBySourceJobId('missing')).toBeNull();
+  });
+
+  it('findById returns the job row for a registered id and null otherwise', async () => {
+    const { jobId } = await seedJobAndEvent('findbyid-1');
+    const row = await jobRepo.findById(jobId);
+    expect(row?.id).toBe(jobId);
+    expect(row?.sourceJobId).toBe('findbyid-1');
+    expect(await jobRepo.findById(99_999_999)).toBeNull();
+  });
+
+  it('recordDiscoveryEvent inserts a row and returns the new id', async () => {
+    const { jobId } = await seedJobAndEvent('rec-evt-1');
+    const id = await jobRepo.recordDiscoveryEvent({
+      jobId,
+      pipelineRunId: 1,
+      searchExecutionId: searchId,
+      timestamp: FIXTURE_TS,
+      isNew: false,
+      currentExtractionState: 'partial',
+      extractionAttempted: true,
+      skipReason: 'panel_timeout',
+    });
+    expect(id).toBeGreaterThan(0);
+  });
+
+  it('updateDiscoveryEvent merges a partial patch (only the keys provided are persisted)', async () => {
+    const { jobId } = await seedJobAndEvent('upd-evt-1');
+    const evId = await jobRepo.recordDiscoveryEvent({
+      jobId,
+      pipelineRunId: 1,
+      searchExecutionId: searchId,
+      timestamp: FIXTURE_TS,
+      isNew: true,
+      currentExtractionState: 'complete',
+      extractionAttempted: true,
+      skipReason: null,
+    });
+    await jobRepo.updateDiscoveryEvent(evId, { currentExtractionState: 'failed' });
+    // findLatestDiscoveryEventByJobAndSearch confirms the row
+    const after = await jobRepo.findLatestDiscoveryEventByJobAndSearch(jobId, searchId);
+    expect(after?.currentExtractionState).toBe('failed');
+    // Unrelated fields untouched
+    expect(after?.extractionAttempted).toBe(true);
+  });
+
+  it('findLatestDiscoveryEventByJobAndSearch returns null when no event matches', async () => {
+    const { jobId } = await seedJobAndEvent('latest-evt-1');
+    expect(await jobRepo.findLatestDiscoveryEventByJobAndSearch(jobId, 99_999)).toBeNull();
+  });
+
+  it('listDiscoveryEventsByJob returns every event for the job in id order', async () => {
+    const { jobId } = await seedJobAndEvent('list-evt-1');
+    await jobRepo.recordDiscoveryEvent({
+      jobId,
+      pipelineRunId: 1,
+      searchExecutionId: searchId,
+      timestamp: FIXTURE_TS,
+      isNew: false,
+      currentExtractionState: 'partial',
+      extractionAttempted: true,
+      skipReason: null,
+    });
+    const events = await jobRepo.listDiscoveryEventsByJob(jobId);
+    expect(events).toHaveLength(2);
+    expect(events[0]?.id).toBeLessThan(events[1]!.id);
+  });
+
+  it('listDiscoveryEventsByRun returns every event for the run', async () => {
+    await seedJobAndEvent('list-evt-run-1');
+    const events = await jobRepo.listDiscoveryEventsByRun(1);
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it('listDiscoveryErrorsByRun returns the recorded errors', async () => {
+    const errorId = await jobRepo.recordDiscoveryError({
+      pipelineRunId: 1,
+      searchExecutionId: searchId,
+      cardIndex: 7,
+      cardPosition: null,
+      availableMetadata: null,
+      artifactRefs: null,
+      errorCode: 'extraction_failed',
+      diagnosticMessage: 'panel-parse failed',
+      timestamp: FIXTURE_TS,
+    });
+    expect(errorId).toBeGreaterThan(0);
+    const errors = await jobRepo.listDiscoveryErrorsByRun(1);
+    expect(errors.find((e) => e.id === errorId)).toBeDefined();
+  });
+
+  it('recordExtractionAttempt + listExtractionAttemptsByJob round-trip', async () => {
+    const { jobId } = await seedJobAndEvent('record-attempt-1');
+    const attemptId = await jobRepo.recordExtractionAttempt({
+      jobId,
+      pipelineRunId: 1,
+      searchExecutionId: searchId,
+      attemptTimestamp: FIXTURE_TS,
+      method: 'search_detail_panel',
+      attemptNumber: 1,
+      success: false,
+      errorCode: 'panel_timeout',
+      errorMessage: 'timed out after 30s',
+    });
+    expect(attemptId).toBeGreaterThan(0);
+    const attempts = await jobRepo.listExtractionAttemptsByJob(jobId);
+    expect(attempts.find((a) => a.id === attemptId)?.errorCode).toBe('panel_timeout');
+  });
+
+  it('listByState returns the empty array for the failed state (sourced from discoveryErrors)', async () => {
+    expect(await jobRepo.listByState({ state: 'failed', limit: 10 })).toEqual([]);
+  });
+
+  it('listByState returns the empty array for the failed state (sourced from discoveryErrors) and the seeded row for the all state', async () => {
+    await seedJobAndEvent('listbystate-1');
+    expect(await jobRepo.listByState({ state: 'failed', limit: 10 })).toEqual([]);
+    // The 'all' state is the union of extractionStatus=complete jobs;
+    // the seed above uses that status. State-specific joins
+    // ('scored', 'accepted', etc.) require score_results /
+    // filter_results rows and are exercised end-to-end by
+    // tests/inspection/services/jobs-list-service.test.ts.
+    const all = await jobRepo.listByState({ state: 'all', limit: 10 });
+    expect(all.find((j) => j.sourceJobId === 'listbystate-1')).toBeDefined();
+  });
+
+  it('findBySourceJobIdOrId resolves job_<int>, a numeric sourceJobId, and rejects garbage', async () => {
+    const { jobId } = await seedJobAndEvent('3857123456');
+    expect((await jobRepo.findBySourceJobIdOrId(`job_${jobId}`))?.id).toBe(jobId);
+    // The numeric branch parses with NUMERIC_JOB_PATTERN; reuse
+    // the LinkedIn-shape jobId string as both the storage sourceJobId
+    // and the lookup key (this is the shape the function is designed for).
+    expect((await jobRepo.findBySourceJobIdOrId('3857123456'))?.sourceJobId).toBe('3857123456');
+    expect(await jobRepo.findBySourceJobIdOrId('')).toBeNull();
+    expect(await jobRepo.findBySourceJobIdOrId('   ')).toBeNull();
+    expect(await jobRepo.findBySourceJobIdOrId('plain-string-not-in-table')).toBeNull();
+    expect(await jobRepo.findBySourceJobIdOrId('job_abc')).toBeNull();
+  });
+
+  it('discoveryErrorCountByRun returns the recorded count', async () => {
+    expect(await jobRepo.discoveryErrorCountByRun(1)).toBe(0);
+    await jobRepo.recordDiscoveryError({
+      pipelineRunId: 1,
+      searchExecutionId: searchId,
+      cardIndex: 1,
+      cardPosition: null,
+      availableMetadata: null,
+      artifactRefs: null,
+      errorCode: 'extraction_failed',
+      diagnosticMessage: 'x',
+      timestamp: FIXTURE_TS,
+    });
+    expect(await jobRepo.discoveryErrorCountByRun(1)).toBe(1);
+  });
 });
