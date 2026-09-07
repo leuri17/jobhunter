@@ -164,4 +164,95 @@ describe('createLogger', () => {
     expect(errorField.message).toBe('top');
     expect(errorField.cause?.message).toBe('leaf');
   });
+
+  describe('redaction wildcards (audit B1-M1)', () => {
+    // Pre-fix: secrets one level deep (e.g. request.headers.apiKey)
+    // and secrets inside arrays of objects (e.g. messages[*].prompt)
+    // were emitted verbatim because DEFAULT_REDACT_PATHS only
+    // enumerated top-level keys. The list now mirrors every entry
+    // with `*.k` (one-level wildcard) and `[*].k` (array element).
+
+    it('redacts an apiKey nested inside a request envelope', () => {
+      const { stream, records } = captureSink();
+      const logger = createLogger({ level: 'info', prettyTerminal: false }, { stdout: stream });
+
+      logger.info(
+        {
+          component: 'openai',
+          event: 'request',
+          request: { headers: { apiKey: 'sk-secret-test' } },
+        },
+        'openai call',
+      );
+
+      expect(records).toHaveLength(1);
+      const serialized = JSON.stringify(records[0]!);
+      expect(serialized).not.toContain('sk-secret-test');
+      expect(serialized).toContain('[Redacted]');
+    });
+
+    it('still redacts top-level apiKey (regression — pre-fix covered this)', () => {
+      const { stream, records } = captureSink();
+      const logger = createLogger({ level: 'info', prettyTerminal: false }, { stdout: stream });
+
+      logger.info(
+        { component: 'openai', event: 'request', apiKey: 'sk-top-secret' },
+        'openai call',
+      );
+
+      expect(records).toHaveLength(1);
+      const serialized = JSON.stringify(records[0]!);
+      expect(serialized).not.toContain('sk-top-secret');
+      expect(serialized).toContain('[Redacted]');
+    });
+
+    it('redacts prompts inside an array of chat messages', () => {
+      const { stream, records } = captureSink();
+      const logger = createLogger({ level: 'info', prettyTerminal: false }, { stdout: stream });
+
+      logger.info(
+        {
+          component: 'openai',
+          event: 'batch',
+          messages: [
+            { role: 'user', prompt: 'first secret prompt' },
+            { role: 'assistant', prompt: 'second secret prompt' },
+          ],
+        },
+        'chat batch',
+      );
+
+      expect(records).toHaveLength(1);
+      const serialized = JSON.stringify(records[0]!);
+      expect(serialized).not.toContain('first secret prompt');
+      expect(serialized).not.toContain('second secret prompt');
+    });
+
+    it('redacts nested tokens, passwords, and authorization headers', () => {
+      const { stream, records } = captureSink();
+      const logger = createLogger({ level: 'info', prettyTerminal: false }, { stdout: stream });
+
+      logger.info(
+        {
+          component: 'http',
+          event: 'authenticated',
+          request: {
+            headers: {
+              authorization: 'Bearer super-secret-token',
+              cookie: 'session=super-secret-cookie',
+            },
+            body: {
+              password: 'super-secret-password',
+            },
+          },
+        },
+        'authenticated',
+      );
+
+      expect(records).toHaveLength(1);
+      const serialized = JSON.stringify(records[0]!);
+      expect(serialized).not.toContain('super-secret-token');
+      expect(serialized).not.toContain('super-secret-password');
+    });
+  });
 });
