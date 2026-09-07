@@ -7,9 +7,9 @@
 //!   - the no-window path (the closure must not panic when no "main"
 //!     webview window exists), and
 //!   - the with-window path (the closure calls unminimize, show, and
-//!     set_focus on the existing "main" window — verified by checking
-//!     the WebviewWindow's observable state through a custom Runtime
-//!     that counts invocations).
+//!     set_focus on the existing "main" window — verified by a custom
+//!     Runtime that counts invocations through the WindowDispatch
+//!     hook in `src/lib.rs`'s `bring_main_window_forward_tests` module).
 
 use jobhunter_desktop_lib::bring_main_window_forward;
 
@@ -24,26 +24,10 @@ fn bring_main_window_forward_does_not_panic_when_no_main_window() {
 
 #[test]
 fn bring_main_window_forward_calls_three_operations_on_main_window() {
-    // We can't easily intercept tauri::WebviewWindow's unminimize / show /
-    // set_focus methods through the MockRuntime (those are wired to
-    // platform-specific behaviour that the mock does not implement).
-    //
-    // The smoke test above covers the no-window path; for the with-window
-    // path the production code is straightforward — get_webview_window,
-    // then three idempotent calls. A two-process spawn (the alternative
-    // proposed by the issue) would only verify that the single-instance
-    // plugin's IPC delivers the closure, not that the closure does what
-    // it says, since the closure operates on platform windows that the
-    // test process can't observe directly.
-    //
-    // For now we rely on:
-    //   - the smoke test above for the no-window path,
-    //   - a static review of the closure body (3 lines, no branches
-    //     beyond the if-let), and
-    //   - the production code path being covered by manual desktop
-    //     smoke tests on the Tauri runtime.
-    //
-    // If a deeper unit test becomes feasible (e.g. via a custom Runtime
-    // that counts Window::show-style calls), it would replace this
-    // placeholder.
+    // The counting runtime installed by `bring_main_window_forward_tests`
+    // records every WebviewWindow::unminimize / show / set_focus call into
+    // a shared log. This test exercises the helper against a built
+    // `CountingRuntime` app with a "main" window and asserts the recorded
+    // sequence matches the documented order.
+    jobhunter_desktop_lib::bring_main_window_forward_tests::run_bring_main_window_forward_against_counting_runtime();
 }

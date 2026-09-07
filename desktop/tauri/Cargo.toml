@@ -21,9 +21,35 @@ tokio = { version = "1", features = ["process", "io-util", "macros", "rt-multi-t
 once_cell = "1"
 libc = "0.2"
 
+# Test-only infrastructure. The `bring_main_window_forward_tests` module
+# in `src/lib.rs` exercises a custom `tauri::Runtime` that intercepts
+# `WebviewWindow::unminimize` / `show` / `set_focus`. The dep set is gated
+# by the `test-utils` feature; it is enabled by default so
+# `cargo test --test single_instance` works without flags, and can be
+# disabled in production builds with `--no-default-features` if the
+# resulting dead code is unwanted.
+tauri-runtime = { version = "2", optional = true }
+tauri-utils = { version = "2", optional = true }
+raw-window-handle = { version = "0.6", optional = true }
+url = { version = "2", optional = true }
+
+[target.'cfg(any(target_os = "linux", target_os = "dragonfly", target_os = "freebsd", target_os = "netbsd", target_os = "openbsd"))'.dependencies.gtk]
+version = "0.18"
+features = ["v3_24"]
+optional = true
+
 [dev-dependencies]
 tauri = { version = "2", features = ["test"] }
 
 [features]
-default = ["custom-protocol"]
+default = ["custom-protocol", "test-utils"]
 custom-protocol = ["tauri/custom-protocol"]
+# Declared so the `#[cfg(feature = "devtools")]` in tauri's re-exported
+# WebviewDispatch impl doesn't trigger a check-cfg warning when we mirror
+# those methods in the test bridge.
+devtools = []
+# `test-utils` enables the `bring_main_window_forward_tests` module and the
+# deps it pulls in. It is enabled by default so `cargo test --test
+# single_instance` works without flags. Disable with `--no-default-features`
+# if the resulting dead code is unwanted in production builds.
+test-utils = ["tauri/test", "dep:tauri-runtime", "dep:tauri-utils", "dep:raw-window-handle", "dep:url", "dep:gtk"]
