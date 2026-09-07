@@ -2,6 +2,7 @@ import { PDFParse } from 'pdf-parse';
 
 import { ExtractionFailedError } from '../errors.js';
 import type { ExtractionResult, Extractor } from './types.js';
+import { formatError } from '../../logging/format-error.js';
 
 const EMPTY_TEXT_FALLBACK_PATTERN = /^[\s]*$/;
 
@@ -77,7 +78,7 @@ export class PdfExtractor implements Extractor {
         };
       }
       throw new ExtractionFailedError(
-        `PDF text extraction failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+        `PDF text extraction failed: ${formatError(cause).message}`,
         { byteLength: bytes.byteLength },
         cause instanceof Error ? cause : undefined,
       );

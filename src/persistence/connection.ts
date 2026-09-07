@@ -4,6 +4,7 @@ import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 
 import { DatabaseError } from './errors.js';
 import { schema, type Schema } from './schema.js';
+import { formatError } from '../logging/format-error.js';
 
 export interface DatabaseConnection {
   readonly db: BetterSQLite3Database<Schema>;
@@ -16,7 +17,7 @@ export function createDatabaseConnection(filePath: string): DatabaseConnection {
   try {
     sqlite = new Database(filePath);
   } catch (cause) {
-    const message = cause instanceof Error ? cause.message : String(cause);
+    const message = formatError(cause).message;
     throw new DatabaseError(
       'database_open_failed',
       `Failed to open SQLite database at ${filePath}: ${message}`,

@@ -53,6 +53,7 @@ import type { ProfileSourceRow } from '../persistence/repositories/profile-sourc
 import { profileConflicts, profileVersions, profileWarnings } from '../persistence/schema.js';
 import { PROFILE_SCHEMA_VERSION } from './schema.js';
 import { normalizeExtractedText } from './text-normalize.js';
+import { formatError } from '../logging/format-error.js';
 
 // ---------- Public types ----------
 
@@ -268,7 +269,7 @@ export class ProfileExtractionService {
       try {
         extractedText = await this.loadSourceText(row);
       } catch (cause) {
-        const reason = cause instanceof Error ? cause.message : String(cause);
+        const reason = formatError(cause).message;
         this.logger.error(
           {
             event: 'profile_extraction_source_read_failed',
@@ -370,7 +371,7 @@ export class ProfileExtractionService {
     } catch (caught) {
       const errorCode =
         caught instanceof ProfileExtractionError ? caught.code : 'openai_invalid_output';
-      const errorMessage = caught instanceof Error ? caught.message : String(caught);
+      const errorMessage = formatError(caught).message;
       // `ProfileExtractionInputTooLargeError` is raised before any OpenAI
       // attempt, so the audit row records `attemptCount: 0`. For every
       // other failure the retry policy attaches `attempts` to the error;

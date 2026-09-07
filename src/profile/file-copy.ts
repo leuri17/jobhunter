@@ -9,6 +9,7 @@ import {
   ProfileSourceStorageError,
 } from './errors.js';
 import type { BinaryFileSystem } from './file-system.js';
+import { formatError } from '../logging/format-error.js';
 
 export function resolveSourceStoragePath(
   paths: PlatformPaths,
@@ -112,7 +113,7 @@ export async function copySourceFileToStorage(options: CopySourceFileOptions): P
       );
     }
     throw new ProfileSourceStorageError(
-      `Failed to copy source file to ${destination}: ${cause instanceof Error ? cause.message : String(cause)}`,
+      `Failed to copy source file to ${destination}: ${formatError(cause).message}`,
       { sourcePath, destination },
       cause instanceof Error ? cause : undefined,
     );

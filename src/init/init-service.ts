@@ -80,6 +80,7 @@ import {
   classifySearch,
   classifySources,
 } from './classify.js';
+import { formatError } from '../logging/format-error.js';
 
 /**
  * Prerequisite-prompt seams are OPTIONAL. The desktop sidecar wires
@@ -321,7 +322,7 @@ export class InitOrchestrator {
           throw error;
         }
         if (error instanceof InitSearchFailedError) throw error;
-        const message = error instanceof Error ? error.message : String(error);
+        const message = formatError(error).message;
         throw new InitSearchFailedError(
           'init_search_failed',
           message,
@@ -516,7 +517,7 @@ export class InitOrchestrator {
         });
       } catch (error) {
         if (error instanceof InitExtractRuntimeFailedError) throw error;
-        const message = error instanceof Error ? error.message : String(error);
+        const message = formatError(error).message;
         throw new InitExtractRuntimeFailedError(
           'openai_runtime_failed',
           message,
@@ -741,7 +742,7 @@ export class InitOrchestrator {
         // responses. Only wrap unknown errors as
         // `InitFiltersFailedError`.
         if (error instanceof ApplicationError) throw error;
-        const message = error instanceof Error ? error.message : String(error);
+        const message = formatError(error).message;
         throw new InitFiltersFailedError(
           'init_filters_failed',
           message,

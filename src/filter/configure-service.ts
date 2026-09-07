@@ -52,6 +52,7 @@ import { calculateFilterConfigContentHash } from './content-hash.js';
 import { FilterStorageError, InvalidFilterConfigError, NoActiveProfileError } from './errors.js';
 import { type FilterConfigurationPreview, type FilterPrompts } from './prompts.js';
 import { JobFilterConfigSchema, normalizeJobFilterConfig, type JobFilterConfig } from './schema.js';
+import { formatError } from '../logging/format-error.js';
 
 export interface ConfigureFiltersServiceOptions {
   readonly repositories: Repositories;
@@ -210,7 +211,7 @@ export class ConfigureFiltersService {
       await this.repositories.filterConfigurations.activate(newId);
     } catch (cause) {
       throw new FilterStorageError(
-        `Failed to persist filter configuration: ${cause instanceof Error ? cause.message : String(cause)}`,
+        `Failed to persist filter configuration: ${formatError(cause).message}`,
         {},
         cause instanceof Error ? cause : undefined,
       );
