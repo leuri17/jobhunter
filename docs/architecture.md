@@ -14,7 +14,10 @@ see [`docs/responsible-use.md`](./responsible-use.md).
 - **Single user, single profile.** JobHunter is designed for one job
   seeker using it on their own machine.
 - **Inspectable.** Every persisted record is readable SQLite. Every
-  log line is structured JSON.
+  log record written by the sidecar is structured JSON; the
+  READY handshake and shutdown diagnostic messages are
+  intentionally prose protocol lines (see Reliability invariants
+  below).
 - **Reproducible decisions.** Deterministic filters and fingerprints
   make filter and scoring results stable across runs given the same
   inputs.
@@ -167,12 +170,32 @@ The UI exposes a configuration view backed by the sidecar's
 
 ## Reliability invariants
 
-A handful of cross-cutting invariants are non-negotiable:
+A handful of cross-cutting invariants are non-negotiable. Three of
+them were reconciled against the code in `docs/audit/AUDIT_REPORT.md`
+§3 H7 (commit history in `git log --grep='H7'`); each per-invariant
+decision is recorded inline below.
 
-- JSON stdout stays clean. Every log record goes to stderr; nothing
-  else writes to stdout during HTTP response emission (sidecar).
-- A single SIGINT triggers a graceful cancellation between pipeline
-  steps; a second SIGINT force-exits.
+- **HTTP response bodies are JSON** — the sidecar emits the
+  `READY <port>` handshake on stdout (Tauri parses this line to
+  discover the bound port) and HTTP response bodies as JSON.
+  Pinning every sidecar write to JSON is part of the
+  `tauri_local_browser.json_consumer` contract (see
+  `desktop/tauri/src/lib.rs`).
+- **A single SIGINT triggers a 5-second graceful drain, then
+  force-exits.** The original invariant claimed "first SIGINT
+  graceful, second SIGINT force-exits", but the implementation
+  collapses both into a single 5 s deadline on the first SIGINT
+  (`desktop/sidecar/src/server.ts:213-240`). Decision (H7,
+  2026-09-06): the 5 s drain is short enough that a second-SIGINT
+  fast-path adds user-visible complexity without meaningful UX gain.
+  The doc matches the code, not the original aspiration.
+- **Pino log records are structured JSON.** The sidecar emits one
+  JSON record per line via pino with `redact.paths` set on
+  `DEFAULT_REDACT_PATHS` (see `desktop/sidecar/src/server.ts:104-134`).
+  The READY handshake and shutdown diagnostic messages are
+  intentionally prose — they are protocol/diagnostic lines, not
+  log records, and a strict-prefix match on `READY <port>` is
+  required for the Tauri shell to discover the bound port.
 - One job's failure never terminates the whole run. Search-level or
   browser-level failures terminate the affected search or run only
   when safe continuation is impossible; already-persisted data
@@ -181,5 +204,9 @@ A handful of cross-cutting invariants are non-negotiable:
   written under the OS-specific diagnostics directory only. They
   never reach stdout, stderr, or any networked destination.
 
-These are checked by automated tests; see `CONTRIBUTING.md` for the
-full verification commands.
+These are checked by automated tests at the protocol layer (the
+READY handshake, pino JSON output, and the abortAllActiveRuns drain
+have integration coverage in `desktop/tauri/tests/` and
+`tests/`); the SIGINT and stdout-routing decisions above are
+recorded here as design choices, not test-enforced rules. See
+`CONTRIBUTING.md` for the full verification commands.
