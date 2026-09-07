@@ -1,3 +1,5 @@
+import { parseHTML } from 'linkedom';
+
 import { FakePage, type FakeLocator } from '../../../src/linkedin/fake-page.js';
 import type { CreateFakePage } from '../../../src/linkedin/fake-session.js';
 
@@ -59,6 +61,12 @@ export function fakePageWithCard(sourceJobIds: readonly string[]): CreateFakePag
         all: async () => [makeCardLocator(id)],
         first: (): FakeLocator => makeCardLocator(id),
         elementHandle: async () => makeCardNode(id),
+        evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> => {
+          const html = `<li class="jobs-search-results__list-item"><a href="/jobs/view/${id}/" data-occludable-job-id="${id}">${id}</a></li>`;
+          const { document } = parseHTML(`<html><body>${html}</body></html>`);
+          const nodes = Array.from(document.querySelectorAll('li')) as Element[];
+          return pageFunction(nodes);
+        },
         click: async () => undefined,
         waitFor: async () => undefined,
       };
@@ -94,6 +102,17 @@ export function fakePageWithCard(sourceJobIds: readonly string[]): CreateFakePag
             all: async () => sourceJobIds.map((id) => makeCardLocator(id)),
             first: (): FakeLocator => makeCardLocator(firstId),
             elementHandle: async () => makeCardNode(firstId),
+            evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> => {
+              const html = sourceJobIds
+                .map(
+                  (id) =>
+                    `<li class="jobs-search-results__list-item"><a href="/jobs/view/${id}/" data-occludable-job-id="${id}">${id}</a></li>`,
+                )
+                .join('');
+              const { document } = parseHTML(`<html><body>${html}</body></html>`);
+              const nodes = Array.from(document.querySelectorAll('li')) as Element[];
+              return pageFunction(nodes);
+            },
             click: async () => undefined,
             waitFor: async () => undefined,
           };
@@ -115,12 +134,16 @@ export function fakePageWithCard(sourceJobIds: readonly string[]): CreateFakePag
                 all: async () => [],
                 first: () => makeCardLocator(firstId),
                 elementHandle: async () => makeCardNode(firstId),
+                evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> =>
+                  pageFunction([]),
                 click: async () => undefined,
                 waitFor: async () => undefined,
               },
             ],
             first: (): FakeLocator => makeCardLocator(firstId),
             elementHandle: async () => makeCardNode(firstId),
+            evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> =>
+              pageFunction([]),
             click: async () => undefined,
             waitFor: async () => undefined,
           };

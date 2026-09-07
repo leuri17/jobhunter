@@ -14,14 +14,21 @@
 
 /**
  * Minimal `Locator`-shaped object. The `count` / `all` / `first` /
- * `elementHandle` / `click` methods cover every callsite the
- * orchestrator + helpers exercise (`load-more.ts` + `overlay.ts`).
+ * `elementHandle` / `evaluateAll` / `click` methods cover every
+ * callsite the orchestrator + helpers exercise (`load-more.ts` +
+ * `overlay.ts`).
+ *
+ * `evaluateAll` mirrors Playwright's signature so the same callback
+ * the production code uses can run against the in-memory DOM the
+ * fake page provides. Helpers that never exercise the bulk-read path
+ * can stub it with `async (fn) => fn([])`.
  */
 export interface FakeLocator {
   count: () => Promise<number>;
   all: () => Promise<FakeLocator[]>;
   first: () => FakeLocator;
   elementHandle: () => Promise<MinimalPageNode>;
+  evaluateAll: <R>(pageFunction: (nodes: Element[]) => R) => Promise<R>;
   click: (options?: { readonly timeout?: number }) => Promise<void>;
   waitFor: (options: { readonly state: string; readonly timeout: number }) => Promise<void>;
 }
@@ -67,6 +74,7 @@ const EMPTY_LOCATOR: FakeLocator = {
     getAttribute: () => null,
     querySelector: () => null,
   }),
+  evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> => pageFunction([]),
   click: async () => undefined,
   waitFor: async () => undefined,
 };
