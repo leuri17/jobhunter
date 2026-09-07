@@ -298,6 +298,11 @@ export class PipelineOrchestrator {
 
     let page: Page | null = null;
     let extractionOutcome: ExtractionBatchOutcome | undefined;
+    // Hoisted out of the try block so the post-extraction filter loop
+    // can reuse the already-fetched JobRows instead of issuing a
+    // redundant findById per complete-outcome job (audit B3-C.1.3).
+    // Initialised empty; populated by the batched fetch inside try.
+    let fetchedByJobId!: Map<number, Awaited<ReturnType<typeof this.repositories.jobs.findByIds>>[number]>;
     try {
       page = await this.browserSession.openPage(searchExecution.generatedUrl);
 
@@ -309,16 +314,14 @@ export class PipelineOrchestrator {
       const searchEvents = events.filter((e) => e.searchExecutionId === searchExecution.id);
       const dedupedIds = Array.from(new Set(searchEvents.map((e) => e.jobId)));
       const fetched = await this.repositories.jobs.findByIds(dedupedIds);
-      const rowById = new Map<number, (typeof fetched)[number]>(
-        fetched.map((row) => [row.id, row]),
-      );
+      fetchedByJobId = new Map(fetched.map((row) => [row.id, row]));
       const jobRows: {
         id: number;
         sourceJobId: string;
         extractionStatus: 'complete' | 'partial' | 'failed';
       }[] = [];
       for (const ev of searchEvents) {
-        const row = rowById.get(ev.jobId);
+        const row = fetchedByJobId.get(ev.jobId);
         if (row === undefined) continue;
         jobRows.push({
           id: row.id,
@@ -383,8 +386,11 @@ export class PipelineOrchestrator {
     if (extractionOutcome !== undefined) {
       for (const outcome of extractionOutcome.perJob) {
         if (outcome.kind !== 'complete') continue;
-        const jobRow = await this.repositories.jobs.findById(outcome.jobId);
-        if (jobRow === null) continue;
+        // Reuse the already-batched JobRows from the extraction step
+        // instead of issuing a redundant findById per complete job
+        // (audit B3-C.1.3).
+        const jobRow = fetchedByJobId.get(outcome.jobId);
+        if (jobRow === undefined) continue;
         try {
           const filterResult = await this.filterApplyService.apply({
             jobId: jobRow.id,
