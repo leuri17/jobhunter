@@ -182,4 +182,118 @@ describe('PipelineRunRepository', () => {
     expect(search?.finalStatus).toBe('completed');
     expect(search?.jobsDiscovered).toBe(5);
   });
+
+  // ---------------------------------------------------------------------
+  // Coverage tests for the under-covered methods. The audit H17
+  // vitest-coverage gate (`vitest.config.ts`) enforces per-file
+  // thresholds on `src/persistence/repositories/`. `pipeline-runs.ts`
+  // was at 68% lines / 43% branches; these tests cover the remaining
+  // read paths that weren't exercised by the suite above.
+  // ---------------------------------------------------------------------
+
+  it('findRunById returns the persisted run row, or null when unknown', async () => {
+    const { runId } = await repo.createRunWithSearches(
+      {
+        startTimestamp: '2026-08-05T10:00:00.000Z',
+        configSnapshotJson: {},
+        configSchemaVersion: 1,
+        configHash: 'h',
+        applicationVersion: '0.1.0',
+      },
+      [{ pipelineRunId: 0, searchQuery: 'q', locationName: 'L', generatedUrl: 'https://example.com/jobs?q=q', startTimestamp: '2026-08-05T10:00:00.000Z', geoId: '1' }],
+    );
+    const row = await repo.findRunById(runId);
+    expect(row?.id).toBe(runId);
+    expect(row?.status).toBe('running');
+    expect(await repo.findRunById(99_999_999)).toBeNull();
+  });
+
+  it('listRuns returns every persisted run (no status filter)', async () => {
+    await repo.createRunWithSearches(
+      { startTimestamp: '2026-08-05T10:00:00.000Z', configSnapshotJson: {}, configSchemaVersion: 1, configHash: 'h1', applicationVersion: '0.1.0' },
+      [{ pipelineRunId: 0, searchQuery: 'q1', locationName: 'L', generatedUrl: 'https://example.com/jobs?q=q1', startTimestamp: '2026-08-05T10:00:00.000Z', geoId: '1' }],
+    );
+    await repo.createRunWithSearches(
+      { startTimestamp: '2026-08-05T11:00:00.000Z', configSnapshotJson: {}, configSchemaVersion: 1, configHash: 'h2', applicationVersion: '0.1.0' },
+      [{ pipelineRunId: 0, searchQuery: 'q2', locationName: 'L', generatedUrl: 'https://example.com/jobs?q=q2', startTimestamp: '2026-08-05T10:00:00.000Z', geoId: '1' }],
+    );
+    const rows = await repo.listRuns();
+    expect(rows).toHaveLength(2);
+  });
+
+  it('listRuns filters by status when opts.status is supplied', async () => {
+    const { runId } = await repo.createRunWithSearches(
+      { startTimestamp: '2026-08-05T10:00:00.000Z', configSnapshotJson: {}, configSchemaVersion: 1, configHash: 'h', applicationVersion: '0.1.0' },
+      [{ pipelineRunId: 0, searchQuery: 'q', locationName: 'L', generatedUrl: 'https://example.com/jobs?q=q', startTimestamp: '2026-08-05T10:00:00.000Z', geoId: '1' }],
+    );
+    await repo.finalizeRunStats(runId, { status: 'failed' });
+    const failed = await repo.listRuns({ status: 'failed' });
+    expect(failed.map((r) => r.id)).toContain(runId);
+    expect(await repo.listRuns({ status: 'completed' })).toHaveLength(0);
+  });
+
+  it('listRecent returns the most recent runs (newest first, limit N)', async () => {
+    await repo.createRunWithSearches(
+      { startTimestamp: '2026-08-05T10:00:00.000Z', configSnapshotJson: {}, configSchemaVersion: 1, configHash: 'a', applicationVersion: '0.1.0' },
+      [{ pipelineRunId: 0, searchQuery: 'q1', locationName: 'L', generatedUrl: 'https://example.com/jobs?q=q1', startTimestamp: '2026-08-05T10:00:00.000Z', geoId: '1' }],
+    );
+    await repo.createRunWithSearches(
+      { startTimestamp: '2026-08-05T11:00:00.000Z', configSnapshotJson: {}, configSchemaVersion: 1, configHash: 'b', applicationVersion: '0.1.0' },
+      [{ pipelineRunId: 0, searchQuery: 'q2', locationName: 'L', generatedUrl: 'https://example.com/jobs?q=q2', startTimestamp: '2026-08-05T10:00:00.000Z', geoId: '1' }],
+    );
+    await repo.createRunWithSearches(
+      { startTimestamp: '2026-08-05T12:00:00.000Z', configSnapshotJson: {}, configSchemaVersion: 1, configHash: 'c', applicationVersion: '0.1.0' },
+      [{ pipelineRunId: 0, searchQuery: 'q3', locationName: 'L', generatedUrl: 'https://example.com/jobs?q=q3', startTimestamp: '2026-08-05T10:00:00.000Z', geoId: '1' }],
+    );
+    const recent = await repo.listRecent(2);
+    expect(recent).toHaveLength(2);
+    expect(recent[0]?.configHash).toBe('c');
+    expect(recent[1]?.configHash).toBe('b');
+  });
+
+  it('listRecent returns an empty array for a non-positive limit (no DB query)', async () => {
+    expect(await repo.listRecent(0)).toEqual([]);
+    expect(await repo.listRecent(-3)).toEqual([]);
+  });
+
+  it('findWithDetails returns the run joined with its search executions', async () => {
+    const { runId, searchIds } = await repo.createRunWithSearches(
+      {
+        startTimestamp: '2026-08-05T10:00:00.000Z',
+        configSnapshotJson: {},
+        configSchemaVersion: 1,
+        configHash: 'h',
+        applicationVersion: '0.1.0',
+      },
+      [
+        { pipelineRunId: 0, searchQuery: 'q1', locationName: 'L', generatedUrl: 'https://example.com/jobs?q=q1', startTimestamp: '2026-08-05T10:00:00.000Z', geoId: '1' },
+        { pipelineRunId: 0, searchQuery: 'q2', locationName: 'L', generatedUrl: 'https://example.com/jobs?q=q2', startTimestamp: '2026-08-05T10:00:00.000Z', geoId: '2' },
+      ],
+    );
+    const details = await repo.findWithDetails(runId);
+    expect(details?.row.id).toBe(runId);
+    expect(details?.searches).toHaveLength(2);
+    expect([...(details?.searches ?? [])].map((s) => s.id).sort()).toEqual([...searchIds].sort());
+    expect(await repo.findWithDetails(99_999_999)).toBeNull();
+  });
+
+  it('listSearchesByRun returns every search under a run', async () => {
+    const { runId, searchIds } = await repo.createRunWithSearches(
+      {
+        startTimestamp: '2026-08-05T10:00:00.000Z',
+        configSnapshotJson: {},
+        configSchemaVersion: 1,
+        configHash: 'h',
+        applicationVersion: '0.1.0',
+      },
+      [
+        { pipelineRunId: 0, searchQuery: 'a', locationName: 'L', generatedUrl: 'https://example.com/jobs?q=a', startTimestamp: '2026-08-05T10:00:00.000Z', geoId: '1' },
+        { pipelineRunId: 0, searchQuery: 'b', locationName: 'L', generatedUrl: 'https://example.com/jobs?q=b', startTimestamp: '2026-08-05T10:00:00.000Z', geoId: '2' },
+      ],
+    );
+    const searches = await repo.listSearchesByRun(runId);
+    expect(searches).toHaveLength(2);
+    expect(searches.map((s) => s.id).sort()).toEqual([...searchIds].sort());
+    expect(await repo.listSearchesByRun(99_999_999)).toEqual([]);
+  });
 });
