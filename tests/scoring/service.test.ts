@@ -45,17 +45,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { hashString } from '../../src/profile/hashing.js';
-import {
-  OpenAIAuthenticationError,
-  OpenAITimeoutError,
-} from '../../src/profile/openai/errors.js';
+import { OpenAIAuthenticationError, OpenAITimeoutError } from '../../src/profile/openai/errors.js';
 import { computeScoreFingerprint } from '../../src/scoring/fingerprint.js';
 import { SCORING_PROMPT_VERSION } from '../../src/scoring/prompt.js';
 import { RUBRIC_VERSION } from '../../src/scoring/rubric.js';
-import {
-  FakeScoringPipeline,
-  makeValidResponse,
-} from './fixtures/fake-scoring-pipeline.js';
+import { FakeScoringPipeline, makeValidResponse } from './fixtures/fake-scoring-pipeline.js';
 import { loadScoringFixture } from './fixtures/loadFixture.js';
 
 const VALID_OUTPUT = loadScoringFixture('scoring-output-valid');
