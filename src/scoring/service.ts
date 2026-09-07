@@ -19,6 +19,7 @@ import { buildScoringPlan, type BuildScoringPlanInput } from './plan.js';
 import { ApplicationError } from '../errors/index.js';
 import { ScoringHardStopError, ScoringInvalidStructuredOutputError } from './errors.js';
 import { formatError } from '../logging/format-error.js';
+import { detectRefusal } from '../profile/openai/refusal-detector.js';
 import { noopScoringLogger, type ScoringLogger } from './log.js';
 import {
   LINKEDIN_SCORING_SCHEMA_VERSION,
@@ -295,6 +296,28 @@ export class ScoringService {
           });
           attemptCount += 1;
           tokenUsage = response.tokenUsage;
+
+          // B2-M8: refusal-detector scans `rawJsonText` for empty
+          // bodies, empty JSON objects, and known refusal phrases
+          // ("I can't", "as an AI", etc.). The default OpenAI client
+          // also scans, but the production scorer wires that
+          // boundary loosely — `scoreBatch` also accepts an
+          // arbitrary `OpenAIClient` (see the FakeOpenAIClient used
+          // by tests), and a custom client may skip the scan. Belt-
+          // and-braces: surface the refusal here as
+          // `ScoringInvalidStructuredOutputError` so the existing
+          // `runWithRetry` classifier picks it up (corrective-retry
+          // budget via the `RetryableOpenAIError` marker; see #18).
+          const refusal = detectRefusal(response.rawJsonText);
+          if (refusal.isRefusal) {
+            throw new ScoringInvalidStructuredOutputError({
+              attemptNumber: attemptCount,
+              validationError: `refusal:${refusal.reason ?? 'unknown'}${
+                refusal.matchedMarker !== undefined ? `:${refusal.matchedMarker}` : ''
+              }`,
+            });
+          }
+
           let parsed: unknown;
           try {
             parsed = JSON.parse(response.rawJsonText);
