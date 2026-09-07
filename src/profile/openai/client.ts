@@ -23,7 +23,14 @@ import {
   OpenAITimeoutError,
   OpenAIUnsupportedModelError,
   ProfileExtractionError,
+  ProfileExtractionRefusalError,
 } from './errors.js';
+import {
+  DEFAULT_REFUSAL_MARKERS,
+  createRefusalDetector,
+  detectRefusal,
+  type RefusalDetectorOptions,
+} from './refusal-detector.js';
 import { getResponseSchema } from './response-schemas.js';
 import type {
   OpenAIExtractionRawResponse,
@@ -50,6 +57,18 @@ const QUOTA_ERROR_CODES: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Options accepted by {@link createDefaultOpenAIClient} in addition
+ * to the transport-level `apiKey` + `timeoutMs`. The refusal-detection
+ * knobs flow from `config.openai.{refusalMarkers,flagEmptyBodies}`
+ * (see `src/config/schema.ts`) so a model-version bump can add new
+ * markers without code-surgery in this module.
+ */
+export interface DefaultOpenAIClientRefusalOptions {
+  readonly refusalMarkers?: readonly string[];
+  readonly flagEmptyBodies?: boolean;
+}
+
+/**
  * Build the production `OpenAIClient` backed by the official `openai`
  * SDK. The SDK is imported only inside this module — every other file
  * in `src/profile/` (and all tests) sees the `OpenAIClient` interface
@@ -65,9 +84,11 @@ const QUOTA_ERROR_CODES: ReadonlySet<string> = new Set([
 export function createDefaultOpenAIClient(options: {
   readonly apiKey: string;
   readonly timeoutMs?: number;
+  readonly refusal?: DefaultOpenAIClientRefusalOptions;
 }): OpenAIClient {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const sdk = new OpenAI({ apiKey: options.apiKey, timeout: timeoutMs });
+  const detect = createRefusalDetector(toRefusalDetectorOptions(options.refusal));
 
   return {
     async extract(request: OpenAIExtractionRequest): Promise<OpenAIExtractionRawResponse> {
@@ -117,6 +138,23 @@ export function createDefaultOpenAIClient(options: {
           throw new OpenAIEmptyResponseError();
         }
 
+        // B2-M8: scan the raw content for refusal markers + empty
+        // bodies the SDK signals missed. Routed through a typed error
+        // (retryable once) so the existing `runWithRetry` classifier
+        // gets the structured-output-failure signal it already
+        // understands. `detect` is bound with the configured marker
+        // list at construction time, so this hot path iterates the
+        // marker array without re-reading config on every call.
+        const refusal = detect(rawJsonText);
+        if (refusal.isRefusal) {
+          throw new ProfileExtractionRefusalError({
+            reason: refusal.reason,
+            ...(refusal.matchedMarker !== undefined
+              ? { matchedMarker: refusal.matchedMarker }
+              : {}),
+          });
+        }
+
         return { rawJsonText, tokenUsage };
       } catch (error) {
         throw translateSdkError(error);
@@ -124,6 +162,36 @@ export function createDefaultOpenAIClient(options: {
     },
   };
 }
+
+/**
+ * Build a `RefusalDetectorOptions` from the client-level options.
+ * Defaults fall through to the module-level `DEFAULT_REFUSAL_MARKERS`
+ * + `flagEmpty: true`.
+ */
+function toRefusalDetectorOptions(
+  options: DefaultOpenAIClientRefusalOptions | undefined,
+): RefusalDetectorOptions | undefined {
+  if (options === undefined) return undefined;
+  const out: {
+    markers?: readonly string[];
+    flagEmpty?: boolean;
+  } = {};
+  if (options.refusalMarkers !== undefined) {
+    out.markers = options.refusalMarkers;
+  }
+  if (options.flagEmptyBodies !== undefined) {
+    out.flagEmpty = options.flagEmptyBodies;
+  }
+  // Touch the imported constant so the linter / tree-shaker doesn't
+  // drop it from the build — it's the documented default for callers
+  // who don't override.
+  void DEFAULT_REFUSAL_MARKERS;
+  return Object.keys(out).length === 0 ? undefined : out;
+}
+
+// `detectRefusal` is exported for tests + direct callers that want
+// one-off scans without instantiating a client.
+export { detectRefusal };
 
 /**
  * Translate an arbitrary `openai` SDK error into the typed

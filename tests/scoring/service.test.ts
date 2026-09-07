@@ -376,3 +376,87 @@ describe('ScoringService.scoreBatch — worker-pool concurrency', () => {
     expect(pipeline.tracker.maxConcurrent).toBe(3);
   });
 });
+
+describe('ScoringService.scoreBatch — refusal detector (audit B2-M8)', () => {
+  let pipeline: FakeScoringPipeline;
+
+  beforeEach(async () => {
+    pipeline = await FakeScoringPipeline.create({
+      fakeScripts: { responses: [makeValidResponse(VALID_OUTPUT)] },
+      config: {
+        model: 'gpt-5.6-sol',
+        reasoningEffort: 'medium',
+        concurrency: 1,
+      },
+    });
+  });
+
+  afterEach(async () => {
+    await pipeline.cleanup();
+  });
+
+  it('surfaces a refusal-marker body as ScoringInvalidStructuredOutputError, not a silent success', async () => {
+    // Pre-fix the scoreOne flow accepted whatever the model returned
+    // as long as it parsed as JSON. A refusal in the content slot
+    // produced `kind: 'failed'` with a generic `validationError` —
+    // no marker, no reason. Post-fix the metadata carries the
+    // `refusal:<reason>` discriminator so operators can audit which
+    // phrase tripped the detector.
+    const { scoreOneInput } = await pipeline.insertCompleteJob();
+    pipeline.replaceOpenAIScripts([
+      { responses: [{ rawJsonText: 'I cannot help with that request.', tokenUsage: null }] },
+      { responses: [{ rawJsonText: 'I cannot help with that request.', tokenUsage: null }] },
+      // The third attempt is also a refusal — but the
+      // `correctiveRetry` budget gives the model ONE additional
+      // attempt before the call aborts, so the third script entry
+      // is never consumed.
+      { responses: [makeValidResponse(VALID_OUTPUT)] },
+    ]);
+    pipeline.tracker.reset();
+    const outcome = await pipeline.service.scoreOne(scoreOneInput);
+    expect(outcome.kind).toBe('failed');
+    expect(outcome.errorCode).toBe('scoring_invalid_structured_output');
+    expect(outcome.errorMessage).toMatch(/refusal:refusal_marker:I cannot$/);
+  });
+
+  it('surfaces an empty JSON object as ScoringInvalidStructuredOutputError', async () => {
+    // The model filled the content slot but emitted `{}` — a
+    // semantically empty response that Zod would have rejected with
+    // a generic "required field missing" message. The refusal
+    // detector catches it earlier with a clearer reason.
+    const { scoreOneInput } = await pipeline.insertCompleteJob();
+    pipeline.replaceOpenAIScripts([
+      { responses: [{ rawJsonText: '{}', tokenUsage: null }] },
+      { responses: [{ rawJsonText: '{}', tokenUsage: null }] },
+    ]);
+    pipeline.tracker.reset();
+    const outcome = await pipeline.service.scoreOne(scoreOneInput);
+    expect(outcome.kind).toBe('failed');
+    expect(outcome.errorCode).toBe('scoring_invalid_structured_output');
+    expect(outcome.errorMessage).toMatch(/refusal:empty_json_object$/);
+  });
+
+  it('surfaces a whitespace-only body as ScoringInvalidStructuredOutputError', async () => {
+    const { scoreOneInput } = await pipeline.insertCompleteJob();
+    pipeline.replaceOpenAIScripts([
+      { responses: [{ rawJsonText: '   \n\t  ', tokenUsage: null }] },
+      { responses: [{ rawJsonText: '   \n\t  ', tokenUsage: null }] },
+    ]);
+    pipeline.tracker.reset();
+    const outcome = await pipeline.service.scoreOne(scoreOneInput);
+    expect(outcome.kind).toBe('failed');
+    expect(outcome.errorCode).toBe('scoring_invalid_structured_output');
+    expect(outcome.errorMessage).toMatch(/refusal:empty_body$/);
+  });
+
+  it('lets a valid non-empty response through unchanged', async () => {
+    const { scoreOneInput } = await pipeline.insertCompleteJob();
+    pipeline.replaceOpenAIScripts([{ responses: [makeValidResponse(VALID_OUTPUT)] }]);
+    pipeline.tracker.reset();
+    const outcome = await pipeline.service.scoreOne(scoreOneInput);
+    expect(outcome.kind).toBe('complete');
+    expect(outcome.attempted).toBe(true);
+    expect(outcome.errorCode).toBeNull();
+    expect(pipeline.tracker.totalCalls).toBe(1);
+  });
+});

@@ -216,7 +216,12 @@ export class OpenAIRefusalError extends ProfileExtractionError {
  */
 export class OpenAIEmptyResponseError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_empty_response', 'OpenAI returned an empty structured-output body.', metadata, cause);
+    super(
+      'openai_empty_response',
+      'OpenAI returned an empty structured-output body.',
+      metadata,
+      cause,
+    );
   }
 }
 
@@ -230,6 +235,37 @@ export class ProfileExtractionSourceUnusableError extends ProfileExtractionError
       'profile_extraction_source_unusable',
       'One or more required sources have unusable extracted text.',
       metadata,
+      cause,
+    );
+  }
+}
+
+/**
+ * Refusal detector found a refusal marker / empty body in the raw
+ * `rawJsonText` returned by the model. Audit B2-M8.
+ *
+ * Distinct from {@link OpenAIRefusalError}: that error fires when
+ * the SDK's `choices[0].message.refusal` field is non-empty, which
+ * is the upstream signal that the model declined the request
+ * wholesale (non-retryable, by policy). This class fires when the
+ * model emits the response in `choices[0].message.content` but the
+ * content itself is a refusal, an empty body, or a syntactic `{}` —
+ * signals the upstream signal missed. Opt into the "retryable once"
+ * budget via `correctiveRetry: true` (mirroring
+ * {@link OpenAIInvalidOutputError}) so a transient content-filter
+ * trigger gets one chance; the second occurrence aborts the call.
+ */
+export class ProfileExtractionRefusalError
+  extends ProfileExtractionError
+  implements RetryableOpenAIError
+{
+  readonly correctiveRetry = true;
+
+  constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
+    super(
+      'profile_extraction_refusal',
+      'Profile extraction model returned a refusal-marker body.',
+      { ...metadata, retryable: true },
       cause,
     );
   }

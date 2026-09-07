@@ -39,10 +39,25 @@ const jobScoringSchema = z
   })
   .strict();
 
+/**
+ * Substrings the model output is scanned for to flag a content-
+ * policy refusal / empty body. Audit B2-M8. Defaults to the
+ * module-level `DEFAULT_REFUSAL_MARKERS`; override via
+ * `refusalMarkers` when a model variant emits a distinctive refusal
+ * phrase the defaults miss.
+ */
+const refusalDetectionSchema = z
+  .object({
+    refusalMarkers: z.array(z.string().min(1)),
+    flagEmptyBodies: z.boolean(),
+  })
+  .strict();
+
 const openaiSchema = z
   .object({
     profileExtraction: profileExtractionSchema,
     jobScoring: jobScoringSchema,
+    refusalDetection: refusalDetectionSchema,
   })
   .strict();
 
@@ -125,6 +140,18 @@ export const DEFAULT_OPERATIONAL_CONFIG: OperationalConfig = {
       model: 'gpt-5.6-sol',
       reasoningEffort: 'medium',
       concurrency: 3,
+    },
+    refusalDetection: {
+      refusalMarkers: [
+        "I can't",
+        'I cannot',
+        'as an AI',
+        "I'm not able to",
+        "I'm unable to",
+        "I won't",
+        'As a language model',
+      ],
+      flagEmptyBodies: true,
     },
   },
   scraper: {
