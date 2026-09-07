@@ -38,9 +38,14 @@ function readField(schema: Record<string, unknown>, path: string[]): unknown {
  * non-null string value (so the model can emit `null` for "unknown"
  * while still being constrained to the documented enum otherwise).
  *
- * Accepts both shapes Zod emits for nullable fields:
- * - `type: ['string', 'null']` with `null` in `enum`
- * - `anyOf: [{type:'string', enum:[...]}, {type:'null'}]`
+ * Accepts both shapes Zod emits for nullable fields (zod 4.5+ may emit
+ * either depending on `compactTypeUnion` and whether the underlying
+ * schema carries extra constraints):
+ * - `type: ['string', 'null']` — possibly with `null` in `enum` for enum-backed fields
+ * - `anyOf: [{type:'string', enum:[...]}, {type:'null'}]` — emitted when the
+ *   string branch carries non-`type` keys
+ *
+ * Plain nullable strings (no enum) only need the `type`/`anyOf` check.
  */
 function expectNullableAcceptsNull(field: Record<string, unknown>): void {
   const type = field['type'];
@@ -49,8 +54,10 @@ function expectNullableAcceptsNull(field: Record<string, unknown>): void {
   if (Array.isArray(type)) {
     expect(type).toContain('null');
     expect(type).toContain('string');
-    const enumValues = field['enum'] as unknown[];
-    expect(enumValues).toContain(null);
+    const enumValues = field['enum'] as unknown[] | undefined;
+    if (enumValues !== undefined) {
+      expect(enumValues).toContain(null);
+    }
     return;
   }
 
@@ -64,6 +71,10 @@ function expectNullableAcceptsNull(field: Record<string, unknown>): void {
       branches.some((branch) => branch['type'] === 'string'),
       'expected a `string` branch in anyOf',
     ).toBe(true);
+    const enumValues = field['enum'] as unknown[] | undefined;
+    if (enumValues !== undefined) {
+      expect(enumValues).toContain(null);
+    }
     return;
   }
 
@@ -148,9 +159,12 @@ describe('STRUCTURED_OUTPUT_SCHEMA', () => {
       'properties',
       'headline',
     ]) as Record<string, unknown>;
-    // Zod's `string().nullable()` projection uses `anyOf: [{type: 'string'}, {type: 'null'}]`,
-    // which is what the unconverted fields look like.
-    expect(headline['anyOf']).toEqual([{ type: 'string' }, { type: 'null' }]);
+    // Zod 4.5+'s `toJSONSchema()` applies a `compactTypeUnion` post-pass in
+    // `finalize()` that turns `z.string().nullable()` into
+    // `{ type: ['string', 'null'] }` (JSON Schema 2020-12). Older zod emits
+    // `{ anyOf: [{type:'string'}, {type:'null'}] }`. OpenAI strict mode accepts
+    // both forms; `expectNullableAcceptsNull` covers either.
+    expectNullableAcceptsNull(headline);
   });
 
   it('does not mutate the original Zod schema (verified by re-importing)', async () => {
