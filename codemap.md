@@ -17,7 +17,7 @@ Runtime baseline: Node `>=24.18.0 <25`, ESM-only (`"type": "module"`), pnpm `11.
 | `tsconfig.test.json` | Test-scoped project extending `tsconfig.json` with `rootDir: "."`; includes `src/**/*.ts`, `tests/**/*.ts`, and both vitest config files. |
 | `drizzle.config.ts` | Drizzle Kit with SQLite dialect: `schema: ./src/persistence/schema.ts`, migrations `out: ./drizzle`, `verbose`, `strict`. Drives `pnpm db:generate`. |
 | `eslint.config.mjs` | Flat config: `@eslint/js` recommended + `typescript-eslint` recommended + `eslint-config-prettier`, Node globals, customized `@typescript-eslint/no-unused-vars` (`^_` ignore patterns). `globalIgnores` covers `dist`, `node_modules`, `coverage`, `.worktrees`, `.superpowers`, `docs`, `drizzle`, `desktop/tauri/target`. |
-| `vitest.config.ts` | Default unit/acceptance suite: includes `tests/**/*.test.ts`, excludes `tests/live/**`, v8 coverage provider. |
+| `vitest.config.ts` | Default unit/acceptance suite: includes `tests/**/*.test.ts`, excludes `tests/live/**`, v8 coverage provider, per-file coverage thresholds enforced as a CI gate for `src/scoring/**`, `src/persistence/repositories/**`, and `src/pipeline/**` (lines 78 / functions 77 / branches 60 / statements 75; the scoring/pipeline floors are intentionally lower — see the audit H17 recommendation in `docs/audit/AUDIT_REPORT.md`). |
 | `vitest.live.config.ts` | Network-touching suite: includes only `tests/live/**/*.test.ts` with `passWithNoTests`. |
 
 ## Directory Map (Aggregated)

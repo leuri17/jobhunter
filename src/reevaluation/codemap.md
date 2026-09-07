@@ -15,7 +15,9 @@ Plan-driven execution. The service classifies every complete job into
 comparison, then runs only the work the classification requires. Output
 is a structured `ReevaluationPlan` envelope rendered by formatters and
 the Zod `REEVALUATION_JSON_SCHEMA` (versioned by
-`REEVALUATION_SCHEMA_VERSION`). Two fingerprints drive delta detection:
+`REEVALUATION_SCHEMA_VERSION = 2 as const` — v2 added the `'failed'`
+action variant and the `scoresFailed` total so partial-failure runs
+surface cleanly; audit B1-H3). Two fingerprints drive delta detection:
 `computeFilterFingerprintForJob` (config + profile + job hash) and
 `computeScoreFingerprintForJob` (profile version + prompt/rubric/model
 + job hash). Pure layer (`state`, `errors`, `plan`, `format`,
@@ -25,6 +27,16 @@ the Zod `REEVALUATION_JSON_SCHEMA` (versioned by
 `ReevaluationError` → `ExitCode.Fatal`,
 `ReevaluationValidationError` → `ExitCode.InvalidUsage`,
 `PipelinePrerequisiteError` for missing profile/filter/`OPENAI_API_KEY`.
+
+`ReevaluationPlanAction` union: `'would-rerun' | 'reran' | 'reused' | 'failed'`.
+The `'failed'` variant records a per-job scoring/persistence error
+during the live rerun phase (previously reported silently as
+`'reran'` — audit B1-H3). On a per-job scoring/persistence error,
+`entry.action = 'failed'` is set, the structured log event
+`reevaluationScoreFail` carries the full error message (not just the
+code), and the totals block exposes `scoresFailed` separately from
+`scoresRerun` so the runs-show page can surface partial-failure
+counts.
 
 ## Flow
 

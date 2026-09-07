@@ -65,6 +65,21 @@ them.
    `invalidateByFilterConfigVersion`, `invalidateActiveByJob` flip matching
    active rows to `false` and return the count flipped; rows are never
    deleted, preserving the audit trail.
+6. **Batched multi-row lookups** (audit B3-C.1.x — replaces per-row
+   PK lookups with one `inArray` SELECT + in-memory `Map` lookup):
+   - `JobRepository.findByIds(ids: readonly number[]): Promise<JobRow[]>`
+     — empty input short-circuits (Drizzle's `inArray` rejects empty
+     arrays). Used by `PipelineOrchestrator.runExtraction` (per-event
+     fetch + filter-application reuse) and the inspection read paths.
+   - `FilterResultsRepository.findActiveByJobIn(jobIds)`
+   - `ScoreResultsRepository.findActiveByJobIn(jobIds)` — splits into
+     `successfulScoreByJobId` / `failedScoreByJobId` Maps in the service
+     layer (partial unique index guarantees ≤ 1 active row per job).
+   - `JobRepository.listExtractionAttemptsByJobIn(jobIds)` — used by
+     `JobsListService` to compute the `latestFailedAttemptByJobId`
+     partition without a per-row SELECT.
+   Each short-circuits on empty input (no DB round-trip). Ordering
+   is not guaranteed; callers key by primary `id`.
 6. **SHA-256 deduplication**: `ProfileSourceRepository.insert` is strict
   INSERT-OR-ERROR — dedup is owned upstream by `ProfileImportService` via
   `findBySha256`; bypassing it raises `DuplicateSha256Error`.
