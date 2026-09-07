@@ -38,6 +38,46 @@ optional file stream (append) + stdout (and stderr when supplied).
 `pinoReevaluationLogger` short-circuits the level choice for
 reevaluation events and enforces the event-name convention.
 
+### Redaction path policy (audit B1-M1)
+
+`DEFAULT_REDACT_PATHS` enumerates 11 secret-bearing key names. Every
+entry is also re-emitted with four wildcard forms so a secret at
+any of the shapes a caller might use is covered.
+
+The five forms emitted per key `k`:
+
+- `k` — top-level only.
+- `*.k` — one-level wildcard (`obj.k`).
+- `*.*.k` — two-level wildcard (`obj.obj.k`).
+- `[*].k` — array-element wildcard at top level. **Note:** pino
+  10.3.1's `@pinojs/redact` 0.4 does NOT match this form on its own
+  (it requires an explicit parent for array-element paths, e.g.
+  `messages[*].k`). The path is included for spec parity and as a
+  no-op when nothing matches.
+- `*.[*].k` — top-level array of objects with `k` (the common
+  "messages: [{prompt: ...}]" shape).
+
+Pino's wildcard syntax is **positional, not recursive**: `*.k` only
+matches ONE level of nesting. The `**` form documented in pino's API
+surface does NOT actually recurse in this version (it behaves
+identically to `*.*`); the implementation in
+`@pinojs/redact/index.js:selectiveClone` only walks the parts
+sequence literally. So we enumerate the practical depths
+explicitly (1 and 2 levels) rather than relying on `**`.
+
+**Convention for future contributors.** When adding a new
+secret-bearing key to `DEFAULT_REDACT_PATHS`, add it to the
+`SECRET_KEYS` tuple at the top of `logger.ts` (NOT directly to the
+exported array). The array literal spreads the tuple plus its
+wildcard forms automatically, so adding a single new entry keeps the
+five-form invariant intact without having to update four more lines
+by hand.
+
+`logger.ts`' Set-based merge at `buildPino` deduplicates the
+wildcard set against any caller-supplied `options.redactPaths`, so
+callers can add their own wildcard paths without conflicting with
+the defaults.
+
 ## Integration
 
 - Type-only `Logger` import: `src/pipeline/log.ts`,

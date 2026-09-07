@@ -42,7 +42,26 @@ export interface LoggerDestinations {
   readonly stderr?: Writable;
 }
 
-export const DEFAULT_REDACT_PATHS: readonly string[] = [
+/**
+ * Top-level secret-bearing key names (audit B1-M1). Each entry is
+ * also re-emitted with `*.k`, `*.*.k`, `[*].k`, and `*.[*].k`
+ * wildcard forms below so a `apiKey` nested one level deep inside
+ * a request envelope (e.g. `request.apiKey`) or two levels deep
+ * (e.g. `request.headers.apiKey`) is still redacted.
+ *
+ * Note on pino's wildcard semantics (10.3.1 / @pinojs/redact 0.4):
+ * the wildcards are positional, not recursive — `*.k` matches ONE
+ * level deep, `*.*.k` matches TWO. The `**` documented in pino's
+ * API surface does NOT actually recurse in this version (it behaves
+ * identically to `*.*`), so we enumerate the practical depths
+ * explicitly. `[*].k` is included for spec parity even though it
+ * does not match on its own (pino's redact requires an explicit
+ * parent for array-element paths, e.g. `messages[*].k`); `*.[*].k`
+ * covers the common "top-level array of objects" case. Keep the
+ * wildcard forms in lockstep when adding a new entry — see
+ * `src/logging/codemap.md` for the convention.
+ */
+const SECRET_KEYS = [
   'OPENAI_API_KEY',
   'apiKey',
   'openaiApiKey',
@@ -54,6 +73,11 @@ export const DEFAULT_REDACT_PATHS: readonly string[] = [
   'rawPrompt',
   'rawResponse',
   'openai.key',
+] as const;
+
+export const DEFAULT_REDACT_PATHS: readonly string[] = [
+  ...SECRET_KEYS,
+  ...SECRET_KEYS.flatMap((key) => [`*.${key}`, `*.*.${key}`, `[*].${key}`, `*.[*].${key}`]),
 ];
 
 function assertValidLevel(level: string): asserts level is LogLevel {
