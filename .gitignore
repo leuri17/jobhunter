@@ -35,6 +35,7 @@ Thumbs.db
 .vscode/
 
 desktop/tauri/target/
+desktop/tauri/gen/
 
 # Tauri desktop
 desktop/ui/dist/
