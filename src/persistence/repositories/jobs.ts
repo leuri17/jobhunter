@@ -552,6 +552,32 @@ export class JobRepository {
     return rows.map(extractionAttemptRowFromRecord);
   }
 
+  /**
+   * Batch lookup: every extraction-attempt row for the supplied
+   * jobIds. Used by `JobsListService` to replace the per-row
+   * `listExtractionAttemptsByJob` N+1 with one `inArray` SELECT
+   * (audit B3-C.1.11).
+   *
+   * Returns an empty array without a DB round-trip when `jobIds` is
+   * empty (Drizzle's `inArray` rejects empty inputs).
+   *
+   * The result is unordered; the caller partitions by `jobId` if it
+   * only cares about the latest attempt per job (the `partial` UI
+   * row does; `JobsListService` handles that partition in memory
+   * via `latestFailedAttempt`).
+   */
+  async listExtractionAttemptsByJobIn(
+    jobIds: readonly number[],
+  ): Promise<readonly ExtractionAttemptRow[]> {
+    if (jobIds.length === 0) return [];
+    const rows = this.ctx.db
+      .select()
+      .from(extractionAttempts)
+      .where(inArray(extractionAttempts.jobId, [...jobIds]))
+      .all();
+    return rows.map(extractionAttemptRowFromRecord);
+  }
+
   // -------------------------------------------------------------------------
   // Inspection queries
   //

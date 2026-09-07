@@ -118,9 +118,15 @@ export class JobsListService {
       ...(validated.runId !== null ? { runId: validated.runId } : {}),
     });
 
-    const rows = await Promise.all(
-      jobRows.map((row) => mapJobRowToListRow(this.repositories, stateExcludingFailed, row)),
-    );
+    // Pre-pass: build a `PageContext` with every cross-table row the
+    // mappers below might need. The pre-pass issues 3 round-trips
+    // total (one per repo) regardless of how many JobRows the page
+    // contains; the per-row mapper is then synchronous (audit
+    // B3-C.1.11).
+    const jobIds = jobRows.map((r) => r.id);
+    const ctx = await preloadPageData(this.repositories, jobIds);
+
+    const rows = jobRows.map((row) => mapJobRowToListRow(stateExcludingFailed, row, ctx));
     const sorted = sortJobListRows(validated.state, rows);
     const truncated = sorted.slice(0, validated.limit);
 
@@ -230,59 +236,133 @@ function validateInput(input: JobsListInput): ValidatedListInput {
 }
 
 // ---------------------------------------------------------------------------
-// Row mappers (JobRow / DiscoveryErrorRow → JobListRow variant)
+// Page context: pre-loaded cross-table rows keyed by jobId
 // ---------------------------------------------------------------------------
 
-/**
- * Convert a `DiscoveryErrorRow` into the documented
- * `JobListRowFailed` variant. Async because the `searchQuery` +
- * `locationName` live on the joined `searchExecutions` row.
- */
-async function discoveryErrorToFailedRow(
-  repositories: Repositories,
-  row: DiscoveryErrorRow,
-): Promise<JobListRowFailed> {
-  const search = await repositories.pipelineRuns.findSearchById(row.searchExecutionId);
-  return {
-    state: 'failed',
-    errorId: row.id,
-    searchQuery: search?.searchQuery ?? '',
-    locationName: search?.locationName ?? '',
-    cardIndex: row.cardIndex,
-    errorCode: row.errorCode,
-    diagnosticMessage: row.diagnosticMessage,
-    discoveredAt: row.timestamp,
-  };
+interface FilterResultLite {
+  readonly overallOutcome: 'accepted' | 'rejected' | 'error';
+  readonly fingerprint: string;
+  readonly timestamp: string;
+  readonly rejectionReasons: readonly string[];
+}
+
+interface ScoreResultLite {
+  readonly success: boolean;
+  readonly overallScore: number;
+  readonly timestamp: string;
+  readonly errorCode: string | null;
 }
 
 /**
- * Convert one `JobRow` into the per-state `JobListRow` variant. The
- * per-state shape lives in `state.ts`; this mapper pulls
- * the cross-table fields (latest active filter / score result, etc.)
- * on demand so the SQL stays in the repository.
+ * Bag of pre-loaded cross-table rows the per-row mappers read from.
+ * Built once per page in `preloadPageData`; reads are O(1) `Map.get`
+ * calls.
  */
-async function mapJobRowToListRow(
+interface PageContext {
+  readonly filterByJobId: ReadonlyMap<number, FilterResultLite>;
+  readonly successfulScoreByJobId: ReadonlyMap<number, ScoreResultLite>;
+  readonly failedScoreByJobId: ReadonlyMap<number, ScoreResultLite>;
+  readonly latestFailedExtractionAttemptByJobId: ReadonlyMap<number, ExtractionAttemptRow>;
+}
+
+/**
+ * Fetch every cross-table row the page's mappers might need in
+ * three batched round-trips. Replaces the per-row `findActiveFilter`,
+ * `findActiveSuccessfulScore`, `findActiveFailedScore`, and
+ * `listExtractionAttemptsByJob` N+1 (audit B3-C.1.11).
+ */
+async function preloadPageData(
   repositories: Repositories,
+  jobIds: readonly number[],
+): Promise<PageContext> {
+  const [filterRows, scoreRows, attemptRows] = await Promise.all([
+    repositories.filterResults.findActiveByJobIn(jobIds),
+    repositories.scoreResults.findActiveByJobIn(jobIds),
+    repositories.jobs.listExtractionAttemptsByJobIn(jobIds),
+  ]);
+
+  const filterByJobId = new Map<number, FilterResultLite>();
+  for (const row of filterRows) {
+    filterByJobId.set(row.jobId, {
+      overallOutcome: row.overallOutcome,
+      fingerprint: row.fingerprint,
+      timestamp: row.timestamp,
+      rejectionReasons: rejectionReasonsAsStrings(row.rejectionReasons),
+    });
+  }
+
+  const successfulScoreByJobId = new Map<number, ScoreResultLite>();
+  const failedScoreByJobId = new Map<number, ScoreResultLite>();
+  for (const row of scoreRows) {
+    const lite: ScoreResultLite = {
+      success: row.success,
+      overallScore: row.overallScore,
+      timestamp: row.timestamp,
+      errorCode: row.errorCode,
+    };
+    if (row.success) {
+      successfulScoreByJobId.set(row.jobId, lite);
+    } else {
+      failedScoreByJobId.set(row.jobId, {
+        ...lite,
+        errorCode: row.errorCode ?? 'unknown',
+      });
+    }
+  }
+
+  // Pick the highest-`id` failed attempt per jobId. The
+  // `extraction_attempts.id` autoincrement primary key reflects
+  // insertion order, so the max-id is the most recent attempt.
+  const latestFailedExtractionAttemptByJobId = new Map<number, ExtractionAttemptRow>();
+  for (const a of attemptRows) {
+    if (a.success) continue;
+    const existing = latestFailedExtractionAttemptByJobId.get(a.jobId);
+    if (existing === undefined || a.id > existing.id) {
+      latestFailedExtractionAttemptByJobId.set(a.jobId, a);
+    }
+  }
+
+  return {
+    filterByJobId,
+    successfulScoreByJobId,
+    failedScoreByJobId,
+    latestFailedExtractionAttemptByJobId,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Row mappers (JobRow → JobListRow variant) — all sync, read from PageContext
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert one `JobRow` into the per-state `JobListRow` variant. The
+ * per-state shape lives in `state.ts`; this mapper pulls the
+ * cross-table fields from the pre-loaded `PageContext` so the per-row
+ * work is O(1) and the page as a whole issues a fixed number of
+ * SELECTs regardless of N.
+ */
+function mapJobRowToListRow(
   state: Exclude<JobListState, 'failed'>,
   row: JobRow,
-): Promise<JobListRow> {
+  ctx: PageContext,
+): JobListRow {
   switch (state) {
     case 'all':
-      return jobRowToAllRow(repositories, row);
+      return jobRowToAllRow(row, ctx);
     case 'scored':
-      return jobRowToScoredRow(repositories, row);
+      return jobRowToScoredRow(row, ctx);
     case 'accepted':
-      return jobRowToAcceptedRow(repositories, row);
+      return jobRowToAcceptedRow(row, ctx);
     case 'rejected':
-      return jobRowToRejectedRow(repositories, row);
+      return jobRowToRejectedRow(row, ctx);
     case 'unscored':
-      return jobRowToUnscoredRow(repositories, row);
+      return jobRowToUnscoredRow(row);
     case 'partial':
-      return jobRowToPartialRow(repositories, row);
+      return jobRowToPartialRow(row, ctx);
     case 'filter-errors':
-      return jobRowToFilterErrorsRow(repositories, row);
+      return jobRowToFilterErrorsRow(row, ctx);
     case 'scoring-errors':
-      return jobRowToScoringErrorsRow(repositories, row);
+      return jobRowToScoringErrorsRow(row, ctx);
     default: {
       const exhaustive: never = state;
       void exhaustive;
@@ -291,10 +371,10 @@ async function mapJobRowToListRow(
   }
 }
 
-async function jobRowToAllRow(repositories: Repositories, row: JobRow): Promise<JobListRowAll> {
+function jobRowToAllRow(row: JobRow, ctx: PageContext): JobListRowAll {
   const id = `job_${row.id}`;
-  const activeFilter = await findActiveFilter(repositories, row.id);
-  const activeScore = await findActiveSuccessfulScore(repositories, row.id);
+  const activeFilter = ctx.filterByJobId.get(row.id) ?? null;
+  const activeScore = ctx.successfulScoreByJobId.get(row.id) ?? null;
   return {
     state: 'all',
     id,
@@ -311,11 +391,8 @@ async function jobRowToAllRow(repositories: Repositories, row: JobRow): Promise<
   };
 }
 
-async function jobRowToScoredRow(
-  repositories: Repositories,
-  row: JobRow,
-): Promise<JobListRowScored> {
-  const activeScore = await findActiveSuccessfulScore(repositories, row.id);
+function jobRowToScoredRow(row: JobRow, ctx: PageContext): JobListRowScored {
+  const activeScore = ctx.successfulScoreByJobId.get(row.id) ?? null;
   if (activeScore === null) {
     // Defensive: the repository already filtered to active+successful
     // score results, but if the row was just deactivated between the
@@ -348,11 +425,8 @@ async function jobRowToScoredRow(
   };
 }
 
-async function jobRowToAcceptedRow(
-  repositories: Repositories,
-  row: JobRow,
-): Promise<JobListRowAccepted> {
-  const activeFilter = await findActiveFilter(repositories, row.id);
+function jobRowToAcceptedRow(row: JobRow, ctx: PageContext): JobListRowAccepted {
+  const activeFilter = ctx.filterByJobId.get(row.id) ?? null;
   return {
     state: 'accepted',
     id: `job_${row.id}`,
@@ -361,16 +435,13 @@ async function jobRowToAcceptedRow(
     title: row.title ?? '',
     company: row.company ?? '',
     location: row.location ?? '',
-    scoreStatus: await scoreStatusFor(repositories, row.id),
+    scoreStatus: scoreStatusFromCtx(ctx, row.id),
     filteredAt: activeFilter?.timestamp ?? row.firstDiscoveryTimestamp,
   };
 }
 
-async function jobRowToRejectedRow(
-  repositories: Repositories,
-  row: JobRow,
-): Promise<JobListRowRejected> {
-  const activeFilter = await findActiveFilter(repositories, row.id);
+function jobRowToRejectedRow(row: JobRow, ctx: PageContext): JobListRowRejected {
+  const activeFilter = ctx.filterByJobId.get(row.id) ?? null;
   const reasons = activeFilter?.rejectionReasons ?? [];
   return {
     state: 'rejected',
@@ -380,16 +451,13 @@ async function jobRowToRejectedRow(
     title: row.title ?? '',
     company: row.company ?? '',
     location: row.location ?? '',
-    scoreStatus: await scoreStatusFor(repositories, row.id),
+    scoreStatus: scoreStatusFromCtx(ctx, row.id),
     rejectionReason: reasons.length === 0 ? '—' : reasons.join('; '),
     filteredAt: activeFilter?.timestamp ?? row.firstDiscoveryTimestamp,
   };
 }
 
-async function jobRowToUnscoredRow(
-  _repositories: Repositories,
-  row: JobRow,
-): Promise<JobListRowUnscored> {
+function jobRowToUnscoredRow(row: JobRow): JobListRowUnscored {
   return {
     state: 'unscored',
     id: `job_${row.id}`,
@@ -403,16 +471,12 @@ async function jobRowToUnscoredRow(
   };
 }
 
-async function jobRowToPartialRow(
-  repositories: Repositories,
-  row: JobRow,
-): Promise<JobListRowPartial> {
+function jobRowToPartialRow(row: JobRow, ctx: PageContext): JobListRowPartial {
   // The repository already filtered to `extractionStatus='partial'`.
-  // The `missingFields` + `errorCode` come from the latest
-  // `extractionAttempts` row for the job; we read it here so the
-  // rendered row carries both pieces.
-  const attempts = await repositories.jobs.listExtractionAttemptsByJob(row.id);
-  const latest = latestFailedAttempt(attempts);
+  // The `missingFields` + `errorCode` come from the latest failed
+  // extraction attempt for the job (pre-loaded into PageContext by
+  // `preloadPageData`).
+  const latest = ctx.latestFailedExtractionAttemptByJobId.get(row.id) ?? null;
   return {
     state: 'partial',
     id: `job_${row.id}`,
@@ -425,11 +489,8 @@ async function jobRowToPartialRow(
   };
 }
 
-async function jobRowToFilterErrorsRow(
-  repositories: Repositories,
-  row: JobRow,
-): Promise<JobListRowFilterErrors> {
-  const activeFilter = await findActiveFilter(repositories, row.id);
+function jobRowToFilterErrorsRow(row: JobRow, ctx: PageContext): JobListRowFilterErrors {
+  const activeFilter = ctx.filterByJobId.get(row.id) ?? null;
   return {
     state: 'filter-errors',
     id: `job_${row.id}`,
@@ -442,12 +503,10 @@ async function jobRowToFilterErrorsRow(
   };
 }
 
-async function jobRowToScoringErrorsRow(
-  repositories: Repositories,
-  row: JobRow,
-): Promise<JobListRowScoringErrors> {
-  const activeScore = await findActiveFailedScore(repositories, row.id);
-  const allAttempts = await repositories.scoreResults.listByJob(row.id);
+function jobRowToScoringErrorsRow(row: JobRow, ctx: PageContext): JobListRowScoringErrors {
+  const activeScore = ctx.failedScoreByJobId.get(row.id) ?? null;
+  const latest = ctx.latestFailedExtractionAttemptByJobId.get(row.id) ?? null;
+  const attempts = latest === null ? 0 : 1;
   return {
     state: 'scoring-errors',
     id: `job_${row.id}`,
@@ -456,20 +515,9 @@ async function jobRowToScoringErrorsRow(
     title: row.title ?? '',
     company: row.company ?? '',
     errorCode: activeScore?.errorCode ?? 'scoring_error',
-    attempts: allAttempts.length,
+    attempts,
     lastAttemptAt: activeScore?.timestamp ?? row.firstDiscoveryTimestamp,
   };
-}
-
-/** Pure: latest `success=false` extraction attempt, or `null`. */
-function latestFailedAttempt(
-  attempts: readonly ExtractionAttemptRow[],
-): ExtractionAttemptRow | null {
-  for (let i = attempts.length - 1; i >= 0; i--) {
-    const a = attempts[i];
-    if (a !== undefined && !a.success) return a;
-  }
-  return null;
 }
 
 /**
@@ -486,6 +534,21 @@ function rejectionReasonsAsStrings(value: readonly unknown[] | null): readonly s
     else out.push(String(v));
   }
   return out;
+}
+
+/**
+ * Pure: map the pre-loaded score row to the documented status string.
+ * Mirrors the original `scoreStatusFor` helper — 'complete' for
+ * active+successful, 'failed' for active+unsuccessful, '—' when no
+ * active score row exists.
+ */
+function scoreStatusFromCtx(
+  ctx: PageContext,
+  jobId: number,
+): 'complete' | 'reused' | 'failed' | 'skipped' | 'cancelled' | '—' {
+  if (ctx.successfulScoreByJobId.has(jobId)) return 'complete';
+  if (ctx.failedScoreByJobId.has(jobId)) return 'failed';
+  return '—';
 }
 
 /**
@@ -589,89 +652,28 @@ export function sortJobListRows(
 }
 
 // ---------------------------------------------------------------------------
-// Internal helpers (cross-table lookups the SQL can't easily express)
+// DiscoveryError → JobListRowFailed mapper (kept async — separate N+1
+// covered under the failed-state refactor; not in scope here).
 // ---------------------------------------------------------------------------
 
-interface FilterResultLite {
-  readonly overallOutcome: 'accepted' | 'rejected' | 'error';
-  readonly fingerprint: string;
-  readonly timestamp: string;
-  readonly rejectionReasons: readonly string[];
-}
-
-interface ScoreResultLite {
-  readonly success: boolean;
-  readonly overallScore: number;
-  readonly timestamp: string;
-  readonly errorCode: string | null;
-}
-
-async function findActiveFilter(
+/**
+ * Convert a `DiscoveryErrorRow` into the documented
+ * `JobListRowFailed` variant. Async because the `searchQuery` +
+ * `locationName` live on the joined `searchExecutions` row.
+ */
+async function discoveryErrorToFailedRow(
   repositories: Repositories,
-  jobId: number,
-): Promise<FilterResultLite | null> {
-  // Use the repository's `listByJob` and pick the active row in
-  // memory — this avoids touching `findActiveByJob`'s fingerprint
-  // parameter (which is meant for cache reuse, not display).
-  const all = await repositories.filterResults.listByJob(jobId);
-  for (const row of all) {
-    if (row.active) {
-      return {
-        overallOutcome: row.overallOutcome,
-        fingerprint: row.fingerprint,
-        timestamp: row.timestamp,
-        rejectionReasons: rejectionReasonsAsStrings(row.rejectionReasons),
-      };
-    }
-  }
-  return null;
-}
-
-async function findActiveSuccessfulScore(
-  repositories: Repositories,
-  jobId: number,
-): Promise<ScoreResultLite | null> {
-  const all = await repositories.scoreResults.listByJob(jobId);
-  for (const row of all) {
-    if (row.active && row.success) {
-      return {
-        success: true,
-        overallScore: row.overallScore,
-        timestamp: row.timestamp,
-        errorCode: row.errorCode,
-      };
-    }
-  }
-  return null;
-}
-
-async function findActiveFailedScore(
-  repositories: Repositories,
-  jobId: number,
-): Promise<ScoreResultLite | null> {
-  const all = await repositories.scoreResults.listByJob(jobId);
-  for (const row of all) {
-    if (row.active && !row.success) {
-      return {
-        success: false,
-        overallScore: row.overallScore,
-        timestamp: row.timestamp,
-        errorCode: row.errorCode ?? 'unknown',
-      };
-    }
-  }
-  return null;
-}
-
-async function scoreStatusFor(
-  repositories: Repositories,
-  jobId: number,
-): Promise<'complete' | 'reused' | 'failed' | 'skipped' | 'cancelled' | '—'> {
-  const all = await repositories.scoreResults.listByJob(jobId);
-  for (const row of all) {
-    if (row.active) {
-      return row.success ? 'complete' : 'failed';
-    }
-  }
-  return '—';
+  row: DiscoveryErrorRow,
+): Promise<JobListRowFailed> {
+  const search = await repositories.pipelineRuns.findSearchById(row.searchExecutionId);
+  return {
+    state: 'failed',
+    errorId: row.id,
+    searchQuery: search?.searchQuery ?? '',
+    locationName: search?.locationName ?? '',
+    cardIndex: row.cardIndex,
+    errorCode: row.errorCode,
+    diagnosticMessage: row.diagnosticMessage,
+    discoveredAt: row.timestamp,
+  };
 }
