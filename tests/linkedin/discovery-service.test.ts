@@ -123,6 +123,24 @@ function pageWithCards(
           elementHandle: async () => makeCardNode(cardIds[0] ?? ''),
           click: async () => undefined,
           waitFor: async () => undefined,
+          evaluateAll: async <R, _E>(pageFunction: (nodes: Element[]) => R): Promise<R> => {
+            // Mirror production: build card-shaped nodes whose
+            // `querySelector('a')` returns the anchor with the right
+            // attributes, then run the pageFunction against them.
+            // The production callback (load-more.ts:184) calls
+            // `node.querySelector('a')` and reads `data-occludable-job-id`
+            // + `href` on the anchor; `makeCardNode.querySelector` only
+            // matches selectors containing `/jobs/view/`, so we
+            // build the node shape inline to match the production
+            // selector exactly.
+            const nodes = cardIds.map((id) => ({
+              querySelector: (selector: string) => {
+                if (selector === 'a') return makeAnchorNode(id);
+                return null;
+              },
+            }));
+            return pageFunction(nodes as unknown as Element[]);
+          },
         };
       }
       return null;
@@ -377,6 +395,28 @@ describe('LinkedInDiscoveryService (integration)', () => {
           }),
           click: async () => undefined,
           waitFor: async () => undefined,
+          evaluateAll: async <R, _E>(pageFunction: (nodes: Element[]) => R): Promise<R> => {
+            // Production walks each node, calls node.querySelector('a'),
+            // and reads two attributes. Build a single card-shaped
+            // node whose anchor returns the broken attr values, so
+            // parseCardJobId's two-priority lookup both miss and
+            // the orchestrator surfaces a discoveryErrors row.
+            const brokenNode = {
+              querySelector: (selector: string) => {
+                if (selector === 'a' || selector.includes('/jobs/view/')) {
+                  return {
+                    getAttribute: (attr: string) => {
+                      if (attr === 'data-occludable-job-id') return null;
+                      if (attr === 'href') return '/jobs/view/broken/';
+                      return null;
+                    },
+                  };
+                }
+                return null;
+              },
+            };
+            return pageFunction([brokenNode as unknown as Element]);
+          },
         };
         return new FakePage({
           url: 'https://www.linkedin.com/jobs/search/?q=engineer',
