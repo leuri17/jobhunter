@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Writable } from 'node:stream';
@@ -254,5 +254,66 @@ describe('createLogger', () => {
       expect(serialized).not.toContain('super-secret-token');
       expect(serialized).not.toContain('super-secret-password');
     });
+  });
+});
+
+describe('createLogger — file destination failure paths (audit B1-M2)', () => {
+  let tempHome: string;
+
+  beforeEach(() => {
+    tempHome = mkdtempSync(join(tmpdir(), 'jobhunter-logger-file-error-'));
+  });
+
+  afterEach(() => {
+    // Reset any chmod bits we set on the temp dir so the rmSync
+    // call below doesn't trip on the read-only parent.
+    try {
+      chmodSync(tempHome, 0o755);
+    } catch {
+      // Ignore — the dir may already be gone or the test may have
+      // been skipped on Windows.
+    }
+    rmSync(tempHome, { recursive: true, force: true });
+  });
+
+  it.runIf(
+    process.platform !== 'win32' &&
+      !(typeof process.getuid === 'function' && process.getuid() === 0),
+  )('boot-time open failure: returns a usable logger and emits a warning to stdout', () => {
+    // Audit B1-M2. Make the parent dir read-only so createWriteStream
+    // throws EACCES. Linux/macOS only — chmod 0o555 is a no-op for
+    // root, so skip the test for root as well as for Windows (where
+    // the POSIX mode bits don't exist).
+    const readOnlyDir = join(tempHome, 'readonly');
+    mkdirSync(readOnlyDir, { recursive: true });
+    chmodSync(readOnlyDir, 0o555);
+    const deniedPath = join(readOnlyDir, 'inner', 'denied.log');
+
+    const { stream: stdout, records } = captureSink();
+    const logger = createLogger(
+      { level: 'info', prettyTerminal: false, filePath: deniedPath },
+      { stdout },
+    );
+
+    // The factory must not throw.
+    expect(logger).toBeDefined();
+
+    // A subsequent info() call still writes to stdout.
+    logger.info({ component: 'audit', event: 'b1m2.boot_recovered' }, 'still alive');
+    const infoRecord = records.find((r) => r['event'] === 'b1m2.boot_recovered');
+    expect(infoRecord).toBeDefined();
+
+    // A single warning was emitted to stdout naming the path and
+    // carrying the underlying error code.
+    const warning = records.find((r) => r['event'] === 'log.file.open_failed');
+    expect(warning).toBeDefined();
+    expect(warning?.['path']).toBe(deniedPath);
+    expect(warning?.['level']).toBe(40);
+    // `mkdirSync` surfaces an Error with `code: 'EACCES'`; the
+    // message will be platform-specific so we assert the code only.
+    expect(warning?.['code']).toBe('EACCES');
+
+    // Restore mode so the temp-dir cleanup rmSync works.
+    chmodSync(readOnlyDir, 0o755);
   });
 });

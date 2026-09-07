@@ -2,7 +2,7 @@ import { createWriteStream, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { Writable } from 'node:stream';
 
-import { multistream, pino, type Logger as PinoLogger, type StreamEntry } from 'pino';
+import { multistream, pino, type Logger as PinoLogger, type MultiStreamRes } from 'pino';
 
 import { LogConfigError } from '../errors/application-error.js';
 import { formatError } from './format-error.js';
@@ -96,13 +96,103 @@ function assertValidLevel(level: string): asserts level is LogLevel {
  */
 const errorSerializer = (input: unknown): unknown => formatError(input);
 
+/**
+ * Pino's `MultiStreamRes.streams` is typed as `StreamEntry[]`
+ * (just `{ stream, level? }`) but the runtime shape also carries
+ * an `id` that `multistream.remove(id)` consumes. Likewise, the
+ * public `MultiStreamRes` type omits the runtime `remove(id)` and
+ * `emit(...)` methods (they're plain JS functions on the closure,
+ * not declared in the .d.ts). Both extensions are captured in the
+ * local alias below so we can detach a broken file stream at run
+ * time without reaching for `any`.
+ */
+type StreamEntryWithId = { id: number; stream: Writable };
+type MutableMultiStream = MultiStreamRes & {
+  readonly remove: (id: number) => unknown;
+};
+
+/**
+ * Emit a single warning line directly to the `stdout` sink.
+ *
+ * The pino instance isn't built yet at boot-time, so the logger
+ * cannot log its own boot failures. We hand-write a JSON line in
+ * the same shape pino would emit so downstream tooling (file
+ * shippers, log search) treats it as a first-class log line.
+ * `formatError` is invoked without `includeStack` so no file paths
+ * from the runtime environment leak into stderr-bound logs.
+ */
+function warnBootFailure(stdout: Writable, event: string, path: string, err: unknown): void {
+  const detail = formatError(err);
+  const line = JSON.stringify({
+    level: 40,
+    time: Date.now(),
+    component: 'jobhunter',
+    event,
+    path,
+    code: detail.code,
+    name: detail.name,
+    message: detail.message,
+  });
+  stdout.write(line + '\n');
+}
+
+/**
+ * Attach an `'error'` listener that removes the broken file stream
+ * from pino's multistream and writes a warning to `stdout`. Pino's
+ * multistream re-reads its `streams` array on every `write` call
+ * (see pino/lib/multistream.js: `const { streams } = this`), so the
+ * `remove()` is observed by the next log line. We also `destroy()`
+ * the underlying stream to release the file handle; the Node
+ * `EventEmitter` would otherwise crash the process on an unhandled
+ * `'error'` event.
+ *
+ * Uses `on` (not `once`) so a hypothetical future reopen — if the
+ * caller rotates the file — would still get its first error handled
+ * the same way. There is no automatic reopen in this codebase; the
+ * listener simply fires once and the stream is detached.
+ */
+function attachFileStreamErrorListener(
+  multi: MutableMultiStream,
+  fileStreamId: number,
+  fileStream: Writable,
+  stdout: Writable,
+  path: string,
+): void {
+  fileStream.on('error', (err: Error) => {
+    warnBootFailure(stdout, 'log.file.error', path, err);
+    multi.remove(fileStreamId);
+    fileStream.destroy();
+  });
+}
+
 function buildPino(options: LoggerOptions, destinations: LoggerDestinations): PinoLogger {
   assertValidLevel(options.level);
   const redact = new Set<string>([...DEFAULT_REDACT_PATHS, ...(options.redactPaths ?? [])]);
-  const streams: StreamEntry[] = [{ stream: destinations.stdout }];
+  const multi = multistream([{ stream: destinations.stdout }]) as MutableMultiStream;
   if (options.filePath !== undefined) {
-    mkdirSync(dirname(options.filePath), { recursive: true });
-    streams.push({ stream: createWriteStream(options.filePath, { flags: 'a' }) });
+    // Audit B1-M2: guard the file-destination block. Pre-fix,
+    // `mkdirSync` or `createWriteStream` throwing synchronously
+    // would abort the pino factory (and therefore sidecar bootstrap)
+    // with no warning surfaced; an async `'error'` event on the
+    // file stream would also be unhandled and crash the process.
+    try {
+      mkdirSync(dirname(options.filePath), { recursive: true });
+      const fileStream = createWriteStream(options.filePath, { flags: 'a' });
+      multi.add({ stream: fileStream });
+      const streams = multi.streams as unknown as readonly StreamEntryWithId[];
+      const entry = streams.find((s) => s.stream === fileStream);
+      if (entry !== undefined) {
+        attachFileStreamErrorListener(
+          multi,
+          entry.id,
+          fileStream,
+          destinations.stdout,
+          options.filePath,
+        );
+      }
+    } catch (err) {
+      warnBootFailure(destinations.stdout, 'log.file.open_failed', options.filePath, err);
+    }
   }
   return pino(
     {
@@ -114,7 +204,7 @@ function buildPino(options: LoggerOptions, destinations: LoggerDestinations): Pi
         error: errorSerializer,
       },
     },
-    multistream(streams),
+    multi,
   );
 }
 
