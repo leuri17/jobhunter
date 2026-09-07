@@ -210,3 +210,28 @@ have integration coverage in `desktop/tauri/tests/` and
 `tests/`); the SIGINT and stdout-routing decisions above are
 recorded here as design choices, not test-enforced rules. See
 `CONTRIBUTING.md` for the full verification commands.
+
+## Release hardening
+
+The release pipeline (`.github/workflows/build.yml`, triggered by
+`v*` tags and `workflow_dispatch`) emits Tauri bundles for Linux,
+macOS, and Windows. Release hardening lands incrementally; the
+audit's B2-M6 recommendation (issue #50, 2026-09-03) is split into
+three changes:
+
+- **SBOM** — `anchore/sbom-action` runs after the Tauri build on
+  each platform and uploads a CycloneDX JSON SBOM as a workflow
+  artifact alongside the bundle. The Rust/Tauri side already has
+  its own provenance from `cargo`/`Cargo.lock`; the SBOM is the
+  machine-readable answer to "what code is in this bundle." Pinned
+  by commit SHA (see `.github/workflows/build.yml`).
+- **Secret scanning** — `gitleaks/gitleaks-action` runs in
+  `.github/workflows/ci.yml` on every push and PR via a dedicated
+  `secrets` job (first in the matrix). A planted credential blocks
+  merge before a release is cut. Pinned by commit SHA, matching
+  the convention from issue #22 (PR #76).
+- **SLSA provenance for Tauri bundles — deferred.** The audit
+  recommended adding `slsa-framework/slsa-github-generator` for
+  provenance generation. Considered optional in this pass; deferred
+  pending review of the build infrastructure. SBOM + gitleaks
+  landed first; SLSA to be picked up in a follow-up issue.
