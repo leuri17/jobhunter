@@ -108,16 +108,60 @@ describe('createLogger', () => {
   it('child loggers inherit the parent redaction and level', () => {
     const { stream, records } = captureSink();
     const logger = createLogger({ level: 'info', prettyTerminal: false }, { stdout: stream });
-    const child = logger.child({ component: 'scraper', runId: 'run-1' });
+    const child = logger.child({ component: 'scorer', runId: 'run-1' });
 
-    child.info({ event: 'starting', apiKey: 'sk-very-secret-value' }, 'scraper begin');
+    child.info({ event: 'starting', apiKey: 'sk-very-secret-value' }, 'scorer begin');
 
     expect(records).toHaveLength(1);
     const record = records[0]!;
-    expect(record.component).toBe('scraper');
+    expect(record.component).toBe('scorer');
     expect(record.runId).toBe('run-1');
     expect(record.event).toBe('starting');
-    expect(record.msg).toBe('scraper begin');
+    expect(record.msg).toBe('scorer begin');
     expect(JSON.stringify(record)).not.toContain('sk-very-secret-value');
+  });
+
+  it('serialises a 3-deep Error cause chain via the registered pino err serializer', () => {
+    // Audit H2 / B1-H2: stack traces + cause chains must reach the
+    // log line so operators can root-cause failures. Pino's default
+    // `err` serializer flattens `cause`; we replace it with
+    // formatError.
+    const { stream, records } = captureSink();
+    const logger = createLogger({ level: 'info', prettyTerminal: false }, { stdout: stream });
+
+    const leaf = new Error('leaf failure');
+    const middle = new Error('middle failure', { cause: leaf });
+    const top = new Error('top failure', { cause: middle });
+
+    logger.error({ err: top, event: 'scoring.fail', jobId: '42' }, 'request failed');
+
+    expect(records).toHaveLength(1);
+    const record = records[0]!;
+    const errField = record['err'] as {
+      message: string;
+      cause?: { message: string; cause?: { message: string; cause?: unknown } };
+    };
+    expect(errField.message).toBe('top failure');
+    expect(errField.cause?.message).toBe('middle failure');
+    expect(errField.cause?.cause?.message).toBe('leaf failure');
+    // No 4th level — chain terminates at the leaf.
+    expect(errField.cause?.cause?.cause).toBeUndefined();
+  });
+
+  it('serialises errors via the `error` key as well as `err`', () => {
+    // Newer domain adapters use `error` (not pino's built-in `err`);
+    // we register a serializer under both so the chain round-trips
+    // through either entry point.
+    const { stream, records } = captureSink();
+    const logger = createLogger({ level: 'info', prettyTerminal: false }, { stdout: stream });
+
+    const leaf = new Error('leaf');
+    const top = new Error('top', { cause: leaf });
+    logger.error({ error: top }, 'failed');
+
+    const record = records[0]!;
+    const errorField = record['error'] as { message: string; cause?: { message: string } };
+    expect(errorField.message).toBe('top');
+    expect(errorField.cause?.message).toBe('leaf');
   });
 });
