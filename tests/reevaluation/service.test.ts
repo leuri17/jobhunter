@@ -731,7 +731,7 @@ describe('ReevaluationService', () => {
   // -----------------------------------------------------------------
   // See #109 for the deferred-work ticket.
   it.todo(
-    'T18: scope conflict → sidecar route throws ReevaluationValidationError(reevaluate_scope_conflict)',
+    'T18: scope conflict → sidecar route throws ReevaluationValidationError(reevaluate_scope_conflict) — see issue #109',
   );
 
   // -----------------------------------------------------------------
