@@ -35,6 +35,31 @@ describe('ApplicationError', () => {
       metadata: { foo: 'bar' },
     });
   });
+
+  it('preserves the full cause chain in toJSON (audit H2 / B1-H2)', () => {
+    // The pre-fix shape flattened `cause` to `{name, message}`;
+    // toJSON now delegates to formatError so the chain (code +
+    // metadata + nested causes) round-trips through any consumer of
+    // the JSON envelope.
+    const root = new ApplicationError('root_code', 'root', ExitCode.Fatal);
+    const middle = new ApplicationError('middle_code', 'middle', ExitCode.Fatal, {}, root);
+    const top = new ApplicationError(
+      'top_code',
+      'top',
+      ExitCode.Fatal,
+      { hint: 'transient' },
+      middle,
+    );
+
+    const serialized = top.toJSON();
+
+    expect(serialized.code).toBe('top_code');
+    expect(serialized.metadata).toEqual({ hint: 'transient' });
+    expect(serialized.cause?.code).toBe('middle_code');
+    expect(serialized.cause?.cause?.code).toBe('root_code');
+    // The leaf has no further cause.
+    expect(serialized.cause?.cause?.cause).toBeUndefined();
+  });
 });
 
 describe('PathError', () => {

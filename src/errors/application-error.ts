@@ -1,3 +1,5 @@
+import { formatError } from '../logging/format-error.js';
+
 export const ExitCode = {
   Success: 0,
   Fatal: 1,
@@ -20,7 +22,7 @@ export interface ApplicationErrorJSON {
   readonly message: string;
   readonly exitCode: ExitCodeValue;
   readonly metadata: ApplicationErrorMetadata;
-  readonly cause?: { name: string; message: string };
+  readonly cause?: ReturnType<typeof formatError>;
 }
 
 export class ApplicationError extends Error {
@@ -55,7 +57,7 @@ export class ApplicationError extends Error {
       metadata: this.metadata,
     };
     if (this.cause !== undefined) {
-      return { ...json, cause: { name: this.cause.name, message: this.cause.message } };
+      return { ...json, cause: formatError(this.cause) };
     }
     return json;
   }

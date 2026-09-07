@@ -5,6 +5,7 @@ import { Writable } from 'node:stream';
 import { multistream, pino, type Logger as PinoLogger, type StreamEntry } from 'pino';
 
 import { LogConfigError } from '../errors/application-error.js';
+import { formatError } from './format-error.js';
 
 export const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -61,6 +62,16 @@ function assertValidLevel(level: string): asserts level is LogLevel {
   }
 }
 
+/**
+ * Pino error serializer that delegates to `formatError` so every
+ * `Error` (or `Error`-shaped object) reaching the logger — including
+ * the full `cause` chain — appears in the JSON output line. Audit
+ * H2 / B1-H2. The serializer is registered under both `err`
+ * (pino's built-in key) and `error` (the convention adopted by the
+ * newer domain log adapters) so call sites can use either.
+ */
+const errorSerializer = (input: unknown): unknown => formatError(input);
+
 function buildPino(options: LoggerOptions, destinations: LoggerDestinations): PinoLogger {
   assertValidLevel(options.level);
   const redact = new Set<string>([...DEFAULT_REDACT_PATHS, ...(options.redactPaths ?? [])]);
@@ -74,6 +85,10 @@ function buildPino(options: LoggerOptions, destinations: LoggerDestinations): Pi
       level: options.level,
       base: { component: 'jobhunter' },
       redact: { paths: [...redact], censor: '[Redacted]' },
+      serializers: {
+        err: errorSerializer,
+        error: errorSerializer,
+      },
     },
     multistream(streams),
   );

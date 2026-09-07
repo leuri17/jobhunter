@@ -4,6 +4,7 @@ import { type JobFilterConfig } from './schema.js';
 import { detectSeniority } from './seniority-detector.js';
 import { applySeniorityRule } from './seniority-rule.js';
 import { type FilterOutcome } from '../persistence/repositories/filter-results.js';
+import { formatError } from '../logging/format-error.js';
 
 /**
  * Composite rule evaluator for the global deterministic filter engine
@@ -94,14 +95,20 @@ function safeEvaluate(
     }
     return [produced as RuleEvaluation];
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    // Audit H2 / B1-H2: keep the human-readable string for the
+    // backwards-compatible `details.errorMessage` field (the
+    // filter-results test at tests/filter/evaluate.test.ts:546
+    // asserts on this shape) but also attach the full
+    // SerialisedError so the cause chain + code + metadata round-
+    // trip through any logger that consumes the rule failure.
+    const errorDetails = formatError(error);
     return [
       {
         ruleId,
         field,
         outcome: 'failed',
         reason: 'evaluator_internal_error',
-        details: { errorMessage },
+        details: { errorMessage: errorDetails.message, error: errorDetails },
       },
     ];
   }
@@ -647,13 +654,16 @@ export function evaluateJob(config: JobFilterConfig, job: JobInput): FilterEvalu
     // The last-line guard: even the `safeEvaluate` plumbing should not
     // be able to throw, but a top-level try/catch ensures the function
     // contract is honoured if a future refactor introduces a bug.
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    // Audit H2 / B1-H2: route through formatError so the cause chain
+    // + code + metadata are available to any logger that consumes
+    // this rule failure.
+    const errorDetails = formatError(error);
     const errorRule: RuleEvaluation = {
       ruleId: 'evaluator_internal_error',
       field: 'title',
       outcome: 'failed',
       reason: 'evaluator_internal_error',
-      details: { errorMessage, scope: 'top_level' },
+      details: { errorMessage: errorDetails.message, scope: 'top_level', error: errorDetails },
     };
     return {
       overallOutcome: 'error',
