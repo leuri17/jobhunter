@@ -22,7 +22,7 @@
 import { ProfessionalProfileSchema, type ProfessionalProfile } from './schema.js';
 import {
   type ProfileConflictRow,
-  type ProfileRevisionRow,
+  type ProfileRevisionEntry,
   type ProfileStatus,
   type ProfileWarningRow,
   type DerivedOverrideRow,
@@ -52,7 +52,7 @@ export interface ProfileShowPayload {
   readonly warnings: readonly ProfileWarningRow[];
   readonly conflicts: readonly ProfileConflictRow[];
   readonly overrides: readonly DerivedOverrideRow[];
-  readonly revisions: readonly ProfileRevisionRow[];
+  readonly revisions: readonly ProfileRevisionEntry[];
 }
 
 function extractProfileId(profileJson: unknown): string {

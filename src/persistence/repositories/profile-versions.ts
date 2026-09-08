@@ -18,7 +18,7 @@ const unknownJson = jsonColumn<unknown>(z.unknown());
 
 export type ProfileStatus = 'draft' | 'approved' | 'rejected' | 'superseded';
 
-export interface ProfileVersionRow {
+interface ProfileVersionRow {
   readonly id: number;
   readonly status: ProfileStatus;
   readonly schemaVersion: number;
@@ -40,7 +40,7 @@ export interface ProfileVersionRow {
   readonly active: boolean;
 }
 
-export interface ProfileVersionInsert {
+interface ProfileVersionInsert {
   readonly status: ProfileStatus;
   readonly schemaVersion: number;
   readonly contentHash: string;
@@ -59,7 +59,7 @@ export interface ProfileVersionInsert {
   readonly active?: boolean;
 }
 
-export interface ProfileRevisionRow {
+export interface ProfileRevisionEntry {
   readonly id: number;
   readonly profileVersionId: number;
   readonly revisionTimestamp: string;
@@ -243,7 +243,7 @@ export class ProfileVersionRepository {
       .run();
   }
 
-  async insertRevision(input: Omit<ProfileRevisionRow, 'id'>): Promise<number> {
+  async insertRevision(input: Omit<ProfileRevisionEntry, 'id'>): Promise<number> {
     const result = this.ctx.db
       .insert(profileRevisions)
       .values({
@@ -268,7 +268,7 @@ export class ProfileVersionRepository {
     return row.id;
   }
 
-  async listRevisions(profileVersionId: number): Promise<readonly ProfileRevisionRow[]> {
+  async listRevisions(profileVersionId: number): Promise<readonly ProfileRevisionEntry[]> {
     const rows = this.ctx.db
       .select()
       .from(profileRevisions)
