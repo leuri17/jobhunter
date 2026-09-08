@@ -6,7 +6,7 @@
  * TypeScript types — no runtime values, no I/O.
  */
 export const PIPELINE_SCHEMA_VERSION = 1 as const;
-export type PipelineSchemaVersion = typeof PIPELINE_SCHEMA_VERSION;
+type PipelineSchemaVersion = typeof PIPELINE_SCHEMA_VERSION;
 
 /**
  * Status values for a pipeline run. The literal

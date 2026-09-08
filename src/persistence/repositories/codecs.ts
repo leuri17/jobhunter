@@ -2,7 +2,7 @@ import type { ZodType } from 'zod';
 
 import { DatabaseError } from '../errors.js';
 
-export interface JsonColumnCodec<T> {
+interface JsonColumnCodec<T> {
   encode(value: T): string;
   decode(raw: string | null): T | null;
   decodeRequired(raw: string | null): T;

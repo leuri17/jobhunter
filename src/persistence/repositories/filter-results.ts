@@ -28,7 +28,7 @@ export interface FilterResultRow {
   readonly active: boolean;
 }
 
-export interface FilterResultInsert {
+interface FilterResultInsert {
   readonly jobId: number;
   readonly pipelineRunId?: number | null;
   readonly filterConfigVersionId: number;

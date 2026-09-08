@@ -49,7 +49,7 @@ export interface PipelineRunRow {
   readonly cancellationReason: string | null;
 }
 
-export interface PipelineRunInsert {
+interface PipelineRunInsert {
   readonly startTimestamp: string;
   readonly status?: PipelineRunStatus;
   readonly configSnapshotJson: unknown;
@@ -139,7 +139,7 @@ function searchRowFromRecord(record: typeof searchExecutions.$inferSelect): Sear
   };
 }
 
-export interface RunStatsPatch {
+interface RunStatsPatch {
   readonly status?: PipelineRunStatus;
   readonly endTimestamp?: string | null;
   readonly searchesPlanned?: number;
@@ -162,7 +162,7 @@ export interface RunStatsPatch {
   readonly searchErrors?: readonly unknown[] | null;
 }
 
-export interface SearchStatusPatch {
+interface SearchStatusPatch {
   readonly finalStatus?: SearchExecutionStatus;
   readonly endTimestamp?: string | null;
   readonly jobsDiscovered?: number;
@@ -411,7 +411,7 @@ export class PipelineRunRepository {
  * - `activeFilterResultCount`        — number of active `filterResults` rows.
  * - `activeScoreResultCount`         — number of active `scoreResults` rows.
  */
-export interface PipelineRunDetails {
+interface PipelineRunDetails {
   readonly row: PipelineRunRow;
   readonly searches: readonly SearchExecutionRow[];
   readonly discoveryErrorCount: number;

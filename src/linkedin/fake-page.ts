@@ -33,7 +33,7 @@ export interface FakeLocator {
   waitFor: (options: { readonly state: string; readonly timeout: number }) => Promise<void>;
 }
 
-export interface FakePageOptions {
+interface FakePageOptions {
   /** Initial URL (defaults to `'about:blank'`). */
   readonly url?: string;
   /** Called on `close()`. Defaults to a no-op. */
@@ -61,7 +61,7 @@ export interface FakePageOptions {
   readonly onLocator?: (selector: string) => FakeLocator | null;
 }
 
-export interface MinimalPageNode {
+interface MinimalPageNode {
   readonly getAttribute: (name: string) => string | null;
   readonly querySelector: (selector: string) => MinimalPageNode | null;
 }

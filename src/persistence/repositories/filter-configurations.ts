@@ -7,7 +7,7 @@ import type { RepositoryContext } from './types.js';
 
 const unknownJson = jsonColumn<unknown>(z.unknown());
 
-export interface FilterConfigurationRow {
+interface FilterConfigurationRow {
   readonly id: number;
   readonly schemaVersion: number;
   readonly contentHash: string;
@@ -16,7 +16,7 @@ export interface FilterConfigurationRow {
   readonly active: boolean;
 }
 
-export interface FilterConfigurationInsert {
+interface FilterConfigurationInsert {
   readonly schemaVersion: number;
   readonly contentHash: string;
   readonly configJson: unknown;

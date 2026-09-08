@@ -12,7 +12,6 @@ import { SCORING_CATEGORIES, type ScoringCategory } from './types.js';
  * intentional — v1 did not segment the untrusted scraped text.
  */
 export const SCORING_PROMPT_VERSION = 2 as const;
-export type ScoringPromptVersion = typeof SCORING_PROMPT_VERSION;
 
 /**
  * XML-style delimiters wrapping the untrusted job description

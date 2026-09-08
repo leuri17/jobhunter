@@ -33,7 +33,7 @@ type ChromiumLike = {
 };
 
 /** Configuration the session needs at construction time. */
-export interface PlaywrightBrowserSessionOptions {
+interface PlaywrightBrowserSessionOptions {
   /** The timeout trio the session enforces. All values are positive integers (ms). */
   readonly config: {
     readonly navigationMs: number;
