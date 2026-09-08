@@ -138,8 +138,8 @@ export function resolveJobIdentifier(raw: string): JobIdentifierResolution {
     });
   }
   if (raw.startsWith(JOB_PREFIX)) {
-    const id = resolveId('job', raw);
-    return { jobId: id };
+    const jobId = resolveId('job', raw);
+    return { jobId };
   }
   if (NUMERIC_JOB_PATTERN.test(raw)) {
     return { sourceJobId: raw };

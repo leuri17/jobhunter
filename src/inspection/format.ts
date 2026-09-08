@@ -77,9 +77,9 @@ function renderCell(text: string, spec: ColumnSpec): string {
 function jobListCell(state: JobListState, row: JobListRow, columnIndex: number): string {
   // Helpers — keep the projections local so the per-state switch
   // stays flat and grep-able.
-  const na = (): string => '—';
+  const notApplicable = (): string => '—';
   const present = (v: string | null | undefined): string =>
-    v === null || v === undefined ? na() : v;
+    v === null || v === undefined ? notApplicable() : v;
 
   switch (state) {
     case 'all': {
@@ -142,7 +142,7 @@ function jobListCell(state: JobListState, row: JobListRow, columnIndex: number):
         present(r.company),
         present(r.location),
         r.scoringStatus,
-        r.lastAttemptAt ?? na(),
+        r.lastAttemptAt ?? notApplicable(),
       ];
       return cells[columnIndex] ?? '';
     }
@@ -164,7 +164,7 @@ function jobListCell(state: JobListState, row: JobListRow, columnIndex: number):
         `discovery_error_${r.errorId}`,
         r.searchQuery,
         r.locationName,
-        r.cardIndex === null ? na() : String(r.cardIndex),
+        r.cardIndex === null ? notApplicable() : String(r.cardIndex),
         r.errorCode,
         r.discoveredAt,
       ];

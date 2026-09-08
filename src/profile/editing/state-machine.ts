@@ -481,17 +481,17 @@ function applyCollectionEdit(
         );
       }
       const next = [...existing];
-      const a = next[idxA];
-      const b = next[idxB];
-      if (a === undefined || b === undefined) {
+      const entryA = next[idxA];
+      const entryB = next[idxB];
+      if (entryA === undefined || entryB === undefined) {
         throw new InvalidProfileStateError(
           'entity_not_found',
           `Reorder could not swap entries in "${section}".`,
           { section, entityIdA, entityIdB },
         );
       }
-      next[idxA] = b;
-      next[idxB] = a;
+      next[idxA] = entryB;
+      next[idxB] = entryA;
       const profile = replaceCollection(state.profile, section, next as never);
       return {
         ...state,

@@ -192,8 +192,14 @@ export class PipelineOrchestrator {
           searchId: searchExecution.id,
           url: searchExecution.generatedUrl,
         });
-        const ok = await this.runOneSearch(runId, searchExecution, signal, perJobs, stats);
-        if (ok) {
+        const searchSucceeded = await this.runOneSearch(
+          runId,
+          searchExecution,
+          signal,
+          perJobs,
+          stats,
+        );
+        if (searchSucceeded) {
           stats.searchesCompleted += 1;
         }
       }
@@ -344,8 +350,8 @@ export class PipelineOrchestrator {
       extractionOutcome = await this.extractionService.extractBatch(extractInput);
 
       // Aggregate extraction totals.
-      const t = extractionOutcome.totals;
-      stats.newCompleteJobs += t.complete;
+      const totals = extractionOutcome.totals;
+      stats.newCompleteJobs += totals.complete;
       for (const o of extractionOutcome.perJob) {
         if (o.kind === 'skipped') {
           // We don't know which bucket (complete vs partial) without
