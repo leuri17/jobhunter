@@ -25,13 +25,13 @@ import type { BrowserSession } from './browser-session.js';
 import { FakePage } from './fake-page.js';
 
 /** Recorded call — lets tests assert the session's call sequence. */
-export interface RouteRecord {
+interface RouteRecord {
   readonly pattern: string | RegExp;
   readonly handler: (route: Route, request: Request) => Promise<void> | void;
 }
 
 /** Recorded lifecycle event. */
-export type SessionEvent =
+type SessionEvent =
   | { readonly kind: 'launch' }
   | { readonly kind: 'close' }
   | { readonly kind: 'openPage'; readonly url: string; readonly page: FakePage }
@@ -44,7 +44,7 @@ export type SessionEvent =
 /** Factory for the fake page handed back to the orchestrator. */
 export type CreateFakePage = (session: FakeBrowserSession, url: string) => FakePage;
 
-export interface FakeBrowserSessionOptions {
+interface FakeBrowserSessionOptions {
   /**
    * Factory invoked on every `openPage` + `openFallbackPage`. Defaults
    * to `new FakePage()`. Tests inject behavior via this hook.

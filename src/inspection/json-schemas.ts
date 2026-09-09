@@ -17,13 +17,7 @@
 
 import { z } from 'zod';
 
-import {
-  type JobListResult,
-  type JobShowPayload,
-  type PipelineRunSearchExecutionRow,
-  type RunListRow,
-  type RunShowPayload,
-} from './state.js';
+import { type PipelineRunSearchExecutionRow } from './state.js';
 
 /** The literal schema version. Mirrors `INSPECTION_SCHEMA_VERSION`. */
 const SCHEMA_VERSION = z.literal(1);
@@ -504,15 +498,5 @@ export { PathsJsonSchema };
 export type PathsJsonPayload = z.infer<typeof PathsJsonSchema>;
 
 // ---------------------------------------------------------------------------
-// Aggregate schemas for tests + the re-exports
+// Aggregate schemas for tests
 // ---------------------------------------------------------------------------
-
-/**
- * Re-export of the `JobListResult` row shape consumed by the
- * service layer. The schema validators do NOT enforce it; this is
- * here for documentation + the test harness only.
- */
-export type JobListResultShape = JobListResult;
-export type JobShowPayloadShape = JobShowPayload;
-export type RunListRowShape = RunListRow;
-export type RunShowPayloadShape = RunShowPayload;

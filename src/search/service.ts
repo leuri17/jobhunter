@@ -73,8 +73,8 @@ export class ConfigureSearchService {
   }
 
   async run(): Promise<SearchConfiguration> {
-    const ex = this.existing;
-    const rawQueries = await this.prompts.askSearchQueries(ex?.searchQueries ?? []);
+    const existing = this.existing;
+    const rawQueries = await this.prompts.askSearchQueries(existing?.searchQueries ?? []);
     const queries = dedupeQueries(rawQueries);
     if (queries.length === 0) {
       throw new SearchConfigError('empty_queries', 'At least one search query is required.', {
@@ -82,7 +82,7 @@ export class ConfigureSearchService {
       });
     }
 
-    const rawWorkplaceTypes = await this.prompts.askWorkplaceTypes(ex?.workplaceTypes ?? []);
+    const rawWorkplaceTypes = await this.prompts.askWorkplaceTypes(existing?.workplaceTypes ?? []);
     const workplaceTypes = sortWorkplaceTypes(rawWorkplaceTypes);
     if (workplaceTypes.length === 0) {
       throw new SearchConfigError(
@@ -91,9 +91,9 @@ export class ConfigureSearchService {
       );
     }
 
-    const datePosted = await this.prompts.askDatePosted(ex?.datePosted ?? null);
+    const datePosted = await this.prompts.askDatePosted(existing?.datePosted ?? null);
 
-    const locationInputs = await this.prompts.askLocationURLs(ex?.locations ?? []);
+    const locationInputs = await this.prompts.askLocationURLs(existing?.locations ?? []);
     if (locationInputs.length === 0) {
       throw new SearchConfigError('empty_locations', 'At least one location URL is required.');
     }

@@ -63,8 +63,8 @@ function deepEqual(a: unknown, b: unknown): boolean {
 
   if (aIsArray && bIsArray) {
     if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (!deepEqual(a[i], b[i])) return false;
+    for (let index = 0; index < a.length; index++) {
+      if (!deepEqual(a[index], b[index])) return false;
     }
     return true;
   }
@@ -74,8 +74,8 @@ function deepEqual(a: unknown, b: unknown): boolean {
   const keysA = Object.keys(a).sort();
   const keysB = Object.keys(b).sort();
   if (keysA.length !== keysB.length) return false;
-  for (let i = 0; i < keysA.length; i++) {
-    if (keysA[i] !== keysB[i]) return false;
+  for (let index = 0; index < keysA.length; index++) {
+    if (keysA[index] !== keysB[index]) return false;
   }
   for (const key of keysA) {
     if (!deepEqual(a[key], b[key])) return false;
@@ -135,18 +135,18 @@ function detectGroupConflicts<T extends SourceReferencedEntry>(
 
   const conflicts: DetectedConflict[] = [];
   for (const [field, extractor] of Object.entries(fields)) {
-    const a = extractor(entryA);
-    const b = extractor(entryB);
-    if (isEmptyValue(a) || isEmptyValue(b)) continue;
-    if (deepEqual(a, b)) continue;
+    const valueFromSourceA = extractor(entryA);
+    const valueFromSourceB = extractor(entryB);
+    if (isEmptyValue(valueFromSourceA) || isEmptyValue(valueFromSourceB)) continue;
+    if (deepEqual(valueFromSourceA, valueFromSourceB)) continue;
     conflicts.push({
       conflictType: `${conflictTypePrefix}.${toSnakeCase(field)}`,
       affectedField: field,
-      valueSourceA: a,
-      valueSourceB: b,
+      valueSourceA: valueFromSourceA,
+      valueSourceB: valueFromSourceB,
       sourceReferences: [...entryA.sourceReferences, ...entryB.sourceReferences],
-      provisionalValue: a,
-      explanation: `Sources disagree on ${field} for ${conflictTypePrefix} "${groupKey}": source "${sourceAId}" reports "${formatValue(a)}", source "${sourceBId}" reports "${formatValue(b)}".`,
+      provisionalValue: valueFromSourceA,
+      explanation: `Sources disagree on ${field} for ${conflictTypePrefix} "${groupKey}": source "${sourceAId}" reports "${formatValue(valueFromSourceA)}", source "${sourceBId}" reports "${formatValue(valueFromSourceB)}".`,
     });
   }
   return conflicts;

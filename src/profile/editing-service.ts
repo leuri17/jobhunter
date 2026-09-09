@@ -199,8 +199,8 @@ export class ProfileEditingService {
         }
         return { kind: 'discarded', profileVersionId };
       }
-      const op = await this.dispatchSection(section, state);
-      if (op !== null) state = reduce(state, op);
+      const operation = await this.dispatchSection(section, state);
+      if (operation !== null) state = reduce(state, operation);
     }
   }
 

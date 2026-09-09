@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { applicationMetadata } from '../schema.js';
 import type { RepositoryContext } from './types.js';
 
-export interface ApplicationMetadataRow {
+interface ApplicationMetadataRow {
   readonly key: string;
   readonly value: string;
   readonly updatedAt: string;

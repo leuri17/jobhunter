@@ -216,13 +216,13 @@ async function collectCards(
   let added = 0;
   let index = 0;
   for (const { occludable, href } of attrs) {
-    const id = parseSourceJobIdFromAnchor(occludable, href);
+    const sourceJobId = parseSourceJobIdFromAnchor(occludable, href);
     // Use a unique placeholder key for null-id cards so the Map can
     // dedup them across iterations without colliding with real ids.
-    const key = id ?? `__null__:${index}:${idToCard.size}`;
+    const key = sourceJobId ?? `__null__:${index}:${idToCard.size}`;
     if (!idToCard.has(key)) {
       idToCard.set(key, {
-        sourceJobId: id,
+        sourceJobId,
         cardPosition: idToCard.size + 1,
         cardIndex: index,
         availableMetadata: null,

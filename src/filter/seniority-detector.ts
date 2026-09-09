@@ -40,9 +40,9 @@ export type DetectedSeniority =
   | 'unknown';
 
 /** A `DetectedSeniority` with `unknown` removed — the value type for non-unlabelled titles. */
-export type KnownSeniority = Exclude<DetectedSeniority, 'unknown'>;
+type KnownSeniority = Exclude<DetectedSeniority, 'unknown'>;
 
-export interface SeniorityMatchedPhrase {
+interface SeniorityMatchedPhrase {
   readonly phrase: string;
   readonly level: KnownSeniority;
 }

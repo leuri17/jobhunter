@@ -372,12 +372,12 @@ function mapJobRowToListRow(
 }
 
 function jobRowToAllRow(row: JobRow, ctx: PageContext): JobListRowAll {
-  const id = `job_${row.id}`;
+  const jobId = `job_${row.id}`;
   const activeFilter = ctx.filterByJobId.get(row.id) ?? null;
   const activeScore = ctx.successfulScoreByJobId.get(row.id) ?? null;
   return {
     state: 'all',
-    id,
+    id: jobId,
     internalId: row.id,
     sourceJobId: row.sourceJobId,
     extraction: row.extractionStatus,

@@ -33,7 +33,7 @@ export interface ScoreResultRow {
   readonly active: boolean;
 }
 
-export interface ScoreResultInsert {
+interface ScoreResultInsert {
   readonly jobId: number;
   readonly pipelineRunId?: number | null;
   readonly filterResultId?: number | null;

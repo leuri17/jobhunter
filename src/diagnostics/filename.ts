@@ -79,7 +79,7 @@ export function buildSafeFilename(opts: SafeFilenameOptions): SafeFilenameResult
   if (typeof opts.extension !== 'string' || opts.extension === '') {
     throw new DiagnosticError('invalid_filename_extension', 'extension must be a non-empty string.');
   }
-  const ts = safeTimestamp(opts.timestamp ?? new Date().toISOString());
+  const timestamp = safeTimestamp(opts.timestamp ?? new Date().toISOString());
   const parts: string[] = [sanitizeFilenameComponent(opts.artifactType)];
   if (isPositiveId(opts.scope.pipelineRunId)) parts.push(`run-${opts.scope.pipelineRunId}`);
   if (isPositiveId(opts.scope.searchExecutionId)) parts.push(`search-${opts.scope.searchExecutionId}`);
@@ -87,7 +87,7 @@ export function buildSafeFilename(opts: SafeFilenameOptions): SafeFilenameResult
   if (isPositiveId(opts.scope.extractionAttemptId)) parts.push(`extraction-${opts.scope.extractionAttemptId}`);
   if (isPositiveId(opts.scope.discoveryErrorId)) parts.push(`discovery-error-${opts.scope.discoveryErrorId}`);
   if (isPositiveId(opts.scope.openaiRequestId)) parts.push(`openai-${opts.scope.openaiRequestId}`);
-  parts.push(ts);
+  parts.push(timestamp);
   if (opts.suffix !== undefined && opts.suffix !== '') {
     const normalizedSuffix = opts.suffix.replace(/^-+/, '');
     if (normalizedSuffix !== '') parts.push(normalizedSuffix);

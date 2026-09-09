@@ -16,7 +16,7 @@ import type { JobListState } from '../../inspection/state.js';
 
 const unknownJson = jsonColumn<unknown>(z.unknown());
 
-export type ExtractionStatus = 'complete' | 'partial' | 'failed';
+type ExtractionStatus = 'complete' | 'partial' | 'failed';
 export type ExtractionMethod = 'search_detail_panel' | 'dedicated_job_page';
 
 export interface JobRow {
@@ -35,7 +35,7 @@ export interface JobRow {
   readonly updatedTimestamp: string;
 }
 
-export interface JobInsert {
+interface JobInsert {
   readonly sourceJobId: string;
   readonly extractionStatus: ExtractionStatus;
   readonly firstDiscoveryTimestamp: string;
@@ -49,7 +49,7 @@ export interface JobInsert {
   readonly updatedTimestamp: string;
 }
 
-export interface JobPatch {
+interface JobPatch {
   readonly title?: string | null;
   readonly company?: string | null;
   readonly location?: string | null;
@@ -61,7 +61,7 @@ export interface JobPatch {
   readonly updatedTimestamp?: string;
 }
 
-export interface DiscoveryEventRow {
+interface DiscoveryEventRow {
   readonly id: number;
   readonly jobId: number;
   readonly pipelineRunId: number;
@@ -79,7 +79,7 @@ export interface DiscoveryEventRow {
  * that are defined. `skipReason: null` is honored as an explicit
  * reset (distinct from `undefined`, which means "leave alone").
  */
-export interface DiscoveryEventPatch {
+interface DiscoveryEventPatch {
   readonly currentExtractionState?: ExtractionStatus;
   readonly extractionAttempted?: boolean;
   readonly skipReason?: string | null;
@@ -179,7 +179,7 @@ function extractionAttemptRowFromRecord(
   };
 }
 
-export interface RecordNewJobInput {
+interface RecordNewJobInput {
   readonly job: JobInsert;
   readonly discoveryEvent: Omit<DiscoveryEventRow, 'id'>;
   readonly extractionAttempt?: Omit<ExtractionAttemptRow, 'id'>;
@@ -312,7 +312,11 @@ export class JobRepository {
    */
   async findByIds(ids: readonly number[]): Promise<JobRow[]> {
     if (ids.length === 0) return [];
-    const rows = this.ctx.db.select().from(jobs).where(inArray(jobs.id, [...ids])).all();
+    const rows = this.ctx.db
+      .select()
+      .from(jobs)
+      .where(inArray(jobs.id, [...ids]))
+      .all();
     return rows.map(jobRowFromRecord);
   }
 
@@ -675,9 +679,9 @@ export class JobRepository {
     if (identifier.startsWith(JOB_PREFIX)) {
       const tail = identifier.slice(JOB_PREFIX.length);
       if (!/^[0-9]+$/.test(tail)) return null;
-      const id = Number(tail);
-      if (!Number.isInteger(id) || id <= 0) return null;
-      return this.findById(id);
+      const jobId = Number(tail);
+      if (!Number.isInteger(jobId) || jobId <= 0) return null;
+      return this.findById(jobId);
     }
     if (NUMERIC_JOB_PATTERN.test(identifier)) {
       return this.findBySourceJobId(identifier);
@@ -843,7 +847,7 @@ export class JobRepository {
  * applies to states that filter against the score table (`scored`,
  * plus `all` when supplied).
  */
-export interface JobListRowFilter {
+interface JobListRowFilter {
   readonly state: JobListState;
   readonly limit: number;
   readonly minScore?: number;

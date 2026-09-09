@@ -77,9 +77,9 @@ function readJobIdFromHref(anchor: MinimalElement): string | null {
   const match = JOB_ID_HREF_PATTERN.exec(href);
   if (match === null) return null;
   // `match[1]` is guaranteed by the regex's capture group.
-  const id = match[1];
-  if (id === undefined || !isValidJobId(id)) return null;
-  return id;
+  const jobId = match[1];
+  if (jobId === undefined || !isValidJobId(jobId)) return null;
+  return jobId;
 }
 
 /** LinkedIn job IDs are 6–12 digits (no leading zeros in practice). */

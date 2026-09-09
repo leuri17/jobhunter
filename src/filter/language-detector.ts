@@ -103,7 +103,7 @@ export interface LanguageDetectionResult {
   readonly acceptedLanguages: readonly string[];
 }
 
-export interface DetectLanguageInput {
+interface DetectLanguageInput {
   readonly description: string | null;
   readonly acceptedLanguages: readonly string[];
 }

@@ -13,7 +13,7 @@
  * Pure function — no I/O. The caller resolves the
  * `activeFilterFingerprint` from the active filter configuration.
  */
-export interface ScoringEligibilityInput {
+interface ScoringEligibilityInput {
   readonly job: {
     readonly extractionStatus: 'complete' | 'partial' | 'failed';
   };

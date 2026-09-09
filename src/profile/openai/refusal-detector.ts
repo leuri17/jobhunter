@@ -25,7 +25,7 @@
  * carries the per-call options, so a scoped scan can be added
  * without breaking the existing API.
  */
-export type RefusalReason =
+type RefusalReason =
   /** `rawJsonText` contains a known refusal phrase (case-insensitive substring). */
   | 'refusal_marker'
   /** `rawJsonText` is empty / whitespace-only. */
@@ -37,7 +37,7 @@ export type RefusalReason =
   /** `rawJsonText` parses as JSON but doesn't match any expected shape. */
   | 'off_schema_json';
 
-export interface RefusalDetection {
+interface RefusalDetection {
   readonly isRefusal: boolean;
   readonly reason?: RefusalReason;
   /** For `refusal_marker`, the matched marker substring. Undefined otherwise. */

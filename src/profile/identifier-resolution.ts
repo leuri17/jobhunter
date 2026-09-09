@@ -61,9 +61,9 @@ export async function resolveProfileVersionId(
   // Form (1): profile_<int> — preferred path. The prefix parser throws on
   // any non-integer tail; we translate that into the typed lifecycle error.
   if (raw.startsWith(PROFILE_ID_KEY)) {
-    let pk: number;
+    let primaryKey: number;
     try {
-      pk = parsePrefixedId(raw, 'profile');
+      primaryKey = parsePrefixedId(raw, 'profile');
     } catch {
       throw new InvalidProfileIdentifierError(
         'invalid_identifier',
@@ -71,12 +71,12 @@ export async function resolveProfileVersionId(
         { input: raw },
       );
     }
-    const row = await repositories.profileVersions.findById(pk);
+    const row = await repositories.profileVersions.findById(primaryKey);
     if (row === null) {
       throw new InvalidProfileIdentifierError(
         'profile_not_found',
-        `No profile version with id ${pk}.`,
-        { input: raw, profileVersionId: pk },
+        `No profile version with id ${primaryKey}.`,
+        { input: raw, profileVersionId: primaryKey },
       );
     }
     return row.id;

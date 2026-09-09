@@ -68,7 +68,7 @@ export function defaultFilenameFor(sourceType: SourceType, originalPath: string)
   return base;
 }
 
-export interface CopySourceFileOptions {
+interface CopySourceFileOptions {
   sourcePath: string;
   destination: string;
   fileSystem: BinaryFileSystem;

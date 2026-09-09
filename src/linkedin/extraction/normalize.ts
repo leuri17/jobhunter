@@ -70,8 +70,8 @@ export function normalizeText(input: string): string {
 
   // Drop script/style blocks first (their inner text is irrelevant).
   for (const tag of DROP_TAGS) {
-    const re = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
-    text = text.replace(re, ' ');
+    const regex = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
+    text = text.replace(regex, ' ');
   }
 
   // Convert block-level tags to a single space (preserves word boundaries).

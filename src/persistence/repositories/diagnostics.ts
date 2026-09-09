@@ -3,10 +3,10 @@ import { eq } from 'drizzle-orm';
 import { diagnosticArtifacts } from '../schema.js';
 import type { RepositoryContext } from './types.js';
 
-export type DiagnosticArtifactType =
+type DiagnosticArtifactType =
   'screenshot' | 'current_url' | 'stack_trace' | 'playwright_trace' | 'html_snapshot' | 'log_file';
 
-export interface DiagnosticArtifactRow {
+interface DiagnosticArtifactRow {
   readonly id: number;
   readonly pipelineRunId: number | null;
   readonly searchExecutionId: number | null;
@@ -23,7 +23,7 @@ export interface DiagnosticArtifactRow {
   readonly description: string | null;
 }
 
-export interface DiagnosticArtifactInsert {
+interface DiagnosticArtifactInsert {
   readonly pipelineRunId?: number | null;
   readonly searchExecutionId?: number | null;
   readonly jobId?: number | null;

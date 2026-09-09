@@ -34,7 +34,7 @@ export interface SerialisedError {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
-export interface FormatErrorOptions {
+interface FormatErrorOptions {
   /** Maximum depth for the cause chain. Default 5. */
   readonly maxDepth?: number;
   /**

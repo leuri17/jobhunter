@@ -25,7 +25,7 @@ export interface ProfileSourceRow {
   readonly warnings: readonly string[];
 }
 
-export interface ProfileSourceInsert {
+interface ProfileSourceInsert {
   readonly sourceType: 'pdf' | 'markdown' | 'plain_text';
   readonly originalFilename: string;
   readonly originalAbsolutePath: string;
@@ -44,7 +44,7 @@ function parseWarnings(raw: string): readonly string[] {
   return WarningsSchema.parse(parsed);
 }
 
-export interface UpdateExtractionPatch {
+interface UpdateExtractionPatch {
   readonly extractedTextHash: string;
   readonly status: 'success' | 'failed';
   readonly message?: string | null;

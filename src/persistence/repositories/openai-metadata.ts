@@ -7,10 +7,10 @@ import type { RepositoryContext } from './types.js';
 
 const unknownJson = jsonColumn<unknown>(z.unknown());
 
-export type OpenAIOperationType = 'profile_extraction' | 'job_scoring';
-export type OpenAIEntityRefType = 'profile_version' | 'score_result';
+type OpenAIOperationType = 'profile_extraction' | 'job_scoring';
+type OpenAIEntityRefType = 'profile_version' | 'score_result';
 
-export interface OpenAIRequestMetadataRow {
+interface OpenAIRequestMetadataRow {
   readonly id: number;
   readonly operationType: OpenAIOperationType;
   readonly relatedEntityType: OpenAIEntityRefType | null;
@@ -31,7 +31,7 @@ export interface OpenAIRequestMetadataRow {
   readonly errorMessage: string | null;
 }
 
-export interface OpenAIRequestMetadataInsert {
+interface OpenAIRequestMetadataInsert {
   readonly operationType: OpenAIOperationType;
   readonly relatedEntityType?: OpenAIEntityRefType | null;
   readonly relatedEntityId?: number | null;

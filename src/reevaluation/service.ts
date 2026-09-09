@@ -76,7 +76,7 @@ const REEVALUATION_SCORING_REASONING_EFFORT = 'medium';
  * type carries private fields (`repositories`, `now`) the test
  * does not need to satisfy.
  */
-export interface ReevaluationFilterApplyService {
+interface ReevaluationFilterApplyService {
   apply(input: FilterApplyInput): Promise<FilterApplyResult>;
 }
 
@@ -85,7 +85,7 @@ export interface ReevaluationFilterApplyService {
  * scoring service — `scoreOne()` for the per-job call +
  * `buildScoringPlan()` for the prompt + JSON envelope.
  */
-export interface ReevaluationScoringService {
+interface ReevaluationScoringService {
   scoreOne(input: ScoreOneInput): Promise<ScoringOutcome>;
   buildScoringPlan(input: BuildScoringPlanInput): ScoringPlan;
 }
