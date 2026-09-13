@@ -17,13 +17,13 @@ jobs:
       contents: write
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86  # v6
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version-file: '.node-version' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @jobhunter/ui build
-      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f  # v1
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         with:
           projectPath: desktop/tauri
           tagName: ${{ github.ref_name }}
@@ -32,7 +32,7 @@ jobs:
           releaseDraft: true
           args: --target x86_64-unknown-linux-gnu
       - name: Generate SBOM
-        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3  # v0.24.2
+        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
         with:
           format: cyclonedx-json
           artifact-name: sbom-cyclonedx-${{ runner.os }}-${{ github.ref_name }}.json
@@ -43,13 +43,13 @@ jobs:
       contents: write
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86  # v6
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version-file: '.node-version' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @jobhunter/ui build
-      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f  # v1
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         with:
           projectPath: desktop/tauri
           tagName: ${{ github.ref_name }}
@@ -57,7 +57,7 @@ jobs:
           releaseBody: 'Automated build'
           releaseDraft: true
       - name: Generate SBOM
-        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3  # v0.24.2
+        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
         with:
           format: cyclonedx-json
           artifact-name: sbom-cyclonedx-${{ runner.os }}-${{ github.ref_name }}.json
@@ -68,13 +68,13 @@ jobs:
       contents: write
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86  # v6
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version-file: '.node-version' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @jobhunter/ui build
-      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f  # v1
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         with:
           projectPath: desktop/tauri
           tagName: ${{ github.ref_name }}
@@ -82,7 +82,7 @@ jobs:
           releaseBody: 'Automated build'
           releaseDraft: true
       - name: Generate SBOM
-        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3  # v0.24.2
+        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
         with:
           format: cyclonedx-json
           artifact-name: sbom-cyclonedx-${{ runner.os }}-${{ github.ref_name }}.json

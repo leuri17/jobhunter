@@ -105,9 +105,9 @@ describe('api retry behaviour', () => {
     });
     const queryFn = vi.fn(async () => api.health());
 
-    await expect(
-      client.fetchQuery({ queryKey: ['health'], queryFn }),
-    ).rejects.toBeInstanceOf(ApiError);
+    await expect(client.fetchQuery({ queryKey: ['health'], queryFn })).rejects.toBeInstanceOf(
+      ApiError,
+    );
     expect(queryFn).toHaveBeenCalledTimes(1);
 
     client.clear();

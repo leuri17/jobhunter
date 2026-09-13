@@ -3,7 +3,7 @@
 ## Responsibility
 
 Reevaluates previously scored jobs against updated profile, filter, or
-scoring-rubric state. Decides which jobs are *stale* (their fingerprint
+scoring-rubric state. Decides which jobs are _stale_ (their fingerprint
 no longer matches a current active filter / score row) and drives a
 targeted re-filter + re-score pass, leaving unchanged jobs untouched.
 Delta detection + selective recomputation — no bulk re-pipeline.
@@ -20,13 +20,14 @@ action variant and the `scoresFailed` total so partial-failure runs
 surface cleanly; audit B1-H3). Two fingerprints drive delta detection:
 `computeFilterFingerprintForJob` (config + profile + job hash) and
 `computeScoreFingerprintForJob` (profile version + prompt/rubric/model
-+ job hash). Pure layer (`state`, `errors`, `plan`, `format`,
-`json-schemas`, `log`) is I/O-free; only `service.ts` and
-`fingerprint.ts` import from `src/filter/`, `src/scoring/`,
-`src/pipeline/`, and `src/persistence/`. Typed errors:
-`ReevaluationError` → `ExitCode.Fatal`,
-`ReevaluationValidationError` → `ExitCode.InvalidUsage`,
-`PipelinePrerequisiteError` for missing profile/filter/`OPENAI_API_KEY`.
+
+- job hash). Pure layer (`state`, `errors`, `plan`, `format`,
+  `json-schemas`, `log`) is I/O-free; only `service.ts` and
+  `fingerprint.ts` import from `src/filter/`, `src/scoring/`,
+  `src/pipeline/`, and `src/persistence/`. Typed errors:
+  `ReevaluationError` → `ExitCode.Fatal`,
+  `ReevaluationValidationError` → `ExitCode.InvalidUsage`,
+  `PipelinePrerequisiteError` for missing profile/filter/`OPENAI_API_KEY`.
 
 `ReevaluationPlanAction` union: `'would-rerun' | 'reran' | 'reused' | 'failed'`.
 The `'failed'` variant records a per-job scoring/persistence error
@@ -56,8 +57,8 @@ single orchestrator:
       `filterRowByJobId` / `scoreRowByJobId` Maps and partition into
       `filtersToReevaluate`, `jobsToScore`, or `skipped` (with
       `ReevaluationSkipReason`).
-   2 round-trips total for the selection phase regardless of N
-   (was 2N sequential single-PK lookups).
+      2 round-trips total for the selection phase regardless of N
+      (was 2N sequential single-PK lookups).
 3. **Plan** — call `ScoringService.buildScoringPlan` for the score
    batch and `buildReevaluationPlan` (pure aggregator) to assemble the
    envelope with `totals`.

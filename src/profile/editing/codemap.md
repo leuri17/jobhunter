@@ -29,7 +29,7 @@ deterministic and prompts-free except for the seam declaration.
   `FailingProfileEditorPrompts` (rejects everything) and
   `ScriptedProfileEditorPrompts` (FIFO per method, records every call).
 - **Validation gate** (`validation.ts`). `validateScalar(section, field,
-  value)` resolves a Zod schema from `src/profile/schema.ts`, returns
+value)` resolves a Zod schema from `src/profile/schema.ts`, returns
   `{ ok, value | issues }` without throwing. `validateOverrideValue`,
   `isValidYearMonthOrNull`, `getValidatedFieldPath` are sibling helpers.
 - **Barrel** (`index.ts`). Re-exports the reducer, validators, prompts, and

@@ -39,7 +39,9 @@ const minimalPaths = (configPath: string): PlatformPaths => {
  * loadConfig doesn't exercise them.
  */
 const memoryFileSystem = (configContent: string): FileSystem => {
-  const files = new Map<string, string>(configContent === '' ? [] : [['mem://config.json', configContent]]);
+  const files = new Map<string, string>(
+    configContent === '' ? [] : [['mem://config.json', configContent]],
+  );
   return {
     async readFile(p) {
       const v = files.get(p);

@@ -243,8 +243,7 @@ export function makeFakePageWithCardForReeval(sourceJobId: string): FakePage {
       getAttribute: (name: string) => (name === 'data-occludable-job-id' ? sourceJobId : null),
       querySelector: () => null,
     }),
-    evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> =>
-      pageFunction([]),
+    evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> => pageFunction([]),
     click: async () => undefined,
     waitFor: async () => undefined,
   };

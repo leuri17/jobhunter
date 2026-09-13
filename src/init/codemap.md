@@ -20,7 +20,7 @@ desktop sidecar's Setup Wizard HTTP route and serialized as JSON for the respons
 - **Per-step classification** — `classify.ts` exposes one pure `classify*`
   helper per prerequisite (`classifyPaths`, `classifyConfig`, `classifyExtract`,
   etc.) returning an `InitStepReport` with status `complete | incomplete |
-  failed | not_started`. The orchestrator classifies first, then runs only
+failed | not_started`. The orchestrator classifies first, then runs only
   the failing/incomplete step.
 - **Step vocabulary** — `state.ts` defines `InitStepId`, `InitStepStatus`,
   `INIT_STEPS`, `INIT_STEP_LABELS`, `INIT_SCHEMA_VERSION`, and `SetupSummary`
@@ -70,7 +70,7 @@ desktop sidecar's Setup Wizard HTTP route and serialized as JSON for the respons
 11. **filters** → `classifyFilters`; on incomplete, runs
     `ConfigureFiltersService` with injected `filterPrompts`.
 12. `buildSummary()` returns `{ schemaVersion, ready, steps, nextStep,
-    openAiKeyMissing }`.
+openAiKeyMissing }`.
 
 ## Integration
 

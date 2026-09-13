@@ -15,7 +15,7 @@ the desktop sidecar plugs into (logger, prompts).
   `PipelineRunResult { summary, scoringPlan, topN }`.
 - State vocabulary is pure TS in `state.ts`: `PipelineRunStatus`
   (`running | cancelling | completed | completed_with_errors | failed |
-  cancelled`), `RunSummary` (21-field persisted shape), `TopNRow`,
+cancelled`), `RunSummary` (21-field persisted shape), `TopNRow`,
   `PIPELINE_SCHEMA_VERSION = 1`.
 - Typed error hierarchy in `errors.ts` — `PipelineLifecycleError` →
   `PipelinePrerequisiteError` → `PipelineOpenAIKeyMissingError` —
@@ -39,7 +39,7 @@ the desktop sidecar plugs into (logger, prompts).
 3. `browserSession.launch()`, then per search (`runOneSearch`):
    `discoveryService.discover` → open search page →
    `extractionService.extractBatch` (aggregate `complete | partial |
-   failed | skipped`) → `filterApplyService.apply` over each
+failed | skipped`) → `filterApplyService.apply` over each
    `complete` job, pushing accepted jobs onto `perJobs`.
 4. `buildScoringPlan()` from accepted perJobs; `prompts.askScoringConfirmation`
    when new OpenAI requests exist and `confirmScoring` is false.

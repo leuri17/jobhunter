@@ -67,7 +67,7 @@ throw removes the temp file and raises `config_write_failed` → returns
 - `src/init/init-service.ts` imports `loadConfig`, `updateConfig`,
   `OperationalConfigSchema`, and the `FileSystem` type: it loads config during
   onboarding, materializes `config.json` via a no-op `updateConfig(paths, {},
-  { confirm: async () => true }, fileSystem)`, writes user answers through a
+{ confirm: async () => true }, fileSystem)`, writes user answers through a
   second `updateConfig`, then re-loads.
 - `src/init/classify.ts` validates a caller-supplied config with
   `OperationalConfigSchema.safeParse` instead of re-reading from disk.

@@ -57,11 +57,7 @@ export const RESPONSE_SCHEMA_NAMES: readonly string[] = Object.keys(RESPONSE_SCH
  * NOT a runtime OpenAI failure, so the retry policy does not apply.
  */
 export class UnknownResponseSchemaError extends ApplicationError {
-  constructor(
-    responseSchemaName: string,
-    metadata: ApplicationErrorMetadata = {},
-    cause?: Error,
-  ) {
+  constructor(responseSchemaName: string, metadata: ApplicationErrorMetadata = {}, cause?: Error) {
     super(
       'unknown_response_schema',
       `Unknown response schema name: "${responseSchemaName}". Known names: ${RESPONSE_SCHEMA_NAMES.join(', ')}.`,
