@@ -1,8 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { JobListRow, RunListRow } from '@/lib/types';
-import { Button } from '@/components/ui/button';
 import {
   PageHeader,
   PageHeaderAction,
@@ -38,10 +37,9 @@ function Dashboard() {
           Dashboard
         </PageHeaderTitle>
         {/* <PageHeaderAction type="button" render={<PipelineStarter />} /> */}
-        <PageHeaderAction
-          type="button"
-          render={<Button render={<Link to="/pipeline">Run pipeline</Link>} />}
-        />
+        <PageHeaderAction type="link" to="/pipeline">
+          Run pipeline
+        </PageHeaderAction>
       </PageHeader>
 
       <section>
