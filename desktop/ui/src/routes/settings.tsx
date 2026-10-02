@@ -10,14 +10,16 @@ import {
 } from '@jobhunter/core/config/schemas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { InfoIcon, Trash, XIcon } from 'lucide-react';
+import { Building2, Cloud, House, InfoIcon, Trash, XIcon } from 'lucide-react';
 import { Field, FieldError } from '@/components/ui/field';
+import { cn } from 'cn';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableRow, TableBody, TableCell } from '@/components/ui/table';
 import LocationPicker from '@/components/shared/features/settings/search-config/location-picker';
+import { WORKPLACE_TYPE_CHOICES } from '@jobhunter/core/search';
 import {
   Select,
   SelectItem,
@@ -313,6 +315,89 @@ function RouteComponent() {
               <div className="px-4 my-6">
                 <Separator />
               </div>
+
+              {/* WORKPLACE TYPES */}
+              <CardHeader>
+                <CardTitle>Workplace types</CardTitle>
+                <CardDescription>
+                  Filter by workplace setting. Standard IDs match upstream job listing parameters.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-5">
+                <form.Field
+                  name="search.workplaceTypes"
+                  mode="array"
+                  children={(field) => {
+                    const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                    const selected = field.state.value;
+                    const workplaceIcons: Record<string, typeof Building2> = {
+                      '1': Building2,
+                      '2': Cloud,
+                      '3': House,
+                    };
+
+                    return (
+                      <>
+                        <Field data-invalid={isInvalid}>
+                          <div className="flex flex-col gap-3">
+                            <div
+                              role="group"
+                              aria-label="Workplace types"
+                              className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+                            >
+                              {WORKPLACE_TYPE_CHOICES.map((choice) => {
+                                const isSelected = selected.includes(choice.value);
+                                const Icon = workplaceIcons[choice.value] ?? Building2;
+                                return (
+                                  <button
+                                    key={choice.value}
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    aria-label={`${choice.label} (value ${choice.value})`}
+                                    onClick={() => {
+                                      if (isSelected) {
+                                        const idx = selected.indexOf(choice.value);
+                                        if (idx >= 0) field.removeValue(idx);
+                                      } else {
+                                        field.pushValue(choice.value);
+                                      }
+                                    }}
+                                    className={cn(
+                                      'group/wt flex items-center gap-3 rounded-xl border p-4 text-left transition-colors',
+                                      'focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+                                      isSelected
+                                        ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/40'
+                                        : 'border-border bg-card/40 hover:border-foreground/20',
+                                    )}
+                                  >
+                                    <span
+                                      className={cn(
+                                        'flex size-9 shrink-0 items-center justify-center rounded-md',
+                                        isSelected
+                                          ? 'bg-primary/15 text-primary'
+                                          : 'bg-muted text-muted-foreground',
+                                      )}
+                                    >
+                                      <Icon className="size-4" aria-hidden="true" />
+                                    </span>
+                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                      <span className="text-sm font-medium leading-tight">
+                                        {choice.label}
+                                      </span>
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </Field>
+                        <FieldError errors={field.state.meta.errors} />
+                      </>
+                    );
+                  }}
+                />
+              </CardContent>
+              {/* WORKPLACE TYPES */}
             </Card>
           </TabsContent>
         </Tabs>
