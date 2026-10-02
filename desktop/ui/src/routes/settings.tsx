@@ -16,6 +16,10 @@ import { SectionDivider } from '@/components/shared/features/settings/search-con
 import { ProfileExtractionSection } from '@/components/shared/features/settings/ai-provider/profile-extraction-section';
 import { JobScoringSection } from '@/components/shared/features/settings/ai-provider/job-scoring-section';
 import { RefusalDetectionSection } from '@/components/shared/features/settings/ai-provider/refusal-detection-section';
+import { ScrapperSection } from '@/components/shared/features/settings/scrapper/scrapper-section';
+import { OutputSection } from '@/components/shared/features/settings/output/output-section';
+import { LoggingSection } from '@/components/shared/features/settings/logging/logging-section';
+import { DiagnosisSection } from '@/components/shared/features/settings/diagnosis/diagnosis-section';
 
 export const Route = createFileRoute('/settings')({
   component: RouteComponent,
@@ -91,6 +95,26 @@ function RouteComponent() {
               <JobScoringSection form={form} />
               <SectionDivider />
               <RefusalDetectionSection form={form} />
+            </Card>
+          </TabsContent>
+          <TabsContent value="scrapper">
+            <Card>
+              <ScrapperSection form={form} />
+            </Card>
+          </TabsContent>
+          <TabsContent value="output">
+            <Card>
+              <OutputSection form={form} />
+            </Card>
+          </TabsContent>
+          <TabsContent value="logging">
+            <Card>
+              <LoggingSection form={form} />
+            </Card>
+          </TabsContent>
+          <TabsContent value="diagnosis">
+            <Card>
+              <DiagnosisSection form={form} />
             </Card>
           </TabsContent>
         </Tabs>
