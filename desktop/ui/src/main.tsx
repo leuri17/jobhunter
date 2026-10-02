@@ -4,8 +4,16 @@ import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/query-client';
 import { routeTree } from './routeTree.gen';
+import { Spinner } from './components/ui/spinner';
 
-const router = createRouter({ routeTree });
+const router = createRouter({
+  routeTree,
+  defaultPendingComponent: () => (
+    <div className="flex min-h-full items-center justify-center">
+      <Spinner className="size-8" />
+    </div>
+  ),
+});
 
 declare module '@tanstack/react-router' {
   interface Register {
