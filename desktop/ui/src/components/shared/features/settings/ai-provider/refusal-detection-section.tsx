@@ -8,10 +8,10 @@ import { useForm } from '@tanstack/react-form';
 import { OperationalConfigSchema } from '@jobhunter/core/config/schemas';
 import { XIcon } from 'lucide-react';
 import { useRef } from 'react';
-import type { AiSectionForm, AnyFieldApi } from './types';
+import type { AnyFieldApi, SectionForm } from './types';
 
 interface RefusalDetectionSectionProps {
-  form: AiSectionForm;
+  form: SectionForm;
 }
 
 export function RefusalDetectionSection({ form }: RefusalDetectionSectionProps) {

@@ -4,10 +4,10 @@ import { Field, FieldError } from '@/components/ui/field';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { Trash } from 'lucide-react';
 import LocationPicker from './location-picker';
-import type { AnyFieldApi } from './types';
+import type { AnyFieldApi, SectionForm } from './types';
 
 interface LocationsSectionProps {
-  field: AnyFieldApi;
+  form: SectionForm;
 }
 
 interface LocationEntry {
@@ -15,7 +15,15 @@ interface LocationEntry {
   geoId: string;
 }
 
-export function LocationsSection({ field }: LocationsSectionProps) {
+export function LocationsSection({ form }: LocationsSectionProps) {
+  return (
+    <form.Field name="search.locations" mode="array">
+      {(field: AnyFieldApi) => <LocationsBody field={field} />}
+    </form.Field>
+  );
+}
+
+function LocationsBody({ field }: { field: AnyFieldApi }) {
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
   const values = field.state.value as LocationEntry[];
 

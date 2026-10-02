@@ -10,10 +10,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { REASONING_EFFORT_CHOICES, type ReasoningEffort } from '@jobhunter/core/config/labels';
-import type { AiSectionForm, AnyFieldApi } from './types';
+import type { AnyFieldApi, SectionForm } from './types';
 
 interface ProfileExtractionSectionProps {
-  form: AiSectionForm;
+  form: SectionForm;
 }
 
 export function ProfileExtractionSection({ form }: ProfileExtractionSectionProps) {

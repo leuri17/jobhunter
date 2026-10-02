@@ -1,9 +1,6 @@
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError } from '@/components/ui/field';
-import {
-  DATE_POSTED_CHOICES,
-  type DatePostedSeconds,
-} from '@jobhunter/core/search';
+import { DATE_POSTED_CHOICES, type DatePostedSeconds } from '@jobhunter/core/search';
 import {
   Select,
   SelectContent,
@@ -14,10 +11,10 @@ import {
 } from '@/components/ui/select';
 import { Item, ItemContent, ItemMedia, ItemTitle } from '@/components/ui/item';
 import { Clock } from 'lucide-react';
-import type { AnyFieldApi } from './types';
+import type { AnyFieldApi, SectionForm } from './types';
 
 interface DatePostedSectionProps {
-  field: AnyFieldApi;
+  form: SectionForm;
 }
 
 function describeFreshness(seconds: DatePostedSeconds): string {
@@ -26,7 +23,15 @@ function describeFreshness(seconds: DatePostedSeconds): string {
   return 'the last 1 month';
 }
 
-export function DatePostedSection({ field }: DatePostedSectionProps) {
+export function DatePostedSection({ form }: DatePostedSectionProps) {
+  return (
+    <form.Field name="search.datePosted">
+      {(field: AnyFieldApi) => <DatePostedBody field={field} />}
+    </form.Field>
+  );
+}
+
+function DatePostedBody({ field }: { field: AnyFieldApi }) {
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
   const current = field.state.value as DatePostedSeconds;
   const currentChoice = DATE_POSTED_CHOICES.find((c) => c.value === current);
@@ -64,7 +69,10 @@ export function DatePostedSection({ field }: DatePostedSectionProps) {
               <Clock />
             </ItemMedia>
             <ItemContent>
-              <ItemTitle>Freshness filter set to posts published within {describeFreshness(currentChoice?.value ?? current)}.</ItemTitle>
+              <ItemTitle>
+                Freshness filter set to posts published within{' '}
+                {describeFreshness(currentChoice?.value ?? current)}.
+              </ItemTitle>
             </ItemContent>
           </Item>
         </Field>

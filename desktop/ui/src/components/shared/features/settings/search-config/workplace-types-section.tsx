@@ -3,7 +3,7 @@ import { Field, FieldError } from '@/components/ui/field';
 import { WORKPLACE_TYPE_CHOICES, type WorkplaceTypeValue } from '@jobhunter/core/search';
 import { Building2, Cloud, House } from 'lucide-react';
 import { cn } from 'cn';
-import type { AnyFieldApi } from './types';
+import type { AnyFieldApi, SectionForm } from './types';
 
 const workplaceIcons: Record<WorkplaceTypeValue, typeof Building2> = {
   '1': Building2,
@@ -12,10 +12,18 @@ const workplaceIcons: Record<WorkplaceTypeValue, typeof Building2> = {
 };
 
 interface WorkplaceTypesSectionProps {
-  field: AnyFieldApi;
+  form: SectionForm;
 }
 
-export function WorkplaceTypesSection({ field }: WorkplaceTypesSectionProps) {
+export function WorkplaceTypesSection({ form }: WorkplaceTypesSectionProps) {
+  return (
+    <form.Field name="search.workplaceTypes" mode="array">
+      {(field: AnyFieldApi) => <WorkplaceTypesBody field={field} />}
+    </form.Field>
+  );
+}
+
+function WorkplaceTypesBody({ field }: { field: AnyFieldApi }) {
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
   const selected = field.state.value as WorkplaceTypeValue[];
 
@@ -62,9 +70,7 @@ export function WorkplaceTypesSection({ field }: WorkplaceTypesSectionProps) {
                   <span
                     className={cn(
                       'flex size-9 shrink-0 items-center justify-center rounded-md',
-                      isSelected
-                        ? 'bg-primary/15 text-primary'
-                        : 'bg-muted text-muted-foreground',
+                      isSelected ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground',
                     )}
                   >
                     <Icon className="size-4" aria-hidden="true" />

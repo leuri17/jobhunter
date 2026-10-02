@@ -75,24 +75,13 @@ function RouteComponent() {
           </TabsList>
           <TabsContent value="search">
             <Card>
-              <form.Field name="search.searchQueries" mode="array">
-                {(field) => <SearchQueriesSection field={field} />}
-              </form.Field>
+              <SearchQueriesSection form={form} />
               <SectionDivider />
-
-              <form.Field name="search.locations" mode="array">
-                {(field) => <LocationsSection field={field} />}
-              </form.Field>
+              <LocationsSection form={form} />
               <SectionDivider />
-
-              <form.Field name="search.datePosted">
-                {(field) => <DatePostedSection field={field} />}
-              </form.Field>
+              <DatePostedSection form={form} />
               <SectionDivider />
-
-              <form.Field name="search.workplaceTypes" mode="array">
-                {(field) => <WorkplaceTypesSection field={field} />}
-              </form.Field>
+              <WorkplaceTypesSection form={form} />
             </Card>
           </TabsContent>
           <TabsContent value="ai">

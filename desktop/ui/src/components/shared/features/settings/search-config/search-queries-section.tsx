@@ -7,13 +7,21 @@ import { useForm } from '@tanstack/react-form';
 import { OperationalConfigSchema } from '@jobhunter/core/config/schemas';
 import { XIcon } from 'lucide-react';
 import { useRef } from 'react';
-import type { AnyFieldApi } from './types';
+import type { AnyFieldApi, SectionForm } from './types';
 
 interface SearchQueriesSectionProps {
-  field: AnyFieldApi;
+  form: SectionForm;
 }
 
-export function SearchQueriesSection({ field }: SearchQueriesSectionProps) {
+export function SearchQueriesSection({ form }: SearchQueriesSectionProps) {
+  return (
+    <form.Field name="search.searchQueries" mode="array">
+      {(field: AnyFieldApi) => <SearchQueriesBody field={field} />}
+    </form.Field>
+  );
+}
+
+function SearchQueriesBody({ field }: { field: AnyFieldApi }) {
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
   const values = field.state.value as string[];
   const inputRef = useRef<HTMLInputElement>(null);
