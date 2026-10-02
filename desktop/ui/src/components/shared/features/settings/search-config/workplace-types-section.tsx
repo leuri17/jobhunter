@@ -69,12 +69,7 @@ export function WorkplaceTypesSection({ field }: WorkplaceTypesSectionProps) {
                   >
                     <Icon className="size-4" aria-hidden="true" />
                   </span>
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="text-sm font-medium leading-tight">{choice.label}</span>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {`Value: "${choice.value}"`}
-                    </span>
-                  </span>
+                  <span className="text-sm font-medium leading-tight">{choice.label}</span>
                 </button>
               );
             })}

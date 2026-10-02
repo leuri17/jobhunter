@@ -12,17 +12,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Item, ItemContent, ItemMedia, ItemTitle } from '@/components/ui/item';
+import { Clock } from 'lucide-react';
 import type { AnyFieldApi } from './types';
 
 interface DatePostedSectionProps {
   field: AnyFieldApi;
 }
 
+function describeFreshness(seconds: DatePostedSeconds): string {
+  if (seconds === 86400) return 'the last 1 day';
+  if (seconds === 604800) return 'the last 1 week';
+  return 'the last 1 month';
+}
+
 export function DatePostedSection({ field }: DatePostedSectionProps) {
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
   const current = field.state.value as DatePostedSeconds;
   const currentChoice = DATE_POSTED_CHOICES.find((c) => c.value === current);
-  const currentLabel = (currentChoice?.label ?? 'past 24 hours').toLowerCase();
 
   return (
     <>
@@ -52,9 +59,14 @@ export function DatePostedSection({ field }: DatePostedSectionProps) {
               </SelectGroup>
             </SelectContent>
           </Select>
-          <p className="text-sm text-muted-foreground">
-            Showing posts from <span className="text-foreground">{currentLabel}</span>.
-          </p>
+          <Item variant="outline">
+            <ItemMedia variant="icon">
+              <Clock />
+            </ItemMedia>
+            <ItemContent>
+              <ItemTitle>Freshness filter set to posts published within {describeFreshness(currentChoice?.value ?? current)}.</ItemTitle>
+            </ItemContent>
+          </Item>
         </Field>
         <FieldError errors={field.state.meta.errors} />
       </CardContent>
