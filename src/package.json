@@ -13,6 +13,7 @@
     "./filter": "./filter/index.ts",
     "./search": "./search/index.ts",
     "./config": "./config/index.ts",
+    "./config/schemas": "./config/schema.ts",
     "./logging": "./logging/index.ts",
     "./platform": "./platform/index.ts",
     "./errors": "./errors/index.ts",

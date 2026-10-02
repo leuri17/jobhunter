@@ -4,6 +4,7 @@ import type {
   ApproveProfileResponse,
   CancelPipelineResponse,
   ConfigResponse,
+  GeoTypeaheadResponse,
   GetJobResponse,
   GetProfileResponse,
   GetRunResponse,
@@ -99,4 +100,6 @@ export const api = {
   runPipeline: () => request<RunPipelineResponse>('POST', '/api/pipeline/run'),
   cancelPipeline: (runId: string) =>
     request<CancelPipelineResponse>('POST', `/api/pipeline/${runId}/cancel`),
+  geoTypeahead: (q: string) =>
+    request<GeoTypeaheadResponse>('GET', `/api/linkedin/geo-typeahead?q=${encodeURIComponent(q)}`),
 };

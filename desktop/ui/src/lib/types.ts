@@ -105,3 +105,15 @@ export interface CancelPipelineResponse {
   readonly schemaVersion: 1;
   readonly status: 'cancelling';
 }
+
+export interface GeoHit {
+  readonly id: string;
+  readonly type: 'GEO';
+  readonly displayName: string;
+  readonly trackingId?: string;
+}
+
+export interface GeoTypeaheadResponse {
+  readonly schemaVersion: 1;
+  readonly hits: readonly GeoHit[];
+}
