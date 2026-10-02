@@ -13,6 +13,9 @@ import { LocationsSection } from '@/components/shared/features/settings/search-c
 import { DatePostedSection } from '@/components/shared/features/settings/search-config/date-posted-section';
 import { WorkplaceTypesSection } from '@/components/shared/features/settings/search-config/workplace-types-section';
 import { SectionDivider } from '@/components/shared/features/settings/search-config/section';
+import { ProfileExtractionSection } from '@/components/shared/features/settings/ai-provider/profile-extraction-section';
+import { JobScoringSection } from '@/components/shared/features/settings/ai-provider/job-scoring-section';
+import { RefusalDetectionSection } from '@/components/shared/features/settings/ai-provider/refusal-detection-section';
 
 export const Route = createFileRoute('/settings')({
   component: RouteComponent,
@@ -90,6 +93,15 @@ function RouteComponent() {
               <form.Field name="search.workplaceTypes" mode="array">
                 {(field) => <WorkplaceTypesSection field={field} />}
               </form.Field>
+            </Card>
+          </TabsContent>
+          <TabsContent value="ai">
+            <Card>
+              <ProfileExtractionSection form={form} />
+              <SectionDivider />
+              <JobScoringSection form={form} />
+              <SectionDivider />
+              <RefusalDetectionSection form={form} />
             </Card>
           </TabsContent>
         </Tabs>
