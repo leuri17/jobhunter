@@ -469,6 +469,13 @@ pub mod bring_main_window_forward_tests {
             <MockWindowDispatcher as WindowDispatch<T>>::set_fullscreen(&self.inner, fullscreen)
         }
 
+        fn set_fullscreen_on_monitor(
+            &self,
+            position: tauri_runtime::dpi::PhysicalPosition<f64>,
+        ) -> Result<()> {
+            <MockWindowDispatcher as WindowDispatch<T>>::set_fullscreen_on_monitor(&self.inner, position)
+        }
+
         #[cfg(target_os = "macos")]
         fn set_simple_fullscreen(&self, enable: bool) -> Result<()> {
             <MockWindowDispatcher as WindowDispatch<T>>::set_simple_fullscreen(&self.inner, enable)
@@ -703,15 +710,19 @@ pub mod bring_main_window_forward_tests {
             <MockRuntimeHandle as RuntimeHandle<T>>::display_handle(&self.inner)
         }
 
-        fn primary_monitor(&self) -> Option<tauri_runtime::monitor::Monitor> {
+        fn primary_monitor(&self) -> Result<Option<tauri_runtime::monitor::Monitor>> {
             <MockRuntimeHandle as RuntimeHandle<T>>::primary_monitor(&self.inner)
         }
 
-        fn monitor_from_point(&self, x: f64, y: f64) -> Option<tauri_runtime::monitor::Monitor> {
+        fn monitor_from_point(
+            &self,
+            x: f64,
+            y: f64,
+        ) -> Result<Option<tauri_runtime::monitor::Monitor>> {
             <MockRuntimeHandle as RuntimeHandle<T>>::monitor_from_point(&self.inner, x, y)
         }
 
-        fn available_monitors(&self) -> Vec<tauri_runtime::monitor::Monitor> {
+        fn available_monitors(&self) -> Result<Vec<tauri_runtime::monitor::Monitor>> {
             <MockRuntimeHandle as RuntimeHandle<T>>::available_monitors(&self.inner)
         }
 
