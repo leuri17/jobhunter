@@ -40,6 +40,28 @@ cd desktop/tauri && cargo build        # build the Rust shell
 
 Launch via `cargo tauri dev` from `desktop/tauri`.
 
+#### Producing a release bundle (Linux)
+
+`cargo tauri build` from `desktop/tauri/` produces the `.deb`, `.rpm`, and
+`.AppImage` artifacts listed in the user quick-start above. On rolling
+distributions (Arch, CachyOS, Fedora 39+, Ubuntu 24.04+), the AppImage step
+fails because the `strip` binary bundled inside the cached
+`linuxdeploy-x86_64.AppImage` cannot parse the modern `.relr.dyn` ELF section
+(`SHT_RELR = 0x13`) emitted by current glibc 2.36+ libraries. The
+workaround, recommended upstream in
+[linuxdeploy/linuxdeploy#272](https://github.com/linuxdeploy/linuxdeploy/issues/272)
+and tracked at
+[tauri-apps/tauri#11149](https://github.com/tauri-apps/tauri/issues/11149),
+is to set `NO_STRIP=true`:
+
+```bash
+NO_STRIP=true cargo tauri build        # desktop/tauri/
+```
+
+The `.deb` and `.rpm` targets are unaffected and build without the flag. The
+resulting AppImage is ~10 MB larger because the bundled libraries are not
+stripped. See `desktop/tauri/codemap.md` for the full root-cause analysis.
+
 ## Commands
 
 | Command                                 | What it does                            |
