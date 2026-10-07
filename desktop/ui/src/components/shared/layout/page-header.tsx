@@ -86,6 +86,8 @@ const PageHeaderAction = forwardRef<HTMLButtonElement | HTMLAnchorElement, PageH
         </Button>
       );
     }
+
+    return null;
   },
 );
 PageHeaderAction.displayName = 'PageHeaderAction';

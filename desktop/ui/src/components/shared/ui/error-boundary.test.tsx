@@ -2,7 +2,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { ErrorBoundary, RetryPanel } from '@/components/error-boundary';
+import { ErrorBoundary, RetryPanel } from '@/components/shared/ui/error-boundary';
 
 afterEach(() => {
   cleanup();
