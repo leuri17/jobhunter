@@ -92,6 +92,12 @@ export async function registerProfileRoutes(
           continue;
         }
         if (part.mimetype === undefined || !ALLOWED_PROFILE_MIME_TYPES.has(part.mimetype)) {
+          // Drain before returning: @fastify/multipart v10+ blocks the
+          // iterator on an undrained `part.file` stream, so leaving it
+          // open would hang the connection until busboy's read deadline.
+          if (part.file) {
+            await part.toBuffer();
+          }
           // Reject the request before any body is written. Don't echo
           // the offending filename or mimetype in the response — both
           // can be attacker-controlled and are not actionable for the
@@ -114,6 +120,10 @@ export async function registerProfileRoutes(
         // bodies) are deferred; when added, this handler must consume
         // part.file via pipeline() or toBuffer() to avoid silent data loss.
         // Tracked in .slim/deepwork/progress.md.
+        //
+        // The drain is still required to release the v10+ multipart iterator.
+        // Peak memory per part is bounded by PROFILE_MULTIPART_LIMITS.fileSize.
+        await part.toBuffer();
         filePaths.push(part.filename);
       }
       const result = await service.importSources(filePaths);
