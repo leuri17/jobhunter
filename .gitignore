@@ -36,6 +36,7 @@ Thumbs.db
 
 desktop/tauri/target/
 desktop/tauri/gen/
+desktop/tauri/jobhunter/
 
 # Tauri desktop
 desktop/ui/dist/
