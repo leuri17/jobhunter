@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { cleanup, render, screen, fireEvent } from '@testing-library/react';
-import { SidecarBanner } from '@/components/sidecar-banner';
+import { SidecarBanner } from '@/components/shared/ui/sidecar-banner';
 import type { SidecarReachability } from '@/lib/sidecar-reachability';
 
 function makeState(overrides: Partial<SidecarReachability> = {}): SidecarReachability {
