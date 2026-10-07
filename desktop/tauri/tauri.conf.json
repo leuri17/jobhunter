@@ -7,7 +7,10 @@
     "beforeDevCommand": "pnpm --filter @jobhunter/ui dev",
     "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "pnpm --filter @jobhunter/ui build",
-    "frontendDist": "../ui/dist"
+    "frontendDist": "../ui/dist",
+    "windows": {
+        "staticVCRuntime": false
+      }
   },
   "app": {
     "windows": [
