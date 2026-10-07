@@ -16,6 +16,7 @@ import { registerProfileRoutes } from './routes/profile.js';
 import { registerJobsRoutes } from './routes/jobs.js';
 import { registerRunsRoutes } from './routes/runs.js';
 import { registerPipelineRoutes, abortAllActiveRuns } from './routes/pipeline.js';
+import { registerLinkedinGeoTypeaheadRoute } from './routes/linkedin-geo-typeahead.js';
 import { DEFAULT_REDACT_PATHS, LOG_LEVELS, type LogLevel } from '@jobhunter/core/logging';
 import {
   loadConfig,
@@ -203,6 +204,8 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
   await registerRunsRoutes(app);
 
   await registerPipelineRoutes(app, { rootLogger, refusal });
+
+  await registerLinkedinGeoTypeaheadRoute(app);
 
   return app;
 }

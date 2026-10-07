@@ -9,8 +9,7 @@ import { ApiError } from './api';
 export const shouldRetryQuery = (failureCount: number, error: unknown): boolean =>
   error instanceof ApiError ? false : failureCount < 2;
 
-export const queryRetryDelay = (attempt: number): number =>
-  Math.min(1000 * 2 ** attempt, 5000);
+export const queryRetryDelay = (attempt: number): number => Math.min(1000 * 2 ** attempt, 5000);
 
 export const queryClient = new QueryClient({
   defaultOptions: {

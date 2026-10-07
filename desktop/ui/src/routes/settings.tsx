@@ -1,74 +1,134 @@
-import { createRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import { api } from '@/lib/api';
+import { PageHeader, PageHeaderTitle } from '@/components/shared/layout/page-header';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { api, ApiError } from '@/lib/api';
+import { useSuspenseQuery } from '@tanstack/react-query';
+import { createFileRoute } from '@tanstack/react-router';
+import { useForm } from '@tanstack/react-form';
+import { OperationalConfigSchema } from '@jobhunter/core/config/schemas';
 import { Button } from '@/components/ui/button';
-import { Route as rootRoute } from './__root';
+import { Card } from '@/components/ui/card';
+import { toast } from '@/components/ui/toast';
+import { SearchQueriesSection } from '@/components/shared/features/settings/search-config/search-queries-section';
+import { LocationsSection } from '@/components/shared/features/settings/search-config/locations-section';
+import { DatePostedSection } from '@/components/shared/features/settings/search-config/date-posted-section';
+import { WorkplaceTypesSection } from '@/components/shared/features/settings/search-config/workplace-types-section';
+import { SectionDivider } from '@/components/shared/features/settings/search-config/section';
+import { ProfileExtractionSection } from '@/components/shared/features/settings/ai-provider/profile-extraction-section';
+import { JobScoringSection } from '@/components/shared/features/settings/ai-provider/job-scoring-section';
+import { RefusalDetectionSection } from '@/components/shared/features/settings/ai-provider/refusal-detection-section';
+import { ScrapperSection } from '@/components/shared/features/settings/scrapper/scrapper-section';
+import { OutputSection } from '@/components/shared/features/settings/output/output-section';
+import { LoggingSection } from '@/components/shared/features/settings/logging/logging-section';
+import { DiagnosisSection } from '@/components/shared/features/settings/diagnosis/diagnosis-section';
 
-// Settings (`/settings`). Surfaces:
-//   - the resolved operational config (search config form + filter toggles
-//     are deferred; v1 shows the raw JSON for transparency)
-//   - a disabled OpenAI key field (key is read from the `OPENAI_API_KEY`
-//     env var in v1; OS-keychain storage lands in a follow-up per spec §5.2)
-//   - the resolved filesystem paths returned by `/api/paths`
-//   - a stub "Re-run setup wizard" CTA (wizard flow is not yet wired in v1)
-export const Route = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/settings',
-  component: SettingsPage,
+export const Route = createFileRoute('/settings')({
+  component: RouteComponent,
 });
 
-function SettingsPage() {
-  const config = useQuery({ queryKey: ['config'], queryFn: api.getConfig });
-  const paths = useQuery({ queryKey: ['paths'], queryFn: api.paths });
-  const [openaiKey] = useState('');
+function RouteComponent() {
+  const config = useSuspenseQuery({
+    queryKey: ['config'],
+    queryFn: api.getConfig,
+  });
+
+  const form = useForm({
+    defaultValues: config.data.config,
+    validators: { onChange: OperationalConfigSchema },
+    onSubmit: async ({ value }) => {
+      try {
+        await api.patchConfig(value);
+
+        toast.add({
+          title: 'Search configuration updated successfully',
+          type: 'success',
+        });
+      } catch (err: unknown) {
+        toast.add({
+          title: 'Search configuration update failed',
+          description: `${(err as ApiError).status} - ${(err as ApiError).message}`,
+          type: 'error',
+        });
+      }
+    },
+  });
 
   return (
-    <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Settings</h1>
+    // TODO: Create Page & PageContent component
+    <div className="space-y-6">
+      <PageHeader>
+        <PageHeaderTitle subtitle="AI provider, score thresholds, scraping limits. API keys are read from your .env file.">
+          Settings
+        </PageHeaderTitle>
+      </PageHeader>
 
-      <section>
-        <h2 className="text-sm uppercase tracking-wide text-zinc-400 mb-2">Search configuration</h2>
-        {config.data === undefined ? (
-          <p>loading…</p>
-        ) : (
-          <pre className="rounded border border-border bg-card p-4 text-xs overflow-auto">
-            {JSON.stringify(config.data.config, null, 2)}
-          </pre>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-sm uppercase tracking-wide text-zinc-400 mb-2">OpenAI key</h2>
-        <p className="text-sm text-zinc-400 mb-2">
-          In v1 the key is read from the <code>OPENAI_API_KEY</code> environment variable.
-          OS-keychain storage lands in a follow-up.
-        </p>
-        <input
-          type="password"
-          value={openaiKey}
-          placeholder="(not editable in v1)"
-          disabled
-          className="rounded border border-border bg-card px-2 py-1 text-sm w-96"
-        />
-      </section>
-
-      <section>
-        <h2 className="text-sm uppercase tracking-wide text-zinc-400 mb-2">Resolved paths</h2>
-        {paths.data === undefined ? (
-          <p>loading…</p>
-        ) : (
-          <ul className="text-sm font-mono space-y-1">
-            {Object.entries(paths.data.paths).map(([k, v]) => (
-              <li key={k}>
-                <span className="text-zinc-400">{k}:</span> {v}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <Button variant="outline">Re-run setup wizard</Button>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+      >
+        <Tabs defaultValue="search">
+          <TabsList variant="line">
+            <TabsTrigger value="search">Search configuration</TabsTrigger>
+            <TabsTrigger value="ai">AI Provider</TabsTrigger>
+            <TabsTrigger value="scrapper">Scrapper</TabsTrigger>
+            <TabsTrigger value="output">Output</TabsTrigger>
+            <TabsTrigger value="logging">Logging</TabsTrigger>
+            <TabsTrigger value="diagnosis">Diagnosis</TabsTrigger>
+          </TabsList>
+          <TabsContent value="search">
+            <Card>
+              <SearchQueriesSection form={form} />
+              <SectionDivider />
+              <LocationsSection form={form} />
+              <SectionDivider />
+              <DatePostedSection form={form} />
+              <SectionDivider />
+              <WorkplaceTypesSection form={form} />
+            </Card>
+          </TabsContent>
+          <TabsContent value="ai">
+            <Card>
+              <ProfileExtractionSection form={form} />
+              <SectionDivider />
+              <JobScoringSection form={form} />
+              <SectionDivider />
+              <RefusalDetectionSection form={form} />
+            </Card>
+          </TabsContent>
+          <TabsContent value="scrapper">
+            <Card>
+              <ScrapperSection form={form} />
+            </Card>
+          </TabsContent>
+          <TabsContent value="output">
+            <Card>
+              <OutputSection form={form} />
+            </Card>
+          </TabsContent>
+          <TabsContent value="logging">
+            <Card>
+              <LoggingSection form={form} />
+            </Card>
+          </TabsContent>
+          <TabsContent value="diagnosis">
+            <Card>
+              <DiagnosisSection form={form} />
+            </Card>
+          </TabsContent>
+        </Tabs>
+        <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting, s.isDirty] as const}>
+          {([canSubmit, isSubmitting, isDirty]) => (
+            <div className="sticky bottom-0 flex items-center gap-3 bg-background/95 p-4 backdrop-blur">
+              <Button type="submit" disabled={!canSubmit || isSubmitting}>
+                {isSubmitting ? 'Saving...' : 'Save settings'}
+              </Button>
+              {!isDirty && <span className="text-xs text-muted-foreground">No changes</span>}
+            </div>
+          )}
+        </form.Subscribe>
+      </form>
     </div>
   );
 }

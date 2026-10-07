@@ -21,3 +21,4 @@ docs/
 # Generated artifacts
 drizzle/meta/
 pnpm-lock.yaml
+**/routeTree.gen.ts

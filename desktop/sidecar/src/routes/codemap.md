@@ -27,7 +27,7 @@ decoding, `AbortController` bookkeeping, and SSE framing.
     handlers can reply `503 openai_unavailable`.
 - **SSE channel** (`pipeline.ts`) reuses `initSseHeaders` / `writeSseEvent` /
   `closeSse` from `../sse.ts`. A module-level `activeRuns: Map<runId,
-  ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
+ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
   `LOG_RING_BUFFER_MAX = 1000`).
 - **Shutdown hook**: `abortAllActiveRuns()` is exported so `main()` can
   cancel in-flight orchestrators before the server closes.
@@ -50,7 +50,7 @@ decoding, `AbortController` bookkeeping, and SSE framing.
   `ProfileExtractionService.extract(usable)` over `OPENAI_MODEL ?? 'gpt-5'`;
   `profileApproveHandler` / `profileRejectHandler` run approval services
   with auto-confirming prompts; `profileEditHandler` returns `501
-  edit_via_http_not_supported` (interactive TUI prompts are out-of-band
+edit_via_http_not_supported` (interactive TUI prompts are out-of-band
   for an HTTP sidecar).
 - **Jobs**: `jobsListHandler` (`GET /api/jobs`) parses filters
   (`state`, `limit`, `minScore`, `company`, `location`, `run` with
@@ -62,12 +62,12 @@ decoding, `AbortController` bookkeeping, and SSE framing.
 - **Runs**: `runsListHandler` (limit default 20) and `runsShowHandler`
   wrap `RunsListService` / `RunsShowService`.
 - **Config**: `configGetHandler` loads via `loadConfig(paths,
-  sidecarFileSystem)`; `configPatchHandler` applies `ConfigPatch` through
+sidecarFileSystem)`; `configPatchHandler` applies `ConfigPatch` through
   `updateConfig` with an auto-confirming `options.confirm`; `configValidateHandler`
   re-parses with `OperationalConfigSchema.safeParse`, throwing
   `ValidationError` on failure.
 - **Paths**: `pathsGetHandler` exposes `resolvePlatformPaths(
-  createDefaultPlatformAdapter())` directories.
+createDefaultPlatformAdapter())` directories.
 
 ## Integration
 

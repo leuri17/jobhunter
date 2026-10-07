@@ -1,15 +1,16 @@
-import { createRoute, Link } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { JobListRow, RunListRow } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { Route as rootRoute } from './__root';
+import {
+  PageHeader,
+  PageHeaderAction,
+  PageHeaderTitle,
+} from '@/components/shared/layout/page-header';
 
 // Dashboard (`/`). Renders last-run status card + top-5 scored jobs,
 // fetched via TanStack Query against the typed sidecar API client.
-export const Route = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
+export const Route = createFileRoute('/')({
   component: Dashboard,
 });
 
@@ -30,13 +31,16 @@ function Dashboard() {
   const firstRun = runs.data?.runs[0];
 
   return (
-    <div className="p-8 space-y-8">
-      <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <Button asChild>
-          <Link to="/pipeline">Run pipeline →</Link>
-        </Button>
-      </header>
+    <div className="space-y-6">
+      <PageHeader>
+        <PageHeaderTitle subtitle="Overview of your job search automation">
+          Dashboard
+        </PageHeaderTitle>
+        {/* <PageHeaderAction type="button" render={<PipelineStarter />} /> */}
+        <PageHeaderAction type="link" to="/pipeline">
+          Run pipeline
+        </PageHeaderAction>
+      </PageHeader>
 
       <section>
         <h2 className="text-sm uppercase tracking-wide text-zinc-400 mb-2">Last run</h2>

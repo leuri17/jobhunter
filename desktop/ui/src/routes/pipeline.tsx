@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { usePipelineEvents } from '@/lib/sse';
-import { LogPane } from '@/components/log-pane';
+import { LogPane } from '@/components/shared/ui/log-pane';
 import { Button } from '@/components/ui/button';
 import { Route as rootRoute } from './__root';
 

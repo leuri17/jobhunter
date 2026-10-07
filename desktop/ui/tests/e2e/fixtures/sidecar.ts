@@ -63,7 +63,8 @@ interface RunRecord {
   readonly internalId: number;
   readonly startTimestamp: string;
   readonly endTimestamp: string | null;
-  readonly status: 'running' | 'cancelling' | 'completed' | 'completed_with_errors' | 'failed' | 'cancelled';
+  readonly status:
+    'running' | 'cancelling' | 'completed' | 'completed_with_errors' | 'failed' | 'cancelled';
   readonly searchesAttempted: number;
   readonly jobsDiscovered: number;
   readonly jobsScored: number;
@@ -104,7 +105,15 @@ const BASE_CONFIG = {
     profileExtraction: { model: 'gpt-5.6-sol', reasoningEffort: 'medium' },
     jobScoring: { model: 'gpt-5.6-sol', reasoningEffort: 'medium', concurrency: 3 },
     refusalDetection: {
-      refusalMarkers: ["I can't", 'I cannot', 'as an AI', "I'm not able to", "I'm unable to", "I won't", 'As a language model'],
+      refusalMarkers: [
+        "I can't",
+        'I cannot',
+        'as an AI',
+        "I'm not able to",
+        "I'm unable to",
+        "I won't",
+        'As a language model',
+      ],
       flagEmptyBodies: true,
     },
   },
@@ -131,16 +140,20 @@ const BASE_CONFIG = {
   },
 } as const;
 
-function seedProfiles(): { profiles: Map<string, ProfileVersionRecord>; details: Map<string, ProfileDetailRecord> } {
+function seedProfiles(): {
+  profiles: Map<string, ProfileVersionRecord>;
+  details: Map<string, ProfileDetailRecord>;
+} {
   const profiles = new Map<string, ProfileVersionRecord>();
   const details = new Map<string, ProfileDetailRecord>();
   // Two drafts so approve + reject tests can both target a draft
   // when run sequentially against the shared fixture process.
-  const seeds: readonly { id: string; status: ProfileVersionRecord['status']; active: boolean }[] = [
-    { id: 'prof_seed_1', status: 'draft', active: false },
-    { id: 'prof_seed_2', status: 'approved', active: true },
-    { id: 'prof_seed_3', status: 'draft', active: false },
-  ];
+  const seeds: readonly { id: string; status: ProfileVersionRecord['status']; active: boolean }[] =
+    [
+      { id: 'prof_seed_1', status: 'draft', active: false },
+      { id: 'prof_seed_2', status: 'approved', active: true },
+      { id: 'prof_seed_3', status: 'draft', active: false },
+    ];
   for (const [i, s] of seeds.entries()) {
     profiles.set(s.id, {
       profileId: s.id,
@@ -277,7 +290,10 @@ function isSubsetPatch(patch: unknown): patch is Record<string, unknown> {
   return typeof patch === 'object' && patch !== null && !Array.isArray(patch);
 }
 
-function deepMerge(base: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {
+function deepMerge(
+  base: Record<string, unknown>,
+  patch: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = { ...base };
   for (const [k, v] of Object.entries(patch)) {
     const existing = out[k];
@@ -295,7 +311,11 @@ function sseWrite(replyRaw: NodeJS.WritableStream, event: string, data: unknown)
   replyRaw.write(`event: ${event}\ndata: ${payload}\n\n`);
 }
 
-function transitionRun(run: ActivePipelineRun, status: ActivePipelineRun['status'], result?: unknown): void {
+function transitionRun(
+  run: ActivePipelineRun,
+  status: ActivePipelineRun['status'],
+  result?: unknown,
+): void {
   run.status = status;
   if (result !== undefined) run.result = result;
 }
@@ -311,7 +331,9 @@ function abortAllRuns(state: AppState): number {
   return count;
 }
 
-export async function buildFixtureSidecar(state: AppState = createInitialState()): Promise<FastifyInstance> {
+export async function buildFixtureSidecar(
+  state: AppState = createInitialState(),
+): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
 
   await app.register(cors, {
@@ -388,7 +410,10 @@ export async function buildFixtureSidecar(state: AppState = createInitialState()
       reply.status(409);
       return {
         schemaVersion: 1,
-        error: { code: 'invalid_profile_state', message: `Profile is ${profile.status}, not draft` },
+        error: {
+          code: 'invalid_profile_state',
+          message: `Profile is ${profile.status}, not draft`,
+        },
       };
     }
     let superseded: number | null = null;
@@ -436,7 +461,10 @@ export async function buildFixtureSidecar(state: AppState = createInitialState()
       reply.status(409);
       return {
         schemaVersion: 1,
-        error: { code: 'invalid_profile_state', message: `Profile is ${profile.status}, not draft` },
+        error: {
+          code: 'invalid_profile_state',
+          message: `Profile is ${profile.status}, not draft`,
+        },
       };
     }
     const updated: ProfileVersionRecord = {
@@ -558,7 +586,12 @@ export async function buildFixtureSidecar(state: AppState = createInitialState()
       status: run.status,
       startTimestamp: run.startTimestamp,
       endTimestamp: run.endTimestamp,
-      configuration: { snapshotJson: {}, schemaVersion: 1, hash: 'h', applicationVersion: '0.1.0-fixture' },
+      configuration: {
+        snapshotJson: {},
+        schemaVersion: 1,
+        hash: 'h',
+        applicationVersion: '0.1.0-fixture',
+      },
       profileVersionId: 1,
       filterConfigVersionId: 1,
       searchExecutions: [],
@@ -638,51 +671,54 @@ export async function buildFixtureSidecar(state: AppState = createInitialState()
     return { schemaVersion: 1, status: 'cancelling' as const };
   });
 
-  app.get<{ Params: { runId: string } }>('/api/pipeline/:runId/events', async (req, reply: FastifyReply) => {
-    const run = state.pipelineRuns.get(req.params.runId);
-    if (run === undefined) {
-      reply.status(404);
-      return {
-        schemaVersion: 1,
-        error: { code: 'pipeline_run_not_found', message: `No run with id ${req.params.runId}` },
-      };
-    }
-    // SSE bypasses the standard reply pipeline (we call flushHeaders
-    // and write directly to reply.raw), so @fastify/cors's onSend
-    // hook never runs. Copy the CORS headers manually before the
-    // stream starts — otherwise the browser's EventSource fires
-    // `error` and the UI's status flips to 'error' instead of
-    // 'running'. The origin allowlist mirrors the registration
-    // above; we intentionally keep the regex simple so a future
-    // permissive fixture doesn't need both sites updated.
-    const origin = req.headers['origin'];
-    if (typeof origin === 'string' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-      reply.raw.setHeader('Access-Control-Allow-Origin', origin);
-      reply.raw.setHeader('Vary', 'Origin');
-      reply.raw.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
-    reply.raw.setHeader('Content-Type', 'text/event-stream');
-    reply.raw.setHeader('Cache-Control', 'no-cache');
-    reply.raw.setHeader('Connection', 'keep-alive');
-    reply.raw.flushHeaders();
-    reply.raw.write(`: connected to ${run.runId}\n\n`);
-
-    const interval = setInterval(() => {
-      for (const line of run.logs.splice(0)) {
-        sseWrite(reply.raw, 'log', line);
+  app.get<{ Params: { runId: string } }>(
+    '/api/pipeline/:runId/events',
+    async (req, reply: FastifyReply) => {
+      const run = state.pipelineRuns.get(req.params.runId);
+      if (run === undefined) {
+        reply.status(404);
+        return {
+          schemaVersion: 1,
+          error: { code: 'pipeline_run_not_found', message: `No run with id ${req.params.runId}` },
+        };
       }
-      if (run.status === 'done' || run.status === 'cancelled' || run.status === 'failed') {
-        sseWrite(reply.raw, 'done', { status: run.status, result: run.result ?? null });
-        clearInterval(interval);
-        reply.raw.end();
-      } else {
-        sseWrite(reply.raw, 'heartbeat', { status: run.status });
+      // SSE bypasses the standard reply pipeline (we call flushHeaders
+      // and write directly to reply.raw), so @fastify/cors's onSend
+      // hook never runs. Copy the CORS headers manually before the
+      // stream starts — otherwise the browser's EventSource fires
+      // `error` and the UI's status flips to 'error' instead of
+      // 'running'. The origin allowlist mirrors the registration
+      // above; we intentionally keep the regex simple so a future
+      // permissive fixture doesn't need both sites updated.
+      const origin = req.headers['origin'];
+      if (typeof origin === 'string' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        reply.raw.setHeader('Access-Control-Allow-Origin', origin);
+        reply.raw.setHeader('Vary', 'Origin');
+        reply.raw.setHeader('Access-Control-Allow-Credentials', 'true');
       }
-    }, 500);
+      reply.raw.setHeader('Content-Type', 'text/event-stream');
+      reply.raw.setHeader('Cache-Control', 'no-cache');
+      reply.raw.setHeader('Connection', 'keep-alive');
+      reply.raw.flushHeaders();
+      reply.raw.write(`: connected to ${run.runId}\n\n`);
 
-    req.raw.on('close', () => clearInterval(interval));
-    return reply;
-  });
+      const interval = setInterval(() => {
+        for (const line of run.logs.splice(0)) {
+          sseWrite(reply.raw, 'log', line);
+        }
+        if (run.status === 'done' || run.status === 'cancelled' || run.status === 'failed') {
+          sseWrite(reply.raw, 'done', { status: run.status, result: run.result ?? null });
+          clearInterval(interval);
+          reply.raw.end();
+        } else {
+          sseWrite(reply.raw, 'heartbeat', { status: run.status });
+        }
+      }, 500);
+
+      req.raw.on('close', () => clearInterval(interval));
+      return reply;
+    },
+  );
 
   return app;
 }
@@ -701,7 +737,8 @@ async function main(): Promise<void> {
     shuttingDown = true;
     process.stderr.write(`fixture-sidecar: received ${signal}\n`);
     const aborted = abortAllRuns(state);
-    if (aborted > 0) process.stderr.write(`fixture-sidecar: cancelled ${aborted} pipeline run(s)\n`);
+    if (aborted > 0)
+      process.stderr.write(`fixture-sidecar: cancelled ${aborted} pipeline run(s)\n`);
     await Promise.race([
       app.close(),
       new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 5_000)),

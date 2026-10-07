@@ -16,6 +16,13 @@ export {
   type OperationalConfig,
 } from './schema.js';
 
+export {
+  REASONING_EFFORT_CHOICES,
+  REASONING_EFFORT_VALUES,
+  ReasoningEffortSchema,
+  type ReasoningEffort,
+} from './labels.js';
+
 export { loadConfig, type LoadedConfig } from './loader.js';
 
 export { resolveRefusalDetection } from './refusal.js';

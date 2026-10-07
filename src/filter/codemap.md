@@ -11,7 +11,7 @@ The evaluator is total: helper exceptions are caught by `safeEvaluate` and surfa
 - **Service layer.** Two application services own the public surface:
   - `FilterApplyService` (`src/filter/service.ts`) is the cache ledger. It consults `filterResults.findActiveByJob(jobId, fingerprint)` and only writes a new active row on a cache miss.
   - `ConfigureFiltersService` (`src/filter/configure-service.ts`) drives the interactive configuration flow and performs the atomic version transition (`insert` inactive → `activate`).
-  Both accept `now?` for test-time wall-clock injection and depend only on the `Repositories` facade.
+    Both accept `now?` for test-time wall-clock injection and depend only on the `Repositories` facade.
 - **Deterministic rule primitives.**
   - Keyword matching: `matchKeywords` (`src/filter/keyword-matcher.ts`) drives `evaluateJob`'s four keyword rules. Underlying helpers are `normalizeKeyword`, `keywordMatches`, and `findKeywordMatchIndex` in `keyword-normalize.ts`, plus the frozen `ALIAS_MAP` (`KEYWORD_ALIAS_VERSION`) in `keyword-aliases.ts`. The matcher folds `.`, `-`, `_`, `/` to spaces, collapses whitespace, applies per-token alias resolution (`js → javascript`, `k8s → kubernetes`, `postgres → postgresql`, …), and walks a token-window match.
   - Seniority: `detectSeniority` in `seniority-detector.ts` matches the normalized title against an inline phrase map (`intern`/`junior`/`mid`/`senior`/`staff`/`principal`/`lead`/`manager`/`director`/`executive`, with multi-word keys `entry level`, `tech lead`, `head of`, `vice president`, …) using `SENIORITY_LEVELS` rank order with highest-rank-wins. `applySeniorityRule` in `seniority-rule.ts` compares the detected rank against the configured `maximum` (`null` ⇒ abstained).

@@ -35,7 +35,7 @@ describe('persistence count helper guard', () => {
     throw new Error(
       'Repositories still use the `.all().length` pattern:\n' +
         out +
-        '\nReplace with `select({ n: count() }).from(...).get()` (Drizzle\'s ' +
+        "\nReplace with `select({ n: count() }).from(...).get()` (Drizzle's " +
         '`count()` aggregation). See issue #64.',
     );
   });

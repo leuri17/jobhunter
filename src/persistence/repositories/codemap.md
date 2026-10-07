@@ -26,7 +26,7 @@ them.
   `profileWarnings`, `derivedOverrides`, `profileSources`,
   `filterConfigurationVersions`, `openaiRequestMetadata`, `diagnosticArtifacts`,
   `applicationMetadata`). Helpers `eq / and / or / gte / inArray / like /
-  asc / desc` from `drizzle-orm`.
+asc / desc` from `drizzle-orm`.
 - **Codec layer (`codecs.ts`)**: `jsonColumn<T>(zodSchema)` produces a
   `JsonColumnCodec<T>` with `encode / decode / decodeRequired`. Decoded JSON is
   Zod-validated; failures throw `DatabaseError('persisted_json_invalid', ...)`
@@ -78,13 +78,13 @@ them.
    - `JobRepository.listExtractionAttemptsByJobIn(jobIds)` — used by
      `JobsListService` to compute the `latestFailedAttemptByJobId`
      partition without a per-row SELECT.
-   Each short-circuits on empty input (no DB round-trip). Ordering
-   is not guaranteed; callers key by primary `id`.
+     Each short-circuits on empty input (no DB round-trip). Ordering
+     is not guaranteed; callers key by primary `id`.
 7. **SHA-256 deduplication**: `ProfileSourceRepository.insert` is strict
-  INSERT-OR-ERROR — dedup is owned upstream by `ProfileImportService` via
-  `findBySha256`; bypassing it raises `DuplicateSha256Error`.
+   INSERT-OR-ERROR — dedup is owned upstream by `ProfileImportService` via
+   `findBySha256`; bypassing it raises `DuplicateSha256Error`.
 8. Sync `db.transaction` callbacks are mandatory because better-sqlite3
-   rejects Promise returns; async sub-repository methods are awaited *after*
+   rejects Promise returns; async sub-repository methods are awaited _after_
    the surrounding transaction returns.
 
 ## Integration
@@ -98,7 +98,7 @@ them.
 - `src/scoring/service.ts` — uses `scoreResults`, `jobs`, `filterResults`,
   `openaiMetadata`.
 - `src/profile/{importer,extraction-service,approval-service,editing-service,
-  review-service,rejection-service,identifier-resolution}.ts` — full profile
+review-service,rejection-service,identifier-resolution}.ts` — full profile
   pipeline, including `ProfileApprovalService.approve` which invalidates stale
   `filterResults` via `Repositories.transact`.
 - `src/reevaluation/service.ts` — uses `jobs`, `filterConfigurations`,
@@ -107,8 +107,8 @@ them.
   `diagnostics`.
 - `src/inspection/services/{jobs-list,jobs-show,runs-list,runs-show}-service.ts`
   — read-only inspection; `JobsListService` leans on `JobRepository.listByState`
-  + state-specific ID helpers, `RunsShowService` on `PipelineRunRepository.
-  findWithDetails`.
+  - state-specific ID helpers, `RunsShowService` on `PipelineRunRepository.
+findWithDetails`.
 - `src/init/init-service.ts` — uses `applicationMetadata` for the
   `initialized_at` marker.
 - Re-exported from `src/persistence/index.ts` and instantiated by

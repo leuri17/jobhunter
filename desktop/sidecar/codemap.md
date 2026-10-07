@@ -1,6 +1,7 @@
 # desktop/sidecar/
 
 ## Responsibility
+
 Node.js HTTP sidecar process that exposes the core `src/` (monorepo `@jobhunter/core`)
 functionality to the Tauri desktop UI. Spawned and supervised by the Tauri shell
 (`desktop/tauri/src/sidecar.rs`); the host reads `READY <port>` from stdout and binds
@@ -8,6 +9,7 @@ HTTP/SSE calls to `127.0.0.1`. Hosts the pipeline runner, init/reevaluation endp
 and inspection routes for jobs, runs, profile, config, and resolved filesystem paths.
 
 ## Design
+
 Fastify 5 (`fastify`) HTTP server with typed route modules and a global error handler
 that maps domain errors (`statusFor` / `envelopeFor` in `errors.ts`) into JSON envelopes.
 Cross-cutting plugins: `@fastify/cors` and `@fastify/multipart`. SSE live updates are
@@ -18,6 +20,7 @@ config comes from `readEnv()` (`src/env.ts`); logging is Fastify's pino at `LOG_
 with `tsc` (`build` script) to `dist/`.
 
 ## Flow
+
 `main()` -> `readEnv()` -> `buildServer()` -> Fastify `listen({ host, port })` ->
 stdout `READY <port>`. Per-request lifecycle: HTTP/SSE request -> typed route handler
 under `src/routes/` -> call into `@jobhunter/core` (pipeline, init, reevaluation,
@@ -26,7 +29,9 @@ triggers `shutdown()` which calls `abortAllActiveRuns()`, races `server.close()`
 against a 5s timeout, and exits with status derived from the race result.
 
 ## Integration
+
 Sub-maps:
+
 - [src/](desktop/sidecar/src/codemap.md) — `server.ts` entry, `env.ts`, `errors.ts`, `sse.ts`
 - [routes/](desktop/sidecar/src/routes/codemap.md) — `paths`, `config`, `profile`, `jobs`, `runs`, `pipeline` (`pipeline.ts` owns SSE streams and run abort)
 

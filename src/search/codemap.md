@@ -7,10 +7,10 @@ Search query construction and result preparation for LinkedIn job discovery. Own
 ## Design
 
 - **Query matrix pattern**: Cartesian product of deduped `searchQueries × locations`, joined with shared `datePosted` and `workplaceTypes` filters. Each cell becomes a `SearchMatrixEntry` carrying `query`, `locationName`, `geoId`, `generatedUrl`, `startTimestamp`.
-- **URL builder/parser pair**: `buildLinkedInSearchURL` composes `URLSearchParams` (`f_TPR`, `f_WT`, `geoId`, `keywords`, `sortBy=DD`) against the `LINKEDIN_JOBS_SEARCH_BASE` constant; `parseLinkedInJobsSearchURL` is the strict inverse, validating scheme/host/path and extracting `geoId`.
+- **URL builder**: `buildLinkedInSearchURL` composes `URLSearchParams` (`f_TPR`, `f_WT`, `geoId`, `keywords`, `sortBy=DD`) against the `LINKEDIN_JOBS_SEARCH_BASE` constant. Locations are picked by name via the sidecar's geo typeahead (returns `displayName` + `id`) — there is no inverse parser on the URL.
 - **Normalization as a value transform**: `dedupeQueries` collapses whitespace and case; `dedupeLocationsByGeoId` keys on `geoId` and re-canonicalizes names. Both are pure and idempotent, suitable for re-running on persisted config.
 - **Prompt seam**: `SearchPrompts` interface injects interactive I/O (queries, date, workplace types, location URLs, confirmation) so `ConfigureSearchService` is testable; `createFailingPrompts` is the test default. No default prompt adapter ships from this package — the desktop sidecar owns wiring.
-- **Error taxonomy**: `SearchConfigError` (invalid usage), `LinkedInURLParseError` (subclass carrying `url`+`reason` metadata), `SearchCancelledError` (user cancellation exit code).
+- **Error taxonomy**: `SearchConfigError` (invalid usage) and `SearchCancelledError` (user cancellation exit code).
 
 ## Flow
 

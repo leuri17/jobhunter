@@ -50,7 +50,9 @@ test('approving a draft profile invalidates the profiles query and refreshes rel
   await approveResponse;
 
   // Wait for the invalidation-driven refetch on /api/profile (list).
-  await expect.poll(() => profileGets.length, { timeout: 5_000 }).toBeGreaterThan(profileGetsBefore);
+  await expect
+    .poll(() => profileGets.length, { timeout: 5_000 })
+    .toBeGreaterThan(profileGetsBefore);
 
   // Cross-route invalidation cluster (issue #66): jobs + runs
   // queries are also invalidated. Mount each route and confirm a
@@ -99,5 +101,7 @@ test('rejecting a draft profile invalidates the profiles query', async ({ page }
   await rejectButton.click();
   await rejectResponse;
 
-  await expect.poll(() => profileGets.length, { timeout: 5_000 }).toBeGreaterThan(profileGetsBefore);
+  await expect
+    .poll(() => profileGets.length, { timeout: 5_000 })
+    .toBeGreaterThan(profileGetsBefore);
 });

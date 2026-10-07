@@ -14,6 +14,7 @@ export default defineConfig([
     'docs/**',
     'drizzle/**',
     'desktop/tauri/target/**',
+    '**/routeTree.gen.ts',
   ]),
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],

@@ -1,4 +1,4 @@
-export { SearchConfigError, LinkedInURLParseError, SearchCancelledError } from './errors.js';
+export { SearchConfigError, SearchCancelledError } from './errors.js';
 
 export {
   DATE_POSTED_CHOICES,
@@ -25,8 +25,6 @@ export {
   normalizeLocations,
   type RawLocationInput,
 } from './locations.js';
-
-export { parseLinkedInJobsSearchURL, type ParsedLinkedInSearchURL } from './url-parser.js';
 
 export {
   buildLinkedInSearchParamMap,

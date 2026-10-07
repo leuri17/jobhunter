@@ -15,16 +15,6 @@ export class SearchConfigError extends ApplicationError {
   }
 }
 
-export class LinkedInURLParseError extends SearchConfigError {
-  constructor(url: string, reason: string, metadata: ApplicationErrorMetadata = {}) {
-    super('invalid_linkedin_url', `Cannot use LinkedIn URL "${url}": ${reason}.`, {
-      url,
-      reason,
-      ...metadata,
-    });
-  }
-}
-
 export class SearchCancelledError extends ApplicationError {
   constructor(
     code: string,

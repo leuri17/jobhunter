@@ -73,8 +73,7 @@ export function RetryPanel({ error, onRetry }: RetryPanelProps) {
     >
       <h2 className="text-base font-semibold mb-2">Something went wrong</h2>
       <p className="mb-3 text-muted-foreground">
-        The current view failed to render. The rest of the app is still reachable from the
-        sidebar.
+        The current view failed to render. The rest of the app is still reachable from the sidebar.
       </p>
       <pre className="mb-3 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-background/60 p-2 text-xs">
         {error.message}
