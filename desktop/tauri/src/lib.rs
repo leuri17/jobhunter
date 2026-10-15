@@ -3,7 +3,7 @@ pub mod sidecar;
 
 use std::sync::Mutex;
 
-use sidecar::{spawn_sidecar, stop_sidecar};
+use sidecar::{discover_external_sidecar_port, spawn_sidecar, stop_sidecar};
 use tauri::Manager;
 use tauri_plugin_notification::NotificationExt;
 
@@ -56,6 +56,14 @@ fn notify_pipeline_complete(
 }
 
 pub fn run() {
+    if std::env::var_os("JOBHUNTER_SIDECAR_EXTERNAL").is_some() {
+        run_external_sidecar_mode();
+    } else {
+        run_supervised_sidecar_mode();
+    }
+}
+
+fn run_supervised_sidecar_mode() {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let runtime_path = "npx";
     let entry_path = format!("{}/../sidecar/src/server.ts", manifest_dir);
@@ -100,6 +108,45 @@ pub fn run() {
                 }
             }
         }
+    });
+}
+
+/// HMR split mode: the sidecar is running externally (e.g. `tsx watch src/server.ts`
+/// in a separate terminal). Tauri reads its bound port from
+/// `desktop/sidecar/.sidecar-port` instead of spawning and supervising one
+/// itself. The external sidecar's lifecycle is the dev's responsibility —
+/// no `Mutex<Option<Child>>` is created and the `RunEvent::ExitRequested`
+/// handler is a no-op for sidecar supervision. See
+/// `docs/superpowers/specs/2026-10-15-hmr-split-dev-design.md` §3.2.
+fn run_external_sidecar_mode() {
+    let sidecar_port_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join("sidecar/.sidecar-port");
+
+    let port = match discover_external_sidecar_port(&sidecar_port_path) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(1);
+        }
+    };
+
+    std::env::set_var("JOBHUNTER_SIDECAR_PORT", port.to_string());
+
+    let app = tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            bring_main_window_forward(app);
+        }))
+        .plugin(tauri_plugin_notification::init())
+        .manage(SidecarPort(port))
+        .invoke_handler(tauri::generate_handler![sidecar_port, notify_pipeline_complete])
+        .setup(|_app| Ok(()))
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|_app_handle, _event| {
+        // No-op: the external sidecar is supervised by the dev's terminal.
     });
 }
 
