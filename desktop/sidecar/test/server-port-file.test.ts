@@ -62,7 +62,7 @@ describe('sidecar port-file deletion on shutdown', () => {
   });
 
   afterEach(async () => {
-    await handle.shutdown().catch(() => undefined);
+    if (handle !== undefined) await handle.shutdown().catch(() => undefined);
     delete process.env['__JOBHUNTER_SIDECAR_PORT_DIR_OVERRIDE'];
     rmSync(tmpDir, { recursive: true, force: true });
   });

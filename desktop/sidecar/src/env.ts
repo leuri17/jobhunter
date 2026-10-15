@@ -24,12 +24,12 @@ export function readEnv(env: NodeJS.ProcessEnv = process.env): SidecarEnv {
  *
  * The sidecar writes its bound port here after `listen()` resolves
  * and removes it on graceful shutdown. Tauri's `run_external_sidecar_mode`
- * reads it once; see `docs/superpowers/specs/2026-10-15-hmr-split-dev-design.md`.
+ * reads it on every IPC invocation so `tsx watch` reloads (which rebind to
+ * a new port) take effect without restarting the Tauri shell; see
+ * `docs/superpowers/specs/2026-10-15-hmr-split-dev-design.md`.
  */
 export function resolveSidecarPortFilePath(): string {
   const override = process.env['__JOBHUNTER_SIDECAR_PORT_DIR_OVERRIDE'];
   if (override !== undefined && override !== '') return resolve(override, '.sidecar-port');
   return resolve(import.meta.dirname, '..', '.sidecar-port');
 }
-
-export const SIDECAR_PORT_FILE_PATH: string = resolveSidecarPortFilePath();
