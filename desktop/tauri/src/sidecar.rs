@@ -208,9 +208,24 @@ mod discover_external_sidecar_port_tests {
     fn garbage_contents_are_treated_as_transient() {
         let path = temp_port_path("garbage");
         fs::write(&path, "not-a-port\n").unwrap();
+
+        // Spawn a thread that overwrites the file with a valid port mid-poll.
+        // If the discover function were to fail-fast on parse error (rather
+        // than retry), this test would surface `Ok(0)` or `Err` rather than
+        // `Ok(14231)`, since the valid overwrite would be missed.
+        let path_clone = path.clone();
+        thread::spawn(move || {
+            thread::sleep(Duration::from_millis(150));
+            fs::write(&path_clone, "14231\n").unwrap();
+        });
+
         let result =
-            discover_external_sidecar_port_with_deadline(&path, Duration::from_millis(500));
+            discover_external_sidecar_port_with_deadline(&path, Duration::from_secs(1));
         let _ = fs::remove_file(&path);
-        assert!(result.is_err(), "should time out, not panic on parse");
+        assert_eq!(
+            result.unwrap(),
+            14231,
+            "transient parse error should retry past the deadline into the valid overwrite",
+        );
     }
 }
