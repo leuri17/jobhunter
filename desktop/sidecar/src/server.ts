@@ -8,7 +8,8 @@ import {
   type Logger as PinoLogger,
   type StreamEntry,
 } from 'pino';
-import { readEnv, type SidecarEnv } from './env.js';
+import { writeFileSync } from 'node:fs';
+import { readEnv, resolveSidecarPortFilePath, type SidecarEnv } from './env.js';
 import { statusFor, envelopeFor } from './errors.js';
 import { registerPathsRoute } from './routes/paths.js';
 import { registerConfigRoutes } from './routes/config.js';
@@ -159,6 +160,57 @@ async function resolveRootLogger(
   return createSidecarRootLoggerFromConfig(processEnv, loaded);
 }
 
+/**
+ * Run the sidecar's listen-and-discoverability sequence without spawning a
+ * subprocess. After `listen` resolves this:
+ *   1. writes the bound port to `SIDECAR_PORT_FILE_PATH` (overwriting any stale file),
+ *   2. emits `READY <port>` to stdout so supervisors (Tauri's `spawn_sidecar`,
+ *      `tsx watch`, etc.) can parse it.
+ *
+ * Returns the running server and the bound port; on graceful shutdown
+ * (via `shutdown(server)`) the port file is unlinked. Used by `main()`
+ * and by `test/server-port-file.test.ts` so the test exercises the same
+ * surface as the production entry point.
+ */
+export async function startSidecarWithPortFile(
+  opts: BuildServerOptions,
+): Promise<{ server: FastifyInstance; port: number; shutdown: () => Promise<void> }> {
+  const server = await buildServer(opts);
+  await server.listen({ port: opts.env.port, host: opts.env.host });
+  const address = server.server.address();
+  const port = typeof address === 'object' && address !== null ? address.port : 0;
+
+  const portFile = resolveSidecarPortFilePath();
+  writeFileSync(portFile, `${port}\n`);
+  process.stdout.write(`READY ${port}\n`);
+
+  let shuttingDown = false;
+  const shutdown = async (): Promise<void> => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    try {
+      const closePromise = server.close();
+      const timeout = new Promise<'timeout'>((resolve) =>
+        setTimeout(() => resolve('timeout'), 5000),
+      );
+      const result = await Promise.race([closePromise, timeout]);
+      try {
+        const { unlinkSync } = await import('node:fs');
+        unlinkSync(portFile);
+      } catch {
+        // ignored — see test plan: tolerance on force-exit.
+      }
+      if (result === 'timeout') {
+        process.exit(1);
+      }
+    } catch {
+      process.exit(1);
+    }
+  };
+
+  return { server, port, shutdown };
+}
+
 export async function buildServer(opts: BuildServerOptions): Promise<FastifyInstance> {
   // Load `config.json` once at boot and reuse for both logger and
   // refusal-detection derivation — keeps the I/O on a single pass
@@ -215,11 +267,11 @@ async function main(): Promise<void> {
   const { resolvePlatformPaths, createDefaultPlatformAdapter } =
     await import('@jobhunter/core/platform');
   const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
-  const server = await buildServer({ env, paths, processEnv: process.env });
-  await server.listen({ port: env.port, host: env.host });
-  const address = server.server.address();
-  const port = typeof address === 'object' && address !== null ? address.port : 0;
-  process.stdout.write(`READY ${port}\n`);
+  const { shutdown: closeServer } = await startSidecarWithPortFile({
+    env,
+    paths,
+    processEnv: process.env,
+  });
 
   let shuttingDown = false;
   const shutdown = async (signal: string): Promise<void> => {
@@ -234,7 +286,7 @@ async function main(): Promise<void> {
       }
 
       // 5-second deadline for graceful close (race).
-      const closePromise = server.close();
+      const closePromise = closeServer();
       const timeout = new Promise<'timeout'>((resolve) =>
         setTimeout(() => resolve('timeout'), 5000),
       );
