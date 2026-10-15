@@ -8,7 +8,7 @@ import {
   type Logger as PinoLogger,
   type StreamEntry,
 } from 'pino';
-import { writeFileSync } from 'node:fs';
+import { unlinkSync, writeFileSync } from 'node:fs';
 import { readEnv, resolveSidecarPortFilePath, type SidecarEnv } from './env.js';
 import { statusFor, envelopeFor } from './errors.js';
 import { registerPathsRoute } from './routes/paths.js';
@@ -163,14 +163,18 @@ async function resolveRootLogger(
 /**
  * Run the sidecar's listen-and-discoverability sequence without spawning a
  * subprocess. After `listen` resolves this:
- *   1. writes the bound port to `SIDECAR_PORT_FILE_PATH` (overwriting any stale file),
+ *   1. writes the bound port to the discoverability file (overwriting any stale file),
  *   2. emits `READY <port>` to stdout so supervisors (Tauri's `spawn_sidecar`,
  *      `tsx watch`, etc.) can parse it.
  *
- * Returns the running server and the bound port; on graceful shutdown
- * (via `shutdown(server)`) the port file is unlinked. Used by `main()`
- * and by `test/server-port-file.test.ts` so the test exercises the same
- * surface as the production entry point.
+ * Returns the running server and the bound port. The returned `shutdown`
+ * closes the HTTP server and removes the port file — it does NOT enforce
+ * a deadline or call `process.exit`. The caller (`main()`'s `shutdown`,
+ * which owns the SIGTERM/SIGINT-timeout race and process-exit semantics)
+ * races its own timer against `shutdown()` and handles the timeout.
+ *
+ * Used by `main()` and by `test/server-port-file.test.ts` so the test
+ * exercises the same entry-point surface.
  */
 export async function startSidecarWithPortFile(
   opts: BuildServerOptions,
@@ -181,7 +185,14 @@ export async function startSidecarWithPortFile(
   const port = typeof address === 'object' && address !== null ? address.port : 0;
 
   const portFile = resolveSidecarPortFilePath();
-  writeFileSync(portFile, `${port}\n`);
+  try {
+    writeFileSync(portFile, `${port}\n`);
+  } catch (err) {
+    // A read-only home dir or a permissions-locked `desktop/sidecar/`
+    // shouldn't kill a boot in supervised mode (where nothing reads the file)
+    // or break the HMR split mode. Log and continue — `READY` still goes out.
+    process.stderr.write(`sidecar: write ${portFile}: ${String(err)}\n`);
+  }
   process.stdout.write(`READY ${port}\n`);
 
   let shuttingDown = false;
@@ -189,22 +200,16 @@ export async function startSidecarWithPortFile(
     if (shuttingDown) return;
     shuttingDown = true;
     try {
-      const closePromise = server.close();
-      const timeout = new Promise<'timeout'>((resolve) =>
-        setTimeout(() => resolve('timeout'), 5000),
-      );
-      const result = await Promise.race([closePromise, timeout]);
-      try {
-        const { unlinkSync } = await import('node:fs');
-        unlinkSync(portFile);
-      } catch {
-        // ignored — see test plan: tolerance on force-exit.
-      }
-      if (result === 'timeout') {
-        process.exit(1);
-      }
-    } catch {
-      process.exit(1);
+      await server.close();
+    } catch (err) {
+      process.stderr.write(`sidecar: server.close: ${String(err)}\n`);
+    }
+    try {
+      unlinkSync(portFile);
+    } catch (err) {
+      // Tolerated: a previous force-exit may already have removed the file;
+      // the dev guide points here when the next boot fails to discover the port.
+      process.stderr.write(`sidecar: unlink ${portFile}: ${String(err)}\n`);
     }
   };
 
