@@ -42,6 +42,15 @@ The scraper is built around a `BrowserSession` interface so the
 production Playwright implementation and the test `FakeBrowserSession`
 share the same contract.
 
+**Dev modes.** Two desktop dev workflows: `cargo tauri dev` (Tauri spawns
+and supervises the sidecar, no HMR on sidecar) and the HMR split
+(`pnpm --filter @jobhunter/sidecar dev` + `JOBHUNTER_SIDECAR_EXTERNAL=1
+cargo tauri dev`). The split writes the sidecar's bound port to
+`desktop/sidecar/.sidecar-port`; Tauri reads it once instead of spawning
+its own sidecar. See `docs/development/desktop-dev.md` for recipes and
+troubleshooting. There is no plain-browser dev loop — the desktop app
+exists to test the Tauri webview + native surface.
+
 ## Pipeline stages
 
 When you kick off a run from the UI (or, in early development, via a
