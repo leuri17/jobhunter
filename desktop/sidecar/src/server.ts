@@ -8,7 +8,8 @@ import {
   type Logger as PinoLogger,
   type StreamEntry,
 } from 'pino';
-import { readEnv, type SidecarEnv } from './env.js';
+import { unlinkSync, writeFileSync } from 'node:fs';
+import { readEnv, resolveSidecarPortFilePath, type SidecarEnv } from './env.js';
 import { statusFor, envelopeFor } from './errors.js';
 import { registerPathsRoute } from './routes/paths.js';
 import { registerConfigRoutes } from './routes/config.js';
@@ -159,6 +160,62 @@ async function resolveRootLogger(
   return createSidecarRootLoggerFromConfig(processEnv, loaded);
 }
 
+/**
+ * Run the sidecar's listen-and-discoverability sequence without spawning a
+ * subprocess. After `listen` resolves this:
+ *   1. writes the bound port to the discoverability file (overwriting any stale file),
+ *   2. emits `READY <port>` to stdout so supervisors (Tauri's `spawn_sidecar`,
+ *      `tsx watch`, etc.) can parse it.
+ *
+ * Returns the running server and the bound port. The returned `shutdown`
+ * closes the HTTP server and removes the port file — it does NOT enforce
+ * a deadline or call `process.exit`. The caller (`main()`'s `shutdown`,
+ * which owns the SIGTERM/SIGINT-timeout race and process-exit semantics)
+ * races its own timer against `shutdown()` and handles the timeout.
+ *
+ * Used by `main()` and by `test/server-port-file.test.ts` so the test
+ * exercises the same entry-point surface.
+ */
+export async function startSidecarWithPortFile(
+  opts: BuildServerOptions,
+): Promise<{ server: FastifyInstance; port: number; shutdown: () => Promise<void> }> {
+  const server = await buildServer(opts);
+  await server.listen({ port: opts.env.port, host: opts.env.host });
+  const address = server.server.address();
+  const port = typeof address === 'object' && address !== null ? address.port : 0;
+
+  const portFile = resolveSidecarPortFilePath();
+  try {
+    writeFileSync(portFile, `${port}\n`);
+  } catch (err) {
+    // A read-only home dir or a permissions-locked `desktop/sidecar/`
+    // shouldn't kill a boot in supervised mode (where nothing reads the file)
+    // or break the HMR split mode. Log and continue — `READY` still goes out.
+    process.stderr.write(`sidecar: write ${portFile}: ${String(err)}\n`);
+  }
+  process.stdout.write(`READY ${port}\n`);
+
+  let shuttingDown = false;
+  const shutdown = async (): Promise<void> => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    try {
+      await server.close();
+    } catch (err) {
+      process.stderr.write(`sidecar: server.close: ${String(err)}\n`);
+    }
+    try {
+      unlinkSync(portFile);
+    } catch (err) {
+      // Tolerated: a previous force-exit may already have removed the file;
+      // the dev guide points here when the next boot fails to discover the port.
+      process.stderr.write(`sidecar: unlink ${portFile}: ${String(err)}\n`);
+    }
+  };
+
+  return { server, port, shutdown };
+}
+
 export async function buildServer(opts: BuildServerOptions): Promise<FastifyInstance> {
   // Load `config.json` once at boot and reuse for both logger and
   // refusal-detection derivation — keeps the I/O on a single pass
@@ -215,11 +272,11 @@ async function main(): Promise<void> {
   const { resolvePlatformPaths, createDefaultPlatformAdapter } =
     await import('@jobhunter/core/platform');
   const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
-  const server = await buildServer({ env, paths, processEnv: process.env });
-  await server.listen({ port: env.port, host: env.host });
-  const address = server.server.address();
-  const port = typeof address === 'object' && address !== null ? address.port : 0;
-  process.stdout.write(`READY ${port}\n`);
+  const { shutdown: closeServer } = await startSidecarWithPortFile({
+    env,
+    paths,
+    processEnv: process.env,
+  });
 
   let shuttingDown = false;
   const shutdown = async (signal: string): Promise<void> => {
@@ -234,7 +291,7 @@ async function main(): Promise<void> {
       }
 
       // 5-second deadline for graceful close (race).
-      const closePromise = server.close();
+      const closePromise = closeServer();
       const timeout = new Promise<'timeout'>((resolve) =>
         setTimeout(() => resolve('timeout'), 5000),
       );

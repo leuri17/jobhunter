@@ -1,9 +1,13 @@
 pub mod notification;
 pub mod sidecar;
 
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::time::Duration;
 
-use sidecar::{spawn_sidecar, stop_sidecar};
+use sidecar::{
+    discover_external_sidecar_port_with_deadline, spawn_sidecar, stop_sidecar,
+};
 use tauri::Manager;
 use tauri_plugin_notification::NotificationExt;
 
@@ -18,15 +22,56 @@ pub fn bring_main_window_forward<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     }
 }
 
-/// Port the sidecar bound to; populated by `run()` and queried via Tauri IPC.
-#[derive(Default, Clone, Copy)]
-pub struct SidecarPort(pub u16);
+/// How the sidecar's bound port is provided to the webview.
+///
+/// In supervised mode (the default `cargo tauri dev` path), Tauri spawned the
+/// sidecar itself and parsed its `READY <port>` handshake; the port is fixed
+/// for the lifetime of the Tauri process and lives in `Fixed`.
+///
+/// In external mode (`JOBHUNTER_SIDECAR_EXTERNAL=1`, the HMR split dev loop),
+/// the sidecar runs as a sibling `tsx watch` process and rewrites
+/// `desktop/sidecar/.sidecar-port` on every reload — each reload gets a fresh
+/// OS-assigned port. The `sidecar_port` IPC command therefore re-reads the
+/// file on every invocation under `External`; a transient missing file (the
+/// race between the sidecar's `unlink` and its subsequent `writeFileSync`
+/// during a reload) returns 0, which `resolveSidecar()` in the webview
+/// turns into the empty-fallback path until the next read succeeds.
+pub enum SidecarPort {
+    Fixed(u16),
+    External(PathBuf),
+}
+
+impl Default for SidecarPort {
+    fn default() -> Self {
+        SidecarPort::Fixed(0)
+    }
+}
 
 /// Tauri command: returns the discovered sidecar port.
-/// Phase D will call `await invoke<number>('sidecar_port')`.
+/// In external mode this re-reads `.sidecar-port` on each invocation so that
+/// `tsx watch` reloads (which rebind the sidecar to a new port) take effect
+/// without restarting the Tauri shell.
 #[tauri::command]
 fn sidecar_port(state: tauri::State<SidecarPort>) -> u16 {
-    state.0
+    match state.inner() {
+        SidecarPort::Fixed(p) => *p,
+        SidecarPort::External(path) => read_sidecar_port(path),
+    }
+}
+
+/// Read the port file once with a short deadline. Returns 0 on
+/// missing/garbage content (callers handle 0 via the fallback path).
+fn read_sidecar_port(path: &Path) -> u16 {
+    match sidecar::discover_external_sidecar_port_with_deadline(
+        path,
+        Duration::from_millis(500),
+    ) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("sidecar_port IPC: {e}");
+            0
+        }
+    }
 }
 
 /// Show an OS-level notification when the discovery pipeline finishes.
@@ -56,6 +101,14 @@ fn notify_pipeline_complete(
 }
 
 pub fn run() {
+    if std::env::var_os("JOBHUNTER_SIDECAR_EXTERNAL").is_some() {
+        run_external_sidecar_mode();
+    } else {
+        run_supervised_sidecar_mode();
+    }
+}
+
+fn run_supervised_sidecar_mode() {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let runtime_path = "npx";
     let entry_path = format!("{}/../sidecar/src/server.ts", manifest_dir);
@@ -86,7 +139,7 @@ pub fn run() {
             bring_main_window_forward(app);
         }))
         .plugin(tauri_plugin_notification::init())
-        .manage(SidecarPort(port))
+        .manage(SidecarPort::Fixed(port))
         .invoke_handler(tauri::generate_handler![sidecar_port, notify_pipeline_complete])
         .setup(|_app| Ok(()))
         .build(tauri::generate_context!())
@@ -101,6 +154,132 @@ pub fn run() {
             }
         }
     });
+}
+
+/// HMR split mode: the sidecar is running externally (e.g. `tsx watch src/server.ts`
+/// in a separate terminal). Tauri reads its bound port from
+/// `desktop/sidecar/.sidecar-port` instead of spawning and supervising one
+/// itself, and re-reads the file on every `sidecar_port` IPC invocation so
+/// that the dev's `tsx watch` reloads (which rebind to a fresh OS-assigned
+/// port) take effect without restarting the Tauri shell. The external
+/// sidecar's lifecycle is the dev's responsibility — no `Mutex<Option<Child>>`
+/// is created and the `RunEvent::ExitRequested` handler is a no-op for
+/// sidecar supervision. See
+/// `docs/superpowers/specs/2026-10-15-hmr-split-dev-design.md` §3.2.
+fn run_external_sidecar_mode() {
+    let sidecar_port_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join("sidecar/.sidecar-port");
+
+    // Best-effort boot read: surfaces a clear "sidecar isn't running"
+    // message before the window appears, so a misconfigured dev loop fails
+    // loudly rather than waiting for the first IPC call. The IPC handler
+    // still re-reads the file per call, so this is purely for early exit.
+    match discover_external_sidecar_port_with_deadline(
+        &sidecar_port_path,
+        Duration::from_secs(5),
+    ) {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(1);
+        }
+    }
+
+    let app = tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            bring_main_window_forward(app);
+        }))
+        .plugin(tauri_plugin_notification::init())
+        .manage(SidecarPort::External(sidecar_port_path))
+        .invoke_handler(tauri::generate_handler![sidecar_port, notify_pipeline_complete])
+        .setup(|_app| Ok(()))
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|_app_handle, _event| {
+        // No-op: the external sidecar is supervised by the dev's terminal.
+    });
+}
+
+#[cfg(test)]
+mod sidecar_port_state_tests {
+    use super::*;
+    use std::fs;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    fn temp_port_path() -> PathBuf {
+        let n = COUNTER.fetch_add(1, Ordering::SeqCst);
+        let dir = std::env::temp_dir().join(format!(
+            "jobhunter-tauri-sidecar-port-state-{}-{n}",
+            std::process::id(),
+        ));
+        let _ = fs::create_dir_all(&dir);
+        dir.join(".sidecar-port")
+    }
+
+    #[test]
+    fn fixed_path_returns_cached_value_and_ignores_file_changes() {
+        let path = temp_port_path();
+        fs::write(&path, "99999\n").unwrap();
+
+        let state = SidecarPort::Fixed(8081);
+        match state {
+            SidecarPort::Fixed(p) => assert_eq!(p, 8081),
+            _ => panic!("expected Fixed variant"),
+        }
+        assert_eq!(state.cache_value_for_test(), 8081);
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn external_path_re_reads_on_each_invocation_after_reload() {
+        let path = temp_port_path();
+        fs::write(&path, "14231\n").unwrap();
+        assert_eq!(read_sidecar_port(&path), 14231);
+
+        // Simulate a `tsx watch` reload — the sidecar unlinks the file and
+        // a fresh boot rebinds to a new OS-assigned port, writing the new
+        // value. Tauri's IPC handler must pick this up without a Tauri restart.
+        let raw = fs::read_to_string(&path).unwrap();
+        let _ = fs::remove_file(&path);
+        fs::write(&path, raw.replace("14231", "14232"));
+
+        assert_eq!(read_sidecar_port(&path), 14232);
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn external_path_returns_zero_when_file_is_missing() {
+        let dir = std::env::temp_dir().join(format!(
+            "jobhunter-tauri-sidecar-port-missing-{}-{}",
+            std::process::id(),
+            COUNTER.fetch_add(1, Ordering::SeqCst),
+        ));
+        let _ = fs::create_dir_all(&dir);
+        let path = dir.join("not-here");
+
+        // 0 is the documented sentinel that `resolveSidecar()` turns into
+        // the empty-fallback path; the test pins that contract so a future
+        // refactor can't change the semantics without a test failure.
+        assert_eq!(read_sidecar_port(&path), 0);
+    }
+
+    /// Test-only accessor: returns the cached port for `Fixed`, or 0 for
+    /// `External`. Lets the pinned `fixed_path_*` test assert the cache
+    /// without going through Tauri's `State` plumbing.
+    impl SidecarPort {
+        pub fn cache_value_for_test(&self) -> u16 {
+            match self {
+                SidecarPort::Fixed(p) => *p,
+                SidecarPort::External(_) => 0,
+            }
+        }
+    }
 }
 
 #[cfg(feature = "test-utils")]

@@ -8,7 +8,7 @@ The codebase reads eight environment variables. Six are real (build-time or runt
 | `OPENAI_MODEL` | sidecar boot | `gpt-5` | no | The model used for both profile extraction and job scoring. |
 | `LOG_LEVEL` | sidecar boot | `info` | no | `trace` \| `debug` \| `info` \| `warn` \| `error` \| `fatal` \| `silent`. Overridden by `config.logging.level` when the operational config file sets it. |
 | `JOBHUNTER_SIDECAR_PORT` | sidecar boot | `0` (OS-assigned) | no | The port the sidecar binds to. Only set explicitly for non-Tauri / non-supervised runs. |
-| `VITE_SIDECAR_PORT` | webview build | empty (Vite dev proxy) | no | Override the URL the webview uses to reach the sidecar in dev. Read via `import.meta.env` — changing it requires a frontend rebuild. |
+| `JOBHUNTER_SIDECAR_EXTERNAL` | Tauri `run()` | unset | no | Set to `1` to make Tauri skip sidecar spawning and read the bound port from `desktop/sidecar/.sidecar-port` instead. Used for the HMR split dev loop. See `docs/development/desktop-dev.md`. |
 | `LINKEDIN_LIVE` | `pnpm test:live` | unset | no | Set to `1` to enable real-Chromium LinkedIn live tests. |
 | `PLAYWRIGHT_SMOKE` | `pnpm test:e2e` | unset | no | Set to `1` to enable the two `*.smoke.test.ts` files in `tests/live/linkedin/`. |
 | `CI` | Playwright webServer | unset | no | Auto-set by GitHub Actions. Controls whether Playwright reuses an existing dev server. |
@@ -17,20 +17,28 @@ The codebase reads eight environment variables. Six are real (build-time or runt
 
 ### Development (`.env` at the repo root)
 
-The sidecar and the Vitest suite read `process.env` directly. The webview reads `import.meta.env` at build time, but for dev Vite exposes those variables to the browser at runtime too.
+The Tauri shell calls `dotenvy::dotenv()` at boot, so values in a
+repo-root `.env` are visible to both the Rust parent (`JOBHUNTER_SIDECAR_EXTERNAL`
+and similar) and the sidecar child (`OPENAI_API_KEY`, `LOG_LEVEL`,
+`OPENAI_MODEL`, etc.) without an inline `KEY=value` prefix on
+`cargo tauri dev`. The sidecar inherits its parent process environment
+via Tauri's `Command::spawn` chain. The Vitest suite reads `process.env`
+directly; the webview reads `import.meta.env` at build time but Vite
+exposes those variables to the browser at runtime in dev.
 
 ```
 cp .env.example .env
 $EDITOR .env   # fill in OPENAI_API_KEY at minimum
 ```
 
-`.env` is gitignored; never commit it.
+`.env` is gitignored; never commit it. A missing `.env` is non-fatal:
+production builds run without one.
 
 ### Production
 
 The Tauri shell supervises the sidecar child process. The sidecar reads `process.env` at boot. Either set the variables in the OS environment before launching the desktop app, or wire them through your packaging layer (e.g. the macOS app bundle's `Info.plist` or a systemd unit file on Linux).
 
-`VITE_SIDECAR_PORT` does **not** apply to production Tauri builds. The webview reaches the sidecar via Tauri's `invoke('sidecar_port')` IPC; the `VITE_*` variable is only consulted when running the Vite dev server outside the Tauri shell.
+`JOBHUNTER_SIDECAR_EXTERNAL=1` is a **dev-only** opt-in. The webview reaches the sidecar via Tauri's `invoke('sidecar_port')` IPC; the external flag flips `run()` into discovery-via-file mode instead of supervisor mode. Production builds (`cargo build --release` / the packaged app) ignore the variable.
 
 ### CI
 
@@ -51,3 +59,9 @@ The split is the most common confusion when a new contributor first runs the pro
 2. Reference it from the sidecar via `process.env['NAME']` or from the webview via `import.meta.env['NAME']`.
 3. If the var is build-time, document that a frontend rebuild is required to pick up the change.
 4. The CI grep guard in `tests/env-vars.test.ts` (issue #48 acceptance criteria) fails the build if a `process.env[...]` or `import.meta.env[...]` reference is added without a matching `.env.example` entry.
+
+## Removed variables
+
+| Variable | Removed in | Reason |
+| --- | --- | --- |
+| `VITE_SIDECAR_PORT` | `feat/hmr-split-dev` ([#188](https://github.com/leuri17/jobhunter/issues/188)) | Webview no longer reads `VITE_SIDECAR_PORT`; the only dev loop is `cargo tauri dev` (optionally with `JOBHUNTER_SIDECAR_EXTERNAL=1`). The corresponding Vite `/api` proxy in `desktop/ui/vite.config.ts` was also removed. |

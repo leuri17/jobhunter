@@ -12,12 +12,9 @@ const mockedInvoke = vi.mocked(invoke);
 describe('resolveSidecar', () => {
   beforeEach(() => {
     mockedInvoke.mockReset();
-    // Ensure the build-time env var does not leak across tests.
-    vi.stubEnv('VITE_SIDECAR_PORT', '');
   });
 
   afterEach(() => {
-    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
 
@@ -30,19 +27,8 @@ describe('resolveSidecar', () => {
     });
   });
 
-  it('falls back to VITE_SIDECAR_PORT when invoke rejects', async () => {
+  it('returns the empty fallback when invoke rejects (component-test / unhinged runtime)', async () => {
     mockedInvoke.mockRejectedValueOnce(new Error('not running under Tauri'));
-    vi.stubEnv('VITE_SIDECAR_PORT', '4000');
-    const result = await resolveSidecar();
-    expect(result).toEqual<SidecarResolution>({
-      url: 'http://127.0.0.1:4000',
-      isFallback: false,
-    });
-  });
-
-  it('marks isFallback when invoke rejects and env is unset (empty URL — Vite proxy catches /api/*)', async () => {
-    mockedInvoke.mockRejectedValueOnce(new Error('not running under Tauri'));
-    vi.stubEnv('VITE_SIDECAR_PORT', '');
     const result = await resolveSidecar();
     expect(result).toEqual<SidecarResolution>({
       url: '',
@@ -50,12 +36,23 @@ describe('resolveSidecar', () => {
     });
   });
 
-  it('treats invoke returning null as a fallback signal (empty URL — Vite proxy catches /api/*)', async () => {
+  it('treats invoke returning null as a fallback signal', async () => {
     mockedInvoke.mockResolvedValueOnce(null as unknown as number);
-    vi.stubEnv('VITE_SIDECAR_PORT', '');
     const result = await resolveSidecar();
     expect(result.isFallback).toBe(true);
     expect(result.url).toBe('');
+  });
+
+  it('ignores VITE_SIDECAR_PORT (the browser-only dev loop was removed in feat/hmr-split-dev)', async () => {
+    process.env['VITE_SIDECAR_PORT'] = '4000';
+    try {
+      mockedInvoke.mockRejectedValueOnce(new Error('not running under Tauri'));
+      const result = await resolveSidecar();
+      // The variable is silently ignored; we fall through to the empty fallback.
+      expect(result).toEqual<SidecarResolution>({ url: '', isFallback: true });
+    } finally {
+      delete process.env['VITE_SIDECAR_PORT'];
+    }
   });
 });
 

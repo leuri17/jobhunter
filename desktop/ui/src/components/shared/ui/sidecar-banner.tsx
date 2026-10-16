@@ -34,7 +34,9 @@ export function SidecarBanner({ state }: SidecarBannerProps) {
       <div className="flex-1">
         <strong className="font-semibold">Couldn't reach the sidecar.</strong>
         <span className="ml-2 text-red-200">
-          No server is listening on port {port}. Is the JobHunter desktop app running?
+          No server is listening on port {port}. In dev, ensure the sidecar is running (`pnpm
+          --filter @jobhunter/sidecar dev`) and the Tauri shell has started (`cargo tauri dev`); see
+          `docs/development/desktop-dev.md`.
         </span>
       </div>
       <Button
