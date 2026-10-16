@@ -22,17 +22,32 @@ iteration, native-surface smoke testing, and CI.
 
 ## HMR split (recommended when editing the sidecar)
 
+The `JOBHUNTER_SIDECAR_EXTERNAL=1` flag flips Tauri's `run()` into
+discovery-via-file mode (reads `desktop/sidecar/.sidecar-port` on every
+`sidecar_port` IPC call). Set it via `.env` at the repo root (Tauri
+auto-loads it via `dotenvy::dotenv()` in `desktop/tauri/src/main.rs`),
+or inline as below.
+
 Terminal A:
 
 ```
 pnpm --filter @jobhunter/sidecar dev
 ```
 
-Terminal B:
+Terminal B (inline, useful when you don't want to leave the flag on
+permanently):
 
 ```
 JOBHUNTER_SIDECAR_EXTERNAL=1 cargo tauri dev
 ```
+
+Or just:
+
+```
+cargo tauri dev
+```
+
+— with `JOBHUNTER_SIDECAR_EXTERNAL=1` set in `.env`.
 
 `tsx watch` reloads `desktop/sidecar/src/server.ts` on save (~2s).
 Vite HMR reloads React components inside the Tauri webview (~1s).
