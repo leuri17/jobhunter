@@ -17,22 +17,14 @@ The codebase reads eight environment variables. Six are real (build-time or runt
 
 ### Development (`.env` at the repo root)
 
-The Tauri shell calls `dotenvy::dotenv()` at boot, so values in a
-repo-root `.env` are visible to both the Rust parent (`JOBHUNTER_SIDECAR_EXTERNAL`
-and similar) and the sidecar child (`OPENAI_API_KEY`, `LOG_LEVEL`,
-`OPENAI_MODEL`, etc.) without an inline `KEY=value` prefix on
-`cargo tauri dev`. The sidecar inherits its parent process environment
-via Tauri's `Command::spawn` chain. The Vitest suite reads `process.env`
-directly; the webview reads `import.meta.env` at build time but Vite
-exposes those variables to the browser at runtime in dev.
+The sidecar and the Vitest suite read `process.env` directly. The webview reads `import.meta.env` at build time, but for dev Vite exposes those variables to the browser at runtime too.
 
 ```
 cp .env.example .env
 $EDITOR .env   # fill in OPENAI_API_KEY at minimum
 ```
 
-`.env` is gitignored; never commit it. A missing `.env` is non-fatal:
-production builds run without one.
+`.env` is gitignored; never commit it.
 
 ### Production
 
