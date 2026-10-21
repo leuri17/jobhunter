@@ -30,6 +30,78 @@ describe('PipelineLogger', () => {
     );
   });
 
+  it('noopPipelineLogger runSummary does not throw', () => {
+    const logger = noopPipelineLogger();
+    expect(() =>
+      logger.runSummary({
+        runId: 1,
+        status: 'completed',
+        durationMs: 1234,
+        searchesPlanned: 1,
+        searchesCompleted: 1,
+        jobsDiscovered: 10,
+        newCompleteJobs: 8,
+        jobsAccepted: 5,
+        jobsRejected: 3,
+        jobsScored: 5,
+        scoresReused: 2,
+        failedExtractions: 0,
+        filterErrors: 0,
+        scoringErrors: 0,
+        promptTokens: 100,
+        completionTokens: 50,
+      }),
+    ).not.toThrow();
+  });
+
+  it('pinoPipelineLogger emits run.summary with counts, duration and token totals', () => {
+    const info = vi.fn();
+    const fakeLogger = { info, warn: vi.fn(), error: vi.fn() } as never;
+    const logger = pinoPipelineLogger(fakeLogger);
+
+    logger.runSummary({
+      runId: 42,
+      status: 'completed',
+      durationMs: 54321,
+      searchesPlanned: 3,
+      searchesCompleted: 3,
+      jobsDiscovered: 20,
+      newCompleteJobs: 15,
+      jobsAccepted: 9,
+      jobsRejected: 6,
+      jobsScored: 9,
+      scoresReused: 4,
+      failedExtractions: 1,
+      filterErrors: 0,
+      scoringErrors: 2,
+      promptTokens: 1234,
+      completionTokens: 567,
+    });
+
+    expect(info).toHaveBeenCalledWith(
+      {
+        event: 'run.summary',
+        runId: '42',
+        status: 'completed',
+        durationMs: 54321,
+        searchesPlanned: 3,
+        searchesCompleted: 3,
+        jobsDiscovered: 20,
+        newCompleteJobs: 15,
+        jobsAccepted: 9,
+        jobsRejected: 6,
+        jobsScored: 9,
+        scoresReused: 4,
+        failedExtractions: 1,
+        filterErrors: 0,
+        scoringErrors: 2,
+        promptTokens: 1234,
+        completionTokens: 567,
+      },
+      'run summary',
+    );
+  });
+
   it('noopPipelineLogger job events do not throw', () => {
     const logger = noopPipelineLogger();
     expect(() =>

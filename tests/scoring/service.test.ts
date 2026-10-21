@@ -335,6 +335,48 @@ describe('ScoringService.scoreBatch — auth hard-stop (concurrency: 1)', () => 
     expect(batch.totals.complete).toBe(1);
     expect(batch.totals.failed).toBe(4);
   });
+
+  it('sums token usage across completed jobs into totals', async () => {
+    const jobs = await Promise.all(
+      Array.from({ length: 3 }, async () => {
+        const { scoreOneInput } = await pipeline.insertCompleteJob();
+        return scoreOneInput;
+      }),
+    );
+    pipeline.replaceOpenAIScripts([
+      { responses: [makeValidResponse(VALID_OUTPUT)] },
+      { responses: [makeValidResponse(VALID_OUTPUT)] },
+      { responses: [makeValidResponse(VALID_OUTPUT)] },
+    ]);
+    pipeline.tracker.reset();
+    const batch = await pipeline.service.scoreBatch(pipeline.makeScoreBatchInput(jobs));
+
+    // makeValidResponse reports 100 prompt / 50 completion per call.
+    expect(batch.totals.complete).toBe(3);
+    expect(batch.totals.promptTokens).toBe(300);
+    expect(batch.totals.completionTokens).toBe(150);
+    for (const outcome of batch.perJob) {
+      expect(outcome.tokenUsage).toEqual({ promptTokens: 100, completionTokens: 50 });
+    }
+  });
+
+  it('reports zero token totals when no job was scored', async () => {
+    const jobs = await Promise.all(
+      Array.from({ length: 2 }, async () => {
+        const { scoreOneInput } = await pipeline.insertCompleteJob();
+        return scoreOneInput;
+      }),
+    );
+    pipeline.replaceOpenAIScripts([
+      { error: new OpenAIAuthenticationError() },
+      { error: new OpenAIAuthenticationError() },
+    ]);
+    pipeline.tracker.reset();
+    const batch = await pipeline.service.scoreBatch(pipeline.makeScoreBatchInput(jobs));
+
+    expect(batch.totals.promptTokens).toBe(0);
+    expect(batch.totals.completionTokens).toBe(0);
+  });
 });
 
 describe('ScoringService.scoreBatch — worker-pool concurrency', () => {

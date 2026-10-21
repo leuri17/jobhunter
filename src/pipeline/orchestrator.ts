@@ -85,6 +85,8 @@ interface MutableRunStats {
   jobsScored: number;
   scoresReused: number;
   scoringErrors: number;
+  promptTokens: number;
+  completionTokens: number;
   scoringDeclinedByUser: boolean;
   cancellationReason: string | null;
 }
@@ -260,6 +262,25 @@ export class PipelineOrchestrator {
       runId,
       this.toRunStatsPatch(runId, startTimestamp, stats),
     );
+
+    this.logger.runSummary({
+      runId,
+      status: stats.status,
+      durationMs: Math.max(0, Date.parse(stats.endTimestamp) - Date.parse(startTimestamp)),
+      searchesPlanned: stats.searchesPlanned,
+      searchesCompleted: stats.searchesCompleted,
+      jobsDiscovered: stats.jobsDiscovered,
+      newCompleteJobs: stats.newCompleteJobs,
+      jobsAccepted: stats.jobsAccepted,
+      jobsRejected: stats.jobsRejected,
+      jobsScored: stats.jobsScored,
+      scoresReused: stats.scoresReused,
+      failedExtractions: stats.failedExtractions,
+      filterErrors: stats.filterErrors,
+      scoringErrors: stats.scoringErrors,
+      promptTokens: stats.promptTokens,
+      completionTokens: stats.completionTokens,
+    });
 
     const topN = await this.computeTopN(runId, this.config.rawConfig.output.runTopN);
     return {
@@ -553,6 +574,8 @@ export class PipelineOrchestrator {
     stats.jobsScored += outcome.totals.complete;
     stats.scoresReused += outcome.totals.reused;
     stats.scoringErrors += outcome.totals.failed;
+    stats.promptTokens += outcome.totals.promptTokens;
+    stats.completionTokens += outcome.totals.completionTokens;
   }
 
   private async computeTopN(runId: number, limit: number): Promise<readonly TopNRow[]> {
@@ -624,6 +647,8 @@ export class PipelineOrchestrator {
       jobsScored: 0,
       scoresReused: 0,
       scoringErrors: 0,
+      promptTokens: 0,
+      completionTokens: 0,
       scoringDeclinedByUser: false,
       cancellationReason: null,
     };

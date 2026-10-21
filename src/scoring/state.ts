@@ -50,6 +50,10 @@ export interface ScoringOutcome {
   readonly errorCode: string | null;
   readonly errorMessage: string | null;
   readonly artifactIds: readonly number[];
+  readonly tokenUsage?: {
+    readonly promptTokens: number;
+    readonly completionTokens: number;
+  } | null;
 }
 
 /** Aggregate of every per-job outcome in a single `scoreBatch` call. */
@@ -64,6 +68,8 @@ export interface ScoringBatchOutcome {
     readonly failed: number;
     readonly skipped: number;
     readonly cancelled: number;
+    readonly promptTokens: number;
+    readonly completionTokens: number;
   };
 }
 

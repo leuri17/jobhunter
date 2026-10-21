@@ -10,6 +10,24 @@ export interface PipelineLogger {
   runStart(input: { runId: number }): void;
   runComplete(input: { runId: number; status: string }): void;
   runFail(input: { runId: number; errorCode: string; message: string }): void;
+  runSummary(input: {
+    runId: number;
+    status: string;
+    durationMs: number;
+    searchesPlanned: number;
+    searchesCompleted: number;
+    jobsDiscovered: number;
+    newCompleteJobs: number;
+    jobsAccepted: number;
+    jobsRejected: number;
+    jobsScored: number;
+    scoresReused: number;
+    failedExtractions: number;
+    filterErrors: number;
+    scoringErrors: number;
+    promptTokens: number;
+    completionTokens: number;
+  }): void;
   searchStart(input: { searchId: number; url: string }): void;
   searchComplete(input: { searchId: number; jobsDiscovered: number }): void;
   searchFail(input: { searchId: number; errorCode: string; message: string }): void;
@@ -34,6 +52,7 @@ export function noopPipelineLogger(): PipelineLogger {
     runStart: () => undefined,
     runComplete: () => undefined,
     runFail: () => undefined,
+    runSummary: () => undefined,
     searchStart: () => undefined,
     searchComplete: () => undefined,
     searchFail: () => undefined,
@@ -66,6 +85,29 @@ export function pinoPipelineLogger(logger: Logger): PipelineLogger {
           message: input.message,
         },
         'run failed',
+      ),
+    runSummary: (input) =>
+      logger.info(
+        {
+          event: 'run.summary',
+          runId: String(input.runId),
+          status: input.status,
+          durationMs: input.durationMs,
+          searchesPlanned: input.searchesPlanned,
+          searchesCompleted: input.searchesCompleted,
+          jobsDiscovered: input.jobsDiscovered,
+          newCompleteJobs: input.newCompleteJobs,
+          jobsAccepted: input.jobsAccepted,
+          jobsRejected: input.jobsRejected,
+          jobsScored: input.jobsScored,
+          scoresReused: input.scoresReused,
+          failedExtractions: input.failedExtractions,
+          filterErrors: input.filterErrors,
+          scoringErrors: input.scoringErrors,
+          promptTokens: input.promptTokens,
+          completionTokens: input.completionTokens,
+        },
+        'run summary',
       ),
     searchStart: (input) =>
       logger.info(
