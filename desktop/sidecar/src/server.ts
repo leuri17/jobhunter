@@ -73,22 +73,50 @@ function asFastifyBaseLogger(p: PinoLogger): FastifyBaseLogger {
 export interface ResolvedLogConfig {
   readonly level: LogLevel;
   readonly prettyTerminal: boolean;
+  /**
+   * Which source supplied `level`, and whether the environment set a
+   * different value that the config is shadowing. Reported at startup so
+   * an operator can see which one won without inspecting config files.
+   */
+  readonly levelSource: 'config' | 'environment' | 'default';
+  readonly shadowedEnvLevel?: LogLevel;
 }
 
 /**
- * Merge a possibly-null loaded config with the environment. Config wins
- * when present; otherwise the env value (for `level`) or the
- * `prettyTerminal: false` default applies. The log file destination is
- * not configurable — it is always derived from `PlatformPaths.logs`.
+ * Merge a possibly-null loaded config with the environment.
+ *
+ * Config wins when present, which is the long-standing behaviour and the
+ * right default: a value the user deliberately set in Settings should not
+ * be overridden by a stale shell profile. The consequence is that
+ * `LOG_LEVEL` is unreachable once a `config.json` exists, so when both are
+ * set and disagree the divergence is recorded on
+ * {@link ResolvedLogConfig.levelSource} and logged at startup rather than
+ * left to be discovered.
  */
 export function resolveLogConfig(
   processEnv: NodeJS.ProcessEnv,
   loaded: LoadedConfig | null,
 ): ResolvedLogConfig {
   const cfg = loaded?.config.logging;
+  const envRaw = processEnv['LOG_LEVEL'];
+
+  if (cfg?.level !== undefined) {
+    const envLevel =
+      envRaw !== undefined && (LOG_LEVELS as readonly string[]).includes(envRaw)
+        ? (envRaw as LogLevel)
+        : undefined;
+    return {
+      level: cfg.level,
+      prettyTerminal: cfg.prettyTerminal ?? false,
+      levelSource: 'config',
+      ...(envLevel !== undefined && envLevel !== cfg.level ? { shadowedEnvLevel: envLevel } : {}),
+    };
+  }
+
   return {
-    level: (cfg?.level ?? readLogLevel(processEnv)) as LogLevel,
+    level: readLogLevel(processEnv),
     prettyTerminal: cfg?.prettyTerminal ?? false,
+    levelSource: envRaw === undefined ? 'default' : 'environment',
   };
 }
 
@@ -106,7 +134,10 @@ export function createSidecarRootLoggerFromConfig(
   loaded: LoadedConfig | null,
   paths?: PlatformPaths,
 ): PinoLogger {
-  const { level, prettyTerminal } = resolveLogConfig(processEnv, loaded);
+  const { level, prettyTerminal, levelSource, shadowedEnvLevel } = resolveLogConfig(
+    processEnv,
+    loaded,
+  );
   const streams: StreamEntry[] = [];
 
   if (prettyTerminal) {
@@ -124,7 +155,7 @@ export function createSidecarRootLoggerFromConfig(
     streams.push({ stream: createRotatingFileStream({ dest: resolveDefaultLogPath(paths) }) });
   }
 
-  return pino(
+  const logger = pino(
     {
       level,
       base: { component: 'sidecar' },
@@ -132,6 +163,29 @@ export function createSidecarRootLoggerFromConfig(
     },
     multistream(streams),
   );
+
+  logger.info(
+    {
+      event: 'log.level.resolved',
+      level,
+      levelSource,
+      ...(shadowedEnvLevel !== undefined ? { shadowedEnvLevel } : {}),
+    },
+    'log level resolved',
+  );
+  if (shadowedEnvLevel !== undefined) {
+    logger.warn(
+      {
+        event: 'log.level.env_shadowed',
+        level,
+        levelSource,
+        shadowedEnvLevel,
+      },
+      'LOG_LEVEL is set but overridden by config.json; remove it from your environment to change the level',
+    );
+  }
+
+  return logger;
 }
 
 export interface BuildServerOptions {
