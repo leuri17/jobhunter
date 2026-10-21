@@ -22,6 +22,12 @@ iteration, native-surface smoke testing, and CI.
 
 ## HMR split (recommended when editing the sidecar)
 
+Per-mode toggle: the `JOBHUNTER_SIDECAR_EXTERNAL` flag flips Tauri's
+`run()` into discovery-via-file mode (reads
+`desktop/sidecar/.sidecar-port` on every `sidecar_port` IPC call).
+Inline-prefix it on the cargo command; nothing in this repo auto-loads
+`.env`, so an `.env` line for this flag won't take effect by itself.
+
 Terminal A:
 
 ```

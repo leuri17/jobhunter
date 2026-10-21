@@ -17,7 +17,7 @@ The codebase reads eight environment variables. Six are real (build-time or runt
 
 ### Development (`.env` at the repo root)
 
-The sidecar and the Vitest suite read `process.env` directly. The webview reads `import.meta.env` at build time, but for dev Vite exposes those variables to the browser at runtime too.
+The sidecar and the Vitest suite read `process.env` directly. The webview reads `import.meta.env` at build time, but for dev Vite exposes those variables to the browser at runtime too. **Nothing in this repo auto-loads `.env`** — `.env` is a template of values you re-use; you put them in your shell (e.g. `set -a; . .env; set +a` in `~/.bashrc` for the session, or an inline `KEY=value` prefix on the relevant command). The Tauri Rust shell follows the same rule; it reads `JOBHUNTER_SIDECAR_EXTERNAL` from the shell that launched it.
 
 ```
 cp .env.example .env
