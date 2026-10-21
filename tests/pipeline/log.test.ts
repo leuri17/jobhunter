@@ -29,4 +29,96 @@ describe('PipelineLogger', () => {
       'run failed',
     );
   });
+
+  it('noopPipelineLogger job events do not throw', () => {
+    const logger = noopPipelineLogger();
+    expect(() =>
+      logger.jobFiltered({
+        runId: 1,
+        jobId: 2,
+        outcome: 'rejected',
+        rejectionReasons: ['title.excluded_keyword'],
+        reused: false,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      logger.jobFilterFail({ runId: 1, jobId: 2, errorCode: 'x', message: 'y' }),
+    ).not.toThrow();
+  });
+
+  it('pinoPipelineLogger emits job.filter.rejected with the exclusion reasons', () => {
+    const info = vi.fn();
+    const fakeLogger = { info, warn: vi.fn(), error: vi.fn() } as never;
+    const logger = pinoPipelineLogger(fakeLogger);
+
+    logger.jobFiltered({
+      runId: 9,
+      jobId: 77,
+      outcome: 'rejected',
+      rejectionReasons: ['title.excluded_keyword', 'seniority.above_maximum'],
+      reused: false,
+    });
+
+    expect(info).toHaveBeenCalledWith(
+      {
+        event: 'job.filter.rejected',
+        runId: '9',
+        jobId: '77',
+        outcome: 'rejected',
+        rejectionReasons: ['title.excluded_keyword', 'seniority.above_maximum'],
+        reused: false,
+      },
+      'job filter rejected',
+    );
+  });
+
+  it('pinoPipelineLogger emits job.filter.accepted with reused=true on a cache hit', () => {
+    const info = vi.fn();
+    const fakeLogger = { info, warn: vi.fn(), error: vi.fn() } as never;
+    const logger = pinoPipelineLogger(fakeLogger);
+
+    logger.jobFiltered({
+      runId: 1,
+      jobId: 5,
+      outcome: 'accepted',
+      rejectionReasons: [],
+      reused: true,
+    });
+
+    expect(info).toHaveBeenCalledWith(
+      {
+        event: 'job.filter.accepted',
+        runId: '1',
+        jobId: '5',
+        outcome: 'accepted',
+        rejectionReasons: [],
+        reused: true,
+      },
+      'job filter accepted',
+    );
+  });
+
+  it('pinoPipelineLogger emits job.filter.fail at warn', () => {
+    const warn = vi.fn();
+    const fakeLogger = { info: vi.fn(), warn, error: vi.fn() } as never;
+    const logger = pinoPipelineLogger(fakeLogger);
+
+    logger.jobFilterFail({
+      runId: 3,
+      jobId: 8,
+      errorCode: 'filter_apply_failed',
+      message: 'boom',
+    });
+
+    expect(warn).toHaveBeenCalledWith(
+      {
+        event: 'job.filter.fail',
+        runId: '3',
+        jobId: '8',
+        errorCode: 'filter_apply_failed',
+        message: 'boom',
+      },
+      'job filter failed',
+    );
+  });
 });

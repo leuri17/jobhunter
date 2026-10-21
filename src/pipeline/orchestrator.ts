@@ -418,12 +418,20 @@ export class PipelineOrchestrator {
           } else {
             stats.jobsRejected += 1;
           }
+          this.logger.jobFiltered({
+            runId,
+            jobId: jobRow.id,
+            outcome: filterResult.outcome,
+            rejectionReasons: filterResult.rejectionReasons,
+            reused: filterResult.reused,
+          });
         } catch (error) {
           stats.filterErrors += 1;
           stats.failedExtractions += 1;
           const message = formatError(error).message;
-          this.logger.searchFail({
-            searchId: searchExecution.id,
+          this.logger.jobFilterFail({
+            runId,
+            jobId: jobRow.id,
             errorCode: 'filter_apply_failed',
             message,
           });
