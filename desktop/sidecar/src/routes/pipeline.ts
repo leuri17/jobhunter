@@ -11,7 +11,7 @@ import { FilterApplyService } from '@jobhunter/core/filter';
 import { ScoringService, pinoScoringLogger } from '@jobhunter/core/scoring';
 import { createDefaultDiagnosticManager } from '@jobhunter/core/diagnostics';
 import { type DefaultOpenAIClientRefusalOptions, type OpenAIClient } from '@jobhunter/core/profile';
-import { loadConfig } from '@jobhunter/core/config';
+import { loadConfig, FileSecretsStore, resolveOpenAiApiKey } from '@jobhunter/core/config';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { pinoPipelineLogger } from '@jobhunter/core/pipeline';
 import { openDbHandle, createRepositories } from './db-helper.js';
@@ -61,12 +61,12 @@ export async function registerPipelineRoutes(
   const rootLogger: PinoLogger = opts.rootLogger ?? pino({ level: 'silent' });
 
   app.post('/api/pipeline/run', async (_req, reply) => {
-    const client = opts.openaiClient ?? resolveOpenAiClientOrNull(opts.refusal);
+    const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
     if (client === null) {
       reply.status(503);
       return {
         schemaVersion: 1,
-        error: { code: 'openai_unavailable', message: 'OPENAI_API_KEY is required' },
+        error: { code: 'openai_unavailable', message: 'No OpenAI API key is configured' },
       };
     }
 
@@ -201,6 +201,10 @@ async function runPipeline(
         prompts: { askScoringConfirmation: async () => true },
         confirmScoring: true,
         env: process.env,
+        resolveApiKey: async () => {
+          const store = new FileSecretsStore({ paths });
+          return resolveOpenAiApiKey({ store, env: process.env });
+        },
         applicationVersion: '0.1.0-desktop',
         logger: pinoPipelineLogger(makeTeeLogger(rootLogger, run)),
         cancelSignal: controller.signal,

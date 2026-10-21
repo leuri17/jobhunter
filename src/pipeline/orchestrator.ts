@@ -53,6 +53,12 @@ export interface PipelineOrchestratorOptions {
   readonly prompts: PipelinePrompts;
   readonly confirmScoring: boolean;
   readonly env: Readonly<Record<string, string | undefined>>;
+  /**
+   * Resolves the effective OpenAI API key. When omitted, `env` is read
+   * directly, which keeps the pre-Settings contract working for callers
+   * that only supply `OPENAI_API_KEY`.
+   */
+  readonly resolveApiKey?: () => Promise<string | null>;
   readonly applicationVersion: string;
   readonly now?: () => Date;
   readonly logger?: PipelineLogger;
@@ -109,6 +115,7 @@ export class PipelineOrchestrator {
   private readonly prompts: PipelinePrompts;
   private readonly confirmScoring: boolean;
   private readonly env: Readonly<Record<string, string | undefined>>;
+  private readonly resolveApiKey: (() => Promise<string | null>) | undefined;
   private readonly applicationVersion: string;
   private readonly now: () => Date;
   private readonly logger: PipelineLogger;
@@ -125,6 +132,7 @@ export class PipelineOrchestrator {
     this.config = options.config;
     this.prompts = options.prompts;
     this.confirmScoring = options.confirmScoring;
+    this.resolveApiKey = options.resolveApiKey;
     this.env = options.env;
     this.applicationVersion = options.applicationVersion;
     this.now = options.now ?? ((): Date => new Date());
@@ -603,12 +611,18 @@ export class PipelineOrchestrator {
     return out;
   }
 
+  private async resolveApiKeyForRun(): Promise<string | null> {
+    if (this.resolveApiKey !== undefined) return this.resolveApiKey();
+    const fromEnv = this.env['OPENAI_API_KEY'];
+    return typeof fromEnv === 'string' && fromEnv.length > 0 ? fromEnv : null;
+  }
+
   private async validatePrerequisites(): Promise<void> {
-    const openAiKey = this.env['OPENAI_API_KEY'];
-    if (typeof openAiKey !== 'string' || openAiKey.length === 0) {
+    const openAiKey = await this.resolveApiKeyForRun();
+    if (openAiKey === null) {
       throw new PipelineOpenAIKeyMissingError(
         'openai_api_key_missing',
-        'OPENAI_API_KEY environment variable is required to run the pipeline. Set it in the Settings tab before starting a run.',
+        'An OpenAI API key is required to run the pipeline. Add one in Settings, or set OPENAI_API_KEY in your environment.',
       );
     }
     const activeProfile = await this.repositories.profileVersions.findActiveApproved();

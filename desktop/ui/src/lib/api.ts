@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { resolveSidecar } from './sidecar-url';
 import type {
+  ApiKeyResponse,
   ApproveProfileResponse,
   CancelPipelineResponse,
   ConfigResponse,
@@ -71,6 +72,9 @@ export const api = {
   getConfig: () => request<ConfigResponse>('GET', '/api/config'),
   patchConfig: (patch: ConfigPatch) => request<ConfigResponse>('PATCH', '/api/config', { patch }),
   validateConfig: () => request<ValidateConfigResponse>('POST', '/api/config/validate'),
+  getApiKeyStatus: () => request<ApiKeyResponse>('GET', '/api/secrets/api-key'),
+  setApiKey: (apiKey: string) => request<ApiKeyResponse>('PUT', '/api/secrets/api-key', { apiKey }),
+  clearApiKey: () => request<ApiKeyResponse>('DELETE', '/api/secrets/api-key'),
   listProfiles: (status?: string) =>
     request<ListProfilesResponse>('GET', `/api/profile${status ? `?status=${status}` : ''}`),
   getProfile: (id: string) => request<GetProfileResponse>('GET', `/api/profile/${id}`),

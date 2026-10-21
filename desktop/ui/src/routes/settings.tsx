@@ -15,6 +15,7 @@ import { WorkplaceTypesSection } from '@/components/shared/features/settings/sea
 import { SectionDivider } from '@/components/shared/features/settings/search-config/section';
 import { ProfileExtractionSection } from '@/components/shared/features/settings/ai-provider/profile-extraction-section';
 import { JobScoringSection } from '@/components/shared/features/settings/ai-provider/job-scoring-section';
+import { ApiKeySection } from '@/components/shared/features/settings/api-key/api-key-section';
 import { OutputSection } from '@/components/shared/features/settings/output/output-section';
 import { AdvancedSection } from '@/components/shared/features/settings/advanced/advanced-section';
 
@@ -56,7 +57,7 @@ function RouteComponent() {
     // TODO: Create Page & PageContent component
     <div className="space-y-6">
       <PageHeader>
-        <PageHeaderTitle subtitle="AI provider, score thresholds, scraping limits. API keys are read from your .env file.">
+        <PageHeaderTitle subtitle="AI provider, search criteria, and scraping limits.">
           Settings
         </PageHeaderTitle>
       </PageHeader>
@@ -88,6 +89,8 @@ function RouteComponent() {
           </TabsContent>
           <TabsContent value="ai">
             <Card>
+              <ApiKeySection />
+              <SectionDivider />
               <ProfileExtractionSection form={form} />
               <SectionDivider />
               <JobScoringSection form={form} />

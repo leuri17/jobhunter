@@ -198,6 +198,12 @@ export interface ReevaluationExecuteInput {
   readonly dryRun: boolean;
   readonly confirmScoring: boolean;
   readonly env: Readonly<Record<string, string | undefined>>;
+  /**
+   * Resolves the effective OpenAI API key. When omitted, `env` is read
+   * directly, which keeps callers that only supply `OPENAI_API_KEY`
+   * working unchanged.
+   */
+  readonly resolveApiKey?: () => Promise<string | null>;
   readonly jobId?: number | null;
   readonly now?: () => Date;
   readonly runId?: number | null;

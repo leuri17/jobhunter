@@ -23,16 +23,30 @@ import {
   type DefaultOpenAIClientRefusalOptions,
 } from '../profile/openai/client.js';
 import type { OpenAIClient } from '../profile/openai/types.js';
+import { resolveOpenAiApiKey } from '../config/api-key.js';
+import type { SecretsStore } from '../config/secrets.js';
 
-export function resolveOpenAiClientOrNull(
+export async function resolveOpenAiClientOrNull(
   refusal?: DefaultOpenAIClientRefusalOptions,
-): OpenAIClient | null {
-  const apiKey = process.env['OPENAI_API_KEY'];
-  if (typeof apiKey !== 'string' || apiKey.length === 0) {
+  store?: SecretsStore,
+): Promise<OpenAIClient | null> {
+  const apiKey = await resolveOpenAiApiKey({
+    store: store ?? emptyStore(),
+    env: process.env,
+  });
+  if (apiKey === null) {
     return null;
   }
   return createDefaultOpenAIClient({
     apiKey,
     ...(refusal !== undefined ? { refusal } : {}),
   });
+}
+
+function emptyStore(): SecretsStore {
+  return {
+    read: async () => ({}),
+    write: async () => undefined,
+    clear: async () => undefined,
+  };
 }
