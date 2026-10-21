@@ -182,9 +182,16 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
   // the Tauri webview's cross-origin fetch from `tauri://localhost` to
   // `http://127.0.0.1:<port>` fails CORS even though the sidecar itself
   // responds 200.
+  //
+  // `methods` must be spelled out: `@fastify/cors` defaults to
+  // `GET,HEAD,POST`, and the desktop UI issues `PATCH /api/config` with a
+  // JSON body. The default list would 204 the preflight without
+  // `access-control-allow-methods: PATCH` and the webview would block the
+  // request with "Method PATCH is not allowed by Access-Control-Allow-Methods."
   await app.register(cors, {
     origin: /^(http:\/\/localhost(:\d+)?|tauri:\/\/localhost)$/,
     credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   app.setErrorHandler((error, _req, reply) => {

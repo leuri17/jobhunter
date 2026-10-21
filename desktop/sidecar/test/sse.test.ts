@@ -34,4 +34,35 @@ describe('sse helpers', () => {
     closeSse(res);
     expect(ended).toBe(true);
   });
+
+  function stubRes(): { res: import('node:http').ServerResponse; headers: Record<string, string> } {
+    const headers: Record<string, string> = {};
+    const res = {
+      setHeader: (k: string, v: string) => {
+        headers[k] = v;
+      },
+    } as unknown as import('node:http').ServerResponse;
+    return { res, headers };
+  }
+
+  it('sets CORS headers for an allowlisted Origin', () => {
+    const { res, headers } = stubRes();
+    initSseHeaders(res, 'tauri://localhost');
+    expect(headers['Access-Control-Allow-Origin']).toBe('tauri://localhost');
+    expect(headers['Access-Control-Allow-Credentials']).toBe('true');
+    expect(headers['Vary']).toBe('Origin');
+  });
+
+  it('omits CORS headers for a non-allowlisted Origin', () => {
+    const { res, headers } = stubRes();
+    initSseHeaders(res, 'https://evil.example.com');
+    expect(headers['Access-Control-Allow-Origin']).toBeUndefined();
+  });
+
+  it('omits CORS headers when no Origin is passed', () => {
+    const { res, headers } = stubRes();
+    initSseHeaders(res);
+    expect(headers['Access-Control-Allow-Origin']).toBeUndefined();
+    expect(headers['Content-Type']).toBe('text/event-stream');
+  });
 });

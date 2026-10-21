@@ -50,4 +50,18 @@ describe('CORS', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('access-control-allow-origin')).toBeNull();
   });
+
+  it('allows PATCH in the preflight Access-Control-Allow-Methods', async () => {
+    const res = await fetch(`${baseUrl}/api/config`, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'tauri://localhost',
+        'Access-Control-Request-Method': 'PATCH',
+        'Access-Control-Request-Headers': 'content-type',
+      },
+    });
+    expect(res.status).toBe(204);
+    expect(res.headers.get('access-control-allow-origin')).toBe('tauri://localhost');
+    expect(res.headers.get('access-control-allow-methods')?.split(/,\s*/)).toContain('PATCH');
+  });
 });

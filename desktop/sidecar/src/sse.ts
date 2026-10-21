@@ -1,6 +1,21 @@
 import type { ServerResponse } from 'node:http';
 
-export function initSseHeaders(res: ServerResponse): void {
+/** Mirrors the `origin` allowlist registered in `server.ts`. */
+const ALLOWED_ORIGIN = /^(http:\/\/localhost(:\d+)?|tauri:\/\/localhost)$/;
+
+/**
+ * Streams write straight to `reply.raw`, so `@fastify/cors`'s `onSend`
+ * hook never runs and no `Access-Control-Allow-*` headers reach the
+ * client. Without them the webview's `EventSource` raises `error` the
+ * moment the stream opens, so callers must pass the request `Origin`
+ * for the headers to be set.
+ */
+export function initSseHeaders(res: ServerResponse, origin?: string): void {
+  if (origin !== undefined && ALLOWED_ORIGIN.test(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
