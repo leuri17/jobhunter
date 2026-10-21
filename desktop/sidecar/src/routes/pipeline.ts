@@ -104,7 +104,8 @@ export async function registerPipelineRoutes(
           error: { code: 'pipeline_run_not_found', message: 'Run not found' },
         };
       }
-      initSseHeaders(reply.raw);
+      const origin = req.headers.origin;
+      initSseHeaders(reply.raw, typeof origin === 'string' ? origin : undefined);
       reply.raw.write(`: connected to ${run.runId}\n\n`);
 
       const interval = setInterval(() => {

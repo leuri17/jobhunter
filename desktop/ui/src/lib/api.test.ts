@@ -35,10 +35,8 @@ describe('api', () => {
     expect(result.hits).toHaveLength(1);
     expect(result.hits[0]?.displayName).toBe('Lisbon, Portugal');
 
-    const [calledUrl, calledInit] = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
-      string,
-      RequestInit,
-    ];
+    const [calledUrl, calledInit] = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0] as [string, RequestInit];
     expect(calledUrl).toMatch(/\/api\/linkedin\/geo-typeahead\?q=S%C3%A3o%20Paulo$/);
     expect(calledInit.method).toBe('GET');
   });

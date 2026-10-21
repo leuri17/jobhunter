@@ -33,7 +33,8 @@ describe('GET /api/linkedin/geo-typeahead', () => {
     // sidecar; the mock replaces only the upstream LinkedIn call by URL.
     upstreamMock = vi.fn();
     vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
       if (url.includes('linkedin.com')) {
         return upstreamMock(url, init) as Promise<Response>;
       }

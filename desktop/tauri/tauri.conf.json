@@ -9,8 +9,8 @@
     "beforeBuildCommand": "pnpm --filter @jobhunter/ui build",
     "frontendDist": "../ui/dist",
     "windows": {
-        "staticVCRuntime": false
-      }
+      "staticVCRuntime": false
+    }
   },
   "app": {
     "windows": [
