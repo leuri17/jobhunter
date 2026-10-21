@@ -16,7 +16,7 @@ Rubric-driven job scoring subsystem. Computes weighted overall scores from OpenA
 - **`rank.ts`** provides `rankResults`: deterministic order `overallScore` desc (full precision), tie-broken by `sourceJobId` asc; pure, no I/O.
 - **`plan.ts`** builds the `ScoringPlan` consumed by the confirmation UI via `buildScoringPlan`.
 - **`errors.ts`** defines the typed `ScoringError` family (exit code `ExitCode.OpenAIFailure`): `ScoringInputTooLargeError`, `ScoringInvalidStructuredOutputError`, `ScoringPersistenceError`, `ScoringFingerprintMismatchError`, `ScoringHardStopError`.
-- **`log.ts`** exposes the `ScoringLogger` interface plus `noopScoringLogger` and `pinoScoringLogger` adapters; only `service.ts` imports it.
+- **`log.ts`** exposes the `ScoringLogger` interface plus `noopScoringLogger` and `pinoScoringLogger` adapters; only `service.ts` imports it. `ScoringService` accepts an optional `logger?: ScoringLogger` via `ScoringServiceOptions` (defaults to `noopScoringLogger()`), so per-job `scoring.start` / `scoring.complete` / `scoring.skip` / `scoring.fail` / `scoring.reuse` events are silent until a consumer passes `pinoScoringLogger(...)` at construction time. All five events fire at `info`; `scoring.fail` fires at `warn`.
 - **`state.ts`** is the typed vocabulary (`LINKEDIN_SCORING_SCHEMA_VERSION`, `ScoringKind`, `ScoringOutcome`, `ScoringBatchOutcome`, `ScoringPlan`); `types.ts` defines the 7 `SCORING_CATEGORIES`.
 - **`index.ts`** is the public barrel; consumers import from here.
 
@@ -37,5 +37,5 @@ Downstream: `computeRank` (rank.ts) orders `scoreBatch` outcomes deterministical
 
 ## Integration
 
-- **Consumers**: `src/pipeline/orchestrator.ts` (drives `scoreBatch` per search execution), `src/reevaluation/` (re-scores cached jobs against current rubric/prompt/scorer versions), `src/persistence/repositories/score-results.ts` (`findActiveByJob` for fingerprint reuse), `src/persistence/schema.ts` (`scoreResults`, `openaiRequestMetadata` tables), `src/profile/openai/` (`OpenAIClient.extract`, `runWithRetry`, structured-output response-schemas registry).
+- **Consumers**: `src/pipeline/orchestrator.ts` (drives `scoreBatch` per search execution via a DI-injected `ScoringService`), `desktop/sidecar/src/routes/pipeline.ts` and `desktop/sidecar/src/routes/jobs.ts` (construct `ScoringService` and supply the `ScoringLogger`), `src/reevaluation/` (re-scores cached jobs against current rubric/prompt/scorer versions), `src/persistence/repositories/score-results.ts` (`findActiveByJob` for fingerprint reuse), `src/persistence/schema.ts` (`scoreResults`, `openaiRequestMetadata` tables), `src/profile/openai/` (`OpenAIClient.extract`, `runWithRetry`, structured-output response-schemas registry).
 - **Versioning surface**: `SCORING_PROMPT_VERSION`, `RUBRIC_VERSION`, `SCORING_STRUCTURED_OUTPUT_SCHEMA_VERSION`, `SCORER_IMPLEMENTATION_VERSION`, `LINKEDIN_SCORING_SCHEMA_VERSION` — any bump invalidates cached scores through the fingerprint.

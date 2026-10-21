@@ -18,6 +18,14 @@ export interface PipelineLogger {
   scoringPlanDisplayed(input: { runId: number; jobsDiscovered: number; newRequests: number }): void;
   scoringConfirmed(input: { runId: number }): void;
   scoringDeclined(input: { runId: number }): void;
+  jobFiltered(input: {
+    runId: number;
+    jobId: number;
+    outcome: 'accepted' | 'rejected' | 'error';
+    rejectionReasons: readonly string[];
+    reused: boolean;
+  }): void;
+  jobFilterFail(input: { runId: number; jobId: number; errorCode: string; message: string }): void;
 }
 
 /** No-op logger for unit tests. */
@@ -34,6 +42,8 @@ export function noopPipelineLogger(): PipelineLogger {
     scoringPlanDisplayed: () => undefined,
     scoringConfirmed: () => undefined,
     scoringDeclined: () => undefined,
+    jobFiltered: () => undefined,
+    jobFilterFail: () => undefined,
   };
 }
 
@@ -99,5 +109,28 @@ export function pinoPipelineLogger(logger: Logger): PipelineLogger {
       logger.info({ event: 'scoring.confirmed', runId: String(input.runId) }, 'scoring confirmed'),
     scoringDeclined: (input) =>
       logger.info({ event: 'scoring.declined', runId: String(input.runId) }, 'scoring declined'),
+    jobFiltered: (input) =>
+      logger.info(
+        {
+          event: `job.filter.${input.outcome}`,
+          runId: String(input.runId),
+          jobId: String(input.jobId),
+          outcome: input.outcome,
+          rejectionReasons: [...input.rejectionReasons],
+          reused: input.reused,
+        },
+        `job filter ${input.outcome}`,
+      ),
+    jobFilterFail: (input) =>
+      logger.warn(
+        {
+          event: 'job.filter.fail',
+          runId: String(input.runId),
+          jobId: String(input.jobId),
+          errorCode: input.errorCode,
+          message: input.message,
+        },
+        'job filter failed',
+      ),
   };
 }

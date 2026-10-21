@@ -8,7 +8,7 @@ import {
   createDefaultBrowserSession,
 } from '@jobhunter/core/linkedin';
 import { FilterApplyService } from '@jobhunter/core/filter';
-import { ScoringService } from '@jobhunter/core/scoring';
+import { ScoringService, pinoScoringLogger } from '@jobhunter/core/scoring';
 import { createDefaultDiagnosticManager } from '@jobhunter/core/diagnostics';
 import { type DefaultOpenAIClientRefusalOptions, type OpenAIClient } from '@jobhunter/core/profile';
 import { loadConfig } from '@jobhunter/core/config';
@@ -182,6 +182,7 @@ async function runPipeline(
       const scoringService = new ScoringService({
         repositories,
         openaiClient,
+        logger: pinoScoringLogger(makeTeeLogger(rootLogger, run)),
         config: {
           model: loaded.config.openai.jobScoring.model,
           reasoningEffort: loaded.config.openai.jobScoring.reasoningEffort,

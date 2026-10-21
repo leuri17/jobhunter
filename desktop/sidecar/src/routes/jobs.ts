@@ -7,7 +7,7 @@ import {
   type ReevaluationScope,
 } from '@jobhunter/core/reevaluation';
 import { FilterApplyService } from '@jobhunter/core/filter';
-import { ScoringService } from '@jobhunter/core/scoring';
+import { ScoringService, pinoScoringLogger } from '@jobhunter/core/scoring';
 import {
   createDefaultOpenAIClient,
   type DefaultOpenAIClientRefusalOptions,
@@ -112,6 +112,7 @@ export async function registerJobsRoutes(
       const scoringService = new ScoringService({
         repositories: repos,
         openaiClient: client,
+        logger: pinoScoringLogger(rootLogger),
         config: {
           model: process.env['OPENAI_MODEL'] ?? 'gpt-5',
           reasoningEffort: 'medium',
