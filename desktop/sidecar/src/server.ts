@@ -1,13 +1,6 @@
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
-import {
-  pino,
-  transport,
-  destination,
-  multistream,
-  type Logger as PinoLogger,
-  type StreamEntry,
-} from 'pino';
+import { pino, transport, multistream, type Logger as PinoLogger, type StreamEntry } from 'pino';
 import { readEnv, type SidecarEnv } from './env.js';
 import { statusFor, envelopeFor } from './errors.js';
 import { registerPathsRoute } from './routes/paths.js';
@@ -17,7 +10,13 @@ import { registerJobsRoutes } from './routes/jobs.js';
 import { registerRunsRoutes } from './routes/runs.js';
 import { registerPipelineRoutes, abortAllActiveRuns } from './routes/pipeline.js';
 import { registerLinkedinGeoTypeaheadRoute } from './routes/linkedin-geo-typeahead.js';
-import { DEFAULT_REDACT_PATHS, LOG_LEVELS, type LogLevel } from '@jobhunter/core/logging';
+import {
+  DEFAULT_REDACT_PATHS,
+  LOG_LEVELS,
+  createRotatingFileStream,
+  resolveDefaultLogPath,
+  type LogLevel,
+} from '@jobhunter/core/logging';
 import {
   loadConfig,
   resolveRefusalDetection,
@@ -74,13 +73,13 @@ function asFastifyBaseLogger(p: PinoLogger): FastifyBaseLogger {
 export interface ResolvedLogConfig {
   readonly level: LogLevel;
   readonly prettyTerminal: boolean;
-  readonly filePath: string | undefined;
 }
 
 /**
  * Merge a possibly-null loaded config with the environment. Config wins
- * when present; otherwise the env value (for `level`) or sensible defaults
- * (`prettyTerminal: false`, `filePath: undefined`) apply.
+ * when present; otherwise the env value (for `level`) or the
+ * `prettyTerminal: false` default applies. The log file destination is
+ * not configurable — it is always derived from `PlatformPaths.logs`.
  */
 export function resolveLogConfig(
   processEnv: NodeJS.ProcessEnv,
@@ -90,21 +89,24 @@ export function resolveLogConfig(
   return {
     level: (cfg?.level ?? readLogLevel(processEnv)) as LogLevel,
     prettyTerminal: cfg?.prettyTerminal ?? false,
-    filePath: cfg?.filePath,
   };
 }
 
 /**
  * Build the sidecar's root pino logger honoring the merged
- * {@link ResolvedLogConfig}. `prettyTerminal` routes stdout through the
- * `pino-pretty` worker transport; `filePath` adds an append-mode file
- * destination alongside stdout. Both stack on top of `DEFAULT_REDACT_PATHS`.
+ * {@link ResolvedLogConfig}. `prettyTerminal` routes the console sink
+ * through the `pino-pretty` worker transport. When `paths` is supplied
+ * the log is additionally written to a rotating file under
+ * `PlatformPaths.logs`; the file destination is never user-configurable
+ * and a failure to open it degrades to a stderr warning. Both sinks
+ * stack on top of `DEFAULT_REDACT_PATHS`.
  */
 export function createSidecarRootLoggerFromConfig(
   processEnv: NodeJS.ProcessEnv,
   loaded: LoadedConfig | null,
+  paths?: PlatformPaths,
 ): PinoLogger {
-  const { level, prettyTerminal, filePath } = resolveLogConfig(processEnv, loaded);
+  const { level, prettyTerminal } = resolveLogConfig(processEnv, loaded);
   const streams: StreamEntry[] = [];
 
   if (prettyTerminal) {
@@ -118,8 +120,8 @@ export function createSidecarRootLoggerFromConfig(
     streams.push({ stream: process.stderr });
   }
 
-  if (filePath !== undefined) {
-    streams.push({ stream: destination({ dest: filePath, sync: false, mkdir: true }) });
+  if (paths !== undefined) {
+    streams.push({ stream: createRotatingFileStream({ dest: resolveDefaultLogPath(paths) }) });
   }
 
   return pino(
@@ -137,9 +139,10 @@ export interface BuildServerOptions {
   readonly rootLogger?: PinoLogger;
   /**
    * When provided, the sidecar calls `loadConfig(paths, fileSystem)` at
-   * startup and honors `config.logging.{level, prettyTerminal, filePath}`.
-   * A failed `loadConfig` falls back to {@link createSidecarRootLogger} so
-   * a malformed user config never crashes the boot.
+   * startup and honors `config.logging.{level, prettyTerminal}`, and
+   * always writes to a rotating log file under `paths.logs`. A failed
+   * `loadConfig` falls back to env-only level resolution so a malformed
+   * user config never crashes the boot.
    */
   readonly paths?: PlatformPaths;
   readonly processEnv?: NodeJS.ProcessEnv;
@@ -155,8 +158,8 @@ async function resolveRootLogger(
   const processEnv = opts.processEnv ?? process.env;
   const loaded =
     loadedOverride ?? (await loadConfig(opts.paths, opts.fileSystem).catch((): null => null));
-  if (loaded === null) return createSidecarRootLogger(processEnv);
-  return createSidecarRootLoggerFromConfig(processEnv, loaded);
+  if (loaded === null) return createSidecarRootLoggerFromConfig(processEnv, null, opts.paths);
+  return createSidecarRootLoggerFromConfig(processEnv, loaded, opts.paths);
 }
 
 export async function buildServer(opts: BuildServerOptions): Promise<FastifyInstance> {

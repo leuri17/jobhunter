@@ -27,8 +27,21 @@ through `src/logging/index.ts`.
   `pino.warn` for `reevaluationScoreFail`), stringifies numeric `*Id`
   fields to keep the `LogContext` ID-as-string contract, and tags each
   entry with `event: 'reevaluation.<verb>'`.
+- `rotate-file.ts` — `createRotatingFileStream(options)` returns an
+  append-mode `Writable` that rolls over at `maxBytes` (default 5 MB)
+  and retains `maxFiles` generations (`jobhunter.log`, `jobhunter.1.log`
+  …). `resolveDefaultLogPath(paths)` derives the sidecar's log
+  destination from `PlatformPaths.logs`. The stream instance registered
+  with pino never changes — rotation swaps the underlying file handle in
+  place — so no write can land in a file it did not start in. Every
+  filesystem failure (open, write, shift) degrades to an `onError`
+  callback writing a `log.file.error` line to stderr rather than an
+  emitted `'error'`, because an unhandled `'error'` on a pino
+  destination stream would terminate the sidecar. A missing parent
+  directory is created at open.
 - `index.ts` is the public barrel re-exporting `LOG_LEVELS`,
-  `createLogger`, all types, and `pinoReevaluationLogger`.
+  `createLogger`, all types, `pinoReevaluationLogger`, and the
+  `rotate-file.js` surface.
 
 ## Flow
 
@@ -84,7 +97,7 @@ the defaults.
   `src/scoring/log.ts`, `src/linkedin/log.ts`,
   `src/linkedin/extraction/log.ts`, `src/init/log.ts` — each defines
   its own domain logger port wrapping the shared `Logger`.
-- Runtime wiring: the sidecar's root logger is constructed in `desktop/sidecar/src/server.ts:createSidecarRootLoggerFromConfig` when `BuildServerOptions.paths` is provided. It merges `config.logging.{level, prettyTerminal, filePath}` with `process.env.LOG_LEVEL` (env is the fallback when the config is missing or fails to load) and emits a `pino.Logger` with `DEFAULT_REDACT_PATHS`. `prettyTerminal: true` routes stdout through the `pino-pretty` worker transport (declared as a runtime dep of `@jobhunter/sidecar`); `filePath` adds a `pino.destination({ sync: false, mkdir: true })` stream alongside stdout. The legacy `createSidecarRootLogger` helper still exists for the env-only path that the sidecar tests exercise without config plumbing. The domain `createLogger()` factory has no production caller — only its own test exercises it. Subsystem modules (`src/init/log.ts`, `src/pipeline/log.ts`, etc.) receive a `Logger` via type-only import and adapt it per-domain.
+- Runtime wiring: the sidecar's root logger is constructed in `desktop/sidecar/src/server.ts:createSidecarRootLoggerFromConfig` when `BuildServerOptions.paths` is provided. It merges `config.logging.{level, prettyTerminal}` with `process.env.LOG_LEVEL` (env is the fallback when the config is missing or fails to load) and emits a `pino.Logger` with `DEFAULT_REDACT_PATHS`. `prettyTerminal: true` routes the console sink through the `pino-pretty` worker transport (declared as a runtime dep of `@jobhunter/sidecar`). When `paths` is supplied the logger **always** adds a `createRotatingFileStream` destination at `resolveDefaultLogPath(paths)`; the destination is not user-configurable and `logging.filePath` no longer exists in the config schema (issue #196). Omitting `paths` leaves the logger console-only, which is the legacy path the sidecar tests exercise. `createSidecarRootLogger` remains the env-only helper. The domain `createLogger()` factory has no production caller — only its own test exercises it — and still accepts an optional `filePath` for that reason. Subsystem modules (`src/init/log.ts`, `src/pipeline/log.ts`, etc.) receive a `Logger` via type-only import and adapt it per-domain.
 - `src/reevaluation/log.ts` defines the `ReevaluationLogger` port;
   `pinoReevaluationLogger` is the only adapter bridging that port to
   the runtime Pino client, mirroring `pinoPipelineLogger` /

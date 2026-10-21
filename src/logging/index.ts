@@ -21,3 +21,12 @@ export {
 } from './logger.js';
 
 export { pinoReevaluationLogger } from './reevaluation-logger.js';
+
+export {
+  createRotatingFileStream,
+  resolveDefaultLogPath,
+  DEFAULT_LOG_FILENAME,
+  DEFAULT_LOG_MAX_BYTES,
+  DEFAULT_LOG_MAX_FILES,
+  type RotateFileOptions,
+} from './rotate-file.js';

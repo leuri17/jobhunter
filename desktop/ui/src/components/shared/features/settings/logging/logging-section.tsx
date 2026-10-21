@@ -1,7 +1,6 @@
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -11,7 +10,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { LOG_LEVEL_CHOICES, type LogLevel } from '@jobhunter/core/config/labels';
-import { SectionDivider } from '@/components/shared/features/settings/search-config/section';
 import type {
   AnyFieldApi,
   SectionForm,
@@ -26,7 +24,9 @@ export function LoggingSection({ form }: LoggingSectionProps) {
     <>
       <CardHeader>
         <CardTitle>Logging</CardTitle>
-        <CardDescription>Sidecar log level, formatting, and optional file sink.</CardDescription>
+        <CardDescription>
+          Sidecar log level and terminal formatting. Logs are always written to a rolling file.
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <form.Field name="logging.level">
@@ -35,12 +35,6 @@ export function LoggingSection({ form }: LoggingSectionProps) {
 
         <form.Field name="logging.prettyTerminal">
           {(field: AnyFieldApi) => <PrettyTerminalRow field={field} />}
-        </form.Field>
-      </CardContent>
-      <SectionDivider />
-      <CardContent className="flex flex-col gap-5">
-        <form.Field name="logging.filePath">
-          {(field: AnyFieldApi) => <FilePathRow field={field} />}
         </form.Field>
       </CardContent>
     </>
@@ -95,35 +89,6 @@ function PrettyTerminalRow({ field }: { field: AnyFieldApi }) {
       <FieldLabel htmlFor={id}>Pretty terminal output</FieldLabel>
       <p className="text-xs text-muted-foreground">
         Render logs as colored lines instead of raw JSON.
-      </p>
-      <FieldError errors={field.state.meta.errors} />
-    </Field>
-  );
-}
-
-function FilePathRow({ field }: { field: AnyFieldApi }) {
-  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-  const name = field.name;
-  const raw = field.state.value as string | undefined;
-  return (
-    <Field data-invalid={isInvalid}>
-      <FieldLabel htmlFor={name}>Log file path</FieldLabel>
-      <Input
-        id={name}
-        name={name}
-        value={raw ?? ''}
-        onBlur={field.handleBlur}
-        onChange={(e) => {
-          const next = e.target.value;
-          field.handleChange(next === '' ? undefined : next);
-        }}
-        aria-invalid={isInvalid}
-        type="text"
-        placeholder="Leave empty to log to stdout only."
-        autoComplete="off"
-      />
-      <p className="text-xs text-muted-foreground">
-        Optional. Absolute path for the rolling log file.
       </p>
       <FieldError errors={field.state.meta.errors} />
     </Field>
