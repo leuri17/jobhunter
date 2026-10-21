@@ -91,7 +91,6 @@ const loggingSchema = z
   .object({
     level: logLevelSchema,
     prettyTerminal: z.boolean(),
-    filePath: z.string().min(1).optional(),
   })
   .strict();
 

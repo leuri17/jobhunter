@@ -1,8 +1,8 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   DEFAULT_OPERATIONAL_CONFIG,
@@ -21,12 +21,13 @@ import {
 
 const silentEnv = (): NodeJS.ProcessEnv => ({ LOG_LEVEL: 'silent' });
 
-const minimalPaths = (configPath: string): PlatformPaths => {
+const minimalPaths = (configPath: string, logsDirectory?: string): PlatformPaths => {
   const directory = path.dirname(configPath);
+  const logsDir = logsDirectory ?? directory;
   return {
     config: { directory, file: () => configPath },
     data: { directory, file: () => '' },
-    logs: { directory, file: () => '' },
+    logs: { directory: logsDir, file: (name) => path.join(logsDir, name) },
     diagnostics: { directory, file: () => '' },
     profileSources: { directory, file: () => '' },
   };
@@ -71,7 +72,6 @@ describe('resolveLogConfig', () => {
     const out: ResolvedLogConfig = resolveLogConfig(env, null);
     expect(out.level).toBe('debug');
     expect(out.prettyTerminal).toBe(false);
-    expect(out.filePath).toBeUndefined();
   });
 
   it('defaults to info when neither config nor env is set', () => {
@@ -85,7 +85,7 @@ describe('resolveLogConfig', () => {
     const config = {
       config: {
         ...DEFAULT_OPERATIONAL_CONFIG,
-        logging: { level: 'trace' as const, prettyTerminal: true, filePath: '/var/log/x.log' },
+        logging: { level: 'trace' as const, prettyTerminal: true },
       },
       schemaVersion: 1 as const,
       hash: 'h',
@@ -94,7 +94,6 @@ describe('resolveLogConfig', () => {
     const out = resolveLogConfig(env, config);
     expect(out.level).toBe('trace');
     expect(out.prettyTerminal).toBe(true);
-    expect(out.filePath).toBe('/var/log/x.log');
   });
 
   it('lets config.logging.level win over env LOG_LEVEL when both are set', () => {
@@ -120,22 +119,24 @@ describe('createSidecarRootLoggerFromConfig', () => {
     expect(() => logger.info({ event: 'smoke' }, 'hi')).not.toThrow();
   });
 
-  it('accepts config with filePath without throwing on construction', () => {
-    const config = {
-      config: {
-        ...DEFAULT_OPERATIONAL_CONFIG,
-        logging: {
-          level: 'info' as const,
-          prettyTerminal: false,
-          filePath: '/tmp/jobhunter-test-does-not-exist/sidecar.log',
-        },
-      },
-      schemaVersion: 1 as const,
-      hash: 'h',
-      path: '/x',
-    };
-    const logger = createSidecarRootLoggerFromConfig(silentEnv(), config);
-    expect(typeof logger.info).toBe('function');
+  it('writes to a rotating log file under paths.logs without throwing', async () => {
+    const tmpDir = mkdtempSync(path.join(tmpdir(), 'jobhunter-logfile-'));
+    const paths = minimalPaths(path.join(tmpDir, 'config.json'), tmpDir);
+    const logger = createSidecarRootLoggerFromConfig({ LOG_LEVEL: 'info' }, null, paths);
+    const logFile = path.join(tmpDir, 'jobhunter.log');
+    try {
+      logger.info({ event: 'smoke' }, 'written to file');
+      await vi.waitFor(() => {
+        expect(existsSync(logFile)).toBe(true);
+      });
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not open a log file when no paths are supplied', () => {
+    const logger = createSidecarRootLoggerFromConfig({ LOG_LEVEL: 'silent' }, null);
+    expect(() => logger.info({ event: 'smoke' }, 'hi')).not.toThrow();
   });
 });
 
