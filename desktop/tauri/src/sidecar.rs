@@ -1,10 +1,10 @@
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-/// Parse a single line of sidecar stdout into a discovered port, if the line
+/// Parse a single line of sidecar output into a discovered port, if the line
 /// matches the `READY <port>` handshake contract.
 pub fn parse_ready_line(line: &str) -> Option<u16> {
     let rest = line.strip_prefix("READY ")?;
@@ -12,7 +12,14 @@ pub fn parse_ready_line(line: &str) -> Option<u16> {
     Some(port)
 }
 
-/// Spawn the Node sidecar and wait until it prints `READY <port>` on stdout.
+/// Spawn the Node sidecar and wait until it prints `READY <port>` on stderr.
+///
+/// The sidecar writes its `READY <port>` handshake and all pino output to
+/// stderr so the Tauri supervisor can pipe stderr while leaving stdout
+/// inherited. One reader thread consumes the sidecar's stderr pipe, forwards
+/// each line to the parent's stderr (so the user sees pino output in the
+/// terminal they launched `pnpm tauri dev` from), and pushes it into an mpsc
+/// channel where the outer loop scans for the `READY <port>` handshake.
 ///
 /// `runtime_path` is the executable that launches the sidecar script (typically
 /// `npx` or `node`); `entry_path` is the script argument passed to that
@@ -23,16 +30,18 @@ pub fn spawn_sidecar(runtime_path: &str, entry_path: &str) -> Result<(Child, u16
         .args(["tsx", entry_path])
         .env("JOBHUNTER_SIDECAR_PORT", "0")
         .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| format!("failed to spawn sidecar: {e}"))?;
 
-    let stdout = child.stdout.take().ok_or("sidecar stdout not captured")?;
+    let stderr = child.stderr.take().ok_or("sidecar stderr not captured")?;
     let (tx, rx) = mpsc::channel::<String>();
     thread::spawn(move || {
-        let reader = BufReader::new(stdout);
+        let reader = BufReader::new(stderr);
         for line in reader.lines().map_while(Result::ok) {
+            let mut parent_stderr = std::io::stderr().lock();
+            let _ = writeln!(parent_stderr, "sidecar: {line}");
             if tx.send(line).is_err() {
                 break;
             }

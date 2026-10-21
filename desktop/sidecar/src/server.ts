@@ -115,7 +115,7 @@ export function createSidecarRootLoggerFromConfig(
       }),
     });
   } else {
-    streams.push({ stream: process.stdout });
+    streams.push({ stream: process.stderr });
   }
 
   if (filePath !== undefined) {
@@ -219,7 +219,7 @@ async function main(): Promise<void> {
   await server.listen({ port: env.port, host: env.host });
   const address = server.server.address();
   const port = typeof address === 'object' && address !== null ? address.port : 0;
-  process.stdout.write(`READY ${port}\n`);
+  process.stderr.write(`READY ${port}\n`);
 
   let shuttingDown = false;
   const shutdown = async (signal: string): Promise<void> => {
