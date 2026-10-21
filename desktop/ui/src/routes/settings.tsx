@@ -15,11 +15,8 @@ import { WorkplaceTypesSection } from '@/components/shared/features/settings/sea
 import { SectionDivider } from '@/components/shared/features/settings/search-config/section';
 import { ProfileExtractionSection } from '@/components/shared/features/settings/ai-provider/profile-extraction-section';
 import { JobScoringSection } from '@/components/shared/features/settings/ai-provider/job-scoring-section';
-import { RefusalDetectionSection } from '@/components/shared/features/settings/ai-provider/refusal-detection-section';
-import { ScrapperSection } from '@/components/shared/features/settings/scrapper/scrapper-section';
 import { OutputSection } from '@/components/shared/features/settings/output/output-section';
-import { LoggingSection } from '@/components/shared/features/settings/logging/logging-section';
-import { DiagnosisSection } from '@/components/shared/features/settings/diagnosis/diagnosis-section';
+import { AdvancedSection } from '@/components/shared/features/settings/advanced/advanced-section';
 
 export const Route = createFileRoute('/settings')({
   component: RouteComponent,
@@ -75,10 +72,8 @@ function RouteComponent() {
           <TabsList variant="line">
             <TabsTrigger value="search">Search configuration</TabsTrigger>
             <TabsTrigger value="ai">AI Provider</TabsTrigger>
-            <TabsTrigger value="scrapper">Scrapper</TabsTrigger>
             <TabsTrigger value="output">Output</TabsTrigger>
-            <TabsTrigger value="logging">Logging</TabsTrigger>
-            <TabsTrigger value="diagnosis">Diagnosis</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced</TabsTrigger>
           </TabsList>
           <TabsContent value="search">
             <Card>
@@ -96,13 +91,6 @@ function RouteComponent() {
               <ProfileExtractionSection form={form} />
               <SectionDivider />
               <JobScoringSection form={form} />
-              <SectionDivider />
-              <RefusalDetectionSection form={form} />
-            </Card>
-          </TabsContent>
-          <TabsContent value="scrapper">
-            <Card>
-              <ScrapperSection form={form} />
             </Card>
           </TabsContent>
           <TabsContent value="output">
@@ -110,14 +98,9 @@ function RouteComponent() {
               <OutputSection form={form} />
             </Card>
           </TabsContent>
-          <TabsContent value="logging">
+          <TabsContent value="advanced">
             <Card>
-              <LoggingSection form={form} />
-            </Card>
-          </TabsContent>
-          <TabsContent value="diagnosis">
-            <Card>
-              <DiagnosisSection form={form} />
+              <AdvancedSection form={form} />
             </Card>
           </TabsContent>
         </Tabs>
