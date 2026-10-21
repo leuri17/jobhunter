@@ -1,7 +1,7 @@
 import { createRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { usePipelineEvents } from '@/lib/sse';
 import { LogPane } from '@/components/shared/ui/log-pane';
 import { Button } from '@/components/ui/button';
@@ -19,25 +19,40 @@ export const Route = createRoute({
 
 function PipelinePage() {
   const [runId, setRunId] = useState<string | null>(null);
+  const [startError, setStartError] = useState<ApiError | null>(null);
+  const [cancelError, setCancelError] = useState<ApiError | null>(null);
   const events = usePipelineEvents(runId);
   const queryClient = useQueryClient();
 
   const start = useMutation({
     mutationFn: api.runPipeline,
     onSuccess: (data) => {
+      setStartError(null);
       setRunId(data.runId);
       // The new run shows up on /runs immediately; refresh the runs
       // list so navigating there doesn't show a stale 'last seen at'.
       void queryClient.invalidateQueries({ queryKey: ['runs'] });
     },
+    onError: (err: unknown) => {
+      setStartError(err as ApiError);
+    },
   });
   const cancel = useMutation({
-    mutationFn: () => api.cancelPipeline(runId as unknown as string),
+    mutationFn: () => {
+      if (runId === null) {
+        throw new ApiError(0, 'invalid_state', 'No active run to cancel');
+      }
+      return api.cancelPipeline(runId);
+    },
     onSuccess: () => {
+      setCancelError(null);
       // Cancel transitions the run to 'cancelled' and updates
       // jobsScored on the run record. Refresh the runs list so
       // /runs reflects the new status without a manual remount.
       void queryClient.invalidateQueries({ queryKey: ['runs'] });
+    },
+    onError: (err: unknown) => {
+      setCancelError(err as ApiError);
     },
   });
 
@@ -71,6 +86,40 @@ function PipelinePage() {
         >
           <p className="font-semibold mb-1">Live event stream failed</p>
           <p className="text-red-200">{events.error.message}</p>
+        </div>
+      )}
+
+      {startError !== null && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          data-testid="pipeline-start-error"
+          className="rounded border border-red-900 bg-red-950 px-4 py-3 text-sm text-red-100"
+        >
+          <p className="font-semibold mb-1">Couldn't start the pipeline</p>
+          <p className="text-red-200">
+            {startError.status} {startError.code} — {startError.message}
+          </p>
+          {startError.code === 'openai_unavailable' && (
+            <p className="mt-2 text-red-200">
+              Set <code className="font-mono">OPENAI_API_KEY</code> in your{' '}
+              <code className="font-mono">.env</code> and restart the sidecar.
+            </p>
+          )}
+        </div>
+      )}
+
+      {cancelError !== null && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          data-testid="pipeline-cancel-error"
+          className="rounded border border-red-900 bg-red-950 px-4 py-3 text-sm text-red-100"
+        >
+          <p className="font-semibold mb-1">Couldn't cancel the run</p>
+          <p className="text-red-200">
+            {cancelError.status} {cancelError.code} — {cancelError.message}
+          </p>
         </div>
       )}
 
