@@ -298,7 +298,6 @@ const pathsPayload = {
     data: '/home/leuri/.local/share/jobhunter',
     logs: '/home/leuri/.local/share/jobhunter/logs',
     diagnostics: '/home/leuri/.local/share/jobhunter/diagnostics',
-    cache: '/home/leuri/.cache/jobhunter',
     profileSources: '/home/leuri/.local/share/jobhunter/profile-sources',
   },
 };
@@ -613,7 +612,6 @@ describe('PathsJsonSchema', () => {
         data: '/B'.repeat(500),
         logs: '/C'.repeat(500),
         diagnostics: '/D'.repeat(500),
-        cache: '/E'.repeat(500),
         profileSources: '/F'.repeat(500),
       },
     };

@@ -28,7 +28,6 @@ const minimalPaths = (configPath: string): PlatformPaths => {
     data: { directory, file: () => '' },
     logs: { directory, file: () => '' },
     diagnostics: { directory, file: () => '' },
-    cache: { directory, file: () => '' },
     profileSources: { directory, file: () => '' },
   };
 };

@@ -487,7 +487,6 @@ const PathsJsonSchema = z
         data: z.string(),
         logs: z.string(),
         diagnostics: z.string(),
-        cache: z.string(),
         profileSources: z.string(),
       })
       .strict(),

@@ -11,7 +11,6 @@ export async function registerPathsRoute(app: FastifyInstance): Promise<void> {
         data: paths.data.directory,
         logs: paths.logs.directory,
         diagnostics: paths.diagnostics.directory,
-        cache: paths.cache.directory,
         profileSources: paths.profileSources.directory,
       },
     };
