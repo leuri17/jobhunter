@@ -103,6 +103,7 @@ function makeOutcome(input: {
   attempted: boolean;
   errorCode: string | null;
   errorMessage: string | null;
+  tokenUsage?: ScoringOutcome['tokenUsage'];
 }): ScoringOutcome {
   return {
     schemaVersion: LINKEDIN_SCORING_SCHEMA_VERSION,
@@ -117,6 +118,7 @@ function makeOutcome(input: {
     errorCode: input.errorCode,
     errorMessage: input.errorMessage,
     artifactIds: [],
+    ...(input.tokenUsage !== undefined ? { tokenUsage: input.tokenUsage } : {}),
   };
 }
 
@@ -494,6 +496,7 @@ export class ScoringService {
       attempted: true,
       errorCode: null,
       errorMessage: null,
+      tokenUsage,
     });
   }
 
@@ -573,6 +576,8 @@ export class ScoringService {
       failed: outcomes.filter((o) => o.kind === 'failed').length,
       skipped: outcomes.filter((o) => o.kind === 'skipped').length,
       cancelled: outcomes.filter((o) => o.kind === 'cancelled').length,
+      promptTokens: outcomes.reduce((sum, o) => sum + (o.tokenUsage?.promptTokens ?? 0), 0),
+      completionTokens: outcomes.reduce((sum, o) => sum + (o.tokenUsage?.completionTokens ?? 0), 0),
     };
 
     return {
