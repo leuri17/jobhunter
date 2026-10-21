@@ -1,7 +1,7 @@
 import { PageHeader, PageHeaderTitle } from '@/components/shared/layout/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api, ApiError } from '@/lib/api';
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { OperationalConfigSchema } from '@jobhunter/core/config/schemas';
@@ -30,6 +30,7 @@ function RouteComponent() {
     queryKey: ['config'],
     queryFn: api.getConfig,
   });
+  const queryClient = useQueryClient();
 
   const form = useForm({
     defaultValues: config.data.config,
@@ -37,15 +38,17 @@ function RouteComponent() {
     onSubmit: async ({ value }) => {
       try {
         await api.patchConfig(value);
+        await queryClient.invalidateQueries({ queryKey: ['config'] });
 
         toast.add({
           title: 'Search configuration updated successfully',
           type: 'success',
         });
       } catch (err: unknown) {
+        const apiError = err as ApiError;
         toast.add({
           title: 'Search configuration update failed',
-          description: `${(err as ApiError).status} - ${(err as ApiError).message}`,
+          description: `${apiError.status} ${apiError.code} - ${apiError.message}`,
           type: 'error',
         });
       }
