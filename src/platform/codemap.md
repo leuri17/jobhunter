@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-Platform/OS abstraction layer: exposes the host platform identifier, user home directory, and process environment through a single `PlatformAdapter` seam, and resolves the canonical filesystem slots (`config`, `data`, `logs`, `diagnostics`, `cache`, `profileSources`) used by every persistence-, config-, and profile-touching module. Owns `ensureDirectory` / `ensureRuntimeDirectories`, the only sanctioned path-mutation entry points.
+Platform/OS abstraction layer: exposes the host platform identifier, user home directory, and process environment through a single `PlatformAdapter` seam, and resolves the canonical filesystem slots (`config`, `data`, `logs`, `diagnostics`, `profileSources`) used by every persistence-, config-, and profile-touching module. Owns `ensureDirectory` / `ensureRuntimeDirectories`, the only sanctioned path-mutation entry points.
 
 ## Design
 

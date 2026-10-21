@@ -14,7 +14,6 @@ export interface PlatformPaths {
   readonly data: PlatformPathSlot;
   readonly logs: PlatformPathSlot;
   readonly diagnostics: PlatformPathSlot;
-  readonly cache: PlatformPathSlot;
   readonly profileSources: PlatformPathSlot;
 }
 
@@ -28,7 +27,6 @@ function linuxPaths(
   const configHome = env.XDG_CONFIG_HOME ?? joinPosix(home, '.config');
   const dataHome = env.XDG_DATA_HOME ?? joinPosix(home, '.local', 'share');
   const stateHome = env.XDG_STATE_HOME ?? joinPosix(home, '.local', 'state');
-  const cacheHome = env.XDG_CACHE_HOME ?? joinPosix(home, '.cache');
 
   const configDir = joinPosix(configHome, 'jobhunter');
   const dataDir = joinPosix(dataHome, 'jobhunter');
@@ -43,10 +41,6 @@ function linuxPaths(
     diagnostics: {
       directory: joinPosix(dataDir, 'diagnostics'),
       file: (name) => joinPosix(dataDir, 'diagnostics', name),
-    },
-    cache: {
-      directory: joinPosix(cacheHome, 'jobhunter'),
-      file: (name) => joinPosix(cacheHome, 'jobhunter', name),
     },
     profileSources: {
       directory: joinPosix(dataDir, 'profile-sources'),
@@ -67,10 +61,6 @@ function darwinPaths(home: string): PlatformPaths {
     diagnostics: {
       directory: joinPosix(appSupport, 'diagnostics'),
       file: (name) => joinPosix(appSupport, 'diagnostics', name),
-    },
-    cache: {
-      directory: joinPosix(home, 'Library', 'Caches', 'JobHunter'),
-      file: (name) => joinPosix(home, 'Library', 'Caches', 'JobHunter', name),
     },
     profileSources: {
       directory: joinPosix(appSupport, 'profile-sources'),
@@ -98,10 +88,6 @@ function windowsPaths(env: Readonly<Record<string, string | undefined>>): Platfo
     diagnostics: {
       directory: joinWin32(dataDir, 'diagnostics'),
       file: (name) => joinWin32(dataDir, 'diagnostics', name),
-    },
-    cache: {
-      directory: joinWin32(dataDir, 'cache'),
-      file: (name) => joinWin32(dataDir, 'cache', name),
     },
     profileSources: {
       directory: joinWin32(dataDir, 'profile-sources'),
@@ -139,7 +125,6 @@ const ALL_RUNTIME_CATEGORIES: readonly RuntimeDirectoryCategory[] = [
   'data',
   'logs',
   'diagnostics',
-  'cache',
   'profileSources',
 ];
 

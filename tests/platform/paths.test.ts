@@ -26,7 +26,6 @@ describe('resolvePlatformPaths', () => {
     expect(paths.config.directory).toBe('/home/alice/.config/jobhunter');
     expect(paths.data.directory).toBe('/home/alice/.local/share/jobhunter');
     expect(paths.logs.directory).toBe('/home/alice/.local/state/jobhunter');
-    expect(paths.cache.directory).toBe('/home/alice/.cache/jobhunter');
     expect(paths.diagnostics.directory).toBe('/home/alice/.local/share/jobhunter/diagnostics');
     expect(paths.profileSources.directory).toBe(
       '/home/alice/.local/share/jobhunter/profile-sources',
@@ -39,7 +38,6 @@ describe('resolvePlatformPaths', () => {
     expect(paths.config.directory).toBe('/home/alice/.config/jobhunter');
     expect(paths.data.directory).toBe('/home/alice/.local/share/jobhunter');
     expect(paths.logs.directory).toBe('/home/alice/.local/state/jobhunter');
-    expect(paths.cache.directory).toBe('/home/alice/.cache/jobhunter');
   });
 
   it('uses ~/Library paths on macOS', () => {
@@ -48,7 +46,6 @@ describe('resolvePlatformPaths', () => {
     expect(paths.config.directory).toBe('/Users/alice/Library/Application Support/JobHunter');
     expect(paths.data.directory).toBe('/Users/alice/Library/Application Support/JobHunter');
     expect(paths.logs.directory).toBe('/Users/alice/Library/Logs/JobHunter');
-    expect(paths.cache.directory).toBe('/Users/alice/Library/Caches/JobHunter');
     expect(paths.diagnostics.directory).toBe(
       '/Users/alice/Library/Application Support/JobHunter/diagnostics',
     );
@@ -71,7 +68,6 @@ describe('resolvePlatformPaths', () => {
     expect(paths.diagnostics.directory).toBe(
       'C:\\Users\\Alice\\AppData\\Local\\JobHunter\\diagnostics',
     );
-    expect(paths.cache.directory).toBe('C:\\Users\\Alice\\AppData\\Local\\JobHunter\\cache');
     expect(paths.profileSources.directory).toBe(
       'C:\\Users\\Alice\\AppData\\Local\\JobHunter\\profile-sources',
     );

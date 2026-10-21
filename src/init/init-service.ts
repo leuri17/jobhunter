@@ -169,7 +169,6 @@ export class InitOrchestrator {
       dataDirectory: opts.paths.data.directory,
       logsDirectory: opts.paths.logs.directory,
       diagnosticsDirectory: opts.paths.diagnostics.directory,
-      cacheDirectory: opts.paths.cache.directory,
       profileSourcesDirectory: opts.paths.profileSources.directory,
       fileSystem: opts.fileSystem,
     });
@@ -186,7 +185,6 @@ export class InitOrchestrator {
       dataDirectory: opts.paths.data.directory,
       logsDirectory: opts.paths.logs.directory,
       diagnosticsDirectory: opts.paths.diagnostics.directory,
-      cacheDirectory: opts.paths.cache.directory,
       profileSourcesDirectory: opts.paths.profileSources.directory,
       fileSystem: opts.fileSystem,
     });

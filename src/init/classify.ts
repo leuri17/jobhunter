@@ -6,7 +6,6 @@ export interface ClassifyPathsInput {
   readonly dataDirectory: string;
   readonly logsDirectory: string;
   readonly diagnosticsDirectory: string;
-  readonly cacheDirectory: string;
   readonly profileSourcesDirectory: string;
   readonly fileSystem: { readonly pathExists: (path: string) => Promise<boolean> };
 }
@@ -97,7 +96,6 @@ export async function classifyDirectories(input: ClassifyPathsInput): Promise<In
     input.dataDirectory,
     input.logsDirectory,
     input.diagnosticsDirectory,
-    input.cacheDirectory,
     input.profileSourcesDirectory,
   ];
   for (const directory of directories) {

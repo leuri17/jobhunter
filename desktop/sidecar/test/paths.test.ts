@@ -19,7 +19,7 @@ describe('GET /api/paths', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { schemaVersion: number; paths: Record<string, string> };
     expect(body.schemaVersion).toBe(1);
-    for (const key of ['config', 'data', 'logs', 'diagnostics', 'cache', 'profileSources']) {
+    for (const key of ['config', 'data', 'logs', 'diagnostics', 'profileSources']) {
       expect(typeof body.paths[key]).toBe('string');
       expect(body.paths[key].length).toBeGreaterThan(0);
     }
