@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { PageHeader, PageHeaderTitle } from '@/components/shared/layout/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api, ApiError } from '@/lib/api';
@@ -9,6 +10,8 @@ import { OperationalConfigSchema } from '@jobhunter/core/config/schemas';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/toast';
+import { ApiErrorDialog } from '@/components/shared/ui/api-error-dialog';
+import { ACTION_GUIDANCE } from '@/lib/error-surfaces';
 import { SearchQueriesSection } from '@/components/shared/features/settings/search-config/search-queries-section';
 import { LocationsSection } from '@/components/shared/features/settings/search-config/locations-section';
 import { DatePostedSection } from '@/components/shared/features/settings/search-config/date-posted-section';
@@ -30,6 +33,7 @@ function RouteComponent() {
     queryFn: api.getConfig,
   });
   const queryClient = useQueryClient();
+  const [saveError, setSaveError] = useState<ApiError | null>(null);
 
   const form = useForm({
     defaultValues: config.data.config,
@@ -48,15 +52,15 @@ function RouteComponent() {
           type: 'success',
         });
       } catch (err: unknown) {
-        const apiError = err as ApiError;
-        toast.add({
-          title: 'Search configuration update failed',
-          description: `${apiError.status} ${apiError.code} - ${apiError.message}`,
-          type: 'error',
-        });
+        setSaveError(err as ApiError);
       }
     },
   });
+
+  const retrySave = () => {
+    setSaveError(null);
+    void form.handleSubmit();
+  };
 
   return (
     // TODO: Create Page & PageContent component
@@ -123,6 +127,14 @@ function RouteComponent() {
           )}
         </form.Subscribe>
       </form>
+
+      <ApiErrorDialog
+        error={saveError}
+        title="Couldn't save settings"
+        guidance={ACTION_GUIDANCE.settingsSave}
+        onAction={retrySave}
+        onDismiss={() => setSaveError(null)}
+      />
     </div>
   );
 }
