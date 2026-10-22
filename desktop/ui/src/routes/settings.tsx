@@ -1,6 +1,7 @@
 import { PageHeader, PageHeaderTitle } from '@/components/shared/layout/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api, ApiError } from '@/lib/api';
+import type { ConfigResponse } from '@/lib/types';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
@@ -37,6 +38,10 @@ function RouteComponent() {
       try {
         await api.patchConfig(value);
         await queryClient.invalidateQueries({ queryKey: ['config'] });
+        // defaultValues are read once on first render, so the form never
+        // picks up the refetched config on its own — re-baseline against
+        // the cache that invalidateQueries just refreshed.
+        form.reset(queryClient.getQueryData<ConfigResponse>(['config'])!.config);
 
         toast.add({
           title: 'Search configuration updated successfully',
