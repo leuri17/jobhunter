@@ -4,7 +4,7 @@
 
 Local-first job-search automation for LinkedIn. The core TypeScript package (`@jobhunter/core`, rooted at `src/`) drives a Playwright-based scraper over public LinkedIn job search results, normalizes and extracts structured job data with OpenAI models, applies deterministic filters plus LLM scoring against a candidate profile, and persists everything to a local SQLite database through Drizzle ORM. A Tauri v2 desktop application (`desktop/`) wraps the same core behind a Fastify HTTP sidecar and a React UI.
 
-Runtime baseline: Node `>=24.18.0 <25`, ESM-only (`"type": "module"`), pnpm `11.25.0`.
+Runtime baseline: Node `>=24.18.0 <25`, ESM-only (`"type": "module"`), pnpm `12.14.0`.
 
 ## System Entry Points
 

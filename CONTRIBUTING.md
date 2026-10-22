@@ -28,7 +28,7 @@ submit it as a PR.
 ## Development setup
 
 Requires Node.js `24.18.0` (pinned via `.node-version`), pnpm
-`11.25.0` (pinned via `package.json#packageManager`), and a Rust
+`12.14.0` (pinned via `package.json#packageManager`), and a Rust
 toolchain (for `cargo tauri dev` and the desktop shell build).
 
 ```bash
