@@ -21,7 +21,9 @@ with the sidecar. `tsconfig.json` extends `../../tsconfig.base.json`, is `noEmit
 
 ## Flow
 
-`vite` (dev) or `tsc -b && vite build` (`build`) produces the static bundle; Tauri serves it
+`node scripts/dev-server.mjs vite` (dev; a signal-forwarding supervisor that
+exits 0 when the shell terminates it) or `tsc -b && vite build` (`build`)
+produces the static bundle; Tauri serves it
 over the `custom-protocol` asset scheme in production and via the Vite dev server locally.
 At runtime pages call `src/lib/api.ts` -> `resolveSidecar()` -> `fetch` against
 `desktop/sidecar/` routes (`/api/health`, `/api/config`, `/api/profile/*`, `/api/jobs/*`,
