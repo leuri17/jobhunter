@@ -71,6 +71,8 @@ After completing a multi-step plan, before declaring work done:
 - **Session state lives at `.slim/deepwork/<slug>.md`.** Gitignored locally, OpenCode-readable via `.ignore` allowlist. Never push to a public remote.
 - **Comments only when they earn it.** Default to no inline narration of what the code does — the code says that. Keep TS-Doc on the exported API surface where it documents non-obvious behavior (type-variance, contract pre/post-conditions, side-effects). Drop inline narration like "this is a smoke check," "we can't observe X from the public API," or "X happens next" — it drifts out of sync and adds noise. If something genuinely needs explaining, lift it into TS-Doc on the function, not a comment above it.
 
+- **Add shadcn/ui components through the CLI only.** Never hand-write or copy-paste `components/ui` primitives — generate with `pnpx shadcn@latest add <component>` and customize only the generated file's className/props seams.
+
 ## Commits
 
 - One commit per logical step. Each commit is independently buildable (typecheck + lint + format all pass; the codebase still runs).
