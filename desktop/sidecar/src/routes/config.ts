@@ -8,6 +8,7 @@ import {
 } from '@jobhunter/core/config';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { ValidationError } from '@jobhunter/core/errors';
+import { FileSecretsStore, maskSecret, resolveApiKeySource } from '@jobhunter/core/config';
 import { sidecarFileSystem } from './fs-adapter.js';
 
 export async function registerConfigRoutes(app: FastifyInstance): Promise<void> {
@@ -34,5 +35,42 @@ export async function registerConfigRoutes(app: FastifyInstance): Promise<void> 
       });
     }
     return { schemaVersion: 1, valid: true };
+  });
+
+  app.get('/api/secrets/api-key', async () => {
+    const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
+    const store = new FileSecretsStore({ paths });
+    const [secrets, source] = await Promise.all([
+      store.read(),
+      resolveApiKeySource({
+        store,
+        env: process.env,
+      }),
+    ]);
+    return {
+      schemaVersion: 1,
+      configured: source !== 'none',
+      source,
+      // Masked only — the plaintext key is never returned over the wire.
+      masked: maskSecret(source === 'stored' ? secrets.openaiApiKey : undefined),
+    };
+  });
+
+  app.put<{ Body: { apiKey?: string } }>('/api/secrets/api-key', async (req) => {
+    const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
+    const store = new FileSecretsStore({ paths });
+    const apiKey = req.body.apiKey?.trim() ?? '';
+    if (apiKey.length === 0) {
+      await store.clear();
+      return { schemaVersion: 1, configured: false, source: 'none', masked: '' };
+    }
+    await store.write({ openaiApiKey: apiKey });
+    return { schemaVersion: 1, configured: true, source: 'stored', masked: maskSecret(apiKey) };
+  });
+
+  app.delete('/api/secrets/api-key', async () => {
+    const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
+    await new FileSecretsStore({ paths }).clear();
+    return { schemaVersion: 1, configured: false, source: 'none', masked: '' };
   });
 }

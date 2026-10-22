@@ -4,7 +4,7 @@ The codebase reads eight environment variables. Six are real (build-time or runt
 
 | Variable | When read | Default | Required? | Description |
 | --- | --- | --- | --- | --- |
-| `OPENAI_API_KEY` | sidecar boot | — | yes (for non-trivial use) | The OpenAI key used by the sidecar for profile extraction and job scoring. |
+| `OPENAI_API_KEY` | sidecar boot | — | no | Fallback OpenAI key used for profile extraction and job scoring. **Prefer entering the key in Settings → AI Provider**, which stores it on this machine and takes precedence over this variable. See [OpenAI API key precedence](#openai-api-key-precedence). |
 | `OPENAI_MODEL` | sidecar boot | `gpt-5` | no | The model used for both profile extraction and job scoring. |
 | `LOG_LEVEL` | sidecar boot | `info` | no | `trace` \| `debug` \| `info` \| `warn` \| `error` \| `fatal` \| `silent`. **Only used when no `config.json` exists.** `config.logging.level` always wins once the operational config is present — see [Log level precedence](#log-level-precedence). |
 | `JOBHUNTER_SIDECAR_PORT` | sidecar boot | `0` (OS-assigned) | no | The port the sidecar binds to. Only set explicitly for non-Tauri / non-supervised runs. |
@@ -12,6 +12,28 @@ The codebase reads eight environment variables. Six are real (build-time or runt
 | `LINKEDIN_LIVE` | `pnpm test:live` | unset | no | Set to `1` to enable real-Chromium LinkedIn live tests. |
 | `PLAYWRIGHT_SMOKE` | `pnpm test:e2e` | unset | no | Set to `1` to enable the two `*.smoke.test.ts` files in `tests/live/linkedin/`. |
 | `CI` | Playwright webServer | unset | no | Auto-set by GitHub Actions. Controls whether Playwright reuses an existing dev server. |
+
+## OpenAI API key precedence
+
+There are two ways to supply the OpenAI key, and the one you set in the app wins.
+
+1. **Settings → AI Provider** — entered in the app and stored on this machine in `secrets.json` under the platform config directory (mode `0600`, not encrypted). **This is the recommended route.**
+2. **`OPENAI_API_KEY`** — the environment variable. Used only when nothing is stored.
+
+A normal user never needs to touch this variable. Settings is the supported path; the env var exists so CI, headless runs, and existing developer setups keep working.
+
+### Why the env var seems to do nothing
+
+The stored key takes precedence, so once you save one in Settings, any `OPENAI_API_KEY` in your environment is ignored — including one in a stale shell profile. Settings shows an inline notice when the key currently in use came from the environment, so you can see which source is active.
+
+### Storage and security
+
+- The key is stored in a file (`secrets.json`), **not** in the OS keychain and **not** in `config.json`. It is written at mode `0600` with the parent directory at `0700`.
+- The key is **never returned over the API**. `GET /api/secrets/api-key` reports only whether a key is configured, which source won, and a masked form (`sk-***…234`). The app never needs to read the real value back.
+- The stored key is not part of the operational config, so it does not affect the config hash and cannot appear in the settings diff.
+- If the stored key cannot be read (for example the file is corrupt), the app falls back to `OPENAI_API_KEY` rather than failing.
+
+> Replacing the plaintext `secrets.json` with the OS keychain is tracked in #211. Until that lands, the key is protected by file permissions rather than OS-level encryption.
 
 ## Log level precedence
 
@@ -50,10 +72,12 @@ The sidecar and the Vitest suite read `process.env` directly. The webview reads 
 
 ```
 cp .env.example .env
-$EDITOR .env   # fill in OPENAI_API_KEY at minimum
+$EDITOR .env   # only needed if you want to set OPENAI_API_KEY here
 ```
 
 `.env` is gitignored; never commit it.
+
+**You do not need a `.env` file to run the app.** Enter your OpenAI key in Settings → AI Provider instead; it is stored on your machine and takes precedence over `OPENAI_API_KEY`. A `.env` is only a convenience for development and CI.
 
 ### Production
 

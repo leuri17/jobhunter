@@ -56,6 +56,17 @@ export interface ValidateConfigResponse {
   readonly valid: true;
 }
 
+/**
+ * The API key itself is never returned. `masked` is enough for the UI
+ * to show that a key exists without ever holding the real value.
+ */
+export interface ApiKeyResponse {
+  readonly schemaVersion: 1;
+  readonly configured: boolean;
+  readonly source: 'stored' | 'environment' | 'none';
+  readonly masked: string;
+}
+
 export interface ListProfilesResponse {
   readonly schemaVersion: 1;
   readonly profiles: readonly ProfileListEntry[];

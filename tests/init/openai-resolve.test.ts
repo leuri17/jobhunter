@@ -42,15 +42,17 @@ afterEach(() => {
 });
 
 describe('resolveOpenAiClientOrNull — refusal-detection wiring (audit B2-M8 follow-up)', () => {
-  it('returns null when OPENAI_API_KEY is unset, regardless of `refusal`', () => {
+  it('returns null when OPENAI_API_KEY is unset, regardless of `refusal`', async () => {
     vi.unstubAllEnvs();
-    expect(resolveOpenAiClientOrNull()).toBeNull();
-    expect(resolveOpenAiClientOrNull({ refusalMarkers: ['X'], flagEmptyBodies: false })).toBeNull();
+    expect(await resolveOpenAiClientOrNull()).toBeNull();
+    expect(
+      await resolveOpenAiClientOrNull({ refusalMarkers: ['X'], flagEmptyBodies: false }),
+    ).toBeNull();
     expect(mockCreateRefusalDetector).not.toHaveBeenCalled();
   });
 
-  it('binds DEFAULT_REFUSAL_MARKERS + flagEmpty=true when called with no options', () => {
-    resolveOpenAiClientOrNull();
+  it('binds DEFAULT_REFUSAL_MARKERS + flagEmpty=true when called with no options', async () => {
+    await resolveOpenAiClientOrNull();
     expect(mockCreateRefusalDetector).toHaveBeenCalledTimes(1);
     // No `refusal` passed → the factory's `toRefusalDetectorOptions`
     // returns `undefined` and `createRefusalDetector(undefined)` falls
@@ -58,12 +60,12 @@ describe('resolveOpenAiClientOrNull — refusal-detection wiring (audit B2-M8 fo
     expect(mockCreateRefusalDetector).toHaveBeenCalledWith(undefined);
   });
 
-  it('binds a passed `refusal` option to the detector (custom markers, flagEmpty=false)', () => {
+  it('binds a passed `refusal` option to the detector (custom markers, flagEmpty=false)', async () => {
     const refusal = {
       refusalMarkers: ['CUSTOM_REFUSAL_PHRASE'],
       flagEmptyBodies: false,
     };
-    resolveOpenAiClientOrNull(refusal);
+    await resolveOpenAiClientOrNull(refusal);
     expect(mockCreateRefusalDetector).toHaveBeenCalledTimes(1);
     // `toRefusalDetectorOptions` translates `refusalMarkers` → `markers`
     // and `flagEmptyBodies` → `flagEmpty` before binding.
@@ -73,8 +75,8 @@ describe('resolveOpenAiClientOrNull — refusal-detection wiring (audit B2-M8 fo
     });
   });
 
-  it('passes through partial refusal overrides (markers only; flagEmpty resolved at scan time)', () => {
-    resolveOpenAiClientOrNull({ refusalMarkers: ['ONLY_MARKERS'] });
+  it('passes through partial refusal overrides (markers only; flagEmpty resolved at scan time)', async () => {
+    await resolveOpenAiClientOrNull({ refusalMarkers: ['ONLY_MARKERS'] });
     // The factory's `toRefusalDetectorOptions` only writes `flagEmpty`
     // when the caller passed `flagEmptyBodies`. The detector defaults
     // `flagEmpty` to `true` at scan time (see refusal-detector.ts),
