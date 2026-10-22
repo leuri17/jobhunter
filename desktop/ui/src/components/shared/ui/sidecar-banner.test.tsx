@@ -32,9 +32,10 @@ describe('<SidecarBanner />', () => {
     expect(screen.queryByTestId('sidecar-banner')).toBeNull();
   });
 
-  it('does not render when the resolver did not fall back', () => {
-    // IPC/env-resolved URL — even if the sidecar is down, the StatusPill
-    // surfaces it; the banner is fallback-specific.
+  it('renders when a high-confidence URL is measured unreachable', () => {
+    // After issue #202 the hook always measures; a pinned URL
+    // (env override / Tauri IPC) with a dead sidecar must surface the
+    // banner, not rely on StatusPill alone.
     render(
       <SidecarBanner
         state={makeState({
@@ -44,7 +45,17 @@ describe('<SidecarBanner />', () => {
         })}
       />,
     );
-    expect(screen.queryByTestId('sidecar-banner')).toBeNull();
+    expect(screen.getByTestId('sidecar-banner')).toBeTruthy();
+    expect(screen.getByTestId('sidecar-banner-retry')).toBeTruthy();
+  });
+
+  it('renders the proxy port for the fallback empty URL', () => {
+    // Plain browser dev resolves to { url: '' }; the copy must say
+    // port 14231, not "port unknown".
+    render(<SidecarBanner state={makeState({ url: '', isFallback: true })} />);
+    const banner = screen.getByTestId('sidecar-banner');
+    expect(banner.textContent ?? '').toContain('14231');
+    expect(banner.textContent ?? '').not.toContain('unknown');
   });
 
   it('does not render while the first ping is still pending', () => {

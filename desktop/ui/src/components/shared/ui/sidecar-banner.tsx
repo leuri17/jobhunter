@@ -6,16 +6,17 @@ export interface SidecarBannerProps {
 }
 
 /**
- * Blocking banner that surfaces when the sidecar URL resolver fell back to
- * the last-resort default port AND a `/api/health` ping fails. Renders above
- * the sidebar/content shell so every route sees it.
+ * Ambient banner for a measured sidecar outage (issue #202 / the
+ * `banner` tier in `@/lib/error-surfaces`). Renders above the
+ * sidebar/content shell so every route sees it, regardless of how
+ * the URL was resolved.
  */
 export function SidecarBanner({ state }: SidecarBannerProps) {
-  if (!state.isFallback || state.status === 'reachable' || state.status === 'pending') {
+  if (state.status !== 'unreachable') {
     return null;
   }
   const port =
-    state.url === null
+    state.url === null || state.url === ''
       ? 14231
       : (() => {
           try {
