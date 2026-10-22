@@ -52,11 +52,22 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
   if (!res.ok) {
-    const errBody = (await res
-      .json()
-      .catch(() => ({ error: { code: 'unknown', message: res.statusText } }))) as {
+    const errBody = (await res.json().catch(() => null)) as {
       error?: { code?: string; message?: string };
-    };
+    } | null;
+    if (errBody === null) {
+      // Vite dev proxy synthesizes a 502 HTML page when the sidecar is
+      // down (issue #202); no parseable envelope means the response did
+      // not come from the sidecar.
+      if (res.status >= 500) {
+        throw new ApiError(
+          res.status,
+          'sidecar_unreachable',
+          'The JobHunter sidecar is not responding.',
+        );
+      }
+      throw new ApiError(res.status, 'unknown', res.statusText);
+    }
     throw new ApiError(
       res.status,
       errBody.error?.code ?? 'unknown',
