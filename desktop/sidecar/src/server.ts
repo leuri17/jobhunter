@@ -1,4 +1,9 @@
-import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
+import Fastify, {
+  type FastifyBaseLogger,
+  type FastifyInstance,
+  type FastifyReply,
+  type FastifyRequest,
+} from 'fastify';
 import cors from '@fastify/cors';
 import { pino, transport, multistream, type Logger as PinoLogger, type StreamEntry } from 'pino';
 import { readEnv, type SidecarEnv } from './env.js';
@@ -216,6 +221,39 @@ async function resolveRootLogger(
   return createSidecarRootLoggerFromConfig(processEnv, loaded, opts.paths);
 }
 
+export interface HealthProbeLogging {
+  readonly logLevel: 'silent';
+  readonly onResponse: (request: FastifyRequest, reply: FastifyReply) => void;
+}
+
+/**
+ * Route logging config for `/api/health`. The UI polls the probe every few
+ * seconds and a successful liveness probe carries no diagnostic value, so
+ * the route's request logger is silenced outright instead of demoting its
+ * records: Fastify logs "incoming request"/"request completed" at `info`
+ * through a per-route child logger, and `logLevel: 'silent'` mutes exactly
+ * that child. Failed probes are diagnostic, so non-2xx outcomes are
+ * re-emitted on the root logger (`request.server.log`), which the silenced
+ * child cannot carry, keeping failures in the rotating log file.
+ */
+export function healthProbeLogging(): HealthProbeLogging {
+  return {
+    logLevel: 'silent',
+    onResponse: (request, reply): void => {
+      if (reply.statusCode < 400) return;
+      request.server.log.error(
+        {
+          event: 'health.probe.failed',
+          method: request.method,
+          url: request.url,
+          statusCode: reply.statusCode,
+        },
+        'health probe failed',
+      );
+    },
+  };
+}
+
 export async function buildServer(opts: BuildServerOptions): Promise<FastifyInstance> {
   // Load `config.json` once at boot and reuse for both logger and
   // refusal-detection derivation — keeps the I/O on a single pass
@@ -255,7 +293,10 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
     reply.status(statusFor(error)).send(envelopeFor(error));
   });
 
-  app.get('/api/health', async () => ({ schemaVersion: 1, status: 'ok' }));
+  app.get('/api/health', healthProbeLogging(), async () => ({
+    schemaVersion: 1,
+    status: 'ok',
+  }));
 
   await registerPathsRoute(app);
 
