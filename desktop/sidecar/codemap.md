@@ -15,8 +15,14 @@ that maps domain errors (`statusFor` / `envelopeFor` in `errors.ts`) into JSON e
 Cross-cutting plugins: `@fastify/cors` and `@fastify/multipart`. SSE live updates are
 implemented via a thin helper (`src/sse.ts`) that writes `text/event-stream` frames
 directly to `node:http.ServerResponse`, used by long-running pipeline routes. Process
-config comes from `readEnv()` (`src/env.ts`); logging is Fastify's pino at `LOG_LEVEL`
-(default `info`). ESM (`"type": "module"`), executed with `tsx` in dev/`start`, built
+config comes from `readEnv()` (`src/env.ts`). Logging is Fastify's pino, with the
+level resolved by `resolveLogConfig` in `server.ts`: `config.logging.level` wins
+whenever a `config.json` exists, and `LOG_LEVEL` (default `info`) is the fallback
+used only when none does — so the env var is unreachable on a configured install.
+The resolution is reported at boot as `log.level.resolved`, with
+`log.level.env_shadowed` at `warn` when `LOG_LEVEL` is set and losing; see
+[docs/env.md](../../docs/env.md#log-level-precedence). A rotating file destination
+under `PlatformPaths.logs` is always added when `paths` is supplied. ESM (`"type": "module"`), executed with `tsx` in dev/`start`, built
 with `tsc` (`build` script) to `dist/`.
 
 ## Flow
