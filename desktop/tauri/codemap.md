@@ -33,6 +33,11 @@ Tauri 2 application crate built on the Rust 2021 edition (MSRV `1.77`).
 
 ## Integration
 
+- Dev shutdown: the `beforeDevCommand` (`pnpm --filter @jobhunter/ui dev`)
+  runs vite under a signal-forwarding supervisor
+  (`desktop/ui/scripts/dev-server.mjs`) that exits 0 on a shell-initiated
+  SIGTERM, so closing the app in `tauri dev` no longer prints pnpm's
+  `ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL` block for the expected exit 143.
 - Sub-map: [src/](desktop/tauri/src/codemap.md) — Tauri commands, sidecar plumbing, app setup.
 - Ships with [desktop/ui/](../ui/codemap.md) — frontend bundle loaded into the WebView.
 - Spawns [desktop/sidecar/](../sidecar/codemap.md) — Node.js process whose stdio is managed by `tokio::process`.
