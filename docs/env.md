@@ -44,6 +44,8 @@ There are two sources for the sidecar's log level, and `config.json` always wins
 
 This ordering is deliberate. The Settings value is a choice the user made in the app, and it should not be silently overridden by a stale `LOG_LEVEL` left in a shell profile. The cost is that `LOG_LEVEL` looks functional but does nothing on a configured install.
 
+Whichever source wins, the level is a **threshold**, not a category: logs show the chosen level and everything more severe, and everything less severe is dropped. A narrower level hides more — `error` hides all warnings, including `log.level.env_shadowed`.
+
 ### Why your `LOG_LEVEL` seems to do nothing
 
 `DEFAULT_OPERATIONAL_CONFIG.logging.level` is `info`, and it is always written into a new `config.json`. So from the first run onward, a config-supplied level exists, the `LOG_LEVEL` fallback is unreachable, and the variable is ignored — even if it is set to something else.

@@ -69,6 +69,11 @@ function LevelRow({ field }: { field: AnyFieldApi }) {
       </Select>
       <FieldError errors={field.state.meta.errors} />
       <p className="text-xs text-muted-foreground">
+        A threshold, not a category: the log shows the selected level and everything more severe.
+        When something went wrong, <code className="font-mono">warn</code> or above is usually what
+        you want — <code className="font-mono">error</code> hides all warnings.
+      </p>
+      <p className="text-xs text-muted-foreground">
         Applies on restart and overrides <code className="font-mono">LOG_LEVEL</code> in your
         environment. Remove the variable if you want this to be the only source.
       </p>
