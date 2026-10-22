@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/toast';
 import { ApiErrorDialog } from '@/components/shared/ui/api-error-dialog';
+import { ACTION_GUIDANCE } from '@/lib/error-surfaces';
 import { SearchQueriesSection } from '@/components/shared/features/settings/search-config/search-queries-section';
 import { LocationsSection } from '@/components/shared/features/settings/search-config/locations-section';
 import { DatePostedSection } from '@/components/shared/features/settings/search-config/date-posted-section';
@@ -55,6 +56,11 @@ function RouteComponent() {
       }
     },
   });
+
+  const retrySave = () => {
+    setSaveError(null);
+    void form.handleSubmit();
+  };
 
   return (
     // TODO: Create Page & PageContent component
@@ -125,12 +131,10 @@ function RouteComponent() {
       <ApiErrorDialog
         error={saveError}
         title="Couldn't save settings"
+        guidance={ACTION_GUIDANCE.settingsSave}
+        onAction={retrySave}
         onDismiss={() => setSaveError(null)}
-      >
-        <p className="text-sm text-muted-foreground">
-          Nothing was saved. Your edits are still in the form.
-        </p>
-      </ApiErrorDialog>
+      />
     </div>
   );
 }

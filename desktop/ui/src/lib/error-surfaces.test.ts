@@ -4,6 +4,7 @@ import {
   ACTION_REQUIRED_ERROR_CODES,
   SURFACE_BY_SEVERITY,
   actionGuidanceFor,
+  formatErrorTrace,
   isActionRequiredError,
 } from './error-surfaces';
 
@@ -43,5 +44,13 @@ describe('actionGuidanceFor', () => {
     expect(
       actionGuidanceFor(new ApiError(500, 'internal_error', 'Internal server error')),
     ).toBeNull();
+  });
+});
+
+describe('formatErrorTrace', () => {
+  it('puts status, code, and message on separate lines', () => {
+    expect(
+      formatErrorTrace(new ApiError(503, 'openai_unavailable', 'No OpenAI API key is configured')),
+    ).toBe('status: 503\ncode: openai_unavailable\nmessage: No OpenAI API key is configured');
   });
 });

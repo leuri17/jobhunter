@@ -1,78 +1,154 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ApiError } from '@/lib/api';
-import { actionGuidanceFor } from '@/lib/error-surfaces';
+import type { ActionGuidance } from '@/lib/error-surfaces';
+import { actionGuidanceFor, formatErrorTrace } from '@/lib/error-surfaces';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { CheckIcon, ChevronRightIcon, CopyIcon, TriangleAlertIcon } from 'lucide-react';
+import { cn } from 'cn';
+import { Separator } from '@/components/ui/separator';
+import { Item, ItemActions, ItemContent, ItemTitle } from '@/components/ui/item';
+
+const DEFAULT_HELP = "It didn't go through. You can try again.";
+const COPY_RESET_MS = 2000;
+
+/**
+ * Technical trace for the failed request, behind a closed-by-default
+ * disclosure at the bottom of the dialog. Owns its own open/copy state
+ * so both reset whenever the dialog moves to a new error.
+ */
+function ErrorTraceDisclosure({ error }: { readonly error: ApiError }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const resetTimeoutRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => window.clearTimeout(resetTimeoutRef.current), []);
+
+  async function copyTrace(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(formatErrorTrace(error));
+      setCopied(true);
+      window.clearTimeout(resetTimeoutRef.current);
+      resetTimeoutRef.current = window.setTimeout(() => setCopied(false), COPY_RESET_MS);
+    } catch {
+      // clipboard writes can fail (unfocused window, permissions);
+      // leave the label as-is so the user can retry
+    }
+  }
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Item
+        variant="outline"
+        size="xs"
+        className={cn('cursor-pointer text-muted-foreground', open && 'rounded-b-none')}
+        render={<CollapsibleTrigger data-testid="api-error-dialog-trace-toggle" />}
+      >
+        <ItemContent>
+          <ItemTitle>More info</ItemTitle>
+        </ItemContent>
+        <ItemActions>
+          <ChevronRightIcon className={cn('size-3.5 transition-transform', open && 'rotate-90')} />
+        </ItemActions>
+      </Item>
+
+      <CollapsibleContent>
+        <pre
+          data-testid="api-error-dialog-trace"
+          className="max-h-40 overflow-auto bg-background/50 p-2 text-xs whitespace-pre-wrap text-muted-foreground"
+        >
+          {formatErrorTrace(error)}
+        </pre>
+        <div className="flex flex-col max-h-40 overflow-auto rounded-b-lg bg-background/50 p-2 text-xs whitespace-pre-wrap text-muted-foreground">
+          <Separator className="mb-2" />
+
+          <Button
+            variant="outline"
+            size="sm"
+            aria-live="polite"
+            onClick={() => void copyTrace()}
+            data-testid="api-error-dialog-copy"
+          >
+            {copied ? <CheckIcon /> : <CopyIcon />}
+            {copied ? 'Copied' : 'Copy details'}
+          </Button>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 interface ApiErrorDialogProps {
   /** The failed request's error; `null` keeps the dialog closed. */
   readonly error: ApiError | null;
   readonly title: string;
-  /** Called when the dialog is dismissed (Close button, X, Escape, backdrop). */
+  /** Called when the dialog is dismissed (footer Close, Escape, backdrop). */
   readonly onDismiss: () => void;
   /**
-   * Performs the documented action for action-required error codes
-   * (see `lib/error-surfaces.ts`). Only rendered when the error maps
-   * to guidance; safe to pass unconditionally from call sites.
+   * Performs the guidance's action. Only rendered when guidance is in
+   * play — from the error's code or an explicit override — so it is
+   * safe to pass unconditionally from call sites.
    */
   readonly onAction?: (() => void) | undefined;
-  /** Context copy rendered above the error detail, e.g. "Nothing was saved." */
-  readonly children?: ReactNode;
+  /**
+   * Fallback guidance for a failed user action (see `ACTION_GUIDANCE`
+   * in `lib/error-surfaces.ts`). Any error can fail an action like a
+   * save, so the route names the action's guidance and it applies
+   * whenever the error's code has no guidance of its own.
+   */
+  readonly guidance?: ActionGuidance | undefined;
 }
 
-/**
- * Dialog surface for a failed `ApiError` the user must act on (issue
- * #200's action-required tier). Shows the problem plainly, the
- * raw status/code/message for diagnosis, and — for codes with a
- * documented action — the guidance copy and the button that performs
- * it. Use for failures of user-initiated actions; transient errors
- * go through the toast instead.
- */
 export function ApiErrorDialog({
   error,
   title,
   onDismiss,
   onAction,
-  children,
+  guidance,
 }: ApiErrorDialogProps) {
-  const guidance = error !== null ? actionGuidanceFor(error) : null;
+  const resolved = error !== null ? (actionGuidanceFor(error) ?? guidance ?? null) : null;
+  const help = resolved !== null ? resolved.message : DEFAULT_HELP;
 
   return (
-    <Dialog
+    <AlertDialog
       open={error !== null}
       onOpenChange={(open) => {
         if (!open) onDismiss();
       }}
     >
-      <DialogContent data-testid="api-error-dialog">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-2 px-4">
-          {children}
-          {error !== null && (
-            <pre className="max-h-40 overflow-auto rounded bg-background/60 p-2 text-xs whitespace-pre-wrap text-muted-foreground">
-              {error.status} {error.code} — {error.message}
-            </pre>
+      <AlertDialogContent size="sm" data-testid="api-error-dialog">
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-destructive/20 text-destructive">
+            <TriangleAlertIcon />
+          </AlertDialogMedia>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{help}</AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <Separator />
+
+        {error !== null && <ErrorTraceDisclosure error={error} />}
+
+        <AlertDialogFooter>
+          <AlertDialogCancel variant="outline">Close</AlertDialogCancel>
+          {resolved !== null && onAction !== undefined && (
+            <AlertDialogAction data-testid="api-error-dialog-action" onClick={onAction}>
+              {resolved.actionLabel}
+            </AlertDialogAction>
           )}
-          {guidance !== null && <p className="text-sm">{guidance.message}</p>}
-        </div>
-        <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>Close</DialogClose>
-          {guidance !== null && onAction !== undefined && (
-            <Button data-testid="api-error-dialog-action" onClick={onAction}>
-              {guidance.actionLabel}
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
