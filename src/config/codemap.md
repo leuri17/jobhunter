@@ -9,6 +9,17 @@ config, and a `FileSystem` port used for dependency-injected I/O. It is the
 single source of truth for `OperationalConfig` (search targets, OpenAI models,
 scraper timeouts, output limits, logging, and diagnostics toggles).
 
+Also owns the **secrets** surface, which is deliberately kept out of
+`OperationalConfig`: `secrets.ts` declares the `SecretsStore` port and the
+interim `FileSecretsStore` backend (`secrets.json` at mode `0600`, written
+atomically via temp file + rename), and `api-key.ts` holds
+`resolveOpenAiApiKey` — the single seam through which every consumer
+obtains the effective OpenAI key (stored value wins, `OPENAI_API_KEY` is the
+fallback). Because the key is not in the operational config, it never
+affects `hashOperationalConfig` and cannot appear in the config diff. See
+[#211](https://github.com/leuri17/jobhunter/issues/211) for the planned move
+to the OS keychain; `SecretsStore` is the seam that replacement targets.
+
 ## Design
 
 - **Schema-first validation** — `schema.ts` composes `.strict()` Zod objects
