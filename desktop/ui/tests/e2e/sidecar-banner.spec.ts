@@ -6,9 +6,9 @@ test.describe('sidecar fallback banner (issue #31)', () => {
   }) => {
     // With the fixture sidecar booted by playwright.config.ts and
     // VITE_SIDECAR_PORT=14231, `resolveSidecar()` lands on the
-    // env-override branch and returns a non-fallback URL. The banner
-    // is fallback-specific (see sidecar-banner.tsx), so it must stay
-    // hidden even though no Tauri webview is running.
+    // env-override branch, and the measured /api/health ping answers
+    // 2xx (status === 'reachable'), so the banner stays hidden even
+    // though no Tauri webview is running.
     await page.goto('/');
     const banner = page.getByTestId('sidecar-banner');
     await expect(banner).toBeHidden({ timeout: 5_000 });
