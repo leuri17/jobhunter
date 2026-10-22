@@ -1,10 +1,12 @@
-import { createRoute, Link } from '@tanstack/react-router';
-import { useState } from 'react';
+import { createRoute, useNavigate } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '@/lib/api';
 import { usePipelineEvents } from '@/lib/sse';
 import { LogPane } from '@/components/shared/ui/log-pane';
+import { ApiErrorDialog } from '@/components/shared/ui/api-error-dialog';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 import { Route as rootRoute } from './__root';
 
 // Pipeline (`/pipeline`). Live pipeline runner UI: Start Run button,
@@ -23,6 +25,7 @@ function PipelinePage() {
   const [cancelError, setCancelError] = useState<ApiError | null>(null);
   const events = usePipelineEvents(runId);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const start = useMutation({
     mutationFn: api.runPipeline,
@@ -56,6 +59,25 @@ function PipelinePage() {
     },
   });
 
+  // Stream loss is transient for the user (the run continues server-side,
+  // the status line below keeps showing 'error'), so it announces itself
+  // once via toast instead of holding the page hostage — see
+  // lib/error-surfaces.ts.
+  useEffect(() => {
+    if (events.error === null) return;
+    toast.add({
+      type: 'error',
+      title: 'Live event stream failed',
+      description: events.error.message,
+    });
+  }, [events.error]);
+
+  const openSettings = () => {
+    setStartError(null);
+    setCancelError(null);
+    void navigate({ to: '/settings' });
+  };
+
   return (
     <div className="p-8 space-y-4">
       <h1 className="text-3xl font-bold">Pipeline</h1>
@@ -78,48 +100,9 @@ function PipelinePage() {
       </div>
 
       {events.error !== null && (
-        <div
-          role="alert"
-          aria-live="assertive"
-          data-testid="sse-error"
-          className="rounded border border-red-900 bg-red-950 px-4 py-3 text-sm text-red-100"
-        >
-          <p className="font-semibold mb-1">Live event stream failed</p>
-          <p className="text-red-200">{events.error.message}</p>
-        </div>
-      )}
-
-      {startError !== null && (
-        <div
-          role="alert"
-          aria-live="assertive"
-          data-testid="pipeline-start-error"
-          className="rounded border border-red-900 bg-red-950 px-4 py-3 text-sm text-red-100"
-        >
-          <p className="font-semibold mb-1">Couldn't start the pipeline</p>
-          <p className="text-red-200">
-            {startError.status} {startError.code} — {startError.message}
-          </p>
-          {startError.code === 'openai_unavailable' && (
-            <p className="mt-2 text-red-200">
-              Add your OpenAI API key in <Link to="/settings">Settings</Link>, under AI Provider.
-            </p>
-          )}
-        </div>
-      )}
-
-      {cancelError !== null && (
-        <div
-          role="alert"
-          aria-live="assertive"
-          data-testid="pipeline-cancel-error"
-          className="rounded border border-red-900 bg-red-950 px-4 py-3 text-sm text-red-100"
-        >
-          <p className="font-semibold mb-1">Couldn't cancel the run</p>
-          <p className="text-red-200">
-            {cancelError.status} {cancelError.code} — {cancelError.message}
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground" data-testid="sse-error-note">
+          Live updates stopped: {events.error.message}
+        </p>
       )}
 
       <LogPane lines={events.lines} />
@@ -130,6 +113,20 @@ function PipelinePage() {
           <pre className="text-xs">{JSON.stringify(events.result, null, 2)}</pre>
         </div>
       )}
+
+      <ApiErrorDialog
+        error={startError}
+        title="Couldn't start the pipeline"
+        onDismiss={() => setStartError(null)}
+        onAction={openSettings}
+      />
+
+      <ApiErrorDialog
+        error={cancelError}
+        title="Couldn't cancel the run"
+        onDismiss={() => setCancelError(null)}
+        onAction={openSettings}
+      />
     </div>
   );
 }
