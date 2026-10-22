@@ -85,6 +85,17 @@ export class ConfigError extends ApplicationError {
   }
 }
 
+export class SecretStoreError extends ApplicationError {
+  constructor(
+    code: string,
+    message: string,
+    metadata: ApplicationErrorMetadata = {},
+    cause?: Error,
+  ) {
+    super(code, message, ExitCode.Fatal, metadata, cause);
+  }
+}
+
 export class ValidationError extends ApplicationError {
   constructor(
     code: string,

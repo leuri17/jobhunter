@@ -139,12 +139,12 @@ export async function registerProfileRoutes(
       const repos = createRepositories(handle);
       const sources = await repos.profileSources.list();
       const usable = sources.filter((s) => s.textExtractionStatus === 'success').map((s) => s.id);
-      const client = opts.openaiClient ?? resolveOpenAiClientOrNull(opts.refusal);
+      const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
       if (client === null) {
         reply.status(503);
         return {
           schemaVersion: 1,
-          error: { code: 'openai_unavailable', message: 'OPENAI_API_KEY not set' },
+          error: { code: 'openai_unavailable', message: 'No OpenAI API key is configured' },
         };
       }
       const service = new ProfileExtractionService({

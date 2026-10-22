@@ -34,3 +34,20 @@ export {
   type ConfigPreview,
   type UpdateResult,
 } from './updater.js';
+
+export {
+  FileSecretsStore,
+  resolveSecretsPath,
+  maskSecret,
+  SECRETS_FILENAME,
+  type SecretsStore,
+  type Secrets,
+  type FileSecretsStoreOptions,
+} from './secrets.js';
+
+export {
+  resolveOpenAiApiKey,
+  resolveApiKeySource,
+  type ResolveApiKeyOptions,
+  type ApiKeySource,
+} from './api-key.js';

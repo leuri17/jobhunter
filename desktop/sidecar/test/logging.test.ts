@@ -111,6 +111,68 @@ describe('resolveLogConfig', () => {
     expect(out.level).toBe('info');
     expect(out.prettyTerminal).toBe(false);
   });
+
+  it('reports levelSource=config and the shadowed env value when both are set and differ', () => {
+    const env: NodeJS.ProcessEnv = { LOG_LEVEL: 'debug' };
+    const config = {
+      config: {
+        ...DEFAULT_OPERATIONAL_CONFIG,
+        logging: { level: 'warn' as const, prettyTerminal: false },
+      },
+      schemaVersion: 1 as const,
+      hash: 'h',
+      path: '/x',
+    };
+    const out = resolveLogConfig(env, config);
+    expect(out.level).toBe('warn');
+    expect(out.levelSource).toBe('config');
+    expect(out.shadowedEnvLevel).toBe('debug');
+  });
+
+  it('does not report a shadowed level when env and config agree', () => {
+    const env: NodeJS.ProcessEnv = { LOG_LEVEL: 'warn' };
+    const config = {
+      config: {
+        ...DEFAULT_OPERATIONAL_CONFIG,
+        logging: { level: 'warn' as const, prettyTerminal: false },
+      },
+      schemaVersion: 1 as const,
+      hash: 'h',
+      path: '/x',
+    };
+    const out = resolveLogConfig(env, config);
+    expect(out.levelSource).toBe('config');
+    expect(out.shadowedEnvLevel).toBeUndefined();
+  });
+
+  it('ignores an invalid LOG_LEVEL rather than reporting it as shadowed', () => {
+    const env: NodeJS.ProcessEnv = { LOG_LEVEL: 'not-a-level' };
+    const config = {
+      config: {
+        ...DEFAULT_OPERATIONAL_CONFIG,
+        logging: { level: 'warn' as const, prettyTerminal: false },
+      },
+      schemaVersion: 1 as const,
+      hash: 'h',
+      path: '/x',
+    };
+    const out = resolveLogConfig(env, config);
+    expect(out.level).toBe('warn');
+    expect(out.shadowedEnvLevel).toBeUndefined();
+  });
+
+  it('reports levelSource=environment when only the env sets a level', () => {
+    const out = resolveLogConfig({ LOG_LEVEL: 'debug' } as NodeJS.ProcessEnv, null);
+    expect(out.level).toBe('debug');
+    expect(out.levelSource).toBe('environment');
+  });
+
+  it('reports levelSource=default when neither source sets a level', () => {
+    const out = resolveLogConfig({} as NodeJS.ProcessEnv, null);
+    expect(out.level).toBe('info');
+    expect(out.levelSource).toBe('default');
+    expect(out.shadowedEnvLevel).toBeUndefined();
+  });
 });
 
 describe('createSidecarRootLoggerFromConfig', () => {

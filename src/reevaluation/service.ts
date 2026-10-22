@@ -282,11 +282,14 @@ export class ReevaluationService {
     }
 
     if (keyRequired) {
-      const key = input.env['OPENAI_API_KEY'];
-      if (key === undefined || key === null || key.length === 0) {
+      const key =
+        input.resolveApiKey !== undefined
+          ? await input.resolveApiKey()
+          : (input.env['OPENAI_API_KEY'] ?? null);
+      if (key === null || key.length === 0) {
         throw new PipelinePrerequisiteError(
           'openai_api_key_missing',
-          'OPENAI_API_KEY is not set. The reevaluation service requires it for OpenAI scoring.',
+          'No OpenAI API key is available. Add one in Settings, or set OPENAI_API_KEY in your environment.',
           { scope: input.scope, dryRun: input.dryRun },
         );
       }

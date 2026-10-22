@@ -14,6 +14,8 @@ import {
   type OpenAIClient,
 } from '@jobhunter/core/profile';
 import { pinoReevaluationLogger } from '@jobhunter/core/logging';
+import { FileSecretsStore, resolveOpenAiApiKey } from '@jobhunter/core/config';
+import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { openDbHandle, createRepositories } from './db-helper.js';
 import { resolveOpenAiClientOrNull } from './openai-resolve.js';
 
@@ -107,7 +109,7 @@ export async function registerJobsRoutes(
       const filterApplyService = new FilterApplyService({ repositories: repos });
       const client =
         opts.openaiClient ??
-        resolveOpenAiClientOrNull(opts.refusal) ??
+        (await resolveOpenAiClientOrNull(opts.refusal)) ??
         createDefaultOpenAIClient({ apiKey: '' });
       const scoringService = new ScoringService({
         repositories: repos,
@@ -132,6 +134,10 @@ export async function registerJobsRoutes(
         dryRun: req.body.dryRun ?? false,
         confirmScoring: req.body.confirmScoring ?? false,
         env: process.env,
+        resolveApiKey: async () => {
+          const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
+          return resolveOpenAiApiKey({ store: new FileSecretsStore({ paths }), env: process.env });
+        },
         ...(req.body.jobId !== undefined && req.body.jobId !== null
           ? { jobId: req.body.jobId }
           : {}),

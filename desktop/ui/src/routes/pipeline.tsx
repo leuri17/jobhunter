@@ -1,4 +1,4 @@
-import { createRoute } from '@tanstack/react-router';
+import { createRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '@/lib/api';
@@ -102,8 +102,7 @@ function PipelinePage() {
           </p>
           {startError.code === 'openai_unavailable' && (
             <p className="mt-2 text-red-200">
-              Set <code className="font-mono">OPENAI_API_KEY</code> in your{' '}
-              <code className="font-mono">.env</code> and restart the sidecar.
+              Add your OpenAI API key in <Link to="/settings">Settings</Link>, under AI Provider.
             </p>
           )}
         </div>

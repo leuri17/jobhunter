@@ -68,6 +68,10 @@ function LevelRow({ field }: { field: AnyFieldApi }) {
         </SelectContent>
       </Select>
       <FieldError errors={field.state.meta.errors} />
+      <p className="text-xs text-muted-foreground">
+        Applies on restart and overrides <code className="font-mono">LOG_LEVEL</code> in your
+        environment. Remove the variable if you want this to be the only source.
+      </p>
     </Field>
   );
 }
