@@ -11,7 +11,7 @@ HTTP server entry point for the Jobhunter sidecar process. Boosts a Fastify inst
 
 ## Design
 
-- **Fastify app**: `buildServer` constructs a `FastifyInstance` with a JSON logger (`LOG_LEVEL`), a global error handler that delegates to `statusFor` + `envelopeFor`, and a `/api/health` probe. Each route module from `./routes/` is mounted via `register*Routes` / `registerPathsRoute`.
+- **Fastify app**: `buildServer` constructs a `FastifyInstance` with a JSON logger (`LOG_LEVEL`), a global error handler that delegates to `statusFor` + `envelopeFor`, and a `/api/health` probe (route logger silenced via `healthProbeLogging()` — successful probes write no records; failed probes are re-emitted at `error`). Each route module from `./routes/` is mounted via `register*Routes` / `registerPathsRoute`.
 - **Env loader** (`readEnv`): parses `JOBHUNTER_SIDECAR_PORT` (integer, `0` for OS-assigned); host is pinned to `127.0.0.1`. Returns the immutable `SidecarEnv` contract consumed by `buildServer`.
 - **SSE helper** (`initSseHeaders`, `writeSseEvent<T>`, `closeSse`): low-level wrappers around `node:http.ServerResponse` that set `text/event-stream` headers, serialize `event:` / multi-line `data:` frames, and terminate the stream.
 - **Error middleware** (`statusFor`, `envelopeFor`): maps `ApplicationError.exitCode` to HTTP semantics (`2→400`, `3→404`, `4→409`, `5→502`, else `5xx`/`500`) and produces a versioned `{ schemaVersion, error: { code, message, details } }` envelope.
