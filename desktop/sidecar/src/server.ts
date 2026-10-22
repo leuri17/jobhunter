@@ -241,14 +241,14 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
   // responds 200.
   //
   // `methods` must be spelled out: `@fastify/cors` defaults to
-  // `GET,HEAD,POST`, and the desktop UI issues `PATCH /api/config` with a
-  // JSON body. The default list would 204 the preflight without
-  // `access-control-allow-methods: PATCH` and the webview would block the
-  // request with "Method PATCH is not allowed by Access-Control-Allow-Methods."
+  // `GET,HEAD,POST`, and the desktop UI issues `PATCH /api/config` and
+  // `PUT /api/secrets/api-key` with JSON bodies. A method missing from the
+  // allowlist never reaches its handler: the browser blocks the request at
+  // preflight with "Method PATCH is not allowed by Access-Control-Allow-Methods."
   await app.register(cors, {
     origin: /^(http:\/\/localhost(:\d+)?|tauri:\/\/localhost)$/,
     credentials: true,
-    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   app.setErrorHandler((error, _req, reply) => {
