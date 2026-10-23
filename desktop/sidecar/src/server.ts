@@ -206,6 +206,13 @@ export interface BuildServerOptions {
   readonly paths?: PlatformPaths;
   readonly processEnv?: NodeJS.ProcessEnv;
   readonly fileSystem?: FileSystem;
+  /**
+   * Optional test/alternative seam: probes a candidate OpenAI key.
+   * Defaults to a throwaway `createDefaultOpenAIClient` with a short
+   * 10 s timeout. Resolves = key accepted; rejects = rejected or
+   * unverifiable (the route maps typed errors to outcomes).
+   */
+  readonly validateApiKey?: (apiKey: string) => Promise<void>;
 }
 
 async function resolveRootLogger(
@@ -300,7 +307,10 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
 
   await registerPathsRoute(app);
 
-  await registerConfigRoutes(app);
+  await registerConfigRoutes(
+    app,
+    opts.validateApiKey !== undefined ? { validateApiKey: opts.validateApiKey } : {},
+  );
 
   await registerProfileRoutes(app, { refusal });
 
