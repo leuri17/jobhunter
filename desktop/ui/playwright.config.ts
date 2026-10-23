@@ -15,7 +15,7 @@ export default defineConfig({
     {
       // Node + Fastify fixture that stubs every `/api/*` endpoint the
       // desktop UI touches. Boot it before Vite so the UI's first
-      // `/api/health` ping (used by StatusPill + SidecarBanner) succeeds.
+      // `/api/health` ping (used by StatusPill) succeeds.
       // Fixes audit ID B4-B-L4.14 (sidecar fixture for e2e specs).
       command: 'pnpm exec tsx tests/e2e/fixtures/sidecar.ts',
       url: `${FIXTURE_SIDECAR_URL}/api/health`,
@@ -26,9 +26,8 @@ export default defineConfig({
       // Vite dev server. `VITE_SIDECAR_PORT` is injected at boot so
       // the sidecar-url resolver returns a high-confidence URL
       // (`http://127.0.0.1:14231`) instead of the empty proxy fallback.
-      // When the resolver is high-confidence, `useSidecarReachability`
-      // skips the fallback ping and `SidecarBanner` stays hidden — the
-      // spec at `tests/e2e/sidecar-banner.spec.ts` asserts this state.
+      // The spec at `tests/e2e/sidecar-banner.spec.ts` asserts that
+      // real requests reach the fixture on that port.
       command: 'pnpm dev',
       url: 'http://localhost:5173',
       reuseExistingServer: !process.env['CI'],

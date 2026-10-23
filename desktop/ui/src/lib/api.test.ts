@@ -40,4 +40,26 @@ describe('api', () => {
     expect(calledUrl).toMatch(/\/api\/linkedin\/geo-typeahead\?q=S%C3%A3o%20Paulo$/);
     expect(calledInit.method).toBe('GET');
   });
+
+  it('maps an unparseable non-JSON 5xx body to sidecar_unreachable', async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response('<html>502 Bad Gateway</html>', { status: 502, statusText: 'Bad Gateway' }),
+    );
+    await expect(api.health()).rejects.toMatchObject({
+      status: 502,
+      code: 'sidecar_unreachable',
+      message: expect.not.stringContaining('Bad Gateway'),
+    });
+  });
+
+  it('keeps unknown/statusText for an unparseable non-JSON 4xx body', async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response('<html>not found</html>', { status: 404, statusText: 'Not Found' }),
+    );
+    await expect(api.health()).rejects.toMatchObject({
+      status: 404,
+      code: 'unknown',
+      message: 'Not Found',
+    });
+  });
 });
