@@ -128,6 +128,10 @@ class ConcurrencyTrackingOpenAIClient implements OpenAIClient {
     }
   }
 
+  async validate(): Promise<void> {
+    return this.inner.validate();
+  }
+
   getRequestCount(): number {
     return this.requests.length;
   }

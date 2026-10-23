@@ -36,6 +36,9 @@ export class FakeOpenAIClient implements OpenAIClient {
   private scriptIndex = 0;
   private readonly scriptCursor: number[];
 
+  /** When set, `validate()` rejects with it; otherwise it resolves. */
+  validateError: Error | null = null;
+
   constructor(script: FakeOpenAIClientScript | readonly FakeOpenAIClientScript[]) {
     this.requests = [];
     this.scripts = Array.isArray(script) ? [...script] : [script];
@@ -77,5 +80,9 @@ export class FakeOpenAIClient implements OpenAIClient {
 
   getRequestCount(): number {
     return this.requests.length;
+  }
+
+  async validate(): Promise<void> {
+    if (this.validateError !== null) throw this.validateError;
   }
 }

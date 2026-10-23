@@ -160,6 +160,14 @@ export function createDefaultOpenAIClient(options: {
         throw translateSdkError(error);
       }
     },
+
+    async validate(): Promise<void> {
+      try {
+        await sdk.models.list();
+      } catch (error) {
+        throw translateSdkError(error);
+      }
+    },
   };
 }
 

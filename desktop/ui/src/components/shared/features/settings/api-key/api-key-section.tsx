@@ -1,16 +1,39 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { ApiErrorDialog } from '@/components/shared/ui/api-error-dialog';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import { api, ApiError } from '@/lib/api';
+import type { ActionGuidance } from '@/lib/error-surfaces';
+
+const REJECTED_WITH_KEY =
+  'OpenAI rejected this key. Nothing was saved — the previously configured key is still active.';
+const REJECTED_WITHOUT_KEY = 'OpenAI rejected this key. Nothing was saved.';
+const UNREACHABLE = "Couldn't reach OpenAI to validate the key. Nothing was saved — try again.";
+
+const REJECTED_CODES: ReadonlySet<string> = new Set([
+  'openai_authentication',
+  'openai_permission',
+  'openai_billing',
+]);
+
+function saveGuidanceFor(error: ApiError, configured: boolean): ActionGuidance {
+  const rejected = REJECTED_CODES.has(error.code);
+  return {
+    message: rejected ? (configured ? REJECTED_WITH_KEY : REJECTED_WITHOUT_KEY) : UNREACHABLE,
+    // Inert: the section passes no onAction, so the dialog renders Close only.
+    actionLabel: 'Close',
+  };
+}
 
 export function ApiKeySection() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState('');
+  const [saveError, setSaveError] = useState<ApiError | null>(null);
 
   const status = useQuery({
     queryKey: ['secrets', 'api-key'],
@@ -20,6 +43,7 @@ export function ApiKeySection() {
   const save = useMutation({
     mutationFn: (apiKey: string) => api.setApiKey(apiKey),
     onSuccess: (result) => {
+      setSaveError(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
       setDraft('');
       toast.add({
@@ -29,18 +53,14 @@ export function ApiKeySection() {
       });
     },
     onError: (err: unknown) => {
-      const apiError = err as ApiError;
-      toast.add({
-        title: 'Could not save the API key',
-        description: `${apiError.status} ${apiError.code} - ${apiError.message}`,
-        type: 'error',
-      });
+      setSaveError(err as ApiError);
     },
   });
 
   const clear = useMutation({
     mutationFn: () => api.clearApiKey(),
     onSuccess: () => {
+      setSaveError(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
       setDraft('');
       toast.add({ title: 'API key removed', type: 'success' });
@@ -97,7 +117,7 @@ export function ApiKeySection() {
             disabled={busy || draft.trim().length === 0}
             onClick={() => save.mutate(draft.trim())}
           >
-            {save.isPending ? 'Saving...' : 'Save key'}
+            {save.isPending ? 'Validating key…' : 'Save key'}
           </Button>
           {state?.source === 'stored' && (
             <Button type="button" variant="outline" disabled={busy} onClick={() => clear.mutate()}>
@@ -106,6 +126,14 @@ export function ApiKeySection() {
           )}
         </div>
       </CardContent>
+      <ApiErrorDialog
+        error={saveError}
+        title="Couldn't save the API key"
+        guidance={
+          saveError !== null ? saveGuidanceFor(saveError, state?.configured ?? false) : undefined
+        }
+        onDismiss={() => setSaveError(null)}
+      />
     </>
   );
 }

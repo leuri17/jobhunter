@@ -19,6 +19,9 @@ with the sidecar. `tsconfig.json` extends `../../tsconfig.base.json`, is `noEmit
 `moduleResolution: "Bundler"`, `jsx: "react-jsx"`, `types: ["vite/client", "node"]`, and the
 `@/*` -> `./src/*` path alias; `include` is limited to `src`.
 
+User-facing errors surface only through the four-tier rule in `src/lib/error-surfaces.ts`
+(toast / `ApiErrorDialog` / `ErrorBoundary` / `StatusPill`); never ad-hoc inline boxes.
+
 ## Flow
 
 `node scripts/dev-server.mjs vite` (dev; a signal-forwarding supervisor that

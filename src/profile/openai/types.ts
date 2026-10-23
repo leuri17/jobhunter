@@ -103,4 +103,13 @@ export interface OpenAIExtractionRawResponse {
  */
 export interface OpenAIClient {
   extract(request: OpenAIExtractionRequest): Promise<OpenAIExtractionRawResponse>;
+
+  /**
+   * Cheap authenticated probe — no token cost. Resolves when the key is
+   * accepted; rejects with a typed `ProfileExtractionError` family error:
+   * `OpenAIAuthenticationError` / `OpenAIPermissionError` /
+   * `OpenAIBillingError` mean the key is rejected; transport, timeout,
+   * server, and rate-limit failures mean "cannot tell right now".
+   */
+  validate(): Promise<void>;
 }

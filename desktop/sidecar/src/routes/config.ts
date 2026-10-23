@@ -7,11 +7,43 @@ import {
   type UpdateOptions,
 } from '@jobhunter/core/config';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
-import { ValidationError } from '@jobhunter/core/errors';
+import { ApplicationError, ValidationError } from '@jobhunter/core/errors';
+import {
+  createDefaultOpenAIClient,
+  OpenAIAuthenticationError,
+  OpenAIBillingError,
+  OpenAIPermissionError,
+} from '@jobhunter/core/profile';
 import { FileSecretsStore, maskSecret, resolveApiKeySource } from '@jobhunter/core/config';
 import { sidecarFileSystem } from './fs-adapter.js';
 
-export async function registerConfigRoutes(app: FastifyInstance): Promise<void> {
+export interface ConfigRouteDeps {
+  readonly validateApiKey?: (apiKey: string) => Promise<void>;
+}
+
+const defaultValidateApiKey = (apiKey: string): Promise<void> =>
+  createDefaultOpenAIClient({ apiKey, timeoutMs: 10_000 }).validate();
+
+function classifyKeyValidationFailure(error: unknown): {
+  readonly httpStatus: number;
+  readonly code: string;
+  readonly message: string;
+} {
+  const rejected =
+    error instanceof OpenAIAuthenticationError ||
+    error instanceof OpenAIPermissionError ||
+    error instanceof OpenAIBillingError;
+  return {
+    httpStatus: rejected ? 401 : 503,
+    code: error instanceof ApplicationError ? error.code : 'unknown',
+    message: error instanceof Error ? error.message : 'OpenAI key validation failed.',
+  };
+}
+
+export async function registerConfigRoutes(
+  app: FastifyInstance,
+  deps: ConfigRouteDeps = {},
+): Promise<void> {
   app.get('/api/config', async () => {
     const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
     const loaded = await loadConfig(paths, sidecarFileSystem);
@@ -56,16 +88,40 @@ export async function registerConfigRoutes(app: FastifyInstance): Promise<void> 
     };
   });
 
-  app.put<{ Body: { apiKey?: string } }>('/api/secrets/api-key', async (req) => {
+  app.put<{ Body: { apiKey?: string } }>('/api/secrets/api-key', async (req, reply) => {
     const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
     const store = new FileSecretsStore({ paths });
+    const validateApiKey = deps.validateApiKey ?? defaultValidateApiKey;
     const apiKey = req.body.apiKey?.trim() ?? '';
     if (apiKey.length === 0) {
       await store.clear();
-      return { schemaVersion: 1, configured: false, source: 'none', masked: '' };
+      return {
+        schemaVersion: 1,
+        status: 'validated',
+        configured: false,
+        source: 'none',
+        masked: '',
+      };
+    }
+    try {
+      await validateApiKey(apiKey);
+    } catch (error) {
+      // 401/503 are this route's own semantics; `statusFor` would map the
+      // typed error's CLI exit code instead.
+      const { httpStatus, code, message } = classifyKeyValidationFailure(error);
+      return reply.code(httpStatus).send({
+        schemaVersion: 1,
+        error: { code, message, details: null },
+      });
     }
     await store.write({ openaiApiKey: apiKey });
-    return { schemaVersion: 1, configured: true, source: 'stored', masked: maskSecret(apiKey) };
+    return {
+      schemaVersion: 1,
+      status: 'validated',
+      configured: true,
+      source: 'stored',
+      masked: maskSecret(apiKey),
+    };
   });
 
   app.delete('/api/secrets/api-key', async () => {

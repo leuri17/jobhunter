@@ -67,6 +67,15 @@ export interface ApiKeyResponse {
   readonly masked: string;
 }
 
+/**
+ * PUT /api/secrets/api-key response. Validation failures reject with
+ * real HTTP error statuses (401 rejected / 503 unverifiable) and arrive
+ * as a thrown `ApiError`, so `validated` is the only 200 shape.
+ */
+export interface PutApiKeyResponse extends ApiKeyResponse {
+  readonly status: 'validated';
+}
+
 export interface ListProfilesResponse {
   readonly schemaVersion: 1;
   readonly profiles: readonly ProfileListEntry[];

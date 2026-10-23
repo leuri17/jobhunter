@@ -20,7 +20,9 @@ import type { ApiError } from './api';
  *   explicitly initiated (save settings, run pipeline, cancel run):
  *   the action did not happen, so they must retry, fix, or abandon —
  *   an auto-dismissing toast would let them believe it succeeded.
- *   Render failures through `<ApiErrorDialog />`.
+ *   Render failures through `<ApiErrorDialog />`. Validation-style
+ *   actions (e.g. the api-key probe) reject with real HTTP error
+ *   statuses precisely so this same dialog path applies.
  * - **ErrorBoundary** (`components/shared/ui/error-boundary.tsx`) is
  *   wired at the root layout and needs no per-call-site work.
  * - **Banner** covers ambient, ongoing conditions the user should
