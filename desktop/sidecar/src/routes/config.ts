@@ -25,15 +25,19 @@ const defaultValidateApiKey = (apiKey: string): Promise<void> =>
   createDefaultOpenAIClient({ apiKey, timeoutMs: 10_000 }).validate();
 
 function classifyKeyValidationFailure(error: unknown): {
-  status: 'rejected' | 'unreachable';
-  reason: string;
+  readonly httpStatus: number;
+  readonly code: string;
+  readonly message: string;
 } {
-  const code = error instanceof ApplicationError ? error.code : 'unknown';
   const rejected =
     error instanceof OpenAIAuthenticationError ||
     error instanceof OpenAIPermissionError ||
     error instanceof OpenAIBillingError;
-  return rejected ? { status: 'rejected', reason: code } : { status: 'unreachable', reason: code };
+  return {
+    httpStatus: rejected ? 401 : 503,
+    code: error instanceof ApplicationError ? error.code : 'unknown',
+    message: error instanceof Error ? error.message : 'OpenAI key validation failed.',
+  };
 }
 
 export async function registerConfigRoutes(
@@ -84,7 +88,7 @@ export async function registerConfigRoutes(
     };
   });
 
-  app.put<{ Body: { apiKey?: string } }>('/api/secrets/api-key', async (req) => {
+  app.put<{ Body: { apiKey?: string } }>('/api/secrets/api-key', async (req, reply) => {
     const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
     const store = new FileSecretsStore({ paths });
     const validateApiKey = deps.validateApiKey ?? defaultValidateApiKey;
@@ -102,19 +106,13 @@ export async function registerConfigRoutes(
     try {
       await validateApiKey(apiKey);
     } catch (error) {
-      const { status, reason } = classifyKeyValidationFailure(error);
-      const [secrets, source] = await Promise.all([
-        store.read(),
-        resolveApiKeySource({ store, env: process.env }),
-      ]);
-      return {
+      // 401/503 are this route's own semantics; `statusFor` would map the
+      // typed error's CLI exit code instead.
+      const { httpStatus, code, message } = classifyKeyValidationFailure(error);
+      return reply.code(httpStatus).send({
         schemaVersion: 1,
-        status,
-        reason,
-        configured: source !== 'none',
-        source,
-        masked: maskSecret(source === 'stored' ? secrets.openaiApiKey : undefined),
-      };
+        error: { code, message, details: null },
+      });
     }
     await store.write({ openaiApiKey: apiKey });
     return {

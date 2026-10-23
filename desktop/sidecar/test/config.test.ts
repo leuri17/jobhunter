@@ -38,6 +38,11 @@ interface ApiKeyState {
   readonly masked: string;
 }
 
+interface ErrorEnvelope {
+  readonly schemaVersion: number;
+  readonly error: { readonly code: string; readonly message: string; readonly details: unknown };
+}
+
 describe('PUT /api/secrets/api-key', () => {
   const OLD_KEY = 'sk-old-key-123456';
   const NEW_KEY = 'sk-new-key-654321';
@@ -113,7 +118,7 @@ describe('PUT /api/secrets/api-key', () => {
     });
   });
 
-  it('reports rejected and keeps the previously stored key when validation fails with an auth error', async () => {
+  it('rejects with 401 and keeps the previously stored key when validation fails with an auth error', async () => {
     const okUrl = await startServer(async () => undefined);
     await storeKey(okUrl, OLD_KEY);
 
@@ -121,15 +126,15 @@ describe('PUT /api/secrets/api-key', () => {
       throw new OpenAIAuthenticationError({ status: 401 });
     });
     const res = await putKey(failUrl, NEW_KEY);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(401);
     expect(await res.json()).toEqual({
       schemaVersion: 1,
-      status: 'rejected',
-      reason: 'openai_authentication',
-      configured: true,
-      source: 'stored',
-      masked: maskSecret(OLD_KEY),
-    });
+      error: {
+        code: 'openai_authentication',
+        message: 'OpenAI authentication failed.',
+        details: null,
+      },
+    } satisfies ErrorEnvelope);
 
     expect(await getKey(failUrl)).toEqual({
       schemaVersion: 1,
@@ -139,7 +144,7 @@ describe('PUT /api/secrets/api-key', () => {
     });
   });
 
-  it('reports unreachable and keeps the previously stored key when validation fails with a network error', async () => {
+  it('rejects with 503 and keeps the previously stored key when validation fails with a network error', async () => {
     const okUrl = await startServer(async () => undefined);
     await storeKey(okUrl, OLD_KEY);
 
@@ -147,15 +152,15 @@ describe('PUT /api/secrets/api-key', () => {
       throw new OpenAINetworkError({ status: null });
     });
     const res = await putKey(failUrl, NEW_KEY);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(503);
     expect(await res.json()).toEqual({
       schemaVersion: 1,
-      status: 'unreachable',
-      reason: 'openai_network_error',
-      configured: true,
-      source: 'stored',
-      masked: maskSecret(OLD_KEY),
-    });
+      error: {
+        code: 'openai_network_error',
+        message: 'OpenAI network failure.',
+        details: null,
+      },
+    } satisfies ErrorEnvelope);
 
     expect(await getKey(failUrl)).toEqual({
       schemaVersion: 1,
@@ -165,17 +170,20 @@ describe('PUT /api/secrets/api-key', () => {
     });
   });
 
-  it('returns unreachable with reason unknown when the validator throws a non-typed error', async () => {
+  it('rejects with 503 and code unknown when the validator throws a non-typed error', async () => {
     const baseUrl = await startServer(async () => {
       throw new Error('validator exploded');
     });
 
     const res = await putKey(baseUrl, NEW_KEY);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(503);
     expect(await res.json()).toEqual({
       schemaVersion: 1,
-      status: 'unreachable',
-      reason: 'unknown',
+      error: { code: 'unknown', message: 'validator exploded', details: null },
+    } satisfies ErrorEnvelope);
+
+    expect(await getKey(baseUrl)).toEqual({
+      schemaVersion: 1,
       configured: false,
       source: 'none',
       masked: '',
