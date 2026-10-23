@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { ApiError } from '@/lib/api';
 
 interface ErrorBoundaryProps {
   readonly children: ReactNode;
@@ -61,19 +62,26 @@ interface RetryPanelProps {
 /**
  * Fallback surface rendered by `ErrorBoundary`. Designed to be small
  * and inline so it never throws itself (which would re-trigger the
- * boundary and create a render loop). Uses the same `role="alert"`
- * + `aria-live` pattern as `SidecarBanner` for consistency.
+ * boundary and create a render loop). A `sidecar_unreachable`
+ * `ApiError` swaps the heading and body for sidecar-specific copy;
+ * the trace and Retry affordance stay shared. Every other error —
+ * `ApiError` or not — renders the generic panel unchanged.
  */
 export function RetryPanel({ error, onRetry }: RetryPanelProps) {
+  const sidecarDown = error instanceof ApiError && error.code === 'sidecar_unreachable';
   return (
     <div
       role="alert"
       aria-live="assertive"
       className="m-4 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm"
     >
-      <h2 className="text-base font-semibold mb-2">Something went wrong</h2>
+      <h2 className="text-base font-semibold mb-2">
+        {sidecarDown ? "Couldn't reach the sidecar." : 'Something went wrong'}
+      </h2>
       <p className="mb-3 text-muted-foreground">
-        The current view failed to render. The rest of the app is still reachable from the sidebar.
+        {sidecarDown
+          ? 'Is the JobHunter desktop app running? The rest of the app is still reachable from the sidebar.'
+          : 'The current view failed to render. The rest of the app is still reachable from the sidebar.'}
       </p>
       <pre className="mb-3 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-background/60 p-2 text-xs">
         {error.message}
