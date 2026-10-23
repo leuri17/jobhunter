@@ -27,6 +27,7 @@ import {
 } from '../../src/search/index.js';
 import { FakeOpenAIClient } from '../../src/profile/openai/fake-client.js';
 import type { OpenAIExtractionRawResponse } from '../../src/profile/openai/types.js';
+import type { SecretsStore } from '../../src/config/secrets.js';
 import { PROFILE_SCHEMA_VERSION, type ProfessionalProfile } from '../../src/profile/schema.js';
 import { hashString } from '../../src/profile/hashing.js';
 
@@ -158,6 +159,19 @@ function scriptedCancellingSearchPrompts(): SearchPrompts {
     askRenameLabel: async () => false,
     showPreview: async () => undefined,
     askConfirmation: async () => false, // triggers SearchCancelledError
+  };
+}
+
+function fakeSecretsStore(
+  overrides: { openaiApiKey?: string; throws?: boolean } = {},
+): SecretsStore {
+  return {
+    read: async () => {
+      if (overrides.throws === true) throw new Error('store unavailable');
+      return overrides.openaiApiKey !== undefined ? { openaiApiKey: overrides.openaiApiKey } : {};
+    },
+    write: async () => undefined,
+    clear: async () => undefined,
   };
 }
 
@@ -408,6 +422,83 @@ describe('InitOrchestrator', () => {
     const extractStep = summary.steps.find((s) => s.id === 'extract');
     expect(extractStep?.status).toBe('incomplete');
     expect(extractStep?.reason).toBe('openai_key_missing');
+  });
+
+  it('stored key with no env key: ready=true, source=stored (issue #212 regression)', async () => {
+    await materializeConfig();
+    await seedUsableSource('c'.repeat(64));
+    await seedApprovedProfile({ jsonId: 'prf_init' });
+    await seedDraftProfile({ jsonId: 'prf_draft' });
+    await seedActiveFilterConfig();
+
+    const orchestrator = new InitOrchestrator({
+      paths,
+      repositories,
+      fileSystem,
+      prompts: new ScriptedInitPrompts({ confirmSummary: true }),
+      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      searchPrompts: scriptedSearchPrompts(),
+      filterPrompts: new ScriptedFilterPrompts({}),
+      approvalPrompts: { confirmApprovalWithWarnings: async () => true },
+      rejectionPrompts: { confirmRejection: async () => true },
+      secretsStore: fakeSecretsStore({ openaiApiKey: 'sk-stored-key' }),
+    });
+
+    const summary = await orchestrator.run(ENV_WITHOUT_KEY);
+    expect(summary.ready).toBe(true);
+    expect(summary.openAiKeyMissing).toBe(false);
+    const openaiKeyStep = summary.steps.find((s) => s.id === 'openaiKey');
+    expect(openaiKeyStep?.status).toBe('complete');
+    expect(openaiKeyStep?.source).toBe('stored');
+  });
+
+  it('unreadable store falls through to env: source=environment', async () => {
+    await materializeConfig();
+    await seedUsableSource('c'.repeat(64));
+    await seedApprovedProfile({ jsonId: 'prf_init' });
+    await seedDraftProfile({ jsonId: 'prf_draft' });
+    await seedActiveFilterConfig();
+
+    const orchestrator = new InitOrchestrator({
+      paths,
+      repositories,
+      fileSystem,
+      prompts: new ScriptedInitPrompts({ confirmSummary: true }),
+      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      searchPrompts: scriptedSearchPrompts(),
+      filterPrompts: new ScriptedFilterPrompts({}),
+      approvalPrompts: { confirmApprovalWithWarnings: async () => true },
+      rejectionPrompts: { confirmRejection: async () => true },
+      secretsStore: fakeSecretsStore({ throws: true }),
+    });
+
+    const summary = await orchestrator.run(ENV_WITH_KEY);
+    expect(summary.openAiKeyMissing).toBe(false);
+    expect(summary.steps.find((s) => s.id === 'openaiKey')?.source).toBe('environment');
+  });
+
+  it('stored key wins over env key: source=stored', async () => {
+    await materializeConfig();
+    await seedUsableSource('c'.repeat(64));
+    await seedApprovedProfile({ jsonId: 'prf_init' });
+    await seedDraftProfile({ jsonId: 'prf_draft' });
+    await seedActiveFilterConfig();
+
+    const orchestrator = new InitOrchestrator({
+      paths,
+      repositories,
+      fileSystem,
+      prompts: new ScriptedInitPrompts({ confirmSummary: true }),
+      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      searchPrompts: scriptedSearchPrompts(),
+      filterPrompts: new ScriptedFilterPrompts({}),
+      approvalPrompts: { confirmApprovalWithWarnings: async () => true },
+      rejectionPrompts: { confirmRejection: async () => true },
+      secretsStore: fakeSecretsStore({ openaiApiKey: 'sk-stored-key' }),
+    });
+
+    const summary = await orchestrator.run(ENV_WITH_KEY);
+    expect(summary.steps.find((s) => s.id === 'openaiKey')?.source).toBe('stored');
   });
 
   // -------------------------------------------------------------------

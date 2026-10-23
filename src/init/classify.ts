@@ -1,4 +1,5 @@
 import { OperationalConfigSchema } from '../config/schema.js';
+import type { ApiKeySource } from '../config/api-key.js';
 import type { InitStepReport } from './state.js';
 
 export interface ClassifyPathsInput {
@@ -31,7 +32,7 @@ export interface ClassifyMigrationsInput {
 }
 
 export interface ClassifyOpenAiKeyInput {
-  readonly present: boolean;
+  readonly source: ApiKeySource;
 }
 
 export interface ClassifySearchInput {
@@ -212,17 +213,20 @@ export function classifyMigrations(input: ClassifyMigrationsInput): InitStepRepo
 }
 
 /**
- * `classifyOpenAiKey` always returns `complete` ( — absence is
- * a skip, not a failure). The orchestrator reads the missing-key signal
+ * `classifyOpenAiKey` always returns `complete` — absence is
+ * a skip, not a failure; the orchestrator reads the missing-key signal
  * from `classifyExtract`'s `reason === 'openai_key_missing'` instead.
+ * `source` records where the key came from
+ * (`'stored' | 'environment' | 'none'`) via `resolveApiKeySource`.
  */
-export function classifyOpenAiKey(_input: ClassifyOpenAiKeyInput): InitStepReport {
+export function classifyOpenAiKey(input: ClassifyOpenAiKeyInput): InitStepReport {
   return {
     id: 'openaiKey',
     status: 'complete',
     errorCode: null,
     reason: null,
     artifactId: null,
+    source: input.source,
   };
 }
 
