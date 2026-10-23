@@ -68,14 +68,12 @@ export interface ApiKeyResponse {
 }
 
 /**
- * PUT /api/secrets/api-key response: the base status plus the validation
- * outcome. Only `validated` persists; `rejected`/`unreachable` leave the
- * stored state untouched. GET and DELETE return `ApiKeyResponse` as-is.
+ * PUT /api/secrets/api-key response. Validation failures reject with
+ * real HTTP error statuses (401 rejected / 503 unverifiable) and arrive
+ * as a thrown `ApiError`, so `validated` is the only 200 shape.
  */
 export interface PutApiKeyResponse extends ApiKeyResponse {
-  readonly status: 'validated' | 'rejected' | 'unreachable';
-  /** Present when status !== 'validated': the typed error code, e.g. 'openai_authentication'. */
-  readonly reason?: string;
+  readonly status: 'validated';
 }
 
 export interface ListProfilesResponse {

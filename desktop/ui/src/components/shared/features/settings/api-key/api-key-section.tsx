@@ -1,29 +1,39 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { ApiErrorDialog } from '@/components/shared/ui/api-error-dialog';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import { api, ApiError } from '@/lib/api';
+import type { ActionGuidance } from '@/lib/error-surfaces';
 
-const OUTCOME_COPY = {
-  rejected:
-    'OpenAI rejected this key. Nothing was saved — the previously configured key is still active.',
-  unreachable: "Couldn't reach OpenAI to validate the key. Nothing was saved — try again.",
-} as const;
+const REJECTED_WITH_KEY =
+  'OpenAI rejected this key. Nothing was saved — the previously configured key is still active.';
+const REJECTED_WITHOUT_KEY = 'OpenAI rejected this key. Nothing was saved.';
+const UNREACHABLE = "Couldn't reach OpenAI to validate the key. Nothing was saved — try again.";
 
-type ValidationOutcome = {
-  readonly status: keyof typeof OUTCOME_COPY;
-  readonly reason?: string | undefined;
-  readonly configured: boolean;
-};
+const REJECTED_CODES: ReadonlySet<string> = new Set([
+  'openai_authentication',
+  'openai_permission',
+  'openai_billing',
+]);
+
+function saveGuidanceFor(error: ApiError, configured: boolean): ActionGuidance {
+  const rejected = REJECTED_CODES.has(error.code);
+  return {
+    message: rejected ? (configured ? REJECTED_WITH_KEY : REJECTED_WITHOUT_KEY) : UNREACHABLE,
+    // Inert: the section passes no onAction, so the dialog renders Close only.
+    actionLabel: 'Close',
+  };
+}
 
 export function ApiKeySection() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState('');
-  const [outcome, setOutcome] = useState<ValidationOutcome | null>(null);
+  const [saveError, setSaveError] = useState<ApiError | null>(null);
 
   const status = useQuery({
     queryKey: ['secrets', 'api-key'],
@@ -33,11 +43,7 @@ export function ApiKeySection() {
   const save = useMutation({
     mutationFn: (apiKey: string) => api.setApiKey(apiKey),
     onSuccess: (result) => {
-      if (result.status !== 'validated') {
-        setOutcome({ status: result.status, reason: result.reason, configured: result.configured });
-        return;
-      }
-      setOutcome(null);
+      setSaveError(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
       setDraft('');
       toast.add({
@@ -47,19 +53,14 @@ export function ApiKeySection() {
       });
     },
     onError: (err: unknown) => {
-      const apiError = err as ApiError;
-      toast.add({
-        title: 'Could not save the API key',
-        description: `${apiError.status} ${apiError.code} - ${apiError.message}`,
-        type: 'error',
-      });
+      setSaveError(err as ApiError);
     },
   });
 
   const clear = useMutation({
     mutationFn: () => api.clearApiKey(),
     onSuccess: () => {
-      setOutcome(null);
+      setSaveError(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
       setDraft('');
       toast.add({ title: 'API key removed', type: 'success' });
@@ -101,35 +102,13 @@ export function ApiKeySection() {
             placeholder={state?.configured ? `Stored: ${state.masked}` : 'sk-...'}
             value={draft}
             disabled={busy}
-            aria-invalid={outcome !== null}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              setOutcome(null);
-            }}
+            onChange={(e) => setDraft(e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
             {state?.configured
               ? 'Stored on this machine. Type a new key to replace it.'
               : 'Paste a key from platform.openai.com. It is never sent back to this app.'}
           </p>
-          {outcome !== null && (
-            <div
-              role="alert"
-              className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm"
-            >
-              <p>
-                {outcome.status === 'rejected' && !outcome.configured
-                  ? 'OpenAI rejected this key. Nothing was saved.'
-                  : OUTCOME_COPY[outcome.status]}
-              </p>
-              {outcome.reason !== undefined && (
-                <details className="mt-1.5 text-xs text-muted-foreground">
-                  <summary className="cursor-pointer">More info</summary>
-                  <code className="font-mono">{outcome.reason}</code>
-                </details>
-              )}
-            </div>
-          )}
         </Field>
 
         <div className="flex gap-2">
@@ -147,6 +126,14 @@ export function ApiKeySection() {
           )}
         </div>
       </CardContent>
+      <ApiErrorDialog
+        error={saveError}
+        title="Couldn't save the API key"
+        guidance={
+          saveError !== null ? saveGuidanceFor(saveError, state?.configured ?? false) : undefined
+        }
+        onDismiss={() => setSaveError(null)}
+      />
     </>
   );
 }
