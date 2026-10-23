@@ -8,9 +8,21 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import { api, ApiError } from '@/lib/api';
 
+const OUTCOME_COPY = {
+  rejected:
+    'OpenAI rejected this key. Nothing was saved — the previously configured key is still active.',
+  unreachable: "Couldn't reach OpenAI to validate the key. Nothing was saved — try again.",
+} as const;
+
+type ValidationOutcome = {
+  readonly status: keyof typeof OUTCOME_COPY;
+  readonly reason?: string | undefined;
+};
+
 export function ApiKeySection() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState('');
+  const [outcome, setOutcome] = useState<ValidationOutcome | null>(null);
 
   const status = useQuery({
     queryKey: ['secrets', 'api-key'],
@@ -20,6 +32,11 @@ export function ApiKeySection() {
   const save = useMutation({
     mutationFn: (apiKey: string) => api.setApiKey(apiKey),
     onSuccess: (result) => {
+      if (result.status !== 'validated') {
+        setOutcome({ status: result.status, reason: result.reason });
+        return;
+      }
+      setOutcome(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
       setDraft('');
       toast.add({
@@ -41,6 +58,7 @@ export function ApiKeySection() {
   const clear = useMutation({
     mutationFn: () => api.clearApiKey(),
     onSuccess: () => {
+      setOutcome(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
       setDraft('');
       toast.add({ title: 'API key removed', type: 'success' });
@@ -82,13 +100,31 @@ export function ApiKeySection() {
             placeholder={state?.configured ? `Stored: ${state.masked}` : 'sk-...'}
             value={draft}
             disabled={busy}
-            onChange={(e) => setDraft(e.target.value)}
+            aria-invalid={outcome !== null}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              setOutcome(null);
+            }}
           />
           <p className="text-xs text-muted-foreground">
             {state?.configured
               ? 'Stored on this machine. Type a new key to replace it.'
               : 'Paste a key from platform.openai.com. It is never sent back to this app.'}
           </p>
+          {outcome !== null && (
+            <div
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm"
+            >
+              <p>{OUTCOME_COPY[outcome.status]}</p>
+              {outcome.reason !== undefined && (
+                <details className="mt-1.5 text-xs text-muted-foreground">
+                  <summary className="cursor-pointer">More info</summary>
+                  <code className="font-mono">{outcome.reason}</code>
+                </details>
+              )}
+            </div>
+          )}
         </Field>
 
         <div className="flex gap-2">
@@ -97,7 +133,7 @@ export function ApiKeySection() {
             disabled={busy || draft.trim().length === 0}
             onClick={() => save.mutate(draft.trim())}
           >
-            {save.isPending ? 'Saving...' : 'Save key'}
+            {save.isPending ? 'Validating key…' : 'Save key'}
           </Button>
           {state?.source === 'stored' && (
             <Button type="button" variant="outline" disabled={busy} onClick={() => clear.mutate()}>

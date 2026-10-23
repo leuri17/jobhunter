@@ -62,6 +62,13 @@ export interface ValidateConfigResponse {
  */
 export interface ApiKeyResponse {
   readonly schemaVersion: 1;
+  /**
+   * Outcome of a save (PUT) request. GET and DELETE predate key
+   * validation and omit the field.
+   */
+  readonly status: 'validated' | 'rejected' | 'unreachable';
+  /** Present when status !== 'validated': the typed error code, e.g. 'openai_authentication'. */
+  readonly reason?: string;
   readonly configured: boolean;
   readonly source: 'stored' | 'environment' | 'none';
   readonly masked: string;
