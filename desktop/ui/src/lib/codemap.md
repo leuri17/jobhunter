@@ -6,9 +6,8 @@ Shared frontend utilities for the desktop webview: typed HTTP client targeting t
 
 ## Design
 
-- `api.ts` exposes a single `api` object whose methods map 1:1 to sidecar routes; a private `request<T>()` helper centralizes fetch, JSON encoding, and error normalization into `ApiError`. `notifyPipelineComplete()` invokes a best-effort Tauri command for OS notifications.
+- `api.ts` exposes a single `api` object whose methods map 1:1 to sidecar routes; a private `request<T>()` helper centralizes fetch, JSON encoding, and error normalization into `ApiError` (an unparseable non-JSON 5xx body — e.g. the Vite dev proxy's synthesized 502 page when the sidecar is down — maps to `sidecar_unreachable`). `notifyPipelineComplete()` invokes a best-effort Tauri command for OS notifications.
 - `sidecar-url.ts` resolves the sidecar base URL plus an `isFallback` flag: production binaries call the Tauri IPC command `sidecar_port` to obtain the OS-assigned port; dev mode (no Tauri) falls back to `VITE_SIDECAR_PORT` or `DEFAULT_DEV_PORT` (14231). When `isFallback === true`, both IPC and env resolution failed and the URL is almost certainly wrong; the same file exports `pingSidecar(url)` that probes `/api/health` with a 2 s `AbortController` timeout.
-- `sidecar-reachability.tsx` exports the `useSidecarReachability()` hook (TanStack Query, `staleTime: 5_000`) which measures every resolved URL by pinging `/api/health`, and exposes a `retry()` for the retry button on `<SidecarBanner />`.
 - `sse.ts` exports the React hook `usePipelineEvents(runId)` which opens an `EventSource` against `/api/pipeline/:runId/events`, appends `log` events to a buffered line list, resolves on the terminal `done` event (firing `notifyPipelineComplete`), and degrades to `status: 'error'` on transport failure.
 - `error-surfaces.ts` encodes the severity → surface decision rule for user-facing errors (issue #200): which circumstances map to toast, dialog, the route `ErrorBoundary`, or the ambient banner, plus the action-required error codes (e.g. `openai_unavailable`) and their guidance copy. Guidance data only — call sites keep making the direct `toast.add(...)` / `<ApiErrorDialog />` calls.
 - `query-client.ts` constructs a singleton `QueryClient` with `staleTime: 5_000`, `retry: 1`, and `refetchOnWindowFocus: false`.
@@ -17,7 +16,7 @@ Shared frontend utilities for the desktop webview: typed HTTP client targeting t
 
 ## Flow
 
-UI page/hook -> `api.<method>()` (e.g. `api.listJobs`, `api.getConfig`, `api.runPipeline`) -> `request<T>()` calls `resolveSidecar()` and reads `.url` -> `fetch` against the sidecar -> typed JSON response (e.g. `ListJobsResponse`, `ConfigResponse`). For streaming, `usePipelineEvents(runId)` -> `resolveSidecar()` -> `EventSource('/api/pipeline/:runId/events')` -> incremental `log`/`done` events -> terminal state fires `notifyPipelineComplete`. The root layout also wires `useSidecarReachability()` to render `<SidecarBanner />` when the measured `/api/health` ping reports the sidecar unreachable, regardless of how the URL was resolved (issue #202). React Query caches both the request layer and the reachability query via the shared `queryClient` singleton.
+UI page/hook -> `api.<method>()` (e.g. `api.listJobs`, `api.getConfig`, `api.runPipeline`) -> `request<T>()` calls `resolveSidecar()` and reads `.url` -> `fetch` against the sidecar -> typed JSON response (e.g. `ListJobsResponse`, `ConfigResponse`). For streaming, `usePipelineEvents(runId)` -> `resolveSidecar()` -> `EventSource('/api/pipeline/:runId/events')` -> incremental `log`/`done` events -> terminal state fires `notifyPipelineComplete`. React Query caches the request layer via the shared `queryClient` singleton.
 
 ## Integration
 

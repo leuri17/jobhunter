@@ -30,12 +30,9 @@ At runtime pages call `src/lib/api.ts` -> `resolveSidecar()` -> `fetch` against
 `/api/runs/*`, `/api/pipeline/*`), with non-2xx responses normalized into `ApiError`.
 Streaming pipeline progress arrives through `src/lib/sse.ts` (`EventSource` on
 `/api/pipeline/:runId/events`); terminal events invoke the Tauri command
-`notify_pipeline_complete`. The root layout additionally renders `<SidecarBanner />` from
-`src/components/shared/ui/sidecar-banner.tsx` when
-`useSidecarReachability()` (TanStack Query ping with 5 s cache) measures the sidecar
-unreachable, regardless of how the URL was resolved — see issue #202. Verification scripts: `typecheck`
-(`tsc -b --noEmit`), `test` (`vitest run` on happy-dom), `test:e2e` (`playwright test`),
-`preview` (`vite preview`).
+`notify_pipeline_complete`. Verification scripts: `typecheck`
+(`tsc -b --noEmit`), `test` (`vitest run` on happy-dom), `test:e2e`
+(`playwright test`), `preview` (`vite preview`).
 
 ## Integration
 
