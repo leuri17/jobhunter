@@ -27,6 +27,22 @@ see [`docs/responsible-use.md`](./responsible-use.md).
   and `exactOptionalPropertyTypes`. Zod validates every external,
   persisted, profile, filter, OpenAI, and JSON boundary.
 
+## User-facing error surfaces
+
+An error becomes visible to the user through exactly one of four
+surfaces, one per failure class: a toast for transient problems the
+app recovers from on its own; `ApiErrorDialog` for failures of actions
+the user explicitly initiated (saving settings, saving an API key,
+starting a run) — the unified surface for action failures, exactly as
+the `ErrorBoundary` is for render crashes, and it applies even when a
+route could have disguised the failure as a 200 outcome (the API-key
+probe rejects with real 401/503 statuses precisely so this dialog path
+applies); the `ErrorBoundary` for render crashes; and the `StatusPill`
+for ambient sidecar state such as the sidecar being offline. Inline
+field-level error boxes are not a surface. The enforcement module is
+`desktop/ui/src/lib/error-surfaces.ts`: it owns the severity-to-surface
+mapping and the guidance registries the dialog reads.
+
 ## Layered structure
 
 | Layer | Lives in | Owns |
