@@ -25,8 +25,8 @@ import type { ApiError } from './api';
  *   wired at the root layout and needs no per-call-site work.
  * - **Banner** covers ambient, ongoing conditions the user should
  *   keep seeing while they last (e.g. the sidecar-offline
- *   `<SidecarBanner />`; its wiring is tracked separately). Inline
- *   red boxes are not a surface — route them to one of the four.
+ *   `StatusPill` in the sidebar). Inline red boxes are not a
+ *   surface — route them to one of the four.
  *
  * This module is guidance data, not a framework: call sites still
  * make the direct `toast.add(...)` / `<ApiErrorDialog />` call. Two

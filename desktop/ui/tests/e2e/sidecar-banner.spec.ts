@@ -1,19 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('sidecar fallback banner (issue #31)', () => {
-  test('does not show a blocking banner when the resolver returns a high-confidence URL', async ({
-    page,
-  }) => {
-    // With the fixture sidecar booted by playwright.config.ts and
-    // VITE_SIDECAR_PORT=14231, `resolveSidecar()` lands on the
-    // env-override branch, and the measured /api/health ping answers
-    // 2xx (status === 'reachable'), so the banner stays hidden even
-    // though no Tauri webview is running.
-    await page.goto('/');
-    const banner = page.getByTestId('sidecar-banner');
-    await expect(banner).toBeHidden({ timeout: 5_000 });
-  });
-
+test.describe('sidecar status pill', () => {
   test('the StatusPill reports sidecar connected on port 14231', async ({ page }) => {
     // The pill refetches every 5 s. Wait for the connected state
     // (rather than asserting it on first render, which races the
