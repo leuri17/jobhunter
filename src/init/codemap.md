@@ -29,8 +29,10 @@ failed | not_started`. The orchestrator classifies first, then runs only
   (`askResume`, `askSourcePaths`, `askEditHandoff`, `confirmSummary`); the
   sidecar wires production adapters, tests inject `ScriptedInitPrompts` or
   `createFailingInitPrompts`.
-- **OpenAI resolution** — `openai-resolve.ts` exports `resolveOpenAiClientOrNull`,
-  a boundary helper reading `OPENAI_API_KEY` from `process.env`; absence is
+- **OpenAI resolution** — `openai-resolve.ts` exports `resolveOpenAiClientOrNull`
+  and `emptySecretsStore`; the boundary helper resolves the key via
+  `resolveOpenAiApiKey`/`resolveApiKeySource` with store precedence (a stored
+  secret wins over `OPENAI_API_KEY` from `process.env`); absence is
   treated as skip-not-fail.
 - **Logging seam** — `InitLogger` (`log.ts`) with `stepStart/Complete/Fail/Skip`
   events; production wraps `pinoInitLogger`, tests use `noopInitLogger`.
@@ -45,8 +47,9 @@ failed | not_started`. The orchestrator classifies first, then runs only
 
 ## Flow
 
-1. `InitOrchestrator.run(env)` reads `OPENAI_API_KEY` from `env` to gate the
-   `extract` step.
+1. `InitOrchestrator.run(env)` resolves the key through `resolveApiKeySource`
+   (stored secret wins; unreadable store falls through to `env`; the optional
+   `secretsStore` option wires the store) to gate the `extract` step.
 2. **paths** → `classifyPaths` (always `complete`; resolved at the boundary).
 3. **directories** → `classifyDirectories` checks six runtime dirs via
    `fileSystem.pathExists`; on miss, calls `ensureRuntimeDirectories`.
@@ -54,8 +57,9 @@ failed | not_started`. The orchestrator classifies first, then runs only
    `initializeDatabase` outcome (`migrationsApplied: true`).
 5. **config** → `loadConfig` then `classifyConfig`; on `not_started`,
    `updateConfig` seeds defaults; on `failed`, surfaces `config_invalid`.
-6. **openaiKey** → `classifyOpenAiKey` (always `complete`; key absence is a
-   skip, surfaced via `classifyExtract.reason === 'openai_key_missing'`).
+6. **openaiKey** → `classifyOpenAiKey` (always `complete`; reports
+   `source: stored|environment|none` from `resolveApiKeySource`; key absence
+   is a skip, surfaced via `classifyExtract.reason === 'openai_key_missing'`).
 7. **search** → `classifySearch`; on incomplete, delegates to
    `runConfigureSearch` (`src/search/`) and persists via `updateConfig`;
    `SearchCancelledError` is rethrown.

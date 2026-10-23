@@ -49,6 +49,9 @@ import { SearchCancelledError } from '../search/errors.js';
 import { UserCancelledFilterConfigError } from '../filter/errors.js';
 import type { FileSystem } from '../config/file-system.js';
 import type { OpenAIClient } from '../profile/openai/types.js';
+import { resolveApiKeySource } from '../config/api-key.js';
+import type { SecretsStore } from '../config/secrets.js';
+import { emptySecretsStore } from './openai-resolve.js';
 
 import {
   InitApprovalFailedError,
@@ -106,6 +109,12 @@ export interface InitOrchestratorOptions {
   readonly approvalPrompts?: ProfileApprovalPrompts;
   /** Optional. Wired by the sidecar to the inline rejection-confirm prompt; tests inject scripted. */
   readonly rejectionPrompts?: ProfileRejectionPrompts;
+  /**
+   * Optional. Wired where a secrets backend exists; when omitted the
+   * key check falls back to `env` alone (existing callers and tests).
+   * An unreadable store counts as "not stored" — never a walk failure.
+   */
+  readonly secretsStore?: SecretsStore;
   /** Optional. Wired by the sidecar to `noopProfileImportLogger` or the production adapter; tests inject scripted. */
   readonly importLogger?: ProfileImportLogger;
   /** Optional. Wired by the sidecar to `noopProfileExtractionLogger` or the production adapter; tests inject scripted. */
@@ -139,12 +148,13 @@ export class InitOrchestrator {
    * translates the `UserCancellation = 130` exit code to an HTTP
    * status response).
    *
-   * The `env` parameter is the source of truth for the `OPENAI_API_KEY`
-   * presence check. The orchestrator combines `env` with
-   * the `openaiClient` constructor argument: the key is "present" when
-   * either source provides it. This lets tests inject an `env` record
-   * with the key while passing `openaiClient: null` (the test does not
-   * need a real OpenAI client — it just needs the key-absence path).
+   * The `env` parameter supplies the environment side of the
+   * `OPENAI_API_KEY` presence check. Presence is resolved once via
+   * `resolveApiKeySource` — a stored secret (the optional
+   * `secretsStore` option) wins over `env`, and an unreadable store
+   * falls through to `env`. Tests inject an `env` record (and, when
+   * the scenario needs it, a scripted store) while passing
+   * `openaiClient: null` when the client itself is irrelevant.
    */
   async run(env: Readonly<Record<string, string | undefined>>): Promise<SetupSummary> {
     const opts = this.options;
@@ -160,8 +170,11 @@ export class InitOrchestrator {
     // for the extract step regardless of whether `openaiClient` is
     // null — tests inject `openaiClient: null` to simulate the
     // absence side of the gate.
-    const openAiKeyPresent =
-      typeof env['OPENAI_API_KEY'] === 'string' && env['OPENAI_API_KEY']!.length > 0;
+    const openAiKeySource = await resolveApiKeySource({
+      store: opts.secretsStore ?? emptySecretsStore(),
+      env,
+    });
+    const openAiKeyPresent = openAiKeySource !== 'none';
 
     // === step 1: paths ===
     stepReports['paths'] = await classifyPaths({
@@ -250,7 +263,7 @@ export class InitOrchestrator {
     }
 
     // === step 5: openaiKey ===
-    stepReports['openaiKey'] = classifyOpenAiKey({ present: openAiKeyPresent });
+    stepReports['openaiKey'] = classifyOpenAiKey({ source: openAiKeySource });
 
     // === step 6: search ===
     const persistedSearch = normalizePersistedSearchConfig(loadedConfig.config.search);

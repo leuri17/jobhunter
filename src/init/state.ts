@@ -13,6 +13,8 @@
  * modules — it is consumed by the orchestrator, the classify helpers,
  * the desktop setup-summary renderer, and the test surface.
  */
+import type { ApiKeySource } from '../config/api-key.js';
+
 export type InitStepStatus = 'complete' | 'incomplete' | 'failed' | 'not_started';
 
 /**
@@ -59,7 +61,7 @@ export const INIT_STEP_LABELS: Readonly<Record<InitStepId, string>> = {
   directories: 'Create required runtime directories',
   migrations: 'Initialize SQLite + apply Drizzle migrations',
   config: 'Materialize default config.json when missing',
-  openaiKey: 'Validate OPENAI_API_KEY presence',
+  openaiKey: 'Check that an OpenAI API key is configured',
   search: 'Configure LinkedIn search settings',
   sources: 'Import one or two CV sources',
   extract: 'Generate AI profile draft',
@@ -81,6 +83,12 @@ export interface InitStepReport {
   readonly reason: string | null;
   /** Identifier of the persisted artifact referenced by the step (e.g. `profile_42`). */
   readonly artifactId: string | null;
+  /**
+   * Where the OpenAI key came from — set only on the `openaiKey`
+   * step report (`'stored' | 'environment' | 'none'`). Other steps
+   * omit it.
+   */
+  readonly source?: ApiKeySource;
 }
 
 /**

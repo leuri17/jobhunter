@@ -31,7 +31,7 @@ export async function resolveOpenAiClientOrNull(
   store?: SecretsStore,
 ): Promise<OpenAIClient | null> {
   const apiKey = await resolveOpenAiApiKey({
-    store: store ?? emptyStore(),
+    store: store ?? emptySecretsStore(),
     env: process.env,
   });
   if (apiKey === null) {
@@ -43,7 +43,8 @@ export async function resolveOpenAiClientOrNull(
   });
 }
 
-function emptyStore(): SecretsStore {
+/** A SecretsStore that behaves as "nothing stored"; used when no store is wired. */
+export function emptySecretsStore(): SecretsStore {
   return {
     read: async () => ({}),
     write: async () => undefined,
