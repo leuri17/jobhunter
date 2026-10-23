@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApiKeySection } from '@/components/shared/features/settings/api-key/api-key-section';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api';
-import type { ApiKeyResponse } from '@/lib/types';
+import type { ApiKeyResponse, PutApiKeyResponse } from '@/lib/types';
 
 vi.mock('@/components/ui/toast', () => ({
   toast: { add: vi.fn() },
@@ -45,7 +45,6 @@ function typeAndSave(key: string): void {
 
 const UNCONFIGURED: ApiKeyResponse = {
   schemaVersion: 1,
-  status: 'validated',
   configured: false,
   source: 'none',
   masked: '',
@@ -67,7 +66,7 @@ afterEach(() => {
 
 describe('<ApiKeySection />', () => {
   it('relabels the save button to "Validating key…" and disables the field while the probe runs', async () => {
-    const validation = deferred<ApiKeyResponse>();
+    const validation = deferred<PutApiKeyResponse>();
     vi.mocked(api.setApiKey).mockReturnValue(validation.promise);
 
     renderSection();
@@ -175,5 +174,26 @@ describe('<ApiKeySection />', () => {
 
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByLabelText('Key').getAttribute('aria-invalid')).toBe('false');
+  });
+
+  it('drops the prior-key claim when nothing was configured before the rejection', async () => {
+    vi.mocked(api.setApiKey).mockResolvedValue({
+      schemaVersion: 1,
+      status: 'rejected',
+      reason: 'openai_authentication',
+      configured: false,
+      source: 'none',
+      masked: '',
+    });
+
+    renderSection();
+    typeAndSave('sk-typed');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.querySelector('p')?.textContent).toBe(
+      'OpenAI rejected this key. Nothing was saved.',
+    );
+    expect((screen.getByLabelText('Key') as HTMLInputElement).value).toBe('sk-typed');
+    expect(toast.add).not.toHaveBeenCalled();
   });
 });

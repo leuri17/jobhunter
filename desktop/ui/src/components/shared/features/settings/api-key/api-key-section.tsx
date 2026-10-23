@@ -17,6 +17,7 @@ const OUTCOME_COPY = {
 type ValidationOutcome = {
   readonly status: keyof typeof OUTCOME_COPY;
   readonly reason?: string | undefined;
+  readonly configured: boolean;
 };
 
 export function ApiKeySection() {
@@ -33,7 +34,7 @@ export function ApiKeySection() {
     mutationFn: (apiKey: string) => api.setApiKey(apiKey),
     onSuccess: (result) => {
       if (result.status !== 'validated') {
-        setOutcome({ status: result.status, reason: result.reason });
+        setOutcome({ status: result.status, reason: result.reason, configured: result.configured });
         return;
       }
       setOutcome(null);
@@ -116,7 +117,11 @@ export function ApiKeySection() {
               role="alert"
               className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm"
             >
-              <p>{OUTCOME_COPY[outcome.status]}</p>
+              <p>
+                {outcome.status === 'rejected' && !outcome.configured
+                  ? 'OpenAI rejected this key. Nothing was saved.'
+                  : OUTCOME_COPY[outcome.status]}
+              </p>
               {outcome.reason !== undefined && (
                 <details className="mt-1.5 text-xs text-muted-foreground">
                   <summary className="cursor-pointer">More info</summary>
