@@ -6,7 +6,8 @@ Rust shell (`jobhunter-desktop` crate) that bundles the WebView-based UI and the
 
 ## Design
 
-Tauri 2 application crate built on the Rust 2021 edition (MSRV `1.77`).
+Tauri 2 application crate built on the Rust 2021 edition (MSRV `1.88`, driven
+by `keyring` v4).
 
 - **Cargo manifest (`Cargo.toml`)** — declarative configuration:
   - `[lib]` exposes `jobhunter_desktop_lib` as `staticlib`, `cdylib`, and `rlib` so the same code can power the desktop binary and potential FFI targets.
@@ -19,6 +20,9 @@ Tauri 2 application crate built on the Rust 2021 edition (MSRV `1.77`).
     - `tokio` (features: `process`, `io-util`, `macros`, `rt-multi-thread`) — async runtime for spawning and piping stdio of the Node sidecar.
     - `once_cell` — global/lazy initialization (e.g., sidecar handle).
     - `libc` — low-level process signaling on Unix.
+    - `keyring = "4"` — OS keychain access with default features (macOS
+      Keychain, Windows Credential Manager, Linux Secret Service via zbus;
+      pure Rust); backs the loopback secrets bridge in `src/secrets.rs`.
   - `[features]`: `default = ["custom-protocol"]`; `custom-protocol` flips on `tauri/custom-protocol` so production builds serve assets via the `tauri://` scheme instead of `http://`.
 
 - **Build script (`build.rs`)** — single call to `tauri_build::build()`, which runs Tauri's build pipeline before the Rust crate compiles.
@@ -28,7 +32,7 @@ Tauri 2 application crate built on the Rust 2021 edition (MSRV `1.77`).
 1. `cargo build` invokes `build.rs` → `tauri_build::build()` generates Tauri artifacts (capabilities, bundled resource manifest).
 2. Rust crate compiles against the generated bindings, producing `jobhunter-desktop` (lib + binary).
 3. On launch, the Tauri runtime creates the main window hosting the WebView and loads the UI bundle (`desktop/ui/`).
-4. `src/` (via `tokio`) spawns `desktop/sidecar/` as a child Node process, captures its stdio, and bridges it to the frontend over Tauri IPC commands.
+4. `src/` (via `tokio`) spawns `desktop/sidecar/` as a child Node process, captures its stdio, and bridges it to the frontend over Tauri IPC commands. Before the spawn, `src/secrets.rs` starts a token-authenticated loopback TCP bridge to the OS keychain (via `keyring`) and hands its port/token to the sidecar through env vars; the webview never talks to it.
 5. Single-instance and notification plugins gate OS-level concerns; the `custom-protocol` feature ensures the same code path works in dev (`tauri dev`) and prod (`tauri build`).
 
 ## Integration

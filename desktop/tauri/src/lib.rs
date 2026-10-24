@@ -1,4 +1,5 @@
 pub mod notification;
+pub mod secrets;
 pub mod sidecar;
 
 use std::sync::Mutex;
@@ -60,7 +61,11 @@ pub fn run() {
     let runtime_path = "npx";
     let entry_path = format!("{}/../sidecar/src/server.ts", manifest_dir);
 
-    let (child, port) = spawn_sidecar(runtime_path, &entry_path)
+    // The sidecar cannot reach the OS keychain itself, so the bridge must be
+    // up before the sidecar starts; a bind failure is fatal at startup.
+    let bridge = secrets::start_bridge().expect("failed to start secrets bridge");
+
+    let (child, port) = spawn_sidecar(runtime_path, &entry_path, &bridge)
         .expect("failed to start sidecar");
 
     // Keep the port for the webview (Tauri IPC; chromium doesn't inherit

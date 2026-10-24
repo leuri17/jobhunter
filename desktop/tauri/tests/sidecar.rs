@@ -7,7 +7,17 @@
 
 use std::time::Instant;
 
+use jobhunter_desktop_lib::secrets::BridgeInfo;
 use jobhunter_desktop_lib::sidecar::{parse_ready_line, spawn_sidecar, stop_sidecar};
+
+/// Placeholder bridge info: the spawn tests never exercise the secrets
+/// env vars, only the READY handshake and shutdown paths.
+fn unused_bridge() -> BridgeInfo {
+    BridgeInfo {
+        port: 0,
+        token: String::new(),
+    }
+}
 
 #[test]
 fn parses_ready_line_extracts_port() {
@@ -80,7 +90,7 @@ fn spawns_node_and_reads_ready_line() {
     )
     .expect("write test script");
 
-    let spawn_result = spawn_sidecar("npx", script_path.to_str().unwrap());
+    let spawn_result = spawn_sidecar("npx", script_path.to_str().unwrap(), &unused_bridge());
 
     let (child, port) = match spawn_result {
         Ok(v) => v,
@@ -120,7 +130,7 @@ fn spawn_times_out_when_child_never_prints_ready() {
     .expect("write test script");
 
     let started = Instant::now();
-    let result = spawn_sidecar("npx", script_path.to_str().unwrap());
+    let result = spawn_sidecar("npx", script_path.to_str().unwrap(), &unused_bridge());
     let elapsed = started.elapsed();
 
     let err = result.expect_err("expected spawn to time out without READY");
@@ -156,7 +166,7 @@ fn spawn_times_out_when_ready_prints_after_deadline() {
     .expect("write test script");
 
     let started = Instant::now();
-    let result = spawn_sidecar("npx", script_path.to_str().unwrap());
+    let result = spawn_sidecar("npx", script_path.to_str().unwrap(), &unused_bridge());
     let elapsed = started.elapsed();
 
     let err = result.expect_err("expected spawn to time out before late READY");
@@ -186,7 +196,7 @@ fn spawn_returns_disconnected_when_child_exits_without_ready() {
     .expect("write test script");
 
     let started = Instant::now();
-    let result = spawn_sidecar("npx", script_path.to_str().unwrap());
+    let result = spawn_sidecar("npx", script_path.to_str().unwrap(), &unused_bridge());
     let elapsed = started.elapsed();
 
     let err = result.expect_err("expected spawn to fail when child exits early");
@@ -223,7 +233,7 @@ fn stop_sidecar_falls_back_to_sigkill_when_sigterm_ignored() {
     )
     .expect("write test script");
 
-    let (child, _port) = spawn_sidecar("npx", script_path.to_str().unwrap())
+    let (child, _port) = spawn_sidecar("npx", script_path.to_str().unwrap(), &unused_bridge())
         .expect("spawn fixture sidecar");
 
     let pid = child.id();
