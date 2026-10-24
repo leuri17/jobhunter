@@ -56,15 +56,33 @@ export interface ValidateConfigResponse {
   readonly valid: true;
 }
 
+/** Where the sidecar persists the OpenAI API key (issue #211). */
+export type SecretsBackend = 'keychain' | 'file';
+
+/**
+ * Why the backend fell back to the file store. Present only on
+ * `file`; the UI matches on these stable tokens, never on messages.
+ */
+export type SecretsBackendReason = 'bridge_not_configured' | 'keychain_unavailable';
+
+/** Backend fields carried by every /api/secrets/api-key response. */
+interface SecretsBackendFields {
+  readonly backend: SecretsBackend;
+  readonly backendReason?: SecretsBackendReason;
+}
+
 /**
  * The API key itself is never returned. `masked` is enough for the UI
  * to show that a key exists without ever holding the real value.
+ * GET additionally reports whether a pre-keychain secrets file still
+ * exists on disk so the UI can offer migration.
  */
-export interface ApiKeyResponse {
+export interface ApiKeyResponse extends SecretsBackendFields {
   readonly schemaVersion: 1;
   readonly configured: boolean;
   readonly source: 'stored' | 'environment' | 'none';
   readonly masked: string;
+  readonly legacyFilePresent: boolean;
 }
 
 /**
@@ -72,9 +90,41 @@ export interface ApiKeyResponse {
  * real HTTP error statuses (401 rejected / 503 unverifiable) and arrive
  * as a thrown `ApiError`, so `validated` is the only 200 shape.
  */
-export interface PutApiKeyResponse extends ApiKeyResponse {
+export interface PutApiKeyResponse extends SecretsBackendFields {
+  readonly schemaVersion: 1;
   readonly status: 'validated';
+  readonly configured: boolean;
+  readonly source: 'stored' | 'none';
+  readonly masked: string;
 }
+
+/** DELETE /api/secrets/api-key response. */
+export interface ClearApiKeyResponse extends SecretsBackendFields {
+  readonly schemaVersion: 1;
+  readonly configured: false;
+  readonly source: 'none';
+  readonly masked: '';
+}
+
+/**
+ * POST /api/secrets/api-key/migrate response. `migrated: false` is a
+ * 200 outcome, not a failure: there was nothing to move, or no
+ * keychain backend is in play. Real failures (409 shadowed, 500
+ * verification, 503 backend) reject as `ApiError`.
+ */
+export type MigrateApiKeyResponse =
+  | {
+      readonly schemaVersion: 1;
+      readonly migrated: true;
+      readonly source: 'stored';
+      readonly backend: 'keychain';
+      readonly masked: string;
+    }
+  | {
+      readonly schemaVersion: 1;
+      readonly migrated: false;
+      readonly reason: 'nothing_to_migrate' | 'no_keychain_backend';
+    };
 
 export interface ListProfilesResponse {
   readonly schemaVersion: 1;
