@@ -23,8 +23,9 @@ decoding, `AbortController` bookkeeping, and SSE framing.
     `rename`, `mkdir`, `access`, `rm`), injected into `loadConfig` /
     `updateConfig`.
   - `openai-resolve.ts` — `resolveOpenAiClientOrNull()` lazily builds an
-    `OpenAIClient` from `OPENAI_API_KEY`; returns `null` when unset so
-    handlers can reply `503 openai_unavailable`.
+    `OpenAIClient` from the resolved secrets backend's store (falling back
+    to `OPENAI_API_KEY`); returns `null` when unset so handlers can reply
+    `503 openai_unavailable`.
 - **SSE channel** (`pipeline.ts`) reuses `initSseHeaders` / `writeSseEvent` /
   `closeSse` from `../sse.ts`. A module-level `activeRuns: Map<runId,
 ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
@@ -65,7 +66,18 @@ edit_via_http_not_supported` (interactive TUI prompts are out-of-band
 sidecarFileSystem)`; `configPatchHandler` applies `ConfigPatch` through
   `updateConfig` with an auto-confirming `options.confirm`; `configValidateHandler`
   re-parses with `OperationalConfigSchema.safeParse`, throwing
-  `ValidationError` on failure.
+  `ValidationError` on failure. The secrets api-key surface reads/writes the
+  resolved secrets backend (`../secrets-backend.ts`): GET reports
+  `configured`/`source`/`masked` plus `backend`/`backendReason`/
+  `legacyFilePresent`; PUT validates first, then writes the backend (a
+  keychain-unavailable fallback only writes the file with
+  `allowPlaintextFallback: true` — otherwise `503
+secrets_backend_unavailable`); DELETE clears through the backend;
+  `POST /api/secrets/api-key/migrate` moves a legacy `secrets.json` key into
+  the keychain, deleting the file only after a verified read-back
+  (`legacy_shadowed` 409 when the keychain already holds a key,
+  `secrets_migration_verification_failed` 500 on mismatch). `jobs.ts` /
+  `pipeline.ts` resolve their API key through the same backend store.
 - **Paths**: `pathsGetHandler` exposes `resolvePlatformPaths(
 createDefaultPlatformAdapter())` directories.
 

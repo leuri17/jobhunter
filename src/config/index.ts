@@ -46,6 +46,21 @@ export {
 } from './secrets.js';
 
 export {
+  KeychainSecretsStore,
+  SocketKeychainTransport,
+  parseBridgeEnv,
+  BRIDGE_PORT_ENV_VAR,
+  BRIDGE_TOKEN_ENV_VAR,
+  type KeychainTransport,
+  type KeychainSecretsStoreOptions,
+  type SocketKeychainTransportOptions,
+  type BridgeRequest,
+  type BridgeResponse,
+  type BridgeError,
+  type BridgeEnv,
+} from './keychain-secrets.js';
+
+export {
   resolveOpenAiApiKey,
   resolveApiKeySource,
   type ResolveApiKeyOptions,

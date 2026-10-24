@@ -8,6 +8,7 @@ import cors from '@fastify/cors';
 import { pino, transport, multistream, type Logger as PinoLogger, type StreamEntry } from 'pino';
 import { readEnv, type SidecarEnv } from './env.js';
 import { statusFor, envelopeFor } from './errors.js';
+import { getSecretsBackend, type ResolvedSecretsBackend } from './secrets-backend.js';
 import { registerPathsRoute } from './routes/paths.js';
 import { registerConfigRoutes } from './routes/config.js';
 import { registerProfileRoutes } from './routes/profile.js';
@@ -213,6 +214,11 @@ export interface BuildServerOptions {
    * unverifiable (the route maps typed errors to outcomes).
    */
   readonly validateApiKey?: (apiKey: string) => Promise<void>;
+  /**
+   * Optional test/alternative seam: supplies the resolved secrets backend
+   * to the config routes. Defaults to the process-wide memoized resolver.
+   */
+  readonly secretsBackend?: () => Promise<ResolvedSecretsBackend>;
 }
 
 async function resolveRootLogger(
@@ -271,6 +277,22 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
       ? null
       : await loadConfig(opts.paths, opts.fileSystem).catch((): null => null);
   const rootLogger = await resolveRootLogger(opts, loaded);
+  const secretsBackend = await getSecretsBackend(opts.processEnv ?? process.env);
+  if (secretsBackend.reason !== undefined) {
+    rootLogger.warn(
+      {
+        event: 'secrets.backend.resolved',
+        backend: secretsBackend.backend,
+        reason: secretsBackend.reason,
+      },
+      'secrets backend fell back to the file store',
+    );
+  } else {
+    rootLogger.info(
+      { event: 'secrets.backend.resolved', backend: secretsBackend.backend },
+      'secrets backend resolved',
+    );
+  }
   const refusal: DefaultOpenAIClientRefusalOptions = resolveRefusalDetection(loaded);
   const app = Fastify({ loggerInstance: asFastifyBaseLogger(rootLogger) });
 
@@ -307,10 +329,11 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
 
   await registerPathsRoute(app);
 
-  await registerConfigRoutes(
-    app,
-    opts.validateApiKey !== undefined ? { validateApiKey: opts.validateApiKey } : {},
-  );
+  const configRouteDeps = {
+    ...(opts.validateApiKey !== undefined ? { validateApiKey: opts.validateApiKey } : {}),
+    ...(opts.secretsBackend !== undefined ? { secretsBackend: opts.secretsBackend } : {}),
+  };
+  await registerConfigRoutes(app, configRouteDeps);
 
   await registerProfileRoutes(app, { refusal });
 

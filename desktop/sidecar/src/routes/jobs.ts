@@ -14,8 +14,8 @@ import {
   type OpenAIClient,
 } from '@jobhunter/core/profile';
 import { pinoReevaluationLogger } from '@jobhunter/core/logging';
-import { FileSecretsStore, resolveOpenAiApiKey } from '@jobhunter/core/config';
-import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
+import { resolveOpenAiApiKey } from '@jobhunter/core/config';
+import { getSecretsBackend } from '../secrets-backend.js';
 import { openDbHandle, createRepositories } from './db-helper.js';
 import { resolveOpenAiClientOrNull } from './openai-resolve.js';
 
@@ -135,8 +135,10 @@ export async function registerJobsRoutes(
         confirmScoring: req.body.confirmScoring ?? false,
         env: process.env,
         resolveApiKey: async () => {
-          const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
-          return resolveOpenAiApiKey({ store: new FileSecretsStore({ paths }), env: process.env });
+          return resolveOpenAiApiKey({
+            store: (await getSecretsBackend()).store,
+            env: process.env,
+          });
         },
         ...(req.body.jobId !== undefined && req.body.jobId !== null
           ? { jobId: req.body.jobId }
