@@ -7,6 +7,14 @@
 # on the gate below to catch any NEW advisory that lands in a dep we
 # do control.
 #
+# The three RUSTSEC-2026-037x ids are the same class, one step removed:
+# zvariant/zbus_names/zvariant_derive were absorbed into zbus 6
+# (2026-10-16, patched = [] — no version of the old crates is clean),
+# and every in-tree consumer still pins zbus 5 (keyring 4.2's
+# secret-service store, tauri-plugin-notification 2.7,
+# tauri-plugin-single-instance 2.5.4). Remove these three when any of
+# those ships a zbus-6-based release.
+#
 # Gate semantics:
 #   - vulnerabilities  -> BLOCK (exit 1)
 #   - unsound          -> BLOCK (exit 1)
@@ -40,6 +48,9 @@ if ! JSON=$(cargo audit --json \
   --ignore RUSTSEC-2025-0100 \
   --ignore RUSTSEC-2025-0098 \
   --ignore RUSTSEC-2024-0429 \
+  --ignore RUSTSEC-2026-0370 \
+  --ignore RUSTSEC-2026-0371 \
+  --ignore RUSTSEC-2026-0372 \
   2>/dev/null); then
   # cargo-audit exits non-zero both when it finds a gated advisory and when
   # it cannot run at all (bad flag, unreadable lockfile, network failure).
