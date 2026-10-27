@@ -176,13 +176,41 @@ Foreign keys are enforced. Every migration is committed.
 
 Configuration is persisted in OS-specific JSON (`config.json`). The
 schema is Zod-validated and `.strict()` — unknown properties are
-rejected. The `OPENAI_API_KEY` is read from the environment the
-sidecar inherits when the Tauri shell launches it; it is never
-persisted.
+rejected. The OpenAI key is not part of it: it lives in the secrets
+store (see below) when the user saves one, and otherwise comes from
+the `OPENAI_API_KEY` environment the sidecar inherits when the Tauri
+shell launches it.
 
 Defaults match what's documented in the schema; nothing is implicit.
 The UI exposes a configuration view backed by the sidecar's
 `/config` endpoints (show + patch).
+
+## Secrets and the API key
+
+The OpenAI key is the one credential the app persists, and it lives
+in the OS keychain — the macOS Keychain, Windows Credential Manager,
+or the Linux Secret Service — behind the `SecretsStore` interface
+(`src/config/secrets.ts`). The Tauri shell owns all keychain access
+through the `keyring` crate and serves `get`/`set`/`delete` to the
+Node sidecar over a token-authenticated loopback bridge
+(`desktop/tauri/src/secrets.rs`); the webview never talks to it, and
+the token is regenerated per launch.
+
+At boot the sidecar resolves its backend once and logs it
+(`secrets.backend.resolved`). Without the bridge env (standalone dev
+runs) or when the keychain is unavailable — locked, or no Secret
+Service on headless Linux — it falls back to the plaintext
+`FileSecretsStore`, never silently: the status route reports the
+active backend, and saving a key without a keychain requires explicit
+consent to the file fallback (`allowPlaintextFallback`). A key saved
+in the old file format is offered an explicit migration to the
+keychain; the file is deleted only after the migrated key is written
+and read back matching.
+
+Precedence is unchanged from #207: a stored key beats
+`OPENAI_API_KEY`, and an unreadable store falls through to the
+environment (`resolveOpenAiApiKey` in `src/config/api-key.ts` is the
+single seam).
 
 ## Reliability invariants
 

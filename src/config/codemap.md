@@ -20,6 +20,14 @@ affects `hashOperationalConfig` and cannot appear in the config diff. See
 [#211](https://github.com/leuri17/jobhunter/issues/211) for the planned move
 to the OS keychain; `SecretsStore` is the seam that replacement targets.
 
+`keychain-secrets.ts` is that replacement's client half: a
+`KeychainSecretsStore` (`SecretsStore` over the Tauri shell's token-authed
+loopback TCP bridge) plus the `SocketKeychainTransport` that speaks the
+bridge's one-line-per-connection JSON protocol (5 s deadline, 64 KiB
+response cap, every transport failure normalized to a
+`secrets_backend_unavailable` `SecretStoreError`) and `parseBridgeEnv` for
+the `JOBHUNTER_SECRETS_BRIDGE_PORT`/`_TOKEN` pair.
+
 ## Design
 
 - **Schema-first validation** — `schema.ts` composes `.strict()` Zod objects
@@ -74,7 +82,11 @@ throw removes the temp file and raises `config_write_failed` → returns
 - Public exports (`index.ts`): `FileSystem`, `createDefaultFileSystem`,
   `OperationalConfigSchema`, `DEFAULT_OPERATIONAL_CONFIG`, `OperationalConfig`,
   `loadConfig`/`LoadedConfig`, and `updateConfig` with `ConfigPatch`,
-  `UpdateOptions`, `ConfigPreview`, `UpdateResult`. `hash.ts` is internal.
+  `UpdateOptions`, `ConfigPreview`, `UpdateResult`. From the secrets
+  surface: `FileSecretsStore`, `KeychainSecretsStore`,
+  `SocketKeychainTransport`, `parseBridgeEnv`, `maskSecret`,
+  `resolveSecretsPath`, `resolveOpenAiApiKey`, `resolveApiKeySource`, and
+  their option/type surface. `hash.ts` is internal.
 - `src/init/init-service.ts` imports `loadConfig`, `updateConfig`,
   `OperationalConfigSchema`, and the `FileSystem` type: it loads config during
   onboarding, materializes `config.json` via a no-op `updateConfig(paths, {},
@@ -82,6 +94,9 @@ throw removes the temp file and raises `config_write_failed` → returns
   second `updateConfig`, then re-loads.
 - `src/init/classify.ts` validates a caller-supplied config with
   `OperationalConfigSchema.safeParse` instead of re-reading from disk.
+- `desktop/sidecar/src/secrets-backend.ts` consumes
+  `KeychainSecretsStore` + `SocketKeychainTransport` + `parseBridgeEnv` to
+  pick the keychain or the file backend at sidecar boot (issue #211).
 - `src/pipeline/orchestrator.ts` carries `rawConfig: OperationalConfig` through
   the run; `src/pipeline/normalize.ts` `buildConfigSnapshot()` returns the
   snapshot plus its hash for run provenance.

@@ -2,6 +2,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { resolveSidecar } from './sidecar-url';
 import type {
   ApiKeyResponse,
+  ClearApiKeyResponse,
+  MigrateApiKeyResponse,
   PutApiKeyResponse,
   ApproveProfileResponse,
   CancelPipelineResponse,
@@ -85,9 +87,13 @@ export const api = {
   patchConfig: (patch: ConfigPatch) => request<ConfigResponse>('PATCH', '/api/config', { patch }),
   validateConfig: () => request<ValidateConfigResponse>('POST', '/api/config/validate'),
   getApiKeyStatus: () => request<ApiKeyResponse>('GET', '/api/secrets/api-key'),
-  setApiKey: (apiKey: string) =>
-    request<PutApiKeyResponse>('PUT', '/api/secrets/api-key', { apiKey }),
-  clearApiKey: () => request<ApiKeyResponse>('DELETE', '/api/secrets/api-key'),
+  setApiKey: (apiKey: string, allowPlaintextFallback = false) =>
+    request<PutApiKeyResponse>('PUT', '/api/secrets/api-key', {
+      apiKey,
+      ...(allowPlaintextFallback ? { allowPlaintextFallback: true } : {}),
+    }),
+  clearApiKey: () => request<ClearApiKeyResponse>('DELETE', '/api/secrets/api-key'),
+  migrateApiKey: () => request<MigrateApiKeyResponse>('POST', '/api/secrets/api-key/migrate'),
   listProfiles: (status?: string) =>
     request<ListProfilesResponse>('GET', `/api/profile${status ? `?status=${status}` : ''}`),
   getProfile: (id: string) => request<GetProfileResponse>('GET', `/api/profile/${id}`),

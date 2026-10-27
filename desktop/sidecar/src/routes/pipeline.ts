@@ -11,7 +11,8 @@ import { FilterApplyService } from '@jobhunter/core/filter';
 import { ScoringService, pinoScoringLogger } from '@jobhunter/core/scoring';
 import { createDefaultDiagnosticManager } from '@jobhunter/core/diagnostics';
 import { type DefaultOpenAIClientRefusalOptions, type OpenAIClient } from '@jobhunter/core/profile';
-import { loadConfig, FileSecretsStore, resolveOpenAiApiKey } from '@jobhunter/core/config';
+import { loadConfig, resolveOpenAiApiKey } from '@jobhunter/core/config';
+import { getSecretsBackend } from '../secrets-backend.js';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { pinoPipelineLogger } from '@jobhunter/core/pipeline';
 import { openDbHandle, createRepositories } from './db-helper.js';
@@ -202,8 +203,10 @@ async function runPipeline(
         confirmScoring: true,
         env: process.env,
         resolveApiKey: async () => {
-          const store = new FileSecretsStore({ paths });
-          return resolveOpenAiApiKey({ store, env: process.env });
+          return resolveOpenAiApiKey({
+            store: (await getSecretsBackend()).store,
+            env: process.env,
+          });
         },
         applicationVersion: '0.1.0-desktop',
         logger: pinoPipelineLogger(makeTeeLogger(rootLogger, run)),

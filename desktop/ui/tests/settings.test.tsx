@@ -70,6 +70,8 @@ beforeEach(() => {
     configured: false,
     source: 'none',
     masked: '',
+    backend: 'keychain',
+    legacyFilePresent: false,
   });
 });
 

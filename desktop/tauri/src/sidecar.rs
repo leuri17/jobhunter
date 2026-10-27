@@ -4,6 +4,8 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+use crate::secrets::{BridgeInfo, PORT_ENV_VAR, TOKEN_ENV_VAR};
+
 /// Parse a single line of sidecar output into a discovered port, if the line
 /// matches the `READY <port>` handshake contract.
 pub fn parse_ready_line(line: &str) -> Option<u16> {
@@ -25,10 +27,18 @@ pub fn parse_ready_line(line: &str) -> Option<u16> {
 /// `npx` or `node`); `entry_path` is the script argument passed to that
 /// executable. For the production path we invoke `npx tsx <entry_path>` so the
 /// `tsx` loader is responsible for handling `.ts` (Node 24 has no native TS).
-pub fn spawn_sidecar(runtime_path: &str, entry_path: &str) -> Result<(Child, u16), String> {
+/// The sidecar learns the secrets bridge endpoint from `bridge`, passed as
+/// `JOBHUNTER_SECRETS_BRIDGE_PORT` / `JOBHUNTER_SECRETS_BRIDGE_TOKEN`.
+pub fn spawn_sidecar(
+    runtime_path: &str,
+    entry_path: &str,
+    bridge: &BridgeInfo,
+) -> Result<(Child, u16), String> {
     let mut child = Command::new(runtime_path)
         .args(["tsx", entry_path])
         .env("JOBHUNTER_SIDECAR_PORT", "0")
+        .env(PORT_ENV_VAR, bridge.port.to_string())
+        .env(TOKEN_ENV_VAR, &bridge.token)
         .stdin(Stdio::null())
         .stdout(Stdio::inherit())
         .stderr(Stdio::piped())
