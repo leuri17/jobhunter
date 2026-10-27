@@ -1,13 +1,15 @@
 # Environment variables
 
-The codebase reads eight environment variables. Six are real (build-time or runtime); two are test-only. This file is the canonical map.
+The codebase reads ten environment variables. Eight are real (build-time or runtime); two are test-only. This file is the canonical map.
 
 | Variable | When read | Default | Required? | Description |
 | --- | --- | --- | --- | --- |
-| `OPENAI_API_KEY` | sidecar boot | — | no | Fallback OpenAI key used for profile extraction and job scoring. **Prefer entering the key in Settings → AI Provider**, which stores it on this machine and takes precedence over this variable. See [OpenAI API key precedence](#openai-api-key-precedence). |
+| `OPENAI_API_KEY` | sidecar boot | — | no | Fallback OpenAI key used for profile extraction and job scoring. **Prefer entering the key in Settings → AI Provider**, which stores it in your OS keychain and takes precedence over this variable. See [OpenAI API key precedence](#openai-api-key-precedence). |
 | `OPENAI_MODEL` | sidecar boot | `gpt-5` | no | The model used for both profile extraction and job scoring. |
 | `LOG_LEVEL` | sidecar boot | `info` | no | `trace` \| `debug` \| `info` \| `warn` \| `error` \| `fatal` \| `silent`. **Only used when no `config.json` exists.** `config.logging.level` always wins once the operational config is present — see [Log level precedence](#log-level-precedence). |
 | `JOBHUNTER_SIDECAR_PORT` | sidecar boot | `0` (OS-assigned) | no | The port the sidecar binds to. Only set explicitly for non-Tauri / non-supervised runs. |
+| `JOBHUNTER_SECRETS_BRIDGE_PORT` | sidecar boot | — | no | Port of the Tauri shell's keychain bridge. Set by the shell on the sidecar child process; never set by hand. Absent when the sidecar runs standalone (dev/tests), which selects the file secrets backend. |
+| `JOBHUNTER_SECRETS_BRIDGE_TOKEN` | sidecar boot | — | no | Per-launch auth token for the keychain bridge. Set by the shell alongside `JOBHUNTER_SECRETS_BRIDGE_PORT`. |
 | `VITE_SIDECAR_PORT` | webview build | empty (Vite dev proxy) | no | Override the URL the webview uses to reach the sidecar in dev. Read via `import.meta.env` — changing it requires a frontend rebuild. |
 | `LINKEDIN_LIVE` | `pnpm test:live` | unset | no | Set to `1` to enable real-Chromium LinkedIn live tests. |
 | `PLAYWRIGHT_SMOKE` | `pnpm test:e2e` | unset | no | Set to `1` to enable the two `*.smoke.test.ts` files in `tests/live/linkedin/`. |
@@ -17,7 +19,7 @@ The codebase reads eight environment variables. Six are real (build-time or runt
 
 There are two ways to supply the OpenAI key, and the one you set in the app wins.
 
-1. **Settings → AI Provider** — entered in the app and stored on this machine in `secrets.json` under the platform config directory (mode `0600`, not encrypted). **This is the recommended route.**
+1. **Settings → AI Provider** — entered in the app and stored in your OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service). **This is the recommended route.**
 2. **`OPENAI_API_KEY`** — the environment variable. Used only when nothing is stored.
 
 A normal user never needs to touch this variable. Settings is the supported path; the env var exists so CI, headless runs, and existing developer setups keep working.
@@ -28,12 +30,19 @@ The stored key takes precedence, so once you save one in Settings, any `OPENAI_A
 
 ### Storage and security
 
-- The key is stored in a file (`secrets.json`), **not** in the OS keychain and **not** in `config.json`. It is written at mode `0600` with the parent directory at `0700`.
-- The key is **never returned over the API**. `GET /api/secrets/api-key` reports only whether a key is configured, which source won, and a masked form (`sk-***…234`). The app never needs to read the real value back.
+- The key is stored in the OS keychain (service `com.leuri17.jobhunter`, account `openai-api-key`) — encrypted at rest, scoped to your user account, inspectable with the OS's own credential tools. It never lives in `config.json`.
+- The Node sidecar cannot reach the keychain directly, so the Tauri shell owns all keychain access and serves it to the sidecar over a token-authenticated loopback connection. The webview never talks to that bridge.
+- The key is **never returned over the API**. `GET /api/secrets/api-key` reports whether a key is configured, which source won, which backend holds it (`keychain` or `file`), and a masked form (`sk-***…234`).
 - The stored key is not part of the operational config, so it does not affect the config hash and cannot appear in the settings diff.
-- If the stored key cannot be read (for example the file is corrupt), the app falls back to `OPENAI_API_KEY` rather than failing.
+- If the stored key cannot be read (for example the keychain is locked or unavailable), the app falls back to `OPENAI_API_KEY` rather than failing.
 
-> Replacing the plaintext `secrets.json` with the OS keychain is tracked in #211. Until that lands, the key is protected by file permissions rather than OS-level encryption.
+### Machines without an OS keychain
+
+Headless Linux boxes, some WSL setups, and CI runners have no Secret Service to talk to. The app never silently downgrades: Settings shows that no keychain is available, and saving a key asks first — the plaintext file fallback (the pre-keychain `secrets.json`, mode `0600`) engages only after you confirm it. For CI, prefer `OPENAI_API_KEY` and skip storage entirely.
+
+### Migrating an old `secrets.json`
+
+If you saved a key before the keychain backend landed, Settings detects the old plaintext file and offers a one-click move. The key is written to the keychain and read back to verify before the file is deleted; any failure leaves the file untouched. If the keychain already holds a key, the file is left alone — the keychain key stays the active one.
 
 ## Log level precedence
 

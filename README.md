@@ -26,7 +26,7 @@ public search pages, one to OpenAI for scoring).
    - Windows: `JobHunter_x.y.z_x64-setup.exe`
    - Linux: `JobHunter_x.y.z_amd64.AppImage` or `.deb`
 2. Drag to Applications (macOS) or run the installer (Windows/Linux).
-3. Set `OPENAI_API_KEY` in your environment before launching. (See [docs/env.md](./docs/env.md) for the full env-var map.)
+3. Optional: set `OPENAI_API_KEY` in your environment, or just launch and save the key in Settings — it is stored in your OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service). The env var stays the fallback for CI and headless runs. (See [docs/env.md](./docs/env.md) for the full env-var map.)
 
 ### For developers (build from source)
 
