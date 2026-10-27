@@ -9,6 +9,7 @@ import { getSecretsBackend } from '../secrets-backend.js';
 export async function resolveOpenAiClientOrNull(
   refusal?: DefaultOpenAIClientRefusalOptions,
   store?: SecretsStore,
+  timeoutMs?: number,
 ): Promise<OpenAIClient | null> {
   const resolved = store ?? (await getSecretsBackend()).store;
   const key = await resolveOpenAiApiKey({ store: resolved, env: process.env });
@@ -16,5 +17,6 @@ export async function resolveOpenAiClientOrNull(
   return createDefaultOpenAIClient({
     apiKey: key,
     ...(refusal !== undefined ? { refusal } : {}),
+    ...(timeoutMs !== undefined ? { timeoutMs } : {}),
   });
 }

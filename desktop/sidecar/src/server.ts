@@ -16,6 +16,7 @@ import { registerJobsRoutes } from './routes/jobs.js';
 import { registerRunsRoutes } from './routes/runs.js';
 import { registerPipelineRoutes, abortAllActiveRuns } from './routes/pipeline.js';
 import { registerLinkedinGeoTypeaheadRoute } from './routes/linkedin-geo-typeahead.js';
+import { registerOpenAiRoutes } from './routes/openai.js';
 import {
   DEFAULT_REDACT_PATHS,
   LOG_LEVELS,
@@ -219,6 +220,12 @@ export interface BuildServerOptions {
    * to the config routes. Defaults to the process-wide memoized resolver.
    */
   readonly secretsBackend?: () => Promise<ResolvedSecretsBackend>;
+  /**
+   * Optional test/alternative seam: lists the models the effective key
+   * can access. `null` means "no key configured". Defaults to listing
+   * through `resolveOpenAiClientOrNull` with a short 10 s timeout.
+   */
+  readonly listModels?: () => Promise<readonly string[] | null>;
 }
 
 async function resolveRootLogger(
@@ -344,6 +351,10 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
   await registerPipelineRoutes(app, { rootLogger, refusal });
 
   await registerLinkedinGeoTypeaheadRoute(app);
+
+  await registerOpenAiRoutes(app, {
+    ...(opts.listModels !== undefined ? { listModels: opts.listModels } : {}),
+  });
 
   return app;
 }
