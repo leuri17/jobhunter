@@ -168,6 +168,18 @@ export function createDefaultOpenAIClient(options: {
         throw translateSdkError(error);
       }
     },
+
+    async listModels(): Promise<readonly string[]> {
+      try {
+        const ids: string[] = [];
+        for await (const model of await sdk.models.list()) {
+          ids.push(model.id);
+        }
+        return [...ids].sort();
+      } catch (error) {
+        throw translateSdkError(error);
+      }
+    },
   };
 }
 

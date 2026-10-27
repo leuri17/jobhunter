@@ -71,3 +71,22 @@ describe('FakeOpenAIClient', () => {
     expect(client.getRequestCount()).toBe(3);
   });
 });
+
+describe('FakeOpenAIClient — listModels', () => {
+  it('returns the default models sorted', async () => {
+    const fake = new FakeOpenAIClient({ responses: [response('{"ok":true}')] });
+    await expect(fake.listModels()).resolves.toEqual(['gpt-5.6-mini', 'gpt-5.6-sol']);
+  });
+
+  it('honors a custom models list', async () => {
+    const fake = new FakeOpenAIClient({ responses: [response('{"ok":true}')] });
+    fake.models = ['zeta-model', 'alpha-model'];
+    await expect(fake.listModels()).resolves.toEqual(['alpha-model', 'zeta-model']);
+  });
+
+  it('rejects with modelsError when set', async () => {
+    const fake = new FakeOpenAIClient({ responses: [response('{"ok":true}')] });
+    fake.modelsError = new Error('models boom');
+    await expect(fake.listModels()).rejects.toThrow('models boom');
+  });
+});

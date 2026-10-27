@@ -39,6 +39,12 @@ export class FakeOpenAIClient implements OpenAIClient {
   /** When set, `validate()` rejects with it; otherwise it resolves. */
   validateError: Error | null = null;
 
+  /** Model ids `listModels()` serves up (as a sorted copy). */
+  models: readonly string[] = ['gpt-5.6-sol', 'gpt-5.6-mini'];
+
+  /** When set, `listModels()` rejects with it; otherwise it resolves. */
+  modelsError: Error | null = null;
+
   constructor(script: FakeOpenAIClientScript | readonly FakeOpenAIClientScript[]) {
     this.requests = [];
     this.scripts = Array.isArray(script) ? [...script] : [script];
@@ -84,5 +90,10 @@ export class FakeOpenAIClient implements OpenAIClient {
 
   async validate(): Promise<void> {
     if (this.validateError !== null) throw this.validateError;
+  }
+
+  async listModels(): Promise<readonly string[]> {
+    if (this.modelsError !== null) throw this.modelsError;
+    return [...this.models].sort();
   }
 }

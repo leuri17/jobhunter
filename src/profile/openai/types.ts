@@ -112,4 +112,12 @@ export interface OpenAIClient {
    * server, and rate-limit failures mean "cannot tell right now".
    */
   validate(): Promise<void>;
+
+  /**
+   * Free authenticated probe backed by `models.list()` — no token cost.
+   * Resolves with the ids of the models the key can access, sorted
+   * lexicographically; rejects with the same typed `ProfileExtractionError`
+   * family errors as {@link validate}.
+   */
+  listModels(): Promise<readonly string[]>;
 }
