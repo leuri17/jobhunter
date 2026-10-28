@@ -31,22 +31,19 @@ export function ModelField({ field }: { field: AnyFieldApi }) {
   const name = field.name;
   const value = field.state.value as string;
   const available = models.data?.configured === true ? models.data.models : [];
-  const suggestions = available.filter((model) =>
-    model.toLowerCase().includes(value.toLowerCase()),
-  );
 
   return (
     <Field data-invalid={isInvalid}>
       <FieldLabel htmlFor={name}>Model</FieldLabel>
       <Combobox
-        items={suggestions}
+        items={available}
         value={value}
         inputValue={value}
         onInputValueChange={(next) => {
           field.handleChange(next);
           setOpen(true);
         }}
-        open={open && suggestions.length > 0}
+        open={open && available.length > 0}
         onOpenChange={setOpen}
         onValueChange={(selected) => {
           if (selected === null) return;
