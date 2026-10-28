@@ -56,6 +56,7 @@ export function ModelField({ field }: { field: AnyFieldApi }) {
         <ComboboxInput
           id={name}
           name={name}
+          showTrigger={available.length > 0}
           placeholder="e.g. gpt-5.6-sol"
           autoComplete="off"
           aria-invalid={isInvalid}

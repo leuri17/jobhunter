@@ -6,6 +6,7 @@ import { useForm } from '@tanstack/react-form';
 
 import { ModelField } from '@/components/shared/features/settings/ai-provider/model-field';
 import { api, ApiError } from '@/lib/api';
+import type { OpenAiModelsResponse } from '@/lib/types';
 import type { AnyFieldApi } from '@/components/shared/features/settings/ai-provider/types';
 
 vi.mock('@/lib/api', async (importOriginal) => {
@@ -25,10 +26,15 @@ function ModelFieldHarness() {
   );
 }
 
-function renderModelField() {
+function renderModelField(seed?: OpenAiModelsResponse) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  if (seed !== undefined) {
+    // Seed instead of awaiting the fetch so trigger-presence assertions
+    // cannot race the query resolution.
+    queryClient.setQueryData(['openai', 'models'], seed);
+  }
   return render(
     <QueryClientProvider client={queryClient}>
       <ModelFieldHarness />
@@ -72,6 +78,18 @@ describe('ModelField', () => {
     await waitFor(() => {
       expect((input as HTMLInputElement).value).toBe('gpt-5.6-sol');
     });
+  });
+
+  it('shows the dropdown trigger when models are available', () => {
+    renderModelField(CONFIGURED_MODELS);
+
+    expect(screen.getByRole('button')).toBeTruthy();
+  });
+
+  it('hides the dropdown trigger when no models can ever be suggested', () => {
+    renderModelField({ schemaVersion: 1, configured: false, models: [] });
+
+    expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('keeps a custom id that is not in the fetched list', async () => {
