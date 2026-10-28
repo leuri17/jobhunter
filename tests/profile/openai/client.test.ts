@@ -32,6 +32,9 @@ const REQUEST: OpenAIExtractionRequest = {
 // Hoisted so the `openai` mock below can close over it.
 const fakeCreate = vi.hoisted(() => vi.fn());
 
+// Hoisted so the `openai` mock below can close over it.
+const fakeModelsList = vi.hoisted(() => vi.fn());
+
 // Spy on the real SDK constructor so we can assert the options we pass.
 const fakeConstructor = vi.hoisted(() => vi.fn());
 
@@ -47,6 +50,9 @@ vi.mock('openai', async (importOriginal) => {
         completions: {
           create: fakeCreate,
         },
+      };
+      models = {
+        list: fakeModelsList,
       };
     },
   };
@@ -66,6 +72,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   fakeCreate.mockReset();
   fakeConstructor.mockReset();
+  fakeModelsList.mockReset();
   const sdk = await import('openai');
   ({
     APIError: ApiError,
@@ -560,5 +567,53 @@ describe('createDefaultOpenAIClient — refusal detector (audit B2-M8)', () => {
     const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
     const result = await client.extract(REQUEST);
     expect(result.rawJsonText).toBe('{"basics":{"headline":"Senior Engineer"}}');
+  });
+});
+
+describe('createDefaultOpenAIClient — listModels', () => {
+  /**
+   * Minimal stand-in for the SDK's `ModelsPage`: an object that is only
+   * async-iterable, exactly the surface `listModels()` consumes.
+   */
+  function fakeModelsPage(ids: readonly string[]): AsyncIterable<{ id: string }> {
+    const queue = ids.map((id) => ({ id }));
+    return {
+      [Symbol.asyncIterator]() {
+        return {
+          next: (): Promise<IteratorResult<{ id: string }>> =>
+            Promise.resolve(
+              queue.length > 0
+                ? { done: false, value: queue.shift()! }
+                : { done: true, value: undefined },
+            ),
+        };
+      },
+    };
+  }
+
+  it('returns the collected model ids sorted lexicographically', async () => {
+    fakeModelsList.mockResolvedValueOnce(
+      fakeModelsPage(['gpt-5.6-sol', 'gpt-4.1-nano', 'gpt-5.6-mini']),
+    );
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    await expect(client.listModels()).resolves.toEqual([
+      'gpt-4.1-nano',
+      'gpt-5.6-mini',
+      'gpt-5.6-sol',
+    ]);
+  });
+
+  it('translates an SDK authentication error from models.list to OpenAIAuthenticationError', async () => {
+    const sdkError = new AuthenticationError(
+      401,
+      { type: 'invalid_request_error', message: 'bad api key' },
+      'upstream',
+      new Headers(),
+    );
+    fakeModelsList.mockRejectedValueOnce(sdkError);
+
+    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    await expect(client.listModels()).rejects.toBeInstanceOf(OpenAIAuthenticationError);
   });
 });

@@ -63,7 +63,13 @@ function backendUnavailable(reply: FastifyReply, error: unknown): unknown {
   throw error;
 }
 
-function classifyKeyValidationFailure(error: unknown): {
+/**
+ * Map a key-probe failure (`validate()` / `listModels()`) to this route
+ * family's HTTP semantics: rejected-key errors (authentication, permission,
+ * billing) answer 401; everything else means "cannot tell right now" and
+ * answers 503.
+ */
+export function classifyKeyValidationFailure(error: unknown): {
   readonly httpStatus: number;
   readonly code: string;
   readonly message: string;

@@ -16,6 +16,7 @@ import type {
   ListJobsResponse,
   ListProfilesResponse,
   ListRunsResponse,
+  OpenAiModelsResponse,
   PathsResponse,
   RejectProfileResponse,
   RunPipelineResponse,
@@ -94,6 +95,7 @@ export const api = {
     }),
   clearApiKey: () => request<ClearApiKeyResponse>('DELETE', '/api/secrets/api-key'),
   migrateApiKey: () => request<MigrateApiKeyResponse>('POST', '/api/secrets/api-key/migrate'),
+  listOpenAiModels: () => request<OpenAiModelsResponse>('GET', '/api/openai/models'),
   listProfiles: (status?: string) =>
     request<ListProfilesResponse>('GET', `/api/profile${status ? `?status=${status}` : ''}`),
   getProfile: (id: string) => request<GetProfileResponse>('GET', `/api/profile/${id}`),

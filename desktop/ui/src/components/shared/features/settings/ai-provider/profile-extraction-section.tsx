@@ -1,6 +1,5 @@
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -10,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { REASONING_EFFORT_CHOICES, type ReasoningEffort } from '@jobhunter/core/config/labels';
+import { ModelField } from './model-field';
 import type { AnyFieldApi, SectionForm } from './types';
 
 interface ProfileExtractionSectionProps {
@@ -33,28 +33,6 @@ export function ProfileExtractionSection({ form }: ProfileExtractionSectionProps
         </form.Field>
       </CardContent>
     </>
-  );
-}
-
-function ModelField({ field }: { field: AnyFieldApi }) {
-  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-  const name = field.name;
-  return (
-    <Field data-invalid={isInvalid}>
-      <FieldLabel htmlFor={name}>Model</FieldLabel>
-      <Input
-        id={name}
-        name={name}
-        value={field.state.value as string}
-        onBlur={field.handleBlur}
-        onChange={(e) => field.handleChange(e.target.value)}
-        aria-invalid={isInvalid}
-        type="text"
-        placeholder="e.g. gpt-5.6-sol"
-        autoComplete="off"
-      />
-      <FieldError errors={field.state.meta.errors} />
-    </Field>
   );
 }
 

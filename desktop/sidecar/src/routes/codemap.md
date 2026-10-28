@@ -24,8 +24,10 @@ decoding, `AbortController` bookkeeping, and SSE framing.
     `updateConfig`.
   - `openai-resolve.ts` — `resolveOpenAiClientOrNull()` lazily builds an
     `OpenAIClient` from the resolved secrets backend's store (falling back
-    to `OPENAI_API_KEY`); returns `null` when unset so handlers can reply
-    `503 openai_unavailable`.
+    to `OPENAI_API_KEY`), with an optional `timeoutMs` override; returns
+    `null` when unset so handlers can reply `503 openai_unavailable`.
+  - `openai.ts` — `registerOpenAiRoutes()` exposes `GET /api/openai/models`
+    (see the OpenAI bullet under Flow) with an injectable `listModels` seam.
 - **SSE channel** (`pipeline.ts`) reuses `initSseHeaders` / `writeSseEvent` /
   `closeSse` from `../sse.ts`. A module-level `activeRuns: Map<runId,
 ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
@@ -78,6 +80,14 @@ secrets_backend_unavailable`); DELETE clears through the backend;
   (`legacy_shadowed` 409 when the keychain already holds a key,
   `secrets_migration_verification_failed` 500 on mismatch). `jobs.ts` /
   `pipeline.ts` resolve their API key through the same backend store.
+- **OpenAI**: `openai.ts` registers `GET /api/openai/models` — the sorted
+  model ids the effective key can access, via `OpenAIClient.listModels()`
+  (`models.list()` auto-pagination, no token cost) on a 10 s client
+  timeout. No key configured → `200 { configured: false, models: [] }`
+  (a distinguishable outcome, not an error); probe failures reuse
+  `classifyKeyValidationFailure` from `config.ts` (rejected key trio →
+  401, otherwise 503). The lister is injectable through
+  `buildServer({ listModels })` so tests stay off the network.
 - **Paths**: `pathsGetHandler` exposes `resolvePlatformPaths(
 createDefaultPlatformAdapter())` directories.
 

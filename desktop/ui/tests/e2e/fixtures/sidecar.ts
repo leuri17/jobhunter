@@ -374,6 +374,12 @@ export async function buildFixtureSidecar(
 
   app.post('/api/config/validate', async () => ({ schemaVersion: 1, valid: true as const }));
 
+  app.get('/api/openai/models', async () => ({
+    schemaVersion: 1,
+    configured: true as const,
+    models: ['e2e-mini', 'e2e-sol'],
+  }));
+
   app.get('/api/profile', async () => ({
     schemaVersion: 1,
     profiles: [...state.profiles.values()].sort((a, b) => b.profileVersionId - a.profileVersionId),

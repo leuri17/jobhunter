@@ -132,6 +132,10 @@ class ConcurrencyTrackingOpenAIClient implements OpenAIClient {
     return this.inner.validate();
   }
 
+  listModels(): Promise<readonly string[]> {
+    return this.inner.listModels();
+  }
+
   getRequestCount(): number {
     return this.requests.length;
   }
