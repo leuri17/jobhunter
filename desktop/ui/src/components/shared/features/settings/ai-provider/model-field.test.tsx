@@ -58,14 +58,32 @@ afterEach(() => {
 });
 
 describe('ModelField', () => {
-  it('offers fetched models that match the typed text', async () => {
+  it('offers the full model list while typing', async () => {
     renderModelField();
     const input = screen.getByLabelText('Model');
     fireEvent.change(input, { target: { value: 'gpt-5.6' } });
 
     expect(await screen.findByText('gpt-5.6-mini')).toBeTruthy();
     expect(screen.getByText('gpt-5.6-sol')).toBeTruthy();
+    expect(screen.getByText('o4-standard')).toBeTruthy();
+  });
+
+  it('renders the whole list when expanded with a value selected', async () => {
+    renderModelField();
+    const input = screen.getByLabelText('Model');
+    fireEvent.change(input, { target: { value: 'gpt-5.6' } });
+
+    fireEvent.click(await screen.findByText('gpt-5.6-sol'));
+    await waitFor(() => {
+      expect((input as HTMLInputElement).value).toBe('gpt-5.6-sol');
+    });
     expect(screen.queryByText('o4-standard')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(await screen.findByText('o4-standard')).toBeTruthy();
+    expect(screen.getByText('gpt-5.6-mini')).toBeTruthy();
+    expect(screen.getByText('gpt-5.6-sol')).toBeTruthy();
   });
 
   it('writes a selected suggestion into the field', async () => {
