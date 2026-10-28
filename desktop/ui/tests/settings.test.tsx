@@ -30,6 +30,7 @@ vi.mock('@/lib/api', () => ({
     getConfig: vi.fn(),
     patchConfig: vi.fn(),
     getApiKeyStatus: vi.fn(),
+    listOpenAiModels: vi.fn(),
   },
 }));
 
@@ -72,6 +73,11 @@ beforeEach(() => {
     masked: '',
     backend: 'keychain',
     legacyFilePresent: false,
+  });
+  vi.mocked(api.listOpenAiModels).mockResolvedValue({
+    schemaVersion: 1,
+    configured: false,
+    models: [],
   });
 });
 

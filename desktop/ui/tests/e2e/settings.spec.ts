@@ -5,6 +5,21 @@ test('renders the Settings heading', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 });
 
+test('AI Provider model fields suggest models from the sidecar', async ({ page }) => {
+  await page.goto('/settings');
+  await page.getByRole('tab', { name: 'AI Provider' }).click();
+
+  const model = page.getByLabel('Model').first();
+  await model.click();
+  await model.fill('e2e');
+
+  const suggestion = page.getByRole('option', { name: 'e2e-sol' });
+  await expect(suggestion).toBeVisible();
+  await suggestion.click();
+
+  await expect(model).toHaveValue('e2e-sol');
+});
+
 test('PATCH /api/config propagates to the next refetch of the config query', async ({ page }) => {
   const configRequests: { method: string; url: string }[] = [];
   page.on('request', (req) => {

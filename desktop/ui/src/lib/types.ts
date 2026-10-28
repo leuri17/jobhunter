@@ -98,6 +98,18 @@ export interface PutApiKeyResponse extends SecretsBackendFields {
   readonly masked: string;
 }
 
+/**
+ * GET /api/openai/models response. `configured: false` with an empty
+ * list is the no-key outcome, not a failure — the UI keeps free-text
+ * entry. Real failures (401 rejected / 503 unverifiable) reject as
+ * `ApiError`.
+ */
+export interface OpenAiModelsResponse {
+  readonly schemaVersion: 1;
+  readonly configured: boolean;
+  readonly models: readonly string[];
+}
+
 /** DELETE /api/secrets/api-key response. */
 export interface ClearApiKeyResponse extends SecretsBackendFields {
   readonly schemaVersion: 1;

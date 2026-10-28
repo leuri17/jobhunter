@@ -110,6 +110,7 @@ export function ApiKeySection() {
     onSuccess: (result) => {
       setSaveError(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
+      void queryClient.invalidateQueries({ queryKey: ['openai', 'models'] });
       setDraft('');
       toast.add({
         title: 'API key saved',
@@ -127,6 +128,7 @@ export function ApiKeySection() {
     onSuccess: () => {
       setSaveError(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
+      void queryClient.invalidateQueries({ queryKey: ['openai', 'models'] });
       setDraft('');
       toast.add({ title: 'API key removed', type: 'success' });
     },
