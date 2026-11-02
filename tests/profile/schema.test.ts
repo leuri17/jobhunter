@@ -21,6 +21,9 @@ function minimalProfile(): ProfessionalProfile {
     contentHash: 'a'.repeat(64),
     sourceIds: ['source-1'],
     basics: {
+      fullName: null,
+      email: null,
+      phone: null,
       headline: null,
       professionalSummary: null,
       currentLocation: null,
@@ -284,6 +287,43 @@ describe('ProfessionalProfileSchema', () => {
     });
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(['experience', 0, 'startDate']);
+  });
+
+  it('parses a legacy basics object without identity fields', () => {
+    const legacy = {
+      ...minimalProfile(),
+      basics: {
+        headline: null,
+        professionalSummary: null,
+        currentLocation: null,
+        totalYearsOfExperience: null,
+      },
+    };
+    const result = ProfessionalProfileSchema.safeParse(legacy);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.basics.fullName).toBeNull();
+      expect(result.data.basics.email).toBeNull();
+      expect(result.data.basics.phone).toBeNull();
+    }
+  });
+
+  it('parses identity fields when present', () => {
+    const profile = minimalProfile();
+    const result = ProfessionalProfileSchema.safeParse({
+      ...profile,
+      basics: {
+        ...profile.basics,
+        fullName: 'Alex Vance',
+        email: 'alex@example.com',
+        phone: '+49 30 123456',
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.basics.fullName).toBe('Alex Vance');
+      expect(result.data.basics.email).toBe('alex@example.com');
+    }
   });
 
   it('requires derived values and rejects a profile missing them', () => {
