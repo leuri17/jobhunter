@@ -24,7 +24,7 @@
   "dependencies": {
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.4",
-    "openai": "7.38.0",
+    "openai": "7.43.0",
     "pdf-parse": "2.4.5",
     "pino": "10.4.0",
     "playwright": "1.64.1",
@@ -39,11 +39,11 @@
     "eslint": "10.13.0",
     "eslint-config-prettier": "10.1.8",
     "globals": "17.13.0",
-    "linkedom": "0.18.13",
+    "linkedom": "0.18.14",
     "prettier": "3.9.10",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.71.2",
+    "typescript-eslint": "8.72.0",
     "vitest": "4.1.11"
   }
 }
