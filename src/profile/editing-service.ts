@@ -33,10 +33,15 @@
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 
-import { ProfileLifecycleError, InvalidProfileStateError } from './errors.js';
+import {
+  ProfileLifecycleError,
+  InvalidProfileStateError,
+  InvalidProfilePayloadError,
+} from './errors.js';
 import { ExitCode } from '../errors/application-error.js';
 import { resolveProfileVersionId } from './identifier-resolution.js';
 import { calculateProfileContentHash } from './content-hash.js';
+import { normalizeSkillName, normalizeLanguageName } from './name-normalize.js';
 import {
   emptyDraftState,
   reduce,
@@ -55,7 +60,7 @@ import type {
   ScalarEditResult,
 } from './editing/prompts.js';
 import type { Repositories } from '../persistence/repositories/index.js';
-import type { ProfessionalProfile } from './schema.js';
+import { ProfessionalProfileSchema, type ProfessionalProfile } from './schema.js';
 import { profileVersions, profileRevisions } from '../persistence/schema.js';
 
 export type EditOutcome =
@@ -72,7 +77,7 @@ export interface DerivedDraftResult {
 
 export interface ProfileEditingServiceOptions {
   readonly repositories: Repositories;
-  readonly prompts: ProfileEditorPrompts;
+  readonly prompts?: ProfileEditorPrompts;
   readonly now?: () => Date;
 }
 
@@ -81,15 +86,157 @@ function freshProfileId(): string {
   return `prf_${hex}`;
 }
 
+function prefillNormalizedNames(profile: unknown): unknown {
+  if (profile === null || typeof profile !== 'object') {
+    return profile;
+  }
+  const record = profile as Record<string, unknown>;
+  const withNames = (entries: unknown, normalize: (name: string) => string): unknown =>
+    Array.isArray(entries)
+      ? entries.map((entry) => {
+          if (entry === null || typeof entry !== 'object') {
+            return entry;
+          }
+          const e = entry as Record<string, unknown>;
+          if (typeof e['name'] === 'string' && e['normalizedName'] === '') {
+            return { ...e, normalizedName: normalize(e['name']) };
+          }
+          return entry;
+        })
+      : entries;
+  return {
+    ...record,
+    skills: withNames(record['skills'], (name) => normalizeSkillName(name).normalizedName),
+    languages: withNames(record['languages'], (name) => normalizeLanguageName(name).normalizedName),
+  };
+}
+
+function dedupeByNormalizedName<T extends { name: string; normalizedName: string }>(
+  entries: readonly T[],
+  normalize: (name: string) => { normalizedName: string },
+): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const entry of entries) {
+    const normalizedName =
+      entry.normalizedName === '' ? normalize(entry.name).normalizedName : entry.normalizedName;
+    if (seen.has(normalizedName)) {
+      continue;
+    }
+    seen.add(normalizedName);
+    result.push({ ...entry, normalizedName });
+  }
+  return result;
+}
+
 export class ProfileEditingService {
   private readonly repositories: Repositories;
-  private readonly prompts: ProfileEditorPrompts;
+  private readonly prompts: ProfileEditorPrompts | undefined;
   private readonly now: () => Date;
 
   constructor(options: ProfileEditingServiceOptions) {
     this.repositories = options.repositories;
     this.prompts = options.prompts;
     this.now = options.now ?? ((): Date => new Date());
+  }
+
+  private requirePrompts(): ProfileEditorPrompts {
+    if (this.prompts === undefined) {
+      throw new ProfileLifecycleError(
+        'prompts_unavailable',
+        'Interactive editing requires prompt adapters; use applyBulkEdit for programmatic edits.',
+        ExitCode.InvalidUsage,
+        {},
+      );
+    }
+    return this.prompts;
+  }
+
+  /**
+   * Non-interactive whole-profile edit for the HTTP surface: validates the
+   * submitted profile (tolerating manually added skills/languages whose
+   * `normalizedName` is empty — those are prefilled from `name` before
+   * parsing), optionally derives a draft from an approved row, then
+   * persists the normalized profile with a fresh content hash, one
+   * `ui_edit` revision row, and upserts for every active derived override.
+   */
+  async applyBulkEdit(
+    rawId: string,
+    profile: unknown,
+  ): Promise<{ readonly profileVersionId: number; readonly derived: boolean }> {
+    const parsed = ProfessionalProfileSchema.safeParse(prefillNormalizedNames(profile));
+    if (!parsed.success) {
+      throw new InvalidProfilePayloadError(
+        'invalid_profile_json',
+        'The submitted profile does not match the canonical profile schema.',
+        {
+          issues: parsed.error.issues.map((issue) => ({
+            path: issue.path.join('.'),
+            message: issue.message,
+          })),
+        },
+      );
+    }
+    const input = parsed.data;
+
+    const profileVersionId = await resolveProfileVersionId(this.repositories, rawId);
+    const row = await this.repositories.profileVersions.getById(profileVersionId);
+    if (row.status === 'rejected' || row.status === 'superseded') {
+      throw new InvalidProfileStateError(
+        'profile_not_editable',
+        `Profile version ${profileVersionId} cannot be edited in status "${row.status}".`,
+        { profileVersionId, status: row.status },
+      );
+    }
+    const derived = row.status === 'approved';
+    const targetId = derived
+      ? await this.deriveDraftFromApproved(profileVersionId)
+      : profileVersionId;
+
+    const normalized: ProfessionalProfile = {
+      ...input,
+      ...(derived ? { id: freshProfileId() } : {}),
+      skills: dedupeByNormalizedName(input.skills, (name) => normalizeSkillName(name)),
+      languages: dedupeByNormalizedName(input.languages, (name) => normalizeLanguageName(name)),
+      updatedAt: this.now().toISOString(),
+    };
+    const contentHash = calculateProfileContentHash(normalized);
+    const toPersist = { ...normalized, contentHash };
+    const nowIso = this.now().toISOString();
+
+    this.repositories.db.transaction((tx) => {
+      tx.update(profileVersions)
+        .set({ profileJson: JSON.stringify(toPersist), contentHash, updatedAt: nowIso })
+        .where(eq(profileVersions.id, targetId))
+        .run();
+      tx.insert(profileRevisions)
+        .values({
+          profileVersionId: targetId,
+          revisionTimestamp: nowIso,
+          source: 'user',
+          fieldPath: 'profile',
+          previousValueJson: null,
+          newValueJson: null,
+          note: 'ui_edit',
+        })
+        .run();
+    });
+
+    for (const [field, value] of Object.entries(normalized.derived)) {
+      if (value.overrideActive) {
+        await this.repositories.profileVersions.upsertOverride({
+          profileVersionId: targetId,
+          derivedField: field as
+            'likelySeniority' | 'primaryRoles' | 'primaryDomains' | 'strongestSkills',
+          overrideActive: value.overrideActive,
+          overrideValue: value.overrideValue,
+          generatedValue: value.generatedValue,
+          generatedAt: value.generatedAt,
+          overriddenAt: value.overriddenAt,
+        });
+      }
+    }
+    return { profileVersionId: targetId, derived };
   }
 
   async startEdit(rawId: string): Promise<EditOutcome | DerivedDraftResult> {
@@ -180,9 +327,11 @@ export class ProfileEditingService {
     let state: DraftState = emptyDraftState(profile, overrides);
 
     for (;;) {
-      const section = await this.prompts.selectSection(state.sectionHistory.at(-1) ?? null);
+      const section = await this.requirePrompts().selectSection(
+        state.sectionHistory.at(-1) ?? null,
+      );
       if (section === 'save') {
-        const confirmation = await this.prompts.confirmSave({
+        const confirmation = await this.requirePrompts().confirmSave({
           state,
           remainingWarnings: 0,
         });
@@ -192,7 +341,7 @@ export class ProfileEditingService {
       }
       if (section === 'discard' || section === 'exit') {
         if (state.pendingRevisions.length > 0 || state.pendingOverrides.length > 0) {
-          const confirmation = await this.prompts.confirmDiscard({
+          const confirmation = await this.requirePrompts().confirmDiscard({
             state,
           } as DiscardPrompt);
           if (confirmation.kind === 'cancel') continue;
@@ -215,7 +364,7 @@ export class ProfileEditingService {
       return await this.editDerivedOverride(state);
     }
     if (section === 'review' || section === 'warnings') {
-      const review = await this.prompts.showReview({
+      const review = await this.requirePrompts().showReview({
         state,
         rendered: '(rendered review omitted in service; editor adapter uses renderReviewSummary)',
       });
@@ -236,7 +385,7 @@ export class ProfileEditingService {
       currentValue: state.profile.basics.headline,
       nullable: true,
     };
-    const result: ScalarEditResult = await this.prompts.editScalar(prompt);
+    const result: ScalarEditResult = await this.requirePrompts().editScalar(prompt);
     if (result.kind === 'cancelled') return null;
     if (result.kind === 'keep') return null;
     const value: unknown = result.kind === 'cleared' ? null : result.value;
@@ -257,7 +406,7 @@ export class ProfileEditingService {
       currentEffective: entry.effectiveValue,
       overrideActive: entry.overrideActive,
     };
-    const result = await this.prompts.manageOverrides(prompt);
+    const result = await this.requirePrompts().manageOverrides(prompt);
     if (result.kind === 'keep') return null;
     const now = this.now().toISOString();
     if (result.kind === 'clear') {
@@ -298,7 +447,7 @@ export class ProfileEditingService {
       entries: (collection ?? []).map((e) => ({ id: e.id, summary: e.id })),
       supportsReorder: true,
     };
-    const result: CollectionEditResult = await this.prompts.editCollection(prompt);
+    const result: CollectionEditResult = await this.requirePrompts().editCollection(prompt);
     if (result.kind === 'back' || result.kind === 'list' || result.kind === 'view') {
       return null;
     }
