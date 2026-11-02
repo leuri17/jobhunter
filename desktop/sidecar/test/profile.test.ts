@@ -3,6 +3,13 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildServer } from '../src/server.js';
+import {
+  initializeDatabase,
+  createRepositories,
+  resolveRepoRootForMigrations,
+  schema,
+} from '@jobhunter/core/persistence';
+import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 
 describe('profile endpoints', () => {
   let server: Awaited<ReturnType<typeof buildServer>>;
@@ -159,5 +166,168 @@ describe('profile source routes', () => {
     expect(res.status).toBe(404);
     const body = (await res.json()) as { error?: { code?: string } };
     expect(body.error?.code).toBe('profile_source_not_found');
+  });
+});
+
+describe('POST /api/profile/:id/edit', () => {
+  let server: Awaited<ReturnType<typeof buildServer>>;
+  let baseUrl: string;
+  let configHome: string;
+
+  beforeAll(async () => {
+    configHome = mkdtempSync(join(tmpdir(), 'jobhunter-profile-edit-'));
+    vi.stubEnv('XDG_CONFIG_HOME', configHome);
+    vi.stubEnv('HOME', configHome);
+    server = await buildServer({ env: { port: 0, host: '127.0.0.1' } });
+    baseUrl = await server.listen();
+  });
+
+  afterAll(async () => {
+    await server.close();
+    vi.unstubAllEnvs();
+    rmSync(configHome, { recursive: true, force: true });
+  });
+
+  function profileFixture(id: string): Record<string, unknown> {
+    return {
+      schemaVersion: 1,
+      id,
+      createdAt: '2026-08-14T00:00:00.000Z',
+      updatedAt: '2026-08-14T00:00:00.000Z',
+      contentHash: 'client-hash-ignored',
+      sourceIds: [],
+      basics: {
+        fullName: 'Alex Vance',
+        email: 'alex@example.com',
+        phone: null,
+        headline: 'Staff Engineer',
+        professionalSummary: null,
+        currentLocation: 'Berlin',
+        totalYearsOfExperience: 9,
+      },
+      experience: [],
+      skills: [],
+      languages: [],
+      education: [],
+      certifications: [],
+      projects: [],
+      derived: {
+        likelySeniority: {
+          generatedValue: null,
+          overrideActive: false,
+          overrideValue: null,
+          effectiveValue: null,
+          generatedAt: null,
+          overriddenAt: null,
+        },
+        primaryRoles: {
+          generatedValue: [],
+          overrideActive: false,
+          overrideValue: null,
+          effectiveValue: [],
+          generatedAt: null,
+          overriddenAt: null,
+        },
+        primaryDomains: {
+          generatedValue: [],
+          overrideActive: false,
+          overrideValue: null,
+          effectiveValue: [],
+          generatedAt: null,
+          overriddenAt: null,
+        },
+        strongestSkills: {
+          generatedValue: [],
+          overrideActive: false,
+          overrideValue: null,
+          effectiveValue: [],
+          generatedAt: null,
+          overriddenAt: null,
+        },
+      },
+    };
+  }
+
+  async function seedProfileVersion(
+    status: 'draft' | 'approved' | 'rejected' | 'superseded',
+  ): Promise<string> {
+    const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
+    const handle = await initializeDatabase(paths, {
+      migrationsFolder: resolveRepoRootForMigrations(),
+    });
+    try {
+      const repos = createRepositories(handle);
+      const profileId = `prf_${Math.random().toString(36).slice(2, 10)}`;
+      const inserted = repos.db
+        .insert(schema.profileVersions)
+        .values({
+          status,
+          schemaVersion: 1,
+          contentHash: 'seeded',
+          extractionFingerprint: 'fp',
+          sourceIdsJson: '[]',
+          profileJson: JSON.stringify(profileFixture(profileId)),
+          model: 'gpt-5',
+          reasoningEffort: 'medium',
+          promptVersion: 'p1',
+          structuredOutputSchemaVersion: 2,
+          extractorImplementationVersion: 'e1',
+          createdAt: '2026-11-02T00:00:00.000Z',
+          updatedAt: '2026-11-02T00:00:00.000Z',
+          approvedAt: null,
+          supersededAt: null,
+          active: false,
+        })
+        .returning({ id: schema.profileVersions.id })
+        .all();
+      return `profile_${inserted[0]!.id}`;
+    } finally {
+      handle.close();
+    }
+  }
+
+  it('saves a valid edit to a draft and persists the changes', async () => {
+    const draftId = await seedProfileVersion('draft');
+    const res = await fetch(`${baseUrl}/api/profile/${draftId}/edit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile: profileFixture('prf_edited') }),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ schemaVersion: 1, status: 'draft', derived: false });
+
+    const detail = await fetch(`${baseUrl}/api/profile/${draftId}`);
+    const detailBody = (await detail.json()) as {
+      profile: { basics: { fullName: string | null }; contentHash: string };
+    };
+    expect(detailBody.profile.basics.fullName).toBe('Alex Vance');
+    expect(detailBody.profile.contentHash).not.toBe('client-hash-ignored');
+  });
+
+  it('returns 400 with invalid_profile_json for a malformed profile', async () => {
+    const draftId = await seedProfileVersion('draft');
+    const broken = profileFixture('prf_broken');
+    delete broken['basics'];
+    const res = await fetch(`${baseUrl}/api/profile/${draftId}/edit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile: broken }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string; details: unknown } };
+    expect(body.error.code).toBe('invalid_profile_json');
+    expect(body.error.details).not.toBeNull();
+  });
+
+  it('returns 409 when the target is superseded', async () => {
+    const id = await seedProfileVersion('superseded');
+    const res = await fetch(`${baseUrl}/api/profile/${id}/edit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile: profileFixture('prf_any') }),
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('profile_not_editable');
   });
 });

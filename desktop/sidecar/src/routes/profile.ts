@@ -5,11 +5,14 @@ import {
   ProfileImportService,
   ProfileExtractionService,
   ProfileReviewService,
+  ProfileEditingService,
   ProfileApprovalService,
   ProfileRejectionService,
+  InvalidProfileStateError,
   type DefaultOpenAIClientRefusalOptions,
   type OpenAIClient,
 } from '@jobhunter/core/profile';
+import { envelopeFor } from '../errors.js';
 import { openDbHandle, createRepositories } from './db-helper.js';
 import { resolveOpenAiClientOrNull } from './openai-resolve.js';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
@@ -230,26 +233,32 @@ export async function registerProfileRoutes(
     }
   });
 
-  app.post<{ Params: { id: string }; Body: { profileJson?: unknown } }>(
+  app.post<{ Params: { id: string }; Body: { profile?: unknown } }>(
     '/api/profile/:id/edit',
     async (req, reply) => {
-      // v1 limitation: the interactive ProfileEditingService prompts over
-      // stdin, which is incompatible with an HTTP sidecar. Calling it would
-      // hang or throw TtyError. Surface this clearly to the desktop UI,
-      // acknowledge the body, and signal the follow-up. The full programmatic
-      // edit (apply profileJson as a new draft version via the repo) is tracked
-      // as a known limitation in .slim/deepwork/progress.md.
-      reply.status(501);
-      return {
-        schemaVersion: 1,
-        error: {
-          code: 'edit_via_http_not_supported',
-          message:
-            'Profile editing is not yet supported over HTTP in v1. The desktop UI should display the profile JSON, edit it locally, and POST the new draft via a follow-up endpoint. Tracked in .slim/deepwork/progress.md.',
-        },
-        receivedProfileJson: req.body?.profileJson,
-        receivedSourceId: req.params.id,
-      };
+      const handle = await openDbHandle();
+      try {
+        const repos = createRepositories(handle);
+        const service = new ProfileEditingService({ repositories: repos });
+        const result = await service.applyBulkEdit(req.params.id, req.body?.profile);
+        return {
+          schemaVersion: 1,
+          profileVersionId: result.profileVersionId,
+          status: 'draft',
+          derived: result.derived,
+        };
+      } catch (error) {
+        // State conflicts (rejected/superseded targets) carry the CLI exit
+        // code for invalid usage; over HTTP they are conflicts, so classify
+        // here like routes/config.ts does for key validation.
+        if (error instanceof InvalidProfileStateError) {
+          reply.status(409);
+          return envelopeFor(error);
+        }
+        throw error;
+      } finally {
+        handle.close();
+      }
     },
   );
 }
