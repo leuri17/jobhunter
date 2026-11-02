@@ -52,6 +52,21 @@ describe('ProfileSourceRepository', () => {
     expect(row?.textExtractionStatus).toBe('pending');
   });
 
+  it('delete removes the row', async () => {
+    const id = await repo.insert({
+      sourceType: 'pdf',
+      originalFilename: 'cv.pdf',
+      originalAbsolutePath: '/tmp/cv.pdf',
+      storedPath: '/opt/jobhunter/profile-sources/cv.sha256.pdf',
+      mimeType: 'application/pdf',
+      fileSize: 12345,
+      sha256: 'e'.repeat(64),
+      importTimestamp: '2026-08-05T10:00:00.000Z',
+    });
+    await repo.delete(id);
+    expect(await repo.findById(id)).toBeNull();
+  });
+
   it('throws DuplicateSha256Error on sha256 collision (insert is strict INSERT-OR-ERROR)', async () => {
     const first = await repo.insert({
       sourceType: 'pdf',

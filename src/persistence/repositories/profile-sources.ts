@@ -143,6 +143,10 @@ export class ProfileSourceRepository {
     this.ctx.db.update(profileSources).set({ storedPath }).where(eq(profileSources.id, id)).run();
   }
 
+  async delete(id: number): Promise<void> {
+    this.ctx.db.delete(profileSources).where(eq(profileSources.id, id)).run();
+  }
+
   async list(): Promise<readonly ProfileSourceRow[]> {
     return this.ctx.db.select().from(profileSources).all().map(rowFromRecord);
   }

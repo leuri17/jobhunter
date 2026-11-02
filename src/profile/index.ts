@@ -129,6 +129,8 @@ export {
 
 export { resolveProfileVersionId } from './identifier-resolution.js';
 
+export type { ProfileSourceRow } from '../persistence/repositories/profile-sources.js';
+
 export * from './review/index.js';
 
 export {
