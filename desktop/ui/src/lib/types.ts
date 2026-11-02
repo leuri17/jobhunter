@@ -13,6 +13,12 @@ import type {
   ProfileSourceRow,
   ProfileStatus,
   ProfessionalProfile,
+  Certification,
+  Education,
+  Language,
+  Project,
+  Skill,
+  WorkExperience,
 } from '@jobhunter/core/profile';
 import type {
   JobListRow,
@@ -38,6 +44,12 @@ export type {
   ProfileSourceRow,
   ProfileStatus,
   ProfessionalProfile,
+  Certification,
+  Education,
+  Language,
+  Project,
+  Skill,
+  WorkExperience,
 };
 
 // --- API response shapes (mirror desktop/sidecar/src/routes/* handlers) ---
