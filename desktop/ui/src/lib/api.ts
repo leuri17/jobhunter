@@ -8,14 +8,19 @@ import type {
   ApproveProfileResponse,
   CancelPipelineResponse,
   ConfigResponse,
+  DeleteSourceResponse,
+  EditProfileResponse,
+  ExtractProfileResponse,
   GeoTypeaheadResponse,
   GetJobResponse,
   GetProfileResponse,
   GetRunResponse,
   HealthResponse,
+  ImportSourcesResponse,
   ListJobsResponse,
   ListProfilesResponse,
   ListRunsResponse,
+  ListSourcesResponse,
   OpenAiModelsResponse,
   PathsResponse,
   RejectProfileResponse,
@@ -23,6 +28,7 @@ import type {
   ValidateConfigResponse,
 } from './types.js';
 import type { ConfigPatch } from '@jobhunter/core/config';
+import type { ProfessionalProfile } from '@jobhunter/core/profile';
 
 export class ApiError extends Error {
   constructor(
@@ -48,6 +54,39 @@ export async function notifyPipelineComplete({
   }
 }
 
+async function toApiError(res: Response): Promise<ApiError> {
+  const errBody = (await res.json().catch(() => null)) as {
+    error?: { code?: string; message?: string };
+  } | null;
+  if (errBody === null) {
+    // Vite dev proxy synthesizes a 502 HTML page when the sidecar is
+    // down (issue #202); no parseable envelope means the response did
+    // not come from the sidecar.
+    if (res.status >= 500) {
+      return new ApiError(
+        res.status,
+        'sidecar_unreachable',
+        'The JobHunter sidecar is not responding.',
+      );
+    }
+    return new ApiError(res.status, 'unknown', res.statusText);
+  }
+  return new ApiError(
+    res.status,
+    errBody.error?.code ?? 'unknown',
+    errBody.error?.message ?? res.statusText,
+  );
+}
+
+async function requestForm<T>(path: string, form: FormData): Promise<T> {
+  const baseUrl = (await resolveSidecar()).url;
+  const res = await fetch(`${baseUrl}${path}`, { method: 'POST', body: form });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return res.json() as Promise<T>;
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const baseUrl = (await resolveSidecar()).url;
   const res = await fetch(`${baseUrl}${path}`, {
@@ -56,27 +95,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
   if (!res.ok) {
-    const errBody = (await res.json().catch(() => null)) as {
-      error?: { code?: string; message?: string };
-    } | null;
-    if (errBody === null) {
-      // Vite dev proxy synthesizes a 502 HTML page when the sidecar is
-      // down (issue #202); no parseable envelope means the response did
-      // not come from the sidecar.
-      if (res.status >= 500) {
-        throw new ApiError(
-          res.status,
-          'sidecar_unreachable',
-          'The JobHunter sidecar is not responding.',
-        );
-      }
-      throw new ApiError(res.status, 'unknown', res.statusText);
-    }
-    throw new ApiError(
-      res.status,
-      errBody.error?.code ?? 'unknown',
-      errBody.error?.message ?? res.statusText,
-    );
+    throw await toApiError(res);
   }
   return res.json() as Promise<T>;
 }
@@ -103,6 +122,19 @@ export const api = {
     request<ApproveProfileResponse>('POST', `/api/profile/${id}/approve`, { warnings }),
   rejectProfile: (id: string) =>
     request<RejectProfileResponse>('POST', `/api/profile/${id}/reject`),
+  listSources: () => request<ListSourcesResponse>('GET', '/api/profile/sources'),
+  deleteSource: (id: number) =>
+    request<DeleteSourceResponse>('DELETE', `/api/profile/sources/${id}`),
+  importSources: (paths: string[]) => {
+    const form = new FormData();
+    for (const path of paths) {
+      form.append('path', path);
+    }
+    return requestForm<ImportSourcesResponse>('/api/profile/import', form);
+  },
+  extractProfile: () => request<ExtractProfileResponse>('POST', '/api/profile/extract'),
+  editProfile: (id: string, profile: ProfessionalProfile) =>
+    request<EditProfileResponse>('POST', `/api/profile/${id}/edit`, { profile }),
   listJobs: (params: Record<string, string | number | undefined> = {}) => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][],
