@@ -1,0 +1,139 @@
+// @vitest-environment happy-dom
+import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SourcesSection } from './sources-section';
+import { toast } from '@/components/ui/toast';
+import { api } from '@/lib/api';
+import type { ProfileSourceRow } from '@/lib/types';
+import * as profileUpload from '@/lib/profile-upload';
+
+vi.mock('@/components/ui/toast', () => ({
+  toast: { add: vi.fn() },
+}));
+
+vi.mock('@/lib/api', () => ({
+  api: {
+    listSources: vi.fn(),
+    deleteSource: vi.fn(),
+    importSources: vi.fn(),
+  },
+}));
+
+vi.mock('@tauri-apps/plugin-dialog', () => ({
+  open: vi.fn(),
+}));
+
+vi.mock('@/lib/profile-upload', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/profile-upload')>();
+  return {
+    ...actual,
+    isTauriWebview: vi.fn(),
+  };
+});
+
+const sourceRow = (over: Partial<ProfileSourceRow> = {}): ProfileSourceRow => ({
+  id: 1,
+  sourceType: 'pdf',
+  originalFilename: 'resume.pdf',
+  originalAbsolutePath: '/home/user/resume.pdf',
+  storedPath: '/data/resume.pdf',
+  mimeType: 'application/pdf',
+  fileSize: 145408,
+  sha256: '7b91d34abcdefea14'.padEnd(64, '0'),
+  importTimestamp: '2026-11-01T10:00:00.000Z',
+  extractedTextHash: null,
+  textExtractionStatus: 'success',
+  textExtractionMessage: null,
+  warnings: [],
+  ...over,
+});
+
+function renderSection() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <SourcesSection />
+    </QueryClientProvider>,
+  );
+}
+
+describe('SourcesSection', () => {
+  beforeEach(() => {
+    vi.mocked(profileUpload.isTauriWebview).mockReturnValue(true);
+    vi.mocked(api.listSources).mockResolvedValue({
+      schemaVersion: 1,
+      sources: [sourceRow()],
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('guards the pick: rejects wrong types, caps at two, toasts skips', async () => {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    vi.mocked(open).mockResolvedValue(['/a/cv.pdf', '/b/notes.docx', '/c/one.md', '/d/two.txt']);
+    vi.mocked(api.importSources).mockResolvedValue({
+      schemaVersion: 1,
+      status: 'completed',
+      counts: { total: 2, extracted: 2, failed: 0, reused: 0 },
+      sources: [],
+      failedSourcePaths: [],
+    });
+    renderSection();
+    await screen.findByText('resume.pdf');
+    fireEvent.click(screen.getByRole('button', { name: /add a source file/i }));
+    await waitFor(() => expect(api.importSources).toHaveBeenCalledWith(['/a/cv.pdf', '/c/one.md']));
+    const titles = vi.mocked(toast.add).mock.calls.map((c) => String(c[0]?.title));
+    expect(titles.some((t) => t.includes('notes.docx'))).toBe(true);
+    expect(titles.some((t) => t.includes('skipped'))).toBe(true);
+  });
+
+  it('is a silent no-op when the dialog is cancelled', async () => {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    vi.mocked(open).mockResolvedValue(null);
+    renderSection();
+    await screen.findByText('resume.pdf');
+    fireEvent.click(screen.getByRole('button', { name: /add a source file/i }));
+    await waitFor(() => expect(open).toHaveBeenCalled());
+    expect(api.importSources).not.toHaveBeenCalled();
+    expect(toast.add).not.toHaveBeenCalled();
+  });
+
+  it('renders a disabled add row in non-Tauri dev mode', async () => {
+    vi.mocked(profileUpload.isTauriWebview).mockReturnValue(false);
+    renderSection();
+    const disabled = await screen.findByRole('button', {
+      name: /available in the desktop app/i,
+    });
+    expect((disabled as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('asks for confirmation before deleting a source', async () => {
+    vi.mocked(api.deleteSource).mockResolvedValue({ schemaVersion: 1, removed: true });
+    renderSection();
+    await screen.findByText('resume.pdf');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove resume.pdf' }));
+    expect(screen.getByText('Remove source file?')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove file' }));
+    await waitFor(() => expect(api.deleteSource).toHaveBeenCalledWith(1));
+  });
+
+  it('marks the first source Primary and the rest Supplement', async () => {
+    vi.mocked(api.listSources).mockResolvedValue({
+      schemaVersion: 1,
+      sources: [
+        sourceRow(),
+        sourceRow({ id: 2, originalFilename: 'supplement.md', sourceType: 'markdown' }),
+      ],
+    });
+    renderSection();
+    await screen.findByText('resume.pdf');
+    expect(screen.getByText('Primary')).toBeDefined();
+    expect(screen.getByText('Supplement')).toBeDefined();
+  });
+});
