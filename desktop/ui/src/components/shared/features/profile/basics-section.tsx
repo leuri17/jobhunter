@@ -1,11 +1,11 @@
-import type { ProfileForm } from './types';
+import type { ProfileFormApi } from './profile-form-validator';
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Field, FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
-export function BasicsSection({ form }: { form: ProfileForm }) {
+export function BasicsSection({ form }: { form: ProfileFormApi }) {
   return (
     <>
       <CardHeader>
