@@ -17,10 +17,13 @@ import {
  * Missing scalars are `null`; missing collections are empty arrays.
  */
 
-export const STRUCTURED_OUTPUT_SCHEMA_VERSION = 1;
+export const STRUCTURED_OUTPUT_SCHEMA_VERSION = 2;
 
 export const ExtractedBasicsSchema = z
   .object({
+    fullName: z.string().nullable(),
+    email: z.string().nullable(),
+    phone: z.string().nullable(),
     headline: z.string().nullable(),
     professionalSummary: z.string().nullable(),
     currentLocation: z.string().nullable(),

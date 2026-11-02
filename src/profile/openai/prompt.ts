@@ -213,7 +213,7 @@ Rules — read carefully:
 
 1. Output ONLY the JSON object. No prose, no markdown fences, no commentary.
 2. Use the JSON Schema's structure. Do not add keys that are not in the schema. Do not omit required keys.
-3. Missing scalars (e.g. a profile with no listed headline) MUST be \`null\`. Missing collections (e.g. no languages listed) MUST be empty arrays. Never use \`null\` for collections.
+3. Missing scalars (e.g. a profile with no listed headline) MUST be \`null\`. Missing collections (e.g. no languages listed) MUST be empty arrays. Never use \`null\` for collections. The candidate's contact block (full name, email, phone) is usually at the top of the CV: extract it into \`basics.fullName\`, \`basics.email\`, and \`basics.phone\`, using \`null\` for any part not present — never invent contact details.
 4. NEVER invent facts. If a field is not explicitly supported by the sources, leave it \`null\` or empty. If two sources disagree, prefer the more recent or more authoritative one and emit a warning string in the top-level \`warnings\` array explaining the discrepancy.
 5. For every fact you extract, attach at least one entry in the matching \`sourceReferences\` array (or \`evidence\` array for skills). Each entry MUST use the \`sourceId\` value supplied in the user message's source manifest. Never invent a \`sourceId\`.
 6. \`extractedSkill.category\` and \`extractedLanguage.level\` are optional. If the sources do not state them, supply \`null\` (the post-processor substitutes defaults).
