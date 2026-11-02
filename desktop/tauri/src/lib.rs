@@ -91,6 +91,7 @@ pub fn run() {
             bring_main_window_forward(app);
         }))
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(SidecarPort(port))
         .invoke_handler(tauri::generate_handler![sidecar_port, notify_pipeline_complete])
         .setup(|_app| Ok(()))
