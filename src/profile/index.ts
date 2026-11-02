@@ -130,7 +130,11 @@ export {
 export { resolveProfileVersionId } from './identifier-resolution.js';
 
 export type { ProfileSourceRow } from '../persistence/repositories/profile-sources.js';
-export type { ProfileStatus } from '../persistence/repositories/profile-versions.js';
+export type {
+  ProfileStatus,
+  ProfileConflictRow,
+  ProfileWarningRow,
+} from '../persistence/repositories/profile-versions.js';
 
 export * from './review/index.js';
 
