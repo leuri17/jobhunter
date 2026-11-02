@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ApiError } from './api';
 import {
+  ACTION_GUIDANCE,
   ACTION_REQUIRED_ERROR_CODES,
   SURFACE_BY_SEVERITY,
   actionGuidanceFor,
@@ -52,5 +53,17 @@ describe('formatErrorTrace', () => {
     expect(
       formatErrorTrace(new ApiError(503, 'openai_unavailable', 'No OpenAI API key is configured')),
     ).toBe('status: 503\ncode: openai_unavailable\nmessage: No OpenAI API key is configured');
+  });
+});
+
+describe('ACTION_GUIDANCE profile keys', () => {
+  it('defines guidance for profile saves', () => {
+    expect(ACTION_GUIDANCE.profileSave.message).toContain('draft');
+    expect(ACTION_GUIDANCE.profileSave.actionLabel.length).toBeGreaterThan(0);
+  });
+
+  it('defines guidance for extraction failures pointing at Settings', () => {
+    expect(ACTION_GUIDANCE.profileExtraction.message).toContain('Settings');
+    expect(ACTION_GUIDANCE.profileExtraction.actionLabel.length).toBeGreaterThan(0);
   });
 });
