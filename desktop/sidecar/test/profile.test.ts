@@ -1,4 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { buildServer } from '../src/server.js';
 
 describe('profile endpoints', () => {
@@ -102,5 +105,59 @@ describe('POST /api/profile/import multipart guards', () => {
     ]);
     const res = await fetch(`${baseUrl}/api/profile/import`, { method: 'POST', body });
     expect(res.status).toBe(415);
+  });
+});
+
+describe('profile source routes', () => {
+  let server: Awaited<ReturnType<typeof buildServer>>;
+  let baseUrl: string;
+  let configHome: string;
+
+  beforeAll(async () => {
+    configHome = mkdtempSync(join(tmpdir(), 'jobhunter-profile-sources-'));
+    vi.stubEnv('XDG_CONFIG_HOME', configHome);
+    vi.stubEnv('HOME', configHome);
+    server = await buildServer({ env: { port: 0, host: '127.0.0.1' } });
+    baseUrl = await server.listen();
+  });
+
+  afterAll(async () => {
+    await server.close();
+    vi.unstubAllEnvs();
+    rmSync(configHome, { recursive: true, force: true });
+  });
+
+  it('lists imported sources and deletes by id', async () => {
+    const tempFile = join(configHome, 'resume.md');
+    writeFileSync(tempFile, '# Alex Vance\nReact developer', 'utf-8');
+    const form = new FormData();
+    form.append('path', tempFile);
+    const imported = await fetch(`${baseUrl}/api/profile/import`, { method: 'POST', body: form });
+    expect(imported.status).toBe(200);
+
+    const list = await fetch(`${baseUrl}/api/profile/sources`);
+    expect(list.status).toBe(200);
+    const listBody = (await list.json()) as {
+      schemaVersion: number;
+      sources: { id: number; originalFilename: string }[];
+    };
+    expect(listBody.schemaVersion).toBe(1);
+    const target = listBody.sources.find((s) => s.originalFilename === 'resume.md');
+    expect(target).toBeDefined();
+
+    const del = await fetch(`${baseUrl}/api/profile/sources/${target!.id}`, { method: 'DELETE' });
+    expect(del.status).toBe(200);
+    expect(await del.json()).toMatchObject({ schemaVersion: 1, removed: true });
+
+    const after = await fetch(`${baseUrl}/api/profile/sources`);
+    const afterBody = (await after.json()) as { sources: { id: number }[] };
+    expect(afterBody.sources.find((s) => s.id === target!.id)).toBeUndefined();
+  });
+
+  it('DELETE returns 404 for an unknown id', async () => {
+    const res = await fetch(`${baseUrl}/api/profile/sources/999999`, { method: 'DELETE' });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error?: { code?: string } };
+    expect(body.error?.code).toBe('profile_source_not_found');
   });
 });

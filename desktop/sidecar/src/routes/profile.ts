@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
+import { rm } from 'node:fs/promises';
 import {
   ProfileImportService,
   ProfileExtractionService,
@@ -79,6 +80,38 @@ export async function registerProfileRoutes(
     }
   });
 
+  app.get('/api/profile/sources', async () => {
+    const handle = await openDbHandle();
+    try {
+      const repos = createRepositories(handle);
+      const sources = await repos.profileSources.list();
+      return { schemaVersion: 1, sources };
+    } finally {
+      handle.close();
+    }
+  });
+
+  app.delete<{ Params: { id: string } }>('/api/profile/sources/:id', async (req, reply) => {
+    const handle = await openDbHandle();
+    try {
+      const repos = createRepositories(handle);
+      const id = Number.parseInt(req.params.id, 10);
+      const row = Number.isNaN(id) ? null : await repos.profileSources.findById(id);
+      if (row === null) {
+        reply.status(404);
+        return {
+          schemaVersion: 1,
+          error: { code: 'profile_source_not_found', message: 'No source document with that id.' },
+        };
+      }
+      await rm(row.storedPath, { force: true });
+      await repos.profileSources.delete(row.id);
+      return { schemaVersion: 1, removed: true };
+    } finally {
+      handle.close();
+    }
+  });
+
   app.post('/api/profile/import', async (req, reply) => {
     const handle = await openDbHandle();
     try {
@@ -88,6 +121,16 @@ export async function registerProfileRoutes(
       const parts = req.parts();
       const filePaths: string[] = [];
       for await (const part of parts) {
+        // Absolute paths arrive as `path` field parts: WHATWG FormData
+        // normalization strips directory components from file-part
+        // filenames, so a path can never survive inside one.
+        if (part.type === 'field' && part.fieldname === 'path') {
+          const value = String(part.value);
+          if (value !== '') {
+            filePaths.push(value);
+          }
+          continue;
+        }
         if (part.type !== 'file' || typeof part.filename !== 'string') {
           continue;
         }
