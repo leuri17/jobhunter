@@ -165,7 +165,9 @@ function ProjectEntry({
                       id={leaf.name}
                       placeholder="2021-01"
                       value={leaf.state.value ?? ''}
-                      onChange={(e) => leaf.handleChange(e.target.value)}
+                      onChange={(e) =>
+                        leaf.handleChange(e.target.value === '' ? null : e.target.value)
+                      }
                       onBlur={leaf.handleBlur}
                     />
                     <FieldError errors={leaf.state.meta.errors} />
@@ -181,7 +183,9 @@ function ProjectEntry({
                     <Input
                       id={leaf.name}
                       value={leaf.state.value ?? ''}
-                      onChange={(e) => leaf.handleChange(e.target.value)}
+                      onChange={(e) =>
+                        leaf.handleChange(e.target.value === '' ? null : e.target.value)
+                      }
                       onBlur={leaf.handleBlur}
                     />
                     <FieldError errors={leaf.state.meta.errors} />

@@ -106,7 +106,9 @@ export function EducationSection({ form }: { form: ProfileFormApi }) {
                                   id={leaf.name}
                                   placeholder="2012"
                                   value={leaf.state.value ?? ''}
-                                  onChange={(e) => leaf.handleChange(e.target.value)}
+                                  onChange={(e) =>
+                                    leaf.handleChange(e.target.value === '' ? null : e.target.value)
+                                  }
                                   onBlur={leaf.handleBlur}
                                 />
                                 <FieldError errors={leaf.state.meta.errors} />
@@ -123,7 +125,9 @@ export function EducationSection({ form }: { form: ProfileFormApi }) {
                                   id={leaf.name}
                                   placeholder="2016"
                                   value={leaf.state.value ?? ''}
-                                  onChange={(e) => leaf.handleChange(e.target.value)}
+                                  onChange={(e) =>
+                                    leaf.handleChange(e.target.value === '' ? null : e.target.value)
+                                  }
                                   onBlur={leaf.handleBlur}
                                 />
                                 <FieldError errors={leaf.state.meta.errors} />

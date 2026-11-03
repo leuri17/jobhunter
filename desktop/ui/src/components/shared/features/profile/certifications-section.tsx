@@ -90,7 +90,9 @@ export function CertificationsSection({ form }: { form: ProfileFormApi }) {
                                   id={leaf.name}
                                   placeholder="2021-05"
                                   value={leaf.state.value ?? ''}
-                                  onChange={(e) => leaf.handleChange(e.target.value)}
+                                  onChange={(e) =>
+                                    leaf.handleChange(e.target.value === '' ? null : e.target.value)
+                                  }
                                   onBlur={leaf.handleBlur}
                                 />
                                 <FieldError errors={leaf.state.meta.errors} />
@@ -107,7 +109,9 @@ export function CertificationsSection({ form }: { form: ProfileFormApi }) {
                                   id={leaf.name}
                                   placeholder="2025-05"
                                   value={leaf.state.value ?? ''}
-                                  onChange={(e) => leaf.handleChange(e.target.value)}
+                                  onChange={(e) =>
+                                    leaf.handleChange(e.target.value === '' ? null : e.target.value)
+                                  }
                                   onBlur={leaf.handleBlur}
                                 />
                                 <FieldError errors={leaf.state.meta.errors} />

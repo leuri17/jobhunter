@@ -319,6 +319,24 @@ describe('POST /api/profile/:id/edit', () => {
     expect(body.error.details).not.toBeNull();
   });
 
+  it('approves an extraction-shaped draft via the profile_<int> form', async () => {
+    // Extraction mints `profile_<hex>` JSON ids; the UI addresses
+    // versions as `profile_<int>`. This pins the resolver interplay.
+    const versionId = await seedProfileVersion('draft', 'profile_ab12cd34ef56');
+    const res = await fetch(`${baseUrl}/api/profile/${versionId}/approve`, { method: 'POST' });
+    expect(res.status).toBe(200);
+  });
+
+  it('rejects the raw hex JSON id with invalid_identifier (no scan fallback for profile_-prefixed ids)', async () => {
+    await seedProfileVersion('draft', 'profile_ff9977aa11bb');
+    const res = await fetch(`${baseUrl}/api/profile/profile_ff9977aa11bb/approve`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('invalid_identifier');
+  });
+
   it('returns 409 when the target is superseded', async () => {
     const id = await seedProfileVersion('superseded');
     const res = await fetch(`${baseUrl}/api/profile/${id}/edit`, {

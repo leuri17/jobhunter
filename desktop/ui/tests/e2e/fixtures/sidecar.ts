@@ -194,6 +194,11 @@ function seedProfiles(): {
       { id: 'prof_seed_1', status: 'draft', active: false },
       { id: 'prof_seed_2', status: 'approved', active: true },
       { id: 'prof_seed_3', status: 'draft', active: false },
+      // Extraction-shaped id (post-process mints `profile_<hex>`): the
+      // UI addresses versions as `profile_<int>`, so the fixture must
+      // resolve both forms or hex-id drafts 404 like the real sidecar
+      // would if handed the raw JSON id.
+      { id: 'profile_ab12cd34ef56', status: 'draft', active: false },
     ];
   for (const [i, s] of seeds.entries()) {
     profiles.set(s.id, {
@@ -421,6 +426,10 @@ export async function buildFixtureSidecar(
     models: ['e2e-mini', 'e2e-sol'],
   }));
 
+  const resolveProfile = (id: string): ProfileVersionRecord | undefined =>
+    state.profiles.get(id) ??
+    [...state.profiles.values()].find((p) => `profile_${p.profileVersionId}` === id);
+
   app.get('/api/profile', async () => ({
     schemaVersion: 1,
     profiles: [...state.profiles.values()].sort((a, b) => b.profileVersionId - a.profileVersionId),
@@ -441,11 +450,7 @@ export async function buildFixtureSidecar(
   }));
 
   app.get<{ Params: { id: string } }>('/api/profile/:id', async (req, reply) => {
-    const direct = state.profiles.get(req.params.id);
-    const byVersionId = [...state.profiles.values()].find(
-      (p) => `profile_${p.profileVersionId}` === req.params.id,
-    );
-    const record = direct ?? byVersionId;
+    const record = resolveProfile(req.params.id);
     const detail = record !== undefined ? state.profileDetails.get(record.profileId) : undefined;
     if (detail === undefined) {
       reply.status(404);
@@ -464,7 +469,7 @@ export async function buildFixtureSidecar(
   }));
 
   app.post<{ Params: { id: string } }>('/api/profile/:id/approve', async (req, reply) => {
-    const profile = state.profiles.get(req.params.id);
+    const profile = resolveProfile(req.params.id);
     if (profile === undefined) {
       reply.status(404);
       return {
@@ -515,7 +520,7 @@ export async function buildFixtureSidecar(
   });
 
   app.post<{ Params: { id: string } }>('/api/profile/:id/reject', async (req, reply) => {
-    const profile = state.profiles.get(req.params.id);
+    const profile = resolveProfile(req.params.id);
     if (profile === undefined) {
       reply.status(404);
       return {

@@ -3,15 +3,19 @@ import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { VersionHistorySection } from './version-history-section';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import type { ProfileListEntry } from '@/lib/types';
 
-vi.mock('@/lib/api', () => ({
-  api: {
-    approveProfile: vi.fn(),
-    rejectProfile: vi.fn(),
-  },
-}));
+vi.mock('@/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api')>();
+  return {
+    ApiError: actual.ApiError,
+    api: {
+      approveProfile: vi.fn(),
+      rejectProfile: vi.fn(),
+    },
+  };
+});
 
 const entry = (over: Partial<ProfileListEntry>): ProfileListEntry => ({
   profileVersionId: 1,
@@ -76,7 +80,7 @@ describe('VersionHistorySection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
     expect(screen.getByText('Approve version ver_5?')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Approve & publish' }));
-    await waitFor(() => expect(api.approveProfile).toHaveBeenCalledWith('prf_five'));
+    await waitFor(() => expect(api.approveProfile).toHaveBeenCalledWith('profile_5'));
   });
 
   it('confirms before rejecting a draft', async () => {
@@ -84,11 +88,33 @@ describe('VersionHistorySection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
     expect(screen.getByText(/reject draft ver_5/i)).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Reject draft' }));
-    await waitFor(() => expect(api.rejectProfile).toHaveBeenCalledWith('prf_five'));
+    await waitFor(() => expect(api.rejectProfile).toHaveBeenCalledWith('profile_5'));
   });
 
   it('shows the empty state', () => {
     renderSection([], 0);
     expect(screen.getByText(/no versions yet/i)).toBeDefined();
+  });
+});
+
+describe('VersionHistorySection error surfacing', () => {
+  beforeEach(() => {
+    vi.mocked(api.approveProfile).mockResolvedValue({ schemaVersion: 1 } as never);
+    vi.mocked(api.rejectProfile).mockResolvedValue({ schemaVersion: 1 } as never);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('shows a dialog when approval fails, not just a toast', async () => {
+    vi.mocked(api.approveProfile).mockRejectedValue(
+      new ApiError(409, 'invalid_profile_state', 'Profile is approved, not draft'),
+    );
+    renderSection([entry({ profileVersionId: 9, profileId: 'prf_nine' })], 0);
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Approve & publish' }));
+    await waitFor(() => expect(screen.getByText('Approval failed')).toBeDefined());
   });
 });

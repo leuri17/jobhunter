@@ -232,7 +232,11 @@ function SkillsSectionBody({
                                     id={leaf.name}
                                     placeholder="2025-11"
                                     value={leaf.state.value ?? ''}
-                                    onChange={(e) => leaf.handleChange(e.target.value)}
+                                    onChange={(e) =>
+                                      leaf.handleChange(
+                                        e.target.value === '' ? null : e.target.value,
+                                      )
+                                    }
                                     onBlur={leaf.handleBlur}
                                   />
                                   <FieldError errors={leaf.state.meta.errors} />

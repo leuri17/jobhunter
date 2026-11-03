@@ -86,3 +86,18 @@ describe('ProjectsSection', () => {
     });
   });
 });
+
+describe('ExperienceSection date fields', () => {
+  it('clearing a date field returns it to null instead of an invalid empty string', async () => {
+    const profile = makeProfile();
+    profile.experience = [acmeExperience()];
+    let latest: ProfessionalProfile | null = null;
+    render(<Harness profile={profile} section="experience" onChange={(p) => (latest = p)} />);
+    fireEvent.click(screen.getByRole('button', { name: /^Acme$/i }));
+    const start = await screen.findByPlaceholderText('2021-03');
+    fireEvent.change(start, { target: { value: '' } });
+    await waitFor(() => {
+      expect(latest!.experience[0]!.startDate).toBeNull();
+    });
+  });
+});

@@ -63,7 +63,7 @@ export const Route = createRoute({
   pendingComponent: ProfileSkeleton,
 });
 
-function ProfilePage() {
+export function ProfilePage() {
   const list = useSuspenseQuery({ queryKey: ['profiles'], queryFn: () => api.listProfiles() });
   const workingCopy = resolveWorkingCopy(list.data.profiles);
   if (workingCopy.kind === 'none') {
@@ -100,7 +100,9 @@ function StatusBadges({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
 function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
-  const [saveError, setSaveError] = useState<ApiError | null>(null);
+  const [failure, setFailure] = useState<{ source: 'save' | 'extract'; error: ApiError } | null>(
+    null,
+  );
   const [confirmApprove, setConfirmApprove] = useState(false);
 
   const list = useSuspenseQuery({ queryKey: ['profiles'], queryFn: () => api.listProfiles() });
@@ -125,7 +127,7 @@ function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
         form.reset(fresh.profile);
         toast.add({ title: `Draft saved — ver_${response.profileVersionId}`, type: 'success' });
       } catch (err: unknown) {
-        setSaveError(err as ApiError);
+        setFailure({ source: 'save', error: err as ApiError });
       }
     },
   });
@@ -147,12 +149,12 @@ function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
       setActiveTab('overview');
     },
     onError: (err) => {
-      setSaveError(err as ApiError);
+      setFailure({ source: 'extract', error: err as ApiError });
     },
   });
 
   const approve = useMutation({
-    mutationFn: () => api.approveProfile(workingCopy.entry.profileId),
+    mutationFn: () => api.approveProfile(`profile_${workingCopy.entry.profileVersionId}`),
     onSuccess: () => {
       for (const key of INVALIDATE_ON_APPROVE) {
         void queryClient.invalidateQueries({ queryKey: [...key] });
@@ -160,7 +162,7 @@ function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
       toast.add({ title: 'Version approved — profile is live', type: 'success' });
     },
     onError: (err) => {
-      setSaveError(err as ApiError);
+      setFailure({ source: 'save', error: err as ApiError });
     },
   });
 
@@ -170,7 +172,10 @@ function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
   const warningCount = detail.data.warnings.length - blockingCount;
   const issueCount = detail.data.conflicts.length + detail.data.warnings.length;
   const showExtractAlert =
-    saveError !== null && EXTRACT_FAILURE_ALERT_CODES.has(saveError.code) && !extract.isPending;
+    failure !== null &&
+    failure.source === 'extract' &&
+    EXTRACT_FAILURE_ALERT_CODES.has(failure.error.code) &&
+    !extract.isPending;
 
   return (
     <div className="space-y-6">
@@ -271,7 +276,7 @@ function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
           <Alert variant="destructive" className="mt-4">
             <AlertTitle>Extraction failed</AlertTitle>
             <AlertDescription>
-              {saveError.message}{' '}
+              {failure?.error.message ?? ''}{' '}
               <Link to="/settings" className="underline underline-offset-4">
                 Add your AI provider API key in Settings
               </Link>
@@ -327,14 +332,23 @@ function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
       </AlertDialog>
 
       <ApiErrorDialog
-        error={saveError}
-        title="Couldn't save profile"
-        guidance={ACTION_GUIDANCE.profileSave}
+        error={failure?.error ?? null}
+        title={failure?.source === 'extract' ? 'Extraction failed' : "Couldn't save profile"}
+        guidance={
+          failure?.source === 'extract'
+            ? ACTION_GUIDANCE.profileExtraction
+            : ACTION_GUIDANCE.profileSave
+        }
         onAction={() => {
-          setSaveError(null);
-          void form.handleSubmit();
+          const source = failure?.source;
+          setFailure(null);
+          if (source === 'extract') {
+            extract.mutate();
+          } else {
+            void form.handleSubmit();
+          }
         }}
-        onDismiss={() => setSaveError(null)}
+        onDismiss={() => setFailure(null)}
       />
     </div>
   );

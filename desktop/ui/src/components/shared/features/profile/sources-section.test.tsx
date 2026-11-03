@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SourcesSection } from './sources-section';
 import { toast } from '@/components/ui/toast';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import type { ProfileSourceRow } from '@/lib/types';
 import * as profileUpload from '@/lib/profile-upload';
 
@@ -12,13 +12,17 @@ vi.mock('@/components/ui/toast', () => ({
   toast: { add: vi.fn() },
 }));
 
-vi.mock('@/lib/api', () => ({
-  api: {
-    listSources: vi.fn(),
-    deleteSource: vi.fn(),
-    importSources: vi.fn(),
-  },
-}));
+vi.mock('@/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api')>();
+  return {
+    ApiError: actual.ApiError,
+    api: {
+      listSources: vi.fn(),
+      deleteSource: vi.fn(),
+      importSources: vi.fn(),
+    },
+  };
+});
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: vi.fn(),
@@ -135,5 +139,40 @@ describe('SourcesSection', () => {
     await screen.findByText('resume.pdf');
     expect(screen.getByText('Primary')).toBeDefined();
     expect(screen.getByText('Supplement')).toBeDefined();
+  });
+});
+
+describe('SourcesSection error surfacing', () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('shows a dialog when import fails, not just a toast', async () => {
+    vi.mocked(profileUpload.isTauriWebview).mockReturnValue(true);
+    vi.mocked(api.listSources).mockResolvedValue({ schemaVersion: 1, sources: [] });
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    vi.mocked(open).mockResolvedValue(['/a/cv.pdf']);
+    vi.mocked(api.importSources).mockRejectedValue(
+      new ApiError(500, 'source_import_failed', 'Source file does not exist'),
+    );
+    renderSection();
+    fireEvent.click(screen.getByRole('button', { name: /add a source file/i }));
+    await waitFor(() => expect(screen.getByText('Import failed')).toBeDefined());
+    const titles = vi.mocked(toast.add).mock.calls.map((c) => String(c[0]?.title));
+    expect(titles.some((t) => t.includes('Import failed'))).toBe(false);
+  });
+
+  it('shows a dialog when removal fails', async () => {
+    vi.mocked(api.listSources).mockResolvedValue({
+      schemaVersion: 1,
+      sources: [sourceRow()],
+    });
+    vi.mocked(api.deleteSource).mockRejectedValue(new ApiError(500, 'internal_error', 'boom'));
+    renderSection();
+    await screen.findByText('resume.pdf');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove resume.pdf' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove file' }));
+    await waitFor(() => expect(screen.getByText('Remove failed')).toBeDefined());
   });
 });

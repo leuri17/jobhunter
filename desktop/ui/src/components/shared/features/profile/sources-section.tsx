@@ -17,7 +17,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from '@/components/ui/toast';
-import { api } from '@/lib/api';
+import { ApiErrorDialog } from '@/components/shared/ui/api-error-dialog';
+import { api, ApiError } from '@/lib/api';
 import { SOURCE_EXTENSIONS, isTauriWebview, validatePickedPaths } from '@/lib/profile-upload';
 import type { ProfileSourceRow } from '@/lib/types';
 
@@ -31,14 +32,21 @@ function filenameOf(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
 }
 
+interface RowFailure {
+  error: ApiError;
+  retry: () => void;
+}
+
 function SourceRow({
   row,
   primary,
   disabled,
+  onError,
 }: {
   row: ProfileSourceRow;
   primary: boolean;
   disabled?: boolean;
+  onError: (failure: RowFailure) => void;
 }) {
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
@@ -49,10 +57,7 @@ function SourceRow({
       toast.add({ title: `Removed ${row.originalFilename}`, type: 'success' });
     },
     onError: (error) => {
-      toast.add({
-        title: `Could not remove ${row.originalFilename}: ${error.message}`,
-        type: 'error',
-      });
+      onError({ error: error as ApiError, retry: () => remove.mutate() });
     },
   });
 
@@ -121,11 +126,24 @@ export interface SourcesSectionProps {
 export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps) {
   const queryClient = useQueryClient();
   const sources = useQuery({ queryKey: ['profile-sources'], queryFn: api.listSources });
+  const [actionFailure, setActionFailure] = useState<{
+    error: ApiError;
+    title: string;
+    retry: () => void;
+  } | null>(null);
 
   const importSources = useMutation({
     mutationFn: (paths: string[]) => api.importSources(paths),
     onSuccess: (response) => {
       void queryClient.invalidateQueries({ queryKey: ['profile-sources'] });
+      const failed = response.counts.failed + response.failedSourcePaths.length;
+      if (failed > 0) {
+        toast.add({
+          title: `Imported ${response.counts.total - failed} of ${response.counts.total} file(s) — ${failed} failed. Try again or pick a different file.`,
+          type: 'warning',
+        });
+        return;
+      }
       const duplicates = response.counts.reused;
       toast.add({
         title:
@@ -135,8 +153,12 @@ export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps)
         type: 'success',
       });
     },
-    onError: (error) => {
-      toast.add({ title: `Import failed: ${error.message}`, type: 'error' });
+    onError: (error, paths) => {
+      setActionFailure({
+        error: error as ApiError,
+        title: 'Import failed',
+        retry: () => importSources.mutate(paths),
+      });
     },
   });
 
@@ -189,7 +211,15 @@ export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps)
           </p>
         ) : (
           rows.map((row, i) => (
-            <SourceRow key={row.id} row={row} primary={i === 0} disabled={busy} />
+            <SourceRow
+              key={row.id}
+              row={row}
+              primary={i === 0}
+              disabled={busy}
+              onError={({ error, retry }) =>
+                setActionFailure({ error, title: 'Remove failed', retry })
+              }
+            />
           ))
         )}
         {isTauriWebview() ? (
@@ -209,6 +239,21 @@ export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps)
           </Button>
         )}
       </CardContent>
+
+      <ApiErrorDialog
+        error={actionFailure?.error ?? null}
+        title={actionFailure?.title ?? 'Action failed'}
+        onAction={
+          actionFailure === null
+            ? undefined
+            : () => {
+                const retry = actionFailure.retry;
+                setActionFailure(null);
+                retry();
+              }
+        }
+        onDismiss={() => setActionFailure(null)}
+      />
     </>
   );
 }

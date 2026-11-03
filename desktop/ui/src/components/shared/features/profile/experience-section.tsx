@@ -153,7 +153,9 @@ function ExperienceEntry({
                       id={leaf.name}
                       placeholder="2021-03"
                       value={leaf.state.value ?? ''}
-                      onChange={(e) => leaf.handleChange(e.target.value)}
+                      onChange={(e) =>
+                        leaf.handleChange(e.target.value === '' ? null : e.target.value)
+                      }
                       onBlur={leaf.handleBlur}
                     />
                     <FieldError errors={leaf.state.meta.errors} />
@@ -170,7 +172,9 @@ function ExperienceEntry({
                       id={leaf.name}
                       value={leaf.state.value ?? ''}
                       disabled={entry.state.value.isCurrent}
-                      onChange={(e) => leaf.handleChange(e.target.value)}
+                      onChange={(e) =>
+                        leaf.handleChange(e.target.value === '' ? null : e.target.value)
+                      }
                       onBlur={leaf.handleBlur}
                     />
                     <FieldError errors={leaf.state.meta.errors} />

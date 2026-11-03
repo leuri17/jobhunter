@@ -21,7 +21,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from '@/components/ui/toast';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
+import { ApiErrorDialog } from '@/components/shared/ui/api-error-dialog';
 import type { ProfileListEntry } from '@/lib/types';
 import { VersionStatusBadge } from './version-status-badge';
 
@@ -39,6 +40,11 @@ export function VersionHistorySection({
   const queryClient = useQueryClient();
   const [pendingApprove, setPendingApprove] = useState<ProfileListEntry | null>(null);
   const [pendingReject, setPendingReject] = useState<ProfileListEntry | null>(null);
+  const [actionFailure, setActionFailure] = useState<{
+    error: ApiError;
+    title: string;
+    retry: () => void;
+  } | null>(null);
 
   const invalidateAll = () => {
     for (const key of INVALIDATE) {
@@ -52,8 +58,12 @@ export function VersionHistorySection({
       invalidateAll();
       toast.add({ title: 'Version approved — profile is live', type: 'success' });
     },
-    onError: (error) => {
-      toast.add({ title: `Approval failed: ${error.message}`, type: 'error' });
+    onError: (error, id) => {
+      setActionFailure({
+        error: error as ApiError,
+        title: 'Approval failed',
+        retry: () => approve.mutate(id),
+      });
     },
   });
 
@@ -63,8 +73,12 @@ export function VersionHistorySection({
       invalidateAll();
       toast.add({ title: 'Draft rejected — kept in history', type: 'success' });
     },
-    onError: (error) => {
-      toast.add({ title: `Rejection failed: ${error.message}`, type: 'error' });
+    onError: (error, id) => {
+      setActionFailure({
+        error: error as ApiError,
+        title: 'Rejection failed',
+        retry: () => reject.mutate(id),
+      });
     },
   });
 
@@ -143,6 +157,21 @@ export function VersionHistorySection({
         )}
       </CardContent>
 
+      <ApiErrorDialog
+        error={actionFailure?.error ?? null}
+        title={actionFailure?.title ?? 'Action failed'}
+        onAction={
+          actionFailure === null
+            ? undefined
+            : () => {
+                const retry = actionFailure.retry;
+                setActionFailure(null);
+                retry();
+              }
+        }
+        onDismiss={() => setActionFailure(null)}
+      />
+
       <AlertDialog
         open={pendingApprove !== null}
         onOpenChange={(open) => {
@@ -163,7 +192,9 @@ export function VersionHistorySection({
             <AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (pendingApprove !== null) approve.mutate(pendingApprove.profileId);
+                if (pendingApprove !== null) {
+                  approve.mutate(`profile_${pendingApprove.profileVersionId}`);
+                }
                 setPendingApprove(null);
               }}
             >
@@ -189,7 +220,9 @@ export function VersionHistorySection({
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
-                if (pendingReject !== null) reject.mutate(pendingReject.profileId);
+                if (pendingReject !== null) {
+                  reject.mutate(`profile_${pendingReject.profileVersionId}`);
+                }
                 setPendingReject(null);
               }}
             >
