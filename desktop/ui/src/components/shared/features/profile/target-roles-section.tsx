@@ -1,4 +1,4 @@
-import { SENIORITY_LEVELS, type SeniorityLevel } from '@jobhunter/core/profile';
+import { SENIORITY_LEVELS, type SeniorityLevel } from '@jobhunter/core/profile/schema';
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Field } from '@/components/ui/field';
 import { Label } from '@/components/ui/label';

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { RefObject } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Trash } from 'lucide-react';
@@ -111,7 +112,13 @@ function SourceRow({
   );
 }
 
-export function SourcesSection({ disabled }: { disabled?: boolean }) {
+export interface SourcesSectionProps {
+  disabled?: boolean;
+  /** Exposes the native-picker invocation so the first-run empty state's CTA can trigger it. */
+  addTriggerRef?: RefObject<(() => void) | null>;
+}
+
+export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps) {
   const queryClient = useQueryClient();
   const sources = useQuery({ queryKey: ['profile-sources'], queryFn: api.listSources });
 
@@ -157,6 +164,12 @@ export function SourcesSection({ disabled }: { disabled?: boolean }) {
       await importSources.mutateAsync(accepted);
     }
   };
+
+  useEffect(() => {
+    if (addTriggerRef !== undefined) {
+      addTriggerRef.current = onAdd;
+    }
+  });
 
   const rows = sources.data?.sources ?? [];
   const busy = disabled === true || importSources.isPending;

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SKILL_PROFICIENCIES } from '@jobhunter/core/profile';
+import { SKILL_PROFICIENCIES } from '@jobhunter/core/profile/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

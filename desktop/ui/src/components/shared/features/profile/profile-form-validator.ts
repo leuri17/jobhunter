@@ -1,6 +1,6 @@
 import { useForm } from '@tanstack/react-form';
 import type { FormValidateOrFn } from '@tanstack/react-form';
-import { ProfessionalProfileSchema } from '@jobhunter/core/profile';
+import { ProfessionalProfileSchema } from '@jobhunter/core/profile/schema';
 import type { ProfessionalProfile } from '@/lib/types';
 
 /**

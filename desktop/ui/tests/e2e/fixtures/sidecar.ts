@@ -140,6 +140,47 @@ const BASE_CONFIG = {
   },
 } as const;
 
+function fullProfileJson(id: string, status: string): Record<string, unknown> {
+  const emptyDerived = {
+    generatedValue: null,
+    overrideActive: false,
+    overrideValue: null,
+    effectiveValue: null,
+    generatedAt: null,
+    overriddenAt: null,
+  };
+  const emptyDerivedList = { ...emptyDerived, generatedValue: [], effectiveValue: [] };
+  return {
+    schemaVersion: 1,
+    id,
+    createdAt: TIMESTAMP,
+    updatedAt: TIMESTAMP,
+    contentHash: `hash_${id}`,
+    sourceIds: ['source_1'],
+    basics: {
+      fullName: status === 'approved' ? 'Active Profile' : 'Draft Profile',
+      email: null,
+      phone: null,
+      headline: null,
+      professionalSummary: null,
+      currentLocation: null,
+      totalYearsOfExperience: null,
+    },
+    experience: [],
+    skills: [],
+    languages: [],
+    education: [],
+    certifications: [],
+    projects: [],
+    derived: {
+      likelySeniority: emptyDerived,
+      primaryRoles: emptyDerivedList,
+      primaryDomains: emptyDerivedList,
+      strongestSkills: emptyDerivedList,
+    },
+  };
+}
+
 function seedProfiles(): {
   profiles: Map<string, ProfileVersionRecord>;
   details: Map<string, ProfileDetailRecord>;
@@ -167,7 +208,7 @@ function seedProfiles(): {
       approvedAt: s.status === 'approved' ? TIMESTAMP : null,
     });
     details.set(s.id, {
-      profile: { id: s.id, fullName: s.status === 'approved' ? 'Active Profile' : 'Draft Profile' },
+      profile: fullProfileJson(s.id, s.status),
       status: s.status,
       active: s.active,
       contentHash: `hash_${s.id}`,
@@ -385,8 +426,27 @@ export async function buildFixtureSidecar(
     profiles: [...state.profiles.values()].sort((a, b) => b.profileVersionId - a.profileVersionId),
   }));
 
+  app.get('/api/profile/sources', async () => ({
+    schemaVersion: 1,
+    sources: [],
+  }));
+
+  app.get('/api/secrets/api-key', async () => ({
+    schemaVersion: 1,
+    configured: true,
+    source: 'stored',
+    masked: 'sk-…test',
+    legacyFilePresent: false,
+    backend: 'file',
+  }));
+
   app.get<{ Params: { id: string } }>('/api/profile/:id', async (req, reply) => {
-    const detail = state.profileDetails.get(req.params.id);
+    const direct = state.profiles.get(req.params.id);
+    const byVersionId = [...state.profiles.values()].find(
+      (p) => `profile_${p.profileVersionId}` === req.params.id,
+    );
+    const record = direct ?? byVersionId;
+    const detail = record !== undefined ? state.profileDetails.get(record.profileId) : undefined;
     if (detail === undefined) {
       reply.status(404);
       return {

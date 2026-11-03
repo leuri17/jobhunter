@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LANGUAGE_LEVELS } from '@jobhunter/core/profile';
+import { LANGUAGE_LEVELS } from '@jobhunter/core/profile/schema';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError } from '@/components/ui/field';

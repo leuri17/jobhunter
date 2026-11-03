@@ -1,4 +1,4 @@
-import { SKILL_CATEGORIES } from '@jobhunter/core/profile';
+import { SKILL_CATEGORIES } from '@jobhunter/core/profile/schema';
 
 const LABELS: Record<(typeof SKILL_CATEGORIES)[number], string> = {
   programming_language: 'Programming languages',
