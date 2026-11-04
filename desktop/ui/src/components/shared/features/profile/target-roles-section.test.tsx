@@ -24,11 +24,57 @@ function Harness({ onChange }: HarnessProps) {
   );
 }
 
+function ProfileHarness({
+  profile,
+  onChange,
+}: {
+  profile: ProfessionalProfile;
+  onChange: (profile: ProfessionalProfile) => void;
+}) {
+  const form = useProfileForm({ defaultValues: profile, onSubmit: () => {} });
+  return (
+    <form.Subscribe selector={(s) => s.values}>
+      {(values) => {
+        onChange(values as ProfessionalProfile);
+        return <TargetRolesSection form={form} />;
+      }}
+    </form.Subscribe>
+  );
+}
+
 describe('TargetRolesSection', () => {
-  it('shows generated roles as read-only chips until an override is activated', () => {
-    render(<Harness onChange={() => {}} />);
-    // Harness renders with empty generatedValue; assert the add row exists.
-    expect(screen.getByPlaceholderText('Type a role title and press Enter…')).toBeDefined();
+  it('renders generated roles as chips; removing one activates an override', async () => {
+    let latest: ProfessionalProfile | null = null;
+    const base = makeProfile();
+    const withRoles: ProfessionalProfile = {
+      ...base,
+      derived: {
+        ...base.derived,
+        primaryRoles: {
+          generatedValue: ['Frontend developer', 'Backend developer'],
+          overrideActive: false,
+          overrideValue: null,
+          effectiveValue: ['Frontend developer', 'Backend developer'],
+          generatedAt: '2026-11-02T00:00:00.000Z',
+          overriddenAt: null,
+        },
+      },
+    };
+    render(<ProfileHarness profile={withRoles} onChange={(p) => (latest = p)} />);
+    expect(screen.getByText('Frontend developer')).toBeDefined();
+    expect(screen.getByText('Backend developer')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove role Frontend developer' }));
+    await waitFor(() => {
+      expect(latest).not.toBeNull();
+      expect(latest!.derived.primaryRoles.overrideActive).toBe(true);
+      expect(latest!.derived.primaryRoles.overrideValue).toEqual(['Backend developer']);
+      expect(latest!.derived.primaryRoles.generatedValue).toEqual([
+        'Frontend developer',
+        'Backend developer',
+      ]);
+      expect(screen.getByText('Reset to generated')).toBeDefined();
+    });
   });
 
   it('adding a role activates the override and keeps generatedValue intact', async () => {

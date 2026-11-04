@@ -152,6 +152,9 @@ describe('ProfileEditingService.applyBulkEdit', () => {
     const row = await repos.profileVersions.getById(id);
     const saved = row.profileJson as ProfessionalProfile;
     expect(saved.skills).toHaveLength(1);
+    // Pin keep-first semantics: s1 ('React') survives, not s2 ('react').
+    expect(saved.skills[0]!.id).toBe('s1');
+    expect(saved.skills[0]!.name).toBe('React');
     expect(saved.skills[0]!.normalizedName).toBe('react');
     expect(saved.contentHash).not.toBe('seeded');
     expect(saved.updatedAt).toBe(NOW.toISOString());
