@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from '@tansta
 import { PageHeader, PageHeaderTitle } from '@/components/shared/layout/page-header';
 import { SectionDivider } from '@/components/shared/features/settings/search-config/section';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -379,6 +379,29 @@ function ProfileFirstRun() {
   const sourceCount = sources.data?.sources.length ?? 0;
   const showExtractAlert =
     saveError !== null && EXTRACT_FAILURE_ALERT_CODES.has(saveError.code) && !extract.isPending;
+
+  if (sourceCount === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader>
+          <PageHeaderTitle subtitle="Canonical resume profile, document ingestion, and version approval.">
+            Profile
+          </PageHeaderTitle>
+        </PageHeader>
+        <Card>
+          <CardHeader>
+            <CardTitle>Get started</CardTitle>
+            <CardDescription>
+              Add up to two CV or resume files. JobHunter builds your profile from them — you review
+              and approve every version.
+            </CardDescription>
+          </CardHeader>
+          <SectionDivider />
+          <SourcesSection disabled={extract.isPending} addTriggerRef={addSourceRef} />
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
