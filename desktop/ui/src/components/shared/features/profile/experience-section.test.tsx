@@ -62,6 +62,14 @@ describe('ExperienceSection', () => {
     expect(screen.getByLabelText('Company')).toBeDefined();
   });
 
+  it('focuses the first required field after Add', async () => {
+    render(<Harness profile={makeProfile()} section="experience" onChange={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add experience' }));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByLabelText('Company'));
+    });
+  });
+
   it('checking current role disables end date', async () => {
     const profile = { ...makeProfile(), experience: [acmeExperience()] };
     render(<Harness profile={profile} section="experience" onChange={() => {}} />);

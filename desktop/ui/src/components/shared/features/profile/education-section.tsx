@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError } from '@/components/ui/field';
@@ -21,6 +22,7 @@ export function emptyEducation(): Education {
 }
 
 export function EducationSection({ form }: { form: ProfileFormApi }) {
+  const [focusId, setFocusId] = useState<string | null>(null);
   return (
     <>
       <CardHeader>
@@ -57,6 +59,7 @@ export function EducationSection({ form }: { form: ProfileFormApi }) {
                                 <Input
                                   id={leaf.name}
                                   value={leaf.state.value ?? ''}
+                                  autoFocus={education.id === focusId}
                                   onChange={(e) => leaf.handleChange(e.target.value)}
                                   onBlur={leaf.handleBlur}
                                 />
@@ -159,7 +162,11 @@ export function EducationSection({ form }: { form: ProfileFormApi }) {
               <Button
                 variant="outline"
                 className="w-full border-dashed"
-                onClick={() => field.pushValue(emptyEducation())}
+                onClick={() => {
+                  const entry = emptyEducation();
+                  field.pushValue(entry);
+                  setFocusId(entry.id);
+                }}
               >
                 Add education
               </Button>
