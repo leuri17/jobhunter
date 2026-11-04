@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 import { rm } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import {
   ProfileImportService,
   ProfileExtractionService,
@@ -107,7 +108,7 @@ export async function registerProfileRoutes(
           error: { code: 'profile_source_not_found', message: 'No source document with that id.' },
         };
       }
-      await rm(row.storedPath, { force: true });
+      await rm(dirname(row.storedPath), { recursive: true, force: true });
       await repos.profileSources.delete(row.id);
       return { schemaVersion: 1, removed: true };
     } finally {

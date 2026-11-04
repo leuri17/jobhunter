@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { buildServer } from '../src/server.js';
 import {
   initializeDatabase,
@@ -146,19 +146,41 @@ describe('profile source routes', () => {
     expect(list.status).toBe(200);
     const listBody = (await list.json()) as {
       schemaVersion: number;
-      sources: { id: number; originalFilename: string }[];
+      sources: { id: number; originalFilename: string; storedPath: string }[];
     };
     expect(listBody.schemaVersion).toBe(1);
     const target = listBody.sources.find((s) => s.originalFilename === 'resume.md');
     expect(target).toBeDefined();
+    expect(existsSync(dirname(target!.storedPath))).toBe(true);
 
     const del = await fetch(`${baseUrl}/api/profile/sources/${target!.id}`, { method: 'DELETE' });
     expect(del.status).toBe(200);
     expect(await del.json()).toMatchObject({ schemaVersion: 1, removed: true });
+    expect(existsSync(dirname(target!.storedPath))).toBe(false);
 
     const after = await fetch(`${baseUrl}/api/profile/sources`);
     const afterBody = (await after.json()) as { sources: { id: number }[] };
     expect(afterBody.sources.find((s) => s.id === target!.id)).toBeUndefined();
+  });
+
+  it('DELETE tolerates a missing storage folder', async () => {
+    const tempFile = join(configHome, 'orphan.md');
+    writeFileSync(tempFile, '# Orphan', 'utf-8');
+    const form = new FormData();
+    form.append('path', tempFile);
+    await fetch(`${baseUrl}/api/profile/import`, { method: 'POST', body: form });
+    const list = (await (await fetch(`${baseUrl}/api/profile/sources`)).json()) as {
+      sources: { id: number; originalFilename: string; storedPath: string }[];
+    };
+    const row = list.sources.find((s) => s.originalFilename === 'orphan.md');
+    expect(row).toBeDefined();
+    rmSync(dirname(row!.storedPath), { recursive: true, force: true });
+    const del = await fetch(`${baseUrl}/api/profile/sources/${row!.id}`, { method: 'DELETE' });
+    expect(del.status).toBe(200);
+    const after = (await (await fetch(`${baseUrl}/api/profile/sources`)).json()) as {
+      sources: { id: number }[];
+    };
+    expect(after.sources.find((s) => s.id === row!.id)).toBeUndefined();
   });
 
   it('DELETE returns 404 for an unknown id', async () => {

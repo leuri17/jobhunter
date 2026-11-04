@@ -60,7 +60,7 @@ describe('ProfileImportService', () => {
     const imported = result.sources[0]!;
     expect(imported.sourceType).toBe('markdown');
     expect(imported.textExtractionStatus).toBe('success');
-    expect(imported.storedPath).toContain(`profile-sources/${imported.id}/`);
+    expect(imported.storedPath).toContain(`profile-sources/${imported.sha256}/`);
     expect(imported.reused).toBe(false);
     expect(imported.extractedTextHash).toMatch(/^[0-9a-f]{64}$/);
 
