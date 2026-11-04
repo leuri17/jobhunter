@@ -12,7 +12,11 @@ import {
 } from './file-copy.js';
 import { createDefaultBinaryFileSystem, type BinaryFileSystem } from './file-system.js';
 import { resolveExtractor } from './extractors/index.js';
-import { InvalidArgumentCountError, SourceUnreadableError } from './errors.js';
+import {
+  InvalidArgumentCountError,
+  ProfileSourceLimitError,
+  SourceUnreadableError,
+} from './errors.js';
 import { hashFileContents, hashString } from './hashing.js';
 import { normalizeExtractedText } from './text-normalize.js';
 import { detectSourceTypeFromPath, mimeTypeFor } from './source-types.js';
@@ -90,6 +94,8 @@ export const noopLogger: ProfileImportLogger = {
   error: () => undefined,
 };
 
+export const MAX_PROFILE_SOURCES = 2;
+
 export class ProfileImportService {
   private readonly paths: PlatformPaths;
   private readonly repositories: Repositories;
@@ -106,10 +112,22 @@ export class ProfileImportService {
   }
 
   async importSources(rawPaths: readonly string[]): Promise<ProfileImportResult> {
-    if (rawPaths.length === 0 || rawPaths.length > 2) {
+    if (rawPaths.length === 0 || rawPaths.length > MAX_PROFILE_SOURCES) {
       throw new InvalidArgumentCountError(
         'profile import requires exactly one or two file paths.',
         { receivedCount: rawPaths.length },
+      );
+    }
+
+    const existing = await this.repositories.profileSources.list();
+    if (existing.length + rawPaths.length > MAX_PROFILE_SOURCES) {
+      throw new ProfileSourceLimitError(
+        `The profile library holds at most ${MAX_PROFILE_SOURCES} source documents. Remove one before adding more.`,
+        {
+          existingCount: existing.length,
+          requestedCount: rawPaths.length,
+          limit: MAX_PROFILE_SOURCES,
+        },
       );
     }
 

@@ -45,6 +45,12 @@ export class InvalidArgumentCountError extends ProfileImportError {
   }
 }
 
+export class ProfileSourceLimitError extends ProfileImportError {
+  constructor(message: string, metadata: ApplicationErrorMetadata = {}, cause?: Error) {
+    super('profile_source_limit_reached', message, metadata, cause);
+  }
+}
+
 export class ProfileSourceStorageError extends ProfileImportError {
   constructor(message: string, metadata: ApplicationErrorMetadata = {}, cause?: Error) {
     super('profile_source_storage_error', message, metadata, cause);

@@ -167,6 +167,34 @@ describe('profile source routes', () => {
     const body = (await res.json()) as { error?: { code?: string } };
     expect(body.error?.code).toBe('profile_source_not_found');
   });
+
+  it('rejects imports beyond the 2-source library cap with 400', async () => {
+    const files = ['cap-one.md', 'cap-two.md', 'cap-three.md'].map((name) => {
+      const p = join(configHome, name);
+      writeFileSync(p, `# ${name}`, 'utf-8');
+      return p;
+    });
+    const form12 = new FormData();
+    form12.append('path', files[0]!);
+    form12.append('path', files[1]!);
+    const ok = await fetch(`${baseUrl}/api/profile/import`, { method: 'POST', body: form12 });
+    expect(ok.status).toBe(200);
+
+    const form3 = new FormData();
+    form3.append('path', files[2]!);
+    const res = await fetch(`${baseUrl}/api/profile/import`, { method: 'POST', body: form3 });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error?: { code?: string } };
+    expect(body.error?.code).toBe('profile_source_limit_reached');
+
+    const list = (await (await fetch(`${baseUrl}/api/profile/sources`)).json()) as {
+      sources: { id: number }[];
+    };
+    for (const s of list.sources) {
+      const del = await fetch(`${baseUrl}/api/profile/sources/${s.id}`, { method: 'DELETE' });
+      expect(del.status).toBe(200);
+    }
+  });
 });
 
 describe('POST /api/profile/:id/edit', () => {
