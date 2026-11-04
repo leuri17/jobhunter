@@ -13,22 +13,24 @@ import { formatError } from '../logging/format-error.js';
 
 export function resolveSourceStoragePath(
   paths: PlatformPaths,
-  sourceId: number,
+  sha256: string,
   originalFilename: string,
 ): string {
-  if (!Number.isInteger(sourceId) || sourceId <= 0) {
+  if (!/^[0-9a-f]{64}$/.test(sha256)) {
     throw new ProfileSourceStorageError(
-      `Cannot resolve storage path for non-positive sourceId ${sourceId}.`,
-      { sourceId },
+      'Cannot resolve storage path without a valid sha256 content hash.',
+      { sha256 },
     );
   }
   if (typeof originalFilename !== 'string' || originalFilename.trim() === '') {
     throw new ProfileSourceStorageError(
       'Cannot resolve storage path without an original filename.',
-      { sourceId },
+      {
+        sha256,
+      },
     );
   }
-  const baseDir = path.join(paths.profileSources.directory, String(sourceId));
+  const baseDir = path.join(paths.profileSources.directory, sha256);
   const resolved = path.join(baseDir, originalFilename);
   // Defense-in-depth: reject any resolved path that escapes the expected
   // per-source directory. The calling layer (defaultFilenameFor) already
@@ -38,7 +40,7 @@ export function resolveSourceStoragePath(
   if (!(resolved === baseDir || resolved.startsWith(expectedPrefix))) {
     throw new ProfileSourceStorageError(
       `Resolved storage path "${resolved}" is outside the expected directory "${baseDir}".`,
-      { sourceId, originalFilename, resolved, baseDir },
+      { sha256, originalFilename, resolved, baseDir },
     );
   }
   return resolved;

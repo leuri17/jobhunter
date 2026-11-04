@@ -117,22 +117,6 @@ describe('ProfileSourceRepository', () => {
     expect(row?.fileSize).toBe(500); // immutable
   });
 
-  it('updateStoredPath changes the stored path', async () => {
-    const id = await repo.insert({
-      sourceType: 'pdf',
-      originalFilename: 'cv.pdf',
-      originalAbsolutePath: '/tmp/cv.pdf',
-      mimeType: 'application/pdf',
-      fileSize: 12345,
-      sha256: 'g'.repeat(64),
-      importTimestamp: '2026-08-05T10:00:00.000Z',
-    });
-    await repo.updateStoredPath(id, '/opt/jobhunter/profile-sources/1/cv.pdf');
-    const row = await repo.findById(id);
-    expect(row?.storedPath).toBe('/opt/jobhunter/profile-sources/1/cv.pdf');
-    expect(row?.sha256).toBe('g'.repeat(64));
-  });
-
   it('list returns all sources', async () => {
     await repo.insert({
       sourceType: 'pdf',

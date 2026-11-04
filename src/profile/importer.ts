@@ -203,20 +203,19 @@ export class ProfileImportService {
 
     const importTimestamp = this.now().toISOString();
     const originalFilename = defaultFilenameFor(sourceType, absolutePath);
+    const storedPath = resolveSourceStoragePath(this.paths, sha256, originalFilename);
 
     const insertedId = await this.repositories.profileSources.insert({
       sourceType,
       originalFilename,
       originalAbsolutePath: absolutePath,
+      storedPath,
       mimeType: mimeTypeFor(sourceType),
       fileSize,
       sha256,
       importTimestamp,
       textExtractionStatus: 'pending',
     });
-
-    const storedPath = resolveSourceStoragePath(this.paths, insertedId, originalFilename);
-    await this.repositories.profileSources.updateStoredPath(insertedId, storedPath);
 
     try {
       await copySourceFileToStorage({
