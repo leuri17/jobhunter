@@ -7,42 +7,41 @@ import {
 } from './profile-upload';
 
 describe('validatePickedPaths', () => {
-  it('accepts allowed extensions', () => {
-    const result = validatePickedPaths(['/tmp/a.pdf', '/tmp/b.md']);
+  it('accepts picks within the remaining slots', () => {
+    const result = validatePickedPaths(['/tmp/a.pdf', '/tmp/b.md'], 2);
     expect(result.accepted).toEqual(['/tmp/a.pdf', '/tmp/b.md']);
     expect(result.rejected).toEqual([]);
-    expect(result.skippedByCount).toEqual([]);
+    expect(result.overCapacity).toBe(false);
   });
 
   it('rejects disallowed extensions with per-file reasons', () => {
-    const result = validatePickedPaths(['/tmp/a.docx', '/tmp/noext']);
+    const result = validatePickedPaths(['/tmp/a.docx', '/tmp/ok.pdf'], 1);
+    expect(result.rejected).toEqual([{ path: '/tmp/a.docx', reason: 'type' }]);
+    expect(result.accepted).toEqual(['/tmp/ok.pdf']);
+    expect(result.overCapacity).toBe(false);
+  });
+
+  it('rejects the whole pick when it exceeds the remaining slots', () => {
+    const result = validatePickedPaths(['/tmp/1.pdf', '/tmp/2.md'], 1);
     expect(result.accepted).toEqual([]);
-    expect(result.rejected).toEqual([
-      { path: '/tmp/a.docx', reason: 'type' },
-      { path: '/tmp/noext', reason: 'type' },
-    ]);
+    expect(result.rejected).toEqual([]);
+    expect(result.overCapacity).toBe(true);
   });
 
-  it('caps accepted paths at 2 and reports the rest as skippedByCount', () => {
-    const result = validatePickedPaths(['/tmp/1.pdf', '/tmp/2.md', '/tmp/3.txt', '/tmp/4.md']);
-    expect(result.accepted).toEqual(['/tmp/1.pdf', '/tmp/2.md']);
-    expect(result.skippedByCount).toEqual(['/tmp/3.txt', '/tmp/4.md']);
-  });
-
-  it('filters invalid paths out before applying the count cap', () => {
-    const result = validatePickedPaths(['/tmp/1.docx', '/tmp/2.pdf', '/tmp/3.txt']);
-    expect(result.accepted).toEqual(['/tmp/2.pdf', '/tmp/3.txt']);
+  it('filters invalid paths out before the capacity check', () => {
+    const result = validatePickedPaths(['/tmp/1.docx', '/tmp/2.pdf'], 1);
+    expect(result.accepted).toEqual(['/tmp/2.pdf']);
     expect(result.rejected).toEqual([{ path: '/tmp/1.docx', reason: 'type' }]);
-    expect(result.skippedByCount).toEqual([]);
+    expect(result.overCapacity).toBe(false);
   });
 
   it('returns empty for an empty pick', () => {
-    expect(validatePickedPaths([])).toEqual({ accepted: [], rejected: [], skippedByCount: [] });
+    expect(validatePickedPaths([], 2)).toEqual({ accepted: [], rejected: [], overCapacity: false });
   });
 
   it('is case-insensitive on extensions', () => {
-    const result = validatePickedPaths(['/tmp/Resume.PDF', '/tmp/notes.MD']);
-    expect(result.accepted).toEqual(['/tmp/Resume.PDF', '/tmp/notes.MD']);
+    const result = validatePickedPaths(['/tmp/Resume.PDF'], 2);
+    expect(result.accepted).toEqual(['/tmp/Resume.PDF']);
   });
 });
 

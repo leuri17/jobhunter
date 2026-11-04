@@ -19,7 +19,12 @@ import {
 import { toast } from '@/components/ui/toast';
 import { ApiErrorDialog } from '@/components/shared/ui/api-error-dialog';
 import { api, ApiError } from '@/lib/api';
-import { SOURCE_EXTENSIONS, isTauriWebview, validatePickedPaths } from '@/lib/profile-upload';
+import {
+  SOURCE_EXTENSIONS,
+  MAX_PROFILE_SOURCES,
+  isTauriWebview,
+  validatePickedPaths,
+} from '@/lib/profile-upload';
 import type { ProfileSourceRow } from '@/lib/types';
 
 const EXTRACTOR_LABELS: Record<ProfileSourceRow['sourceType'], string> = {
@@ -162,6 +167,9 @@ export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps)
     },
   });
 
+  const rows = sources.data?.sources ?? [];
+  const busy = disabled === true || importSources.isPending;
+
   const onAdd = async () => {
     const picked = await open({
       multiple: true,
@@ -169,21 +177,25 @@ export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps)
     });
     const paths = Array.isArray(picked) ? picked : picked === null ? [] : [picked];
     if (paths.length === 0) return;
-    const { accepted, rejected, skippedByCount } = validatePickedPaths(paths);
+    const remaining = MAX_PROFILE_SOURCES - rows.length;
+    const { accepted, rejected, overCapacity } = validatePickedPaths(paths, remaining);
     for (const r of rejected) {
       toast.add({
         title: `Skipped ${filenameOf(r.path)} — only PDF, Markdown, and TXT files are supported.`,
         type: 'warning',
       });
     }
-    if (skippedByCount.length > 0) {
+    if (overCapacity) {
       toast.add({
-        title: `Only 2 files can be imported at a time — ${skippedByCount.length} skipped. Add the rest afterwards.`,
+        title:
+          `Only ${remaining} more ${remaining === 1 ? 'source can' : 'sources can'} be added — ` +
+          'nothing was uploaded. Remove a source first or pick fewer files.',
         type: 'warning',
       });
+      return;
     }
     if (accepted.length > 0) {
-      await importSources.mutateAsync(accepted);
+      importSources.mutate(accepted);
     }
   };
 
@@ -192,9 +204,6 @@ export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps)
       addTriggerRef.current = onAdd;
     }
   });
-
-  const rows = sources.data?.sources ?? [];
-  const busy = disabled === true || importSources.isPending;
 
   return (
     <>
@@ -222,7 +231,22 @@ export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps)
             />
           ))
         )}
-        {isTauriWebview() ? (
+        {!isTauriWebview() ? (
+          <Button variant="outline" className="w-full justify-between" disabled>
+            <span>File upload is available in the desktop app</span>
+            <ChevronDown className="size-4" />
+          </Button>
+        ) : rows.length >= MAX_PROFILE_SOURCES ? (
+          <>
+            <Button variant="outline" className="w-full justify-between" disabled>
+              <span>
+                Source limit reached ({rows.length} of {MAX_PROFILE_SOURCES})
+              </span>
+              <ChevronDown className="size-4" />
+            </Button>
+            <p className="text-xs text-muted-foreground">Remove a source file to add another.</p>
+          </>
+        ) : (
           <Button
             variant="outline"
             className="w-full justify-between"
@@ -230,11 +254,6 @@ export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps)
             onClick={onAdd}
           >
             <span>Add a source file (PDF, Markdown, TXT)…</span>
-            <ChevronDown className="size-4" />
-          </Button>
-        ) : (
-          <Button variant="outline" className="w-full justify-between" disabled>
-            <span>File upload is available in the desktop app</span>
             <ChevronDown className="size-4" />
           </Button>
         )}

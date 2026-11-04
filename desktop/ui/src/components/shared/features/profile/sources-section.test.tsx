@@ -78,23 +78,50 @@ describe('SourcesSection', () => {
     vi.clearAllMocks();
   });
 
-  it('guards the pick: rejects wrong types, caps at two, toasts skips', async () => {
+  it('guards the pick: rejects wrong types, imports what fits', async () => {
     const { open } = await import('@tauri-apps/plugin-dialog');
-    vi.mocked(open).mockResolvedValue(['/a/cv.pdf', '/b/notes.docx', '/c/one.md', '/d/two.txt']);
+    vi.mocked(open).mockResolvedValue(['/a/cv.pdf', '/b/notes.docx']);
     vi.mocked(api.importSources).mockResolvedValue({
       schemaVersion: 1,
       status: 'completed',
-      counts: { total: 2, extracted: 2, failed: 0, reused: 0 },
+      counts: { total: 1, extracted: 1, failed: 0, reused: 0 },
       sources: [],
       failedSourcePaths: [],
     });
     renderSection();
     await screen.findByText('resume.pdf');
     fireEvent.click(screen.getByRole('button', { name: /add a source file/i }));
-    await waitFor(() => expect(api.importSources).toHaveBeenCalledWith(['/a/cv.pdf', '/c/one.md']));
+    await waitFor(() => expect(api.importSources).toHaveBeenCalledWith(['/a/cv.pdf']));
     const titles = vi.mocked(toast.add).mock.calls.map((c) => String(c[0]?.title));
     expect(titles.some((t) => t.includes('notes.docx'))).toBe(true);
-    expect(titles.some((t) => t.includes('skipped'))).toBe(true);
+  });
+
+  it('rejects the whole pick when it exceeds the remaining slots', async () => {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    vi.mocked(open).mockResolvedValue(['/a/cv.pdf', '/c/one.md']);
+    renderSection();
+    await screen.findByText('resume.pdf');
+    fireEvent.click(screen.getByRole('button', { name: /add a source file/i }));
+    await waitFor(() =>
+      expect(
+        vi.mocked(toast.add).mock.calls.some((c) => String(c[0]?.title).includes('Only 1 more')),
+      ).toBe(true),
+    );
+    expect(api.importSources).not.toHaveBeenCalled();
+  });
+
+  it('disables the add row at the source cap', async () => {
+    vi.mocked(api.listSources).mockResolvedValue({
+      schemaVersion: 1,
+      sources: [
+        sourceRow(),
+        sourceRow({ id: 2, originalFilename: 'two.md', sourceType: 'markdown' }),
+      ],
+    });
+    renderSection();
+    const capped = await screen.findByRole('button', { name: /source limit reached \(2 of 2\)/i });
+    expect((capped as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('Remove a source file to add another.')).toBeDefined();
   });
 
   it('is a silent no-op when the dialog is cancelled', async () => {
