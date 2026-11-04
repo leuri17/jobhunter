@@ -7,6 +7,7 @@
 import type { OperationalConfig } from '@jobhunter/core/config';
 import type {
   ProfileApprovalSummary,
+  ProfileExtractionStatus,
   ProfileListEntry,
   ProfileRejectionResult,
   ProfileShowPayload,
@@ -202,7 +203,7 @@ export interface ImportSourcesResponse {
 
 export interface ExtractProfileResponse {
   readonly schemaVersion: 1;
-  readonly status: unknown;
+  readonly status: ProfileExtractionStatus;
 }
 
 export interface EditProfileResponse {

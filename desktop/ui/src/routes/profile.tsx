@@ -142,7 +142,14 @@ function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
 
   const extract = useMutation({
     mutationFn: () => api.extractProfile(),
-    onSuccess: async () => {
+    onSuccess: async (response) => {
+      if (response.status.kind === 'failed') {
+        setFailure({
+          source: 'extract',
+          error: new ApiError(200, response.status.errorCode, response.status.message),
+        });
+        return;
+      }
       await queryClient.invalidateQueries({ queryKey: ['profiles'] });
       void queryClient.invalidateQueries({ queryKey: ['profile-sources'] });
       toast.add({ title: 'Extraction complete — new draft ready for review', type: 'success' });
@@ -365,7 +372,11 @@ function ProfileFirstRun() {
 
   const extract = useMutation({
     mutationFn: () => api.extractProfile(),
-    onSuccess: async () => {
+    onSuccess: async (response) => {
+      if (response.status.kind === 'failed') {
+        setSaveError(new ApiError(200, response.status.errorCode, response.status.message));
+        return;
+      }
       await queryClient.invalidateQueries({ queryKey: ['profiles'] });
       void queryClient.invalidateQueries({ queryKey: ['profile-sources'] });
       toast.add({ title: 'Extraction complete — new draft ready for review', type: 'success' });

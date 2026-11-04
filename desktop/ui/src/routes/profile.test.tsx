@@ -12,6 +12,10 @@ import type {
 import { makeProfile } from '@/components/shared/features/profile/test-fixtures';
 import { ProfilePage } from './profile';
 
+vi.mock('@/components/ui/toast', () => ({
+  toast: { add: vi.fn() },
+}));
+
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>();
   return {
@@ -44,6 +48,7 @@ vi.mock('@/lib/api', () => ({
 }));
 
 import { api } from '@/lib/api';
+import { toast } from '@/components/ui/toast';
 
 vi.mock('@/lib/profile-upload', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/profile-upload')>();
@@ -130,6 +135,27 @@ describe('ProfilePage extraction failure', () => {
     expect(screen.queryByText("Couldn't save profile")).toBeNull();
     expect(api.extractProfile).toHaveBeenCalledOnce();
   });
+
+  it('surfaces a 200 response with kind failed as an extraction failure, not success', async () => {
+    vi.mocked(api.extractProfile).mockResolvedValue({
+      schemaVersion: 1,
+      status: {
+        kind: 'failed',
+        errorCode: 'profile_extraction_source_unusable',
+        message: 'No usable profile sources.',
+        attempts: 0,
+      },
+    } as never);
+    renderPage();
+    await screen.findByRole('tab', { name: /overview/i });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run extraction' }));
+    const buttons = screen.getAllByRole('button', { name: 'Run extraction' });
+    fireEvent.click(buttons[buttons.length - 1]!);
+    await waitFor(() => expect(screen.getAllByText('Extraction failed').length).toBeGreaterThan(0));
+    const titles = vi.mocked(toast.add).mock.calls.map((c) => String(c[0]?.title));
+    expect(titles.some((t) => t.includes('Extraction complete'))).toBe(false);
+  });
 });
 
 const firstRunSourceRow: ProfileSourceRow = {
@@ -185,5 +211,30 @@ describe('ProfilePage first run', () => {
     await screen.findByRole('tab', { name: /overview/i });
     expect(screen.getByText(/1 source ready/i)).toBeDefined();
     expect(screen.queryByText('Get started')).toBeNull();
+  });
+
+  it('surfaces a 200 kind failed extraction on the first-run shell as a failure', async () => {
+    vi.mocked(api.listSources).mockResolvedValue({
+      schemaVersion: 1,
+      sources: [firstRunSourceRow],
+    });
+    vi.mocked(api.extractProfile).mockResolvedValue({
+      schemaVersion: 1,
+      status: {
+        kind: 'failed',
+        errorCode: 'profile_extraction_source_unusable',
+        message: 'No usable profile sources.',
+        attempts: 0,
+      },
+    } as never);
+    renderPage();
+    await screen.findByRole('tab', { name: /overview/i });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run extraction' }));
+    const buttons = screen.getAllByRole('button', { name: 'Run extraction' });
+    fireEvent.click(buttons[buttons.length - 1]!);
+    await waitFor(() => expect(screen.getAllByText('Extraction failed').length).toBeGreaterThan(0));
+    const titles = vi.mocked(toast.add).mock.calls.map((c) => String(c[0]?.title));
+    expect(titles.some((t) => t.includes('Extraction complete'))).toBe(false);
   });
 });
