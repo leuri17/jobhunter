@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  validatePickedPaths,
-  SOURCE_EXTENSIONS,
-  mimeForPath,
-  isTauriWebview,
-} from './profile-upload';
+import { validatePickedPaths, SOURCE_EXTENSIONS, isTauriWebview } from './profile-upload';
 
 describe('validatePickedPaths', () => {
   it('accepts picks within the remaining slots', () => {
@@ -42,15 +37,6 @@ describe('validatePickedPaths', () => {
   it('is case-insensitive on extensions', () => {
     const result = validatePickedPaths(['/tmp/Resume.PDF'], 2);
     expect(result.accepted).toEqual(['/tmp/Resume.PDF']);
-  });
-});
-
-describe('mimeForPath', () => {
-  it('maps extensions to sidecar MIME types', () => {
-    expect(mimeForPath('/tmp/a.pdf')).toBe('application/pdf');
-    expect(mimeForPath('/tmp/a.md')).toBe('text/markdown');
-    expect(mimeForPath('/tmp/a.markdown')).toBe('text/markdown');
-    expect(mimeForPath('/tmp/a.txt')).toBe('text/plain');
   });
 });
 

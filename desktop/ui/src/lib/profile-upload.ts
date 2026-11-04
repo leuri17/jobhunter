@@ -28,17 +28,6 @@ export function validatePickedPaths(
   };
 }
 
-export function mimeForPath(path: string): 'application/pdf' | 'text/markdown' | 'text/plain' {
-  switch (extensionOf(path)) {
-    case 'pdf':
-      return 'application/pdf';
-    case 'txt':
-      return 'text/plain';
-    default:
-      return 'text/markdown';
-  }
-}
-
 export function isTauriWebview(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 }
