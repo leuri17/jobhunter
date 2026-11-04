@@ -1,24 +1,30 @@
 export const SOURCE_EXTENSIONS = ['pdf', 'md', 'markdown', 'txt'] as const;
 
+export const MAX_PROFILE_SOURCES = 2;
+
 export interface PickedPathsValidation {
   readonly accepted: string[];
   readonly rejected: readonly { path: string; reason: 'type' }[];
-  readonly skippedByCount: string[];
+  readonly overCapacity: boolean;
 }
 
-export function validatePickedPaths(paths: string[]): PickedPathsValidation {
+export function validatePickedPaths(
+  paths: string[],
+  remainingSlots: number,
+): PickedPathsValidation {
   const allowed = paths.filter((path) =>
     SOURCE_EXTENSIONS.includes(extensionOf(path) as (typeof SOURCE_EXTENSIONS)[number]),
   );
+  const overCapacity = allowed.length > remainingSlots;
   return {
-    accepted: allowed.slice(0, 2),
+    accepted: overCapacity ? [] : allowed,
     rejected: paths
       .filter(
         (path) =>
           !SOURCE_EXTENSIONS.includes(extensionOf(path) as (typeof SOURCE_EXTENSIONS)[number]),
       )
       .map((path) => ({ path, reason: 'type' as const })),
-    skippedByCount: allowed.slice(2),
+    overCapacity,
   };
 }
 

@@ -151,6 +151,37 @@ describe('ProfileImportService', () => {
     );
   });
 
+  it('rejects an import that would exceed the total source cap', async () => {
+    writeFileSync(join(tempHome, 'one.md'), '# One', 'utf8');
+    writeFileSync(join(tempHome, 'two.md'), '# Two', 'utf8');
+    await service.importSources([join(tempHome, 'one.md'), join(tempHome, 'two.md')]);
+
+    writeFileSync(join(tempHome, 'three.md'), '# Three', 'utf8');
+    await expect(service.importSources([join(tempHome, 'three.md')])).rejects.toMatchObject({
+      code: 'profile_source_limit_reached',
+    });
+  });
+
+  it('allows imports up to the cap boundary', async () => {
+    writeFileSync(join(tempHome, 'one.md'), '# One', 'utf8');
+    await service.importSources([join(tempHome, 'one.md')]);
+
+    writeFileSync(join(tempHome, 'two.md'), '# Two', 'utf8');
+    const result = await service.importSources([join(tempHome, 'two.md')]);
+    expect(result.status).toBe('success');
+    expect(result.sources).toHaveLength(1);
+  });
+
+  it('rejects a duplicate re-import when the library is at the cap', async () => {
+    writeFileSync(join(tempHome, 'one.md'), '# One', 'utf8');
+    writeFileSync(join(tempHome, 'two.md'), '# Two', 'utf8');
+    await service.importSources([join(tempHome, 'one.md'), join(tempHome, 'two.md')]);
+
+    await expect(service.importSources([join(tempHome, 'one.md')])).rejects.toMatchObject({
+      code: 'profile_source_limit_reached',
+    });
+  });
+
   it('records the source row before the copy runs (resilience to copy failure)', async () => {
     const sourcePath = join(tempHome, 'cv.md');
     writeFileSync(sourcePath, 'content', 'utf8');

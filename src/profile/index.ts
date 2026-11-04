@@ -12,6 +12,7 @@ export {
   ExtractionFailedError,
   OcrRequiredError,
   InvalidArgumentCountError,
+  ProfileSourceLimitError,
   ProfileSourceStorageError,
   ProfileImportError,
 } from './errors.js';
@@ -34,6 +35,7 @@ export {
 export {
   ProfileImportService,
   noopLogger,
+  MAX_PROFILE_SOURCES,
   type ImportedSource,
   type ProfileImportResult,
   type ProfileImportCounts,
