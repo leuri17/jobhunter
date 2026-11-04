@@ -223,18 +223,16 @@ export class ProfileEditingService {
     });
 
     for (const [field, value] of Object.entries(normalized.derived)) {
-      if (value.overrideActive) {
-        await this.repositories.profileVersions.upsertOverride({
-          profileVersionId: targetId,
-          derivedField: field as
-            'likelySeniority' | 'primaryRoles' | 'primaryDomains' | 'strongestSkills',
-          overrideActive: value.overrideActive,
-          overrideValue: value.overrideValue,
-          generatedValue: value.generatedValue,
-          generatedAt: value.generatedAt,
-          overriddenAt: value.overriddenAt,
-        });
-      }
+      await this.repositories.profileVersions.upsertOverride({
+        profileVersionId: targetId,
+        derivedField: field as
+          'likelySeniority' | 'primaryRoles' | 'primaryDomains' | 'strongestSkills',
+        overrideActive: value.overrideActive,
+        overrideValue: value.overrideValue,
+        generatedValue: value.generatedValue,
+        generatedAt: value.generatedAt,
+        overriddenAt: value.overriddenAt,
+      });
     }
     return { profileVersionId: targetId, derived };
   }
