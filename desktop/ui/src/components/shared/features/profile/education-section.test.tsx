@@ -44,6 +44,14 @@ describe('EducationSection', () => {
     });
     expect(screen.getByLabelText('Institution')).toBeDefined();
   });
+
+  it('focuses the first required field after Add', async () => {
+    render(<EducationHarness onChange={() => {}} />);
+    fireEvent.click(screen.getByText('Add education'));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByLabelText('Institution'));
+    });
+  });
 });
 
 describe('CertificationsSection', () => {

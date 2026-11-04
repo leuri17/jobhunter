@@ -133,6 +133,7 @@ function SkillsSectionBody({
                                   <Input
                                     id={leaf.name}
                                     value={leaf.state.value}
+                                    autoFocus={skill.id === lastAddedId}
                                     onChange={(e) => leaf.handleChange(e.target.value)}
                                     onBlur={leaf.handleBlur}
                                   />

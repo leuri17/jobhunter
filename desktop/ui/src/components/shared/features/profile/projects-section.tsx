@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ProfileFormApi } from './profile-form-validator';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +26,7 @@ export function emptyProject(): Project {
 }
 
 export function ProjectsSection({ form }: { form: ProfileFormApi }) {
+  const [focusId, setFocusId] = useState<string | null>(null);
   return (
     <>
       <CardHeader>
@@ -45,6 +47,7 @@ export function ProjectsSection({ form }: { form: ProfileFormApi }) {
                   key={project.id}
                   form={form}
                   index={i}
+                  autoFocus={project.id === focusId}
                   onRemove={() => field.removeValue(i)}
                 />
               ))}
@@ -52,7 +55,11 @@ export function ProjectsSection({ form }: { form: ProfileFormApi }) {
                 type="button"
                 variant="outline"
                 className="w-full border-dashed"
-                onClick={() => field.pushValue(emptyProject())}
+                onClick={() => {
+                  const entry = emptyProject();
+                  field.pushValue(entry);
+                  setFocusId(entry.id);
+                }}
               >
                 Add project
               </Button>
@@ -67,10 +74,12 @@ export function ProjectsSection({ form }: { form: ProfileFormApi }) {
 function ProjectEntry({
   form,
   index,
+  autoFocus,
   onRemove,
 }: {
   form: ProfileFormApi;
   index: number;
+  autoFocus?: boolean;
   onRemove: () => void;
 }) {
   return (
@@ -98,6 +107,7 @@ function ProjectEntry({
                     <Input
                       id={leaf.name}
                       value={leaf.state.value}
+                      autoFocus={autoFocus}
                       onChange={(e) => leaf.handleChange(e.target.value)}
                       onBlur={leaf.handleBlur}
                     />

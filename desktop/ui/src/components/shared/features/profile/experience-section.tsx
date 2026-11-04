@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ProfileFormApi } from './profile-form-validator';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +30,7 @@ export function emptyExperience(): WorkExperience {
 }
 
 export function ExperienceSection({ form }: { form: ProfileFormApi }) {
+  const [focusId, setFocusId] = useState<string | null>(null);
   return (
     <>
       <CardHeader>
@@ -51,6 +53,7 @@ export function ExperienceSection({ form }: { form: ProfileFormApi }) {
                   key={experience.id}
                   form={form}
                   index={i}
+                  autoFocus={experience.id === focusId}
                   onRemove={() => field.removeValue(i)}
                 />
               ))}
@@ -58,7 +61,11 @@ export function ExperienceSection({ form }: { form: ProfileFormApi }) {
                 type="button"
                 variant="outline"
                 className="w-full border-dashed"
-                onClick={() => field.pushValue(emptyExperience())}
+                onClick={() => {
+                  const entry = emptyExperience();
+                  field.pushValue(entry);
+                  setFocusId(entry.id);
+                }}
               >
                 Add experience
               </Button>
@@ -73,10 +80,12 @@ export function ExperienceSection({ form }: { form: ProfileFormApi }) {
 function ExperienceEntry({
   form,
   index,
+  autoFocus,
   onRemove,
 }: {
   form: ProfileFormApi;
   index: number;
+  autoFocus?: boolean;
   onRemove: () => void;
 }) {
   return (
@@ -104,6 +113,7 @@ function ExperienceEntry({
                     <Input
                       id={leaf.name}
                       value={leaf.state.value}
+                      autoFocus={autoFocus}
                       onChange={(e) => leaf.handleChange(e.target.value)}
                       onBlur={leaf.handleBlur}
                     />

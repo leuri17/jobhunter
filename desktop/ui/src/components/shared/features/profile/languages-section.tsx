@@ -119,6 +119,7 @@ function LanguagesSectionBody({
                                   <Input
                                     id={leaf.name}
                                     value={leaf.state.value}
+                                    autoFocus={language.id === lastAddedId}
                                     onChange={(e) => leaf.handleChange(e.target.value)}
                                     onBlur={leaf.handleBlur}
                                   />
