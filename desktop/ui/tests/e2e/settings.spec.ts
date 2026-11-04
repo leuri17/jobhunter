@@ -63,7 +63,7 @@ test('PATCH /api/config propagates to the next refetch of the config query', asy
   await page.goto('/settings');
   await refetchedConfigGet;
 
-  await expect(page.locator('pre').first()).toContainText(marker);
+  await expect(page.getByRole('button', { name: `Remove ${marker}` })).toBeVisible();
 
   expect(configRequests.some((r) => r.method === 'PATCH')).toBe(true);
   expect(configRequests.filter((r) => r.method === 'GET').length).toBeGreaterThanOrEqual(2);
