@@ -12,7 +12,7 @@ import {
 import { createRepositories, type Repositories } from '../../src/persistence/repositories/index.js';
 import { ProfileEditingService } from '../../src/profile/editing-service.js';
 import { InvalidProfilePayloadError, InvalidProfileStateError } from '../../src/profile/errors.js';
-import { profileVersions } from '../../src/persistence/schema.js';
+import { derivedOverrides, profileVersions } from '../../src/persistence/schema.js';
 import type { ProfessionalProfile, Skill } from '../../src/profile/schema.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
@@ -155,6 +155,46 @@ describe('ProfileEditingService.applyBulkEdit', () => {
     expect(saved.skills[0]!.normalizedName).toBe('react');
     expect(saved.contentHash).not.toBe('seeded');
     expect(saved.updatedAt).toBe(NOW.toISOString());
+  });
+
+  it('persists derived-override deactivation when resetting to generated', async () => {
+    const id = seedVersion('draft');
+    const active = makeProfileJson(`profile_${id}`);
+    active.derived.primaryRoles = {
+      generatedValue: ['Frontend developer'],
+      overrideActive: true,
+      overrideValue: ['Staff Engineer'],
+      effectiveValue: ['Staff Engineer'],
+      generatedAt: null,
+      overriddenAt: NOW.toISOString(),
+    };
+    await service.applyBulkEdit(`profile_${id}`, active);
+
+    const rowsAfterActive = connection.db.select().from(derivedOverrides).all();
+    const activeRow = rowsAfterActive.find(
+      (r) => r.profileVersionId === id && r.derivedField === 'primaryRoles',
+    );
+    expect(activeRow).toBeDefined();
+    expect(activeRow!.overrideActive).toBe(true);
+
+    const reset = makeProfileJson(`profile_${id}`);
+    reset.derived.primaryRoles = {
+      generatedValue: ['Frontend developer'],
+      overrideActive: false,
+      overrideValue: null,
+      effectiveValue: ['Frontend developer'],
+      generatedAt: null,
+      overriddenAt: null,
+    };
+    await service.applyBulkEdit(`profile_${id}`, reset);
+
+    const rowsAfterReset = connection.db.select().from(derivedOverrides).all();
+    const resetRow = rowsAfterReset.find(
+      (r) => r.profileVersionId === id && r.derivedField === 'primaryRoles',
+    );
+    expect(resetRow).toBeDefined();
+    expect(resetRow!.overrideActive).toBe(false);
+    expect(resetRow!.overrideValueJson).toBeNull();
   });
 
   it('editing an approved version derives a new draft and keeps the approved row active', async () => {
