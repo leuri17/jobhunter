@@ -39,5 +39,23 @@ export default defineConfig([
       ],
     },
   },
+  {
+    files: ['desktop/ui/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@jobhunter/core/profile',
+              message:
+                'Value-importing the core profile barrel pulls node:crypto and pdf-parse into the browser bundle (vitest passes, the webview dies). Import from @jobhunter/core/profile/schema instead.',
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
+    },
+  },
   eslintConfigPrettier,
 ]);
