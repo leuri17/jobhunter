@@ -23,7 +23,7 @@ import { toast } from '@/components/ui/toast';
 import { ApiErrorDialog } from '@/components/shared/ui/api-error-dialog';
 import { ACTION_GUIDANCE } from '@/lib/error-surfaces';
 import { api, ApiError } from '@/lib/api';
-import type { ProfessionalProfile } from '@/lib/types';
+import type { ProfessionalProfile, ProfileListEntry } from '@/lib/types';
 import { Route as rootRoute } from './__root';
 import { useProfileForm } from '@/components/shared/features/profile/profile-form-validator';
 import {
@@ -67,7 +67,7 @@ export function ProfilePage() {
   const list = useSuspenseQuery({ queryKey: ['profiles'], queryFn: () => api.listProfiles() });
   const workingCopy = resolveWorkingCopy(list.data.profiles);
   if (workingCopy.kind === 'none') {
-    return <ProfileFirstRun />;
+    return <ProfileFirstRun profiles={list.data.profiles} />;
   }
   return <ProfileEditor workingCopy={workingCopy} />;
 }
@@ -361,7 +361,7 @@ function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
   );
 }
 
-function ProfileFirstRun() {
+function ProfileFirstRun({ profiles }: { profiles: readonly ProfileListEntry[] }) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
   const [saveError, setSaveError] = useState<ApiError | null>(null);
@@ -477,7 +477,7 @@ function ProfileFirstRun() {
         </TabsContent>
         <TabsContent value="history">
           <Card>
-            <VersionHistorySection profiles={[]} blockingConflictCount={0} />
+            <VersionHistorySection profiles={profiles} blockingConflictCount={0} />
           </Card>
         </TabsContent>
       </Tabs>

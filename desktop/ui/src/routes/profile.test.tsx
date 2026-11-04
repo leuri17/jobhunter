@@ -98,6 +98,18 @@ function renderPage() {
   );
 }
 
+const rejectedEntry: ProfileListEntry = {
+  profileVersionId: 7,
+  profileId: 'profile_ab12cd34ef56',
+  status: 'rejected',
+  active: false,
+  contentHash: 'h',
+  sourceIds: [1],
+  createdAt: '2026-11-01T10:00:00.000Z',
+  updatedAt: '2026-11-01T11:00:00.000Z',
+  approvedAt: null,
+};
+
 describe('ProfilePage extraction failure', () => {
   beforeEach(() => {
     vi.mocked(api.listProfiles).mockResolvedValue({
@@ -211,6 +223,25 @@ describe('ProfilePage first run', () => {
     await screen.findByRole('tab', { name: /overview/i });
     expect(screen.getByText(/1 source ready/i)).toBeDefined();
     expect(screen.queryByText('Get started')).toBeNull();
+  });
+
+  it('lists rejected versions in the history tab after rejecting the only version', async () => {
+    vi.mocked(api.listProfiles).mockResolvedValue({
+      schemaVersion: 1,
+      profiles: [rejectedEntry],
+    });
+    vi.mocked(api.listSources).mockResolvedValue({
+      schemaVersion: 1,
+      sources: [firstRunSourceRow],
+    });
+    renderPage();
+    const historyTab = await screen.findByRole('tab', { name: /version history/i });
+    fireEvent.click(historyTab);
+    await waitFor(() => {
+      expect(screen.getByText('ver_7')).toBeDefined();
+    });
+    expect(screen.getByText('Rejected')).toBeDefined();
+    expect(screen.queryByText(/No versions yet/i)).toBeNull();
   });
 
   it('surfaces a 200 kind failed extraction on the first-run shell as a failure', async () => {
