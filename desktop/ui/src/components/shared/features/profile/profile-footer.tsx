@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { CircleCheck, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+function useElapsedSeconds(active: boolean): number {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const startedAt = Date.now();
+    setElapsed(0);
+    const timer = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [active]);
+  return active ? elapsed : 0;
+}
 
 export interface ProfileFooterProps {
   isDirty: boolean;
@@ -49,6 +63,7 @@ export function ProfileFooter(props: ProfileFooterProps) {
     onGoToConflicts,
   } = props;
   const [confirmExtraction, setConfirmExtraction] = useState(false);
+  const extractingSeconds = useElapsedSeconds(extracting);
 
   return (
     <div className="sticky bottom-0 flex items-center justify-between gap-3 bg-background/95 p-4 backdrop-blur">
@@ -56,7 +71,7 @@ export function ProfileFooter(props: ProfileFooterProps) {
         {extracting ? (
           <>
             <Spinner className="size-4" />
-            <span>Running extraction — this can take a minute…</span>
+            <span>Running extraction — {extractingSeconds}s elapsed…</span>
           </>
         ) : blockingCount > 0 ? (
           <>
@@ -110,7 +125,7 @@ export function ProfileFooter(props: ProfileFooterProps) {
                   <AlertDialogTitle>Run extraction?</AlertDialogTitle>
                   <AlertDialogDescription>
                     Your source documents will be sent to your AI provider using your API key. This
-                    consumes tokens and usually takes about a minute.
+                    consumes tokens and typically takes one to a few minutes.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

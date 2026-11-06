@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProfileFooter } from './profile-footer';
 
@@ -83,6 +83,60 @@ describe('ProfileFooter', () => {
     expect(screen.getByText(/running extraction/i)).toBeDefined();
     const run = screen.getByRole('button', { name: /extracting/i }) as HTMLButtonElement;
     expect(run.disabled).toBe(true);
+  });
+
+  it('counts elapsed seconds while extracting and resets on the next run', () => {
+    vi.useFakeTimers();
+    try {
+      const { rerender } = renderFooter({ extracting: true });
+      expect(screen.getByText(/running extraction — 0s elapsed/i)).toBeDefined();
+      act(() => {
+        vi.advanceTimersByTime(84_000);
+      });
+      expect(screen.getByText(/running extraction — 84s elapsed/i)).toBeDefined();
+
+      rerender(
+        <ProfileFooter
+          isDirty={false}
+          canSubmit
+          isSubmitting={false}
+          invalid={false}
+          blockingCount={0}
+          warningCount={0}
+          extracting={false}
+          apiKeyConfigured
+          mode="draft"
+          onSave={noop}
+          onDiscard={noop}
+          onRunExtraction={noop}
+          onApprove={noop}
+          onGoToConflicts={noop}
+        />,
+      );
+      expect(screen.queryByText(/elapsed/i)).toBeNull();
+
+      rerender(
+        <ProfileFooter
+          isDirty={false}
+          canSubmit
+          isSubmitting={false}
+          invalid={false}
+          blockingCount={0}
+          warningCount={0}
+          extracting
+          apiKeyConfigured
+          mode="draft"
+          onSave={noop}
+          onDiscard={noop}
+          onRunExtraction={noop}
+          onApprove={noop}
+          onGoToConflicts={noop}
+        />,
+      );
+      expect(screen.getByText(/running extraction — 0s elapsed/i)).toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('confirms before running extraction', () => {
