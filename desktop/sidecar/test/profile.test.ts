@@ -2,7 +2,10 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import Fastify, { type FastifyInstance } from 'fastify';
 import { buildServer } from '../src/server.js';
+import { registerProfileRoutes } from '../src/routes/profile.js';
+import { FakeOpenAIClient, OpenAITimeoutError } from '@jobhunter/core/profile';
 import {
   initializeDatabase,
   createRepositories,
@@ -215,6 +218,50 @@ describe('profile source routes', () => {
     for (const s of list.sources) {
       const del = await fetch(`${baseUrl}/api/profile/sources/${s.id}`, { method: 'DELETE' });
       expect(del.status).toBe(200);
+    }
+  });
+});
+
+describe('POST /api/profile/extract retry budget', () => {
+  let app: FastifyInstance;
+  let baseUrl: string;
+  let configHome: string;
+
+  beforeAll(async () => {
+    configHome = mkdtempSync(join(tmpdir(), 'jobhunter-extract-budget-'));
+    vi.stubEnv('XDG_CONFIG_HOME', configHome);
+    vi.stubEnv('HOME', configHome);
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+    rmSync(configHome, { recursive: true, force: true });
+  });
+
+  it('stops after two attempts when every attempt times out', async () => {
+    const client = new FakeOpenAIClient({ error: new OpenAITimeoutError({ status: null }) });
+    app = Fastify();
+    await registerProfileRoutes(app, { openaiClient: client });
+    baseUrl = await app.listen({ port: 0, host: '127.0.0.1' });
+    try {
+      const tempFile = join(configHome, 'resume-budget.txt');
+      writeFileSync(tempFile, 'Alex Vance — React developer', 'utf-8');
+      const form = new FormData();
+      form.append('path', tempFile);
+      const imported = await fetch(`${baseUrl}/api/profile/import`, { method: 'POST', body: form });
+      expect(imported.status).toBe(200);
+
+      const res = await fetch(`${baseUrl}/api/profile/extract`, { method: 'POST' });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        status: { kind: string; errorCode?: string; attemptCount?: number };
+      };
+      expect(body.status.kind).toBe('failed');
+      expect(body.status.errorCode).toBe('openai_timeout');
+      expect(body.status.attemptCount).toBe(2);
+      expect(client.getRequestCount()).toBe(2);
+    } finally {
+      await app.close();
     }
   });
 });

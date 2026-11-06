@@ -58,8 +58,8 @@ const QUOTA_ERROR_CODES: ReadonlySet<string> = new Set([
 
 /**
  * Options accepted by {@link createDefaultOpenAIClient} in addition
- * to the transport-level `apiKey` + `timeoutMs`. The refusal-detection
- * knobs flow from `config.openai.{refusalMarkers,flagEmptyBodies}`
+ * to the transport-level `apiKey` + `timeoutMs` + `maxRetries`. The
+ * refusal-detection knobs flow from `config.openai.{refusalMarkers,flagEmptyBodies}`
  * (see `src/config/schema.ts`) so a model-version bump can add new
  * markers without code-surgery in this module.
  */
@@ -80,14 +80,23 @@ export interface DefaultOpenAIClientRefusalOptions {
  * `maxCompletionTokens` cap to the SDK. Prompt building is the
  * caller's responsibility (see `buildProfileExtractionPrompt` for
  * profile extraction; `buildScoringPrompt` will land in ).
+ *
+ * `maxRetries` disables the SDK's built-in retry loop (default 2) for
+ * callers whose retry policy is owned by `runWithRetry` — leaving both
+ * active stacks three SDK attempts inside every service-level attempt.
  */
 export function createDefaultOpenAIClient(options: {
   readonly apiKey: string;
   readonly timeoutMs?: number;
+  readonly maxRetries?: number;
   readonly refusal?: DefaultOpenAIClientRefusalOptions;
 }): OpenAIClient {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const sdk = new OpenAI({ apiKey: options.apiKey, timeout: timeoutMs });
+  const sdk = new OpenAI({
+    apiKey: options.apiKey,
+    timeout: timeoutMs,
+    ...(options.maxRetries !== undefined ? { maxRetries: options.maxRetries } : {}),
+  });
   const detect = createRefusalDetector(toRefusalDetectorOptions(options.refusal));
 
   return {

@@ -48,6 +48,15 @@ const PROFILE_MULTIPART_LIMITS = {
   fields: 20,
 } as const;
 
+// gpt-5 profile extraction routinely exceeds the 60 s client default,
+// which killed every attempt mid-generation and stacked SDK retries
+// (3 per call) on top of the service retry policy (3 calls) — a
+// ~9-minute worst case with no feedback (issue #248 follow-up). The
+// extraction budget is single-layered instead: one generous timeout,
+// zero SDK retries, two attempts owned by `runWithRetry`.
+const PROFILE_EXTRACTION_TIMEOUT_MS = 300_000;
+const PROFILE_EXTRACTION_MAX_ATTEMPTS = 2;
+
 export interface ProfileRouteOptions {
   readonly openaiClient?: OpenAIClient;
   readonly refusal?: DefaultOpenAIClientRefusalOptions;
@@ -180,13 +189,20 @@ export async function registerProfileRoutes(
     }
   });
 
-  app.post('/api/profile/extract', async (_req, reply) => {
+  app.post('/api/profile/extract', async (req, reply) => {
     const handle = await openDbHandle();
     try {
       const repos = createRepositories(handle);
       const sources = await repos.profileSources.list();
       const usable = sources.filter((s) => s.textExtractionStatus === 'success').map((s) => s.id);
-      const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
+      const client =
+        opts.openaiClient ??
+        (await resolveOpenAiClientOrNull(
+          opts.refusal,
+          undefined,
+          PROFILE_EXTRACTION_TIMEOUT_MS,
+          0,
+        ));
       if (client === null) {
         reply.status(503);
         return {
@@ -198,6 +214,8 @@ export async function registerProfileRoutes(
         repositories: repos,
         openaiClient: client,
         config: { model: process.env['OPENAI_MODEL'] ?? 'gpt-5', reasoningEffort: 'medium' },
+        retry: { maxAttempts: PROFILE_EXTRACTION_MAX_ATTEMPTS },
+        logger: req.log,
       });
       const status = await service.extract(usable);
       return { schemaVersion: 1, status };
