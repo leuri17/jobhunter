@@ -111,4 +111,27 @@ describe('settings route form re-baseline', () => {
       expect.objectContaining({ output: expect.objectContaining({ runTopN: 25 }) }),
     );
   });
+
+  it('discards edits back to the persisted baseline without PATCHing', async () => {
+    renderSettings();
+
+    expect(await screen.findByText('No changes')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Discard changes' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Output' }));
+    const runTopN = await screen.findByLabelText('Run top N');
+    fireEvent.change(runTopN, { target: { value: '25' } });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Discard changes' })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('No changes')).toBeTruthy();
+    });
+    expect((screen.getByLabelText('Run top N') as HTMLInputElement).value).toBe('20');
+    expect(api.patchConfig).not.toHaveBeenCalled();
+  });
 });
