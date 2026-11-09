@@ -47,16 +47,23 @@ ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
   defaulting to `db-helper.ts`). The
   background routine assembles `LinkedInDiscoveryService`,
   `LinkedInExtractionService`, `FilterApplyService`, `ScoringService`,
-  `PipelineOrchestrator`, and a tee-logger that mirrors pino into the run's
+  `PipelineOrchestrator` (wired with an `onEvent` sink that
+  ring-buffers structured `PipelineProgressEvent`s on the run), and a
+  tee-logger that mirrors pino into the run's
   log buffer; a thrown failure is normalized by `runErrorFrom()` onto
   `ActiveRun.error` (`ApplicationError` codes are kept, anything else
   becomes `pipeline_failed`). `POST /api/pipeline/:runId/cancel` (`pipelineCancelHandler`)
   trips the `AbortController`. `GET /api/pipeline/:runId/events`
   (`pipelineEventsHandler`) opens an SSE channel, `setInterval` polls every
-  1s, drains buffered logs, emits `heartbeat`, then emits terminal `done`
+  1s, drains buffered logs and `progress` events (in that order, before
+  the terminal event), emits `heartbeat`, then emits terminal `done`
   (`{ status, result, error }` — `error` carries the failure code/message
   the UI routes to remediation guidance) and deletes the run after a 60s
-  TTL.
+  TTL. `GET /api/pipeline/prerequisites` reports the gate state for the
+  UI banner (OpenAI key configured, active approved profile, active
+  filter config, config hash). `GET /api/pipeline/active` returns the
+  running (or most recent, still-TTL'd) run id + status so the UI can
+  reconnect after navigating away mid-run.
 - **Profile**: `registerProfileRoutes` adds `@fastify/multipart` (10 MiB
   per file, 2 files). `profileImportHandler` accepts multipart filenames (v1 delegates
   to `ProfileImportService.importSources`); `profileExtractHandler` invokes

@@ -23,6 +23,7 @@ import {
 } from './state.js';
 import { PipelinePrerequisiteError, PipelineOpenAIKeyMissingError } from './errors.js';
 import { assertPipelinePrerequisites } from './prerequisites.js';
+import type { PipelineEventSink, PipelineProgressEvent, PipelineRunCounters } from './events.js';
 import { buildConfigSnapshot } from './normalize.js';
 import { noopPipelineLogger, type PipelineLogger } from './log.js';
 import type { PipelinePrompts } from './prompts.js';
@@ -71,6 +72,13 @@ export interface PipelineOrchestratorOptions {
    * circuit the run to the cancelled state.
    */
   readonly cancelSignal?: AbortSignal;
+  /**
+   * Optional structured progress sink. Emitted at lifecycle
+   * boundaries (run start, per-search start, stats snapshots, scoring
+   * plan, scoring decision, terminal summary) — see `events.ts`. The
+   * sidecar forwards these as SSE `progress` frames.
+   */
+  readonly onEvent?: PipelineEventSink;
 }
 
 interface MutableRunStats {
@@ -139,7 +147,10 @@ export class PipelineOrchestrator {
     this.now = options.now ?? ((): Date => new Date());
     this.logger = options.logger ?? noopPipelineLogger();
     this.cancelSignal = options.cancelSignal;
+    this.onEvent = options.onEvent;
   }
+
+  private readonly onEvent: PipelineEventSink | undefined;
 
   async run(input: PipelineRunInput): Promise<PipelineRunResult> {
     await this.validatePrerequisites();
@@ -184,6 +195,8 @@ export class PipelineOrchestrator {
       })),
     );
     this.logger.runStart({ runId });
+    this.emit({ type: 'run_start', runId, searchesPlanned: stats.searchesPlanned });
+    this.emit({ type: 'stats', runId, counters: this.countersFrom(stats) });
 
     try {
       await this.browserSession.launch();
@@ -203,6 +216,17 @@ export class PipelineOrchestrator {
           searchId: searchExecution.id,
           url: searchExecution.generatedUrl,
         });
+        const matrixEntry = matrix[i];
+        if (matrixEntry !== undefined) {
+          this.emit({
+            type: 'search_start',
+            runId,
+            index: i,
+            total: matrix.length,
+            query: matrixEntry.query,
+            locationName: matrixEntry.locationName,
+          });
+        }
         const searchSucceeded = await this.runOneSearch(
           runId,
           searchExecution,
@@ -213,6 +237,7 @@ export class PipelineOrchestrator {
         if (searchSucceeded) {
           stats.searchesCompleted += 1;
         }
+        this.emit({ type: 'stats', runId, counters: this.countersFrom(stats) });
       }
     } catch (cause) {
       stats.status = 'failed';
@@ -225,6 +250,14 @@ export class PipelineOrchestrator {
 
     // Scoring plan + confirmation.
     const plan = this.buildScoringPlan(runId, searchIds, perJobs);
+    if (plan.newOpenAIRequests > 0) {
+      this.emit({
+        type: 'scoring_plan',
+        runId,
+        jobsDiscovered: plan.jobsDiscovered,
+        newOpenAIRequests: plan.newOpenAIRequests,
+      });
+    }
     let scoringDeclined = false;
     if (plan.newOpenAIRequests > 0 && !this.confirmScoring && !cancelled) {
       this.logger.scoringPlanDisplayed({
@@ -235,9 +268,11 @@ export class PipelineOrchestrator {
       const confirmed = await this.prompts.askScoringConfirmation({ plan });
       if (confirmed) {
         this.logger.scoringConfirmed({ runId });
+        this.emit({ type: 'scoring_confirmed', runId });
       } else {
         scoringDeclined = true;
         this.logger.scoringDeclined({ runId });
+        this.emit({ type: 'scoring_declined', runId });
       }
     }
 
@@ -289,6 +324,11 @@ export class PipelineOrchestrator {
       scoringErrors: stats.scoringErrors,
       promptTokens: stats.promptTokens,
       completionTokens: stats.completionTokens,
+    });
+    this.emit({
+      type: 'run_summary',
+      runId,
+      summary: this.toRunSummary(runId, startTimestamp, stats),
     });
 
     const topN = await this.computeTopN(runId, this.config.rawConfig.output.runTopN);
@@ -627,6 +667,28 @@ export class PipelineOrchestrator {
       );
     }
     await assertPipelinePrerequisites(this.repositories);
+  }
+
+  private emit(event: PipelineProgressEvent): void {
+    this.onEvent?.(event);
+  }
+
+  private countersFrom(s: MutableRunStats): PipelineRunCounters {
+    return {
+      searchesAttempted: s.searchesAttempted,
+      searchesCompleted: s.searchesCompleted,
+      jobsDiscovered: s.jobsDiscovered,
+      newCompleteJobs: s.newCompleteJobs,
+      failedExtractions: s.failedExtractions,
+      jobsAccepted: s.jobsAccepted,
+      jobsRejected: s.jobsRejected,
+      filterErrors: s.filterErrors,
+      jobsScored: s.jobsScored,
+      scoresReused: s.scoresReused,
+      scoringErrors: s.scoringErrors,
+      promptTokens: s.promptTokens,
+      completionTokens: s.completionTokens,
+    };
   }
 
   private newRunStats(): MutableRunStats {

@@ -24,6 +24,7 @@ import type { OpenAIExtractionRawResponse } from '../../src/profile/openai/types
 import { PipelineOrchestrator } from '../../src/pipeline/orchestrator.js';
 import { ScriptedPipelinePrompts } from '../../src/pipeline/prompts.js';
 import { noopPipelineLogger, type PipelineLogger } from '../../src/pipeline/log.js';
+import type { PipelineEventSink } from '../../src/pipeline/events.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 const MIGRATIONS_FOLDER = join(REPO_ROOT, 'drizzle');
@@ -39,6 +40,8 @@ export interface RunHarnessOptions {
   readonly fakeScripts?: readonly FakeOpenAIClientScript[];
   readonly logger?: PipelineLogger;
   readonly openAIClient?: OpenAIClient;
+  /** Forwarded to the orchestrator for progress-event tests. */
+  readonly onEvent?: PipelineEventSink;
   /**
    * Optional `createPage` factory forwarded to `FakeBrowserSession`.
    * When supplied, every `openPage` / `openFallbackPage` call invokes
@@ -170,6 +173,7 @@ export function buildRunHarness(options: RunHarnessOptions = {}): RunHarness {
     ...(options.now !== undefined ? { now: options.now } : {}),
     logger: options.logger ?? noopPipelineLogger(),
     ...(options.cancelSignal !== undefined ? { cancelSignal: options.cancelSignal } : {}),
+    ...(options.onEvent !== undefined ? { onEvent: options.onEvent } : {}),
   });
 
   return {

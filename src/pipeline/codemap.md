@@ -28,6 +28,13 @@ cancelled`), `RunSummary` (21-field persisted shape), `TopNRow`,
   shared pre-run check (active approved profile + active filter config).
   Used by `validatePrerequisites()` and by the sidecar's synchronous
   POST preflight so the error codes and user-facing copy cannot drift.
+- `events.ts` — `PipelineProgressEvent` discriminated union,
+  `PipelineRunCounters` snapshot, and `PipelineEventSink`. Emitted
+  through the orchestrator's optional `onEvent` seam at lifecycle
+  boundaries (`run_start`, per-search `search_start`, `stats`
+  snapshots, `scoring_plan`, `scoring_confirmed`/`scoring_declined`,
+  terminal `run_summary`); the sidecar forwards them verbatim as SSE
+  `progress` frames.
 - `normalize.ts` produces a sorted-keys JSON snapshot of
   `OperationalConfig` + SHA-256 hash (`pipelineRuns.configHash`);
   `format.ts` renders `RunSummary` / `TopNRow[]` / `ScoringPlan` as

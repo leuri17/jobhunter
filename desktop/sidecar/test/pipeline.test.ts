@@ -158,6 +158,122 @@ describe('POST /api/pipeline/run prerequisite preflight', () => {
   }, 10_000);
 });
 
+describe('GET /api/pipeline/prerequisites', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('reports every prerequisite as met for a seeded database', async () => {
+    vi.stubEnv('OPENAI_API_KEY', 'test-key');
+    await withServer(
+      {
+        env: { port: 0, host: '127.0.0.1' },
+        pipelineDbOpener: makeDbOpener({ profile: true, filter: true }),
+      },
+      async (baseUrl) => {
+        const res = await fetch(`${baseUrl}/api/pipeline/prerequisites`);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as {
+          schemaVersion: number;
+          openaiKeyConfigured: boolean;
+          activeProfile: { id: number; contentHash: string } | null;
+          activeFilter: { id: number; contentHash: string } | null;
+          configHash: string;
+        };
+        expect(body.schemaVersion).toBe(1);
+        expect(body.openaiKeyConfigured).toBe(true);
+        expect(body.activeProfile).toMatchObject({ contentHash: 'test-profile-hash-1' });
+        expect(body.activeFilter).toMatchObject({ contentHash: 'test-filter-hash-1' });
+        expect(typeof body.configHash).toBe('string');
+        expect(body.configHash.length).toBeGreaterThan(0);
+      },
+    );
+  }, 10_000);
+
+  it('reports a missing active profile', async () => {
+    vi.stubEnv('OPENAI_API_KEY', 'test-key');
+    await withServer(
+      {
+        env: { port: 0, host: '127.0.0.1' },
+        pipelineDbOpener: makeDbOpener({ profile: false, filter: true }),
+      },
+      async (baseUrl) => {
+        const res = await fetch(`${baseUrl}/api/pipeline/prerequisites`);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as {
+          activeProfile: { id: number; contentHash: string } | null;
+          activeFilter: { id: number; contentHash: string } | null;
+        };
+        expect(body.activeProfile).toBeNull();
+        expect(body.activeFilter).not.toBeNull();
+      },
+    );
+  }, 10_000);
+
+  it('reports a missing OpenAI key', async () => {
+    vi.stubEnv('OPENAI_API_KEY', '');
+    await withServer(
+      {
+        env: { port: 0, host: '127.0.0.1' },
+        pipelineDbOpener: makeDbOpener({ profile: true, filter: true }),
+      },
+      async (baseUrl) => {
+        const res = await fetch(`${baseUrl}/api/pipeline/prerequisites`);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as {
+          openaiKeyConfigured: boolean;
+          activeProfile: { id: number; contentHash: string } | null;
+        };
+        expect(body.openaiKeyConfigured).toBe(false);
+        expect(body.activeProfile).not.toBeNull();
+      },
+    );
+  }, 10_000);
+});
+
+describe('GET /api/pipeline/active', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns null when no run is tracked', async () => {
+    await withServer({ env: { port: 0, host: '127.0.0.1' } }, async (baseUrl) => {
+      const res = await fetch(`${baseUrl}/api/pipeline/active`);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        schemaVersion: number;
+        runId: string | null;
+        status: string | null;
+      };
+      expect(body).toMatchObject({ schemaVersion: 1, runId: null, status: null });
+    });
+  });
+
+  it('returns the in-flight run while it executes', async () => {
+    vi.stubEnv('OPENAI_API_KEY', 'test-key');
+    const seededOpener = makeDbOpener({ profile: true, filter: true });
+    let opens = 0;
+    const dbOpener = async (): Promise<DatabaseConnection> => {
+      opens += 1;
+      if (opens > 1) return new Promise<DatabaseConnection>(() => {});
+      return seededOpener();
+    };
+    await withServer(
+      { env: { port: 0, host: '127.0.0.1' }, pipelineDbOpener: dbOpener },
+      async (baseUrl) => {
+        const start = await fetch(`${baseUrl}/api/pipeline/run`, { method: 'POST' });
+        expect(start.status).toBe(202);
+        const { runId } = (await start.json()) as { schemaVersion: number; runId: string };
+
+        const res = await fetch(`${baseUrl}/api/pipeline/active`);
+        const body = (await res.json()) as { runId: string | null; status: string | null };
+        expect(body.runId).toBe(runId);
+        expect(body.status).toBe('running');
+      },
+    );
+  }, 10_000);
+});
+
 describe('pipeline run failure reporting', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
