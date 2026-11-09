@@ -8,3 +8,8 @@ allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
   - better-sqlite3@13.0.3
+permissions:
+  '@tanstack/react-router':
+    skills: true
+  '@tanstack/router-plugin':
+    skills: true

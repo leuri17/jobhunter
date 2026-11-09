@@ -104,6 +104,16 @@ export const ACTION_GUIDANCE = {
     message: 'Nothing was saved. Your edits are still in the form.',
     actionLabel: 'Retry saving',
   },
+  profileSave: {
+    message:
+      'Nothing was saved. Your edits are still in the form — saving creates or updates a draft profile version.',
+    actionLabel: 'Retry saving',
+  },
+  profileExtraction: {
+    message:
+      'Extraction did not run. Check your AI provider API key in Settings → AI provider, then try again.',
+    actionLabel: 'Try again',
+  },
 } as const satisfies Record<string, ActionGuidance>;
 
 /**

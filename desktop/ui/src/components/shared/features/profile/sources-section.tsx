@@ -1,0 +1,278 @@
+import { useEffect, useState } from 'react';
+import type { RefObject } from 'react';
+import { open } from '@tauri-apps/plugin-dialog';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown, Trash } from 'lucide-react';
+import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from '@/components/ui/toast';
+import { ApiErrorDialog } from '@/components/shared/ui/api-error-dialog';
+import { api, ApiError } from '@/lib/api';
+import {
+  SOURCE_EXTENSIONS,
+  MAX_PROFILE_SOURCES,
+  isTauriWebview,
+  validatePickedPaths,
+} from '@/lib/profile-upload';
+import type { ProfileSourceRow } from '@/lib/types';
+
+const EXTRACTOR_LABELS: Record<ProfileSourceRow['sourceType'], string> = {
+  pdf: 'PDF',
+  markdown: 'Markdown',
+  plain_text: 'Plain text',
+};
+
+function filenameOf(path: string): string {
+  return path.split(/[\\/]/).pop() ?? path;
+}
+
+interface RowFailure {
+  error: ApiError;
+  retry: () => void;
+}
+
+function SourceRow({
+  row,
+  primary,
+  disabled,
+  onError,
+}: {
+  row: ProfileSourceRow;
+  primary: boolean;
+  disabled?: boolean;
+  onError: (failure: RowFailure) => void;
+}) {
+  const queryClient = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const remove = useMutation({
+    mutationFn: () => api.deleteSource(row.id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['profile-sources'] });
+      toast.add({ title: `Removed ${row.originalFilename}`, type: 'success' });
+    },
+    onError: (error) => {
+      onError({ error: error as ApiError, retry: () => remove.mutate() });
+    },
+  });
+
+  return (
+    <>
+      <div className="flex items-center justify-between rounded-md border bg-card/50 px-3.5 py-2.5 transition-colors hover:border-muted-foreground/30">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <span className="truncate">{row.originalFilename}</span>
+            {primary ? (
+              <Badge
+                variant="outline"
+                className="border-emerald-500/30 bg-emerald-500/10 text-[10px] text-emerald-400"
+              >
+                Primary
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                Supplement
+              </Badge>
+            )}
+          </div>
+          <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+            sha256:{row.sha256.slice(0, 8)}…{row.sha256.slice(-4)} ·{' '}
+            {Math.max(1, Math.round(row.fileSize / 1024))} KB · {EXTRACTOR_LABELS[row.sourceType]}{' '}
+            extractor · {row.textExtractionStatus}
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Remove ${row.originalFilename}`}
+          disabled={disabled}
+          onClick={() => setConfirming(true)}
+        >
+          <Trash />
+        </Button>
+      </div>
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove source file?</AlertDialogTitle>
+            <AlertDialogDescription>
+              “{row.originalFilename}” will be deleted from your library. Already extracted profile
+              data stays; run extraction again to rebuild without it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => remove.mutate()}>
+              Remove file
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+export interface SourcesSectionProps {
+  disabled?: boolean;
+  /** Exposes the native-picker invocation so the first-run empty state's CTA can trigger it. */
+  addTriggerRef?: RefObject<(() => void) | null>;
+}
+
+export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps) {
+  const queryClient = useQueryClient();
+  const sources = useQuery({ queryKey: ['profile-sources'], queryFn: api.listSources });
+  const [actionFailure, setActionFailure] = useState<{
+    error: ApiError;
+    title: string;
+    retry: () => void;
+  } | null>(null);
+
+  const importSources = useMutation({
+    mutationFn: (paths: string[]) => api.importSources(paths),
+    onSuccess: (response) => {
+      void queryClient.invalidateQueries({ queryKey: ['profile-sources'] });
+      const failed = response.counts.failed + response.failedSourcePaths.length;
+      if (failed > 0) {
+        toast.add({
+          title: `Imported ${response.counts.total - failed} of ${response.counts.total} file(s) — ${failed} failed. Try again or pick a different file.`,
+          type: 'warning',
+        });
+        return;
+      }
+      const duplicates = response.counts.reused;
+      toast.add({
+        title:
+          duplicates > 0
+            ? `Imported ${response.counts.total - duplicates} file(s); ${duplicates} duplicate(s) skipped`
+            : `Imported ${response.counts.total} file(s)`,
+        type: 'success',
+      });
+    },
+    onError: (error, paths) => {
+      setActionFailure({
+        error: error as ApiError,
+        title: 'Import failed',
+        retry: () => importSources.mutate(paths),
+      });
+    },
+  });
+
+  const rows = sources.data?.sources ?? [];
+  const busy = disabled === true || importSources.isPending;
+
+  const onAdd = async () => {
+    const picked = await open({
+      multiple: true,
+      filters: [{ name: 'Documents', extensions: [...SOURCE_EXTENSIONS] }],
+    });
+    const paths = Array.isArray(picked) ? picked : picked === null ? [] : [picked];
+    if (paths.length === 0) return;
+    const remaining = MAX_PROFILE_SOURCES - rows.length;
+    const { accepted, rejected, overCapacity } = validatePickedPaths(paths, remaining);
+    for (const r of rejected) {
+      toast.add({
+        title: `Skipped ${filenameOf(r.path)} — only PDF, Markdown, and TXT files are supported.`,
+        type: 'warning',
+      });
+    }
+    if (overCapacity) {
+      toast.add({
+        title:
+          `Only ${remaining} more ${remaining === 1 ? 'source can' : 'sources can'} be added — ` +
+          'nothing was uploaded. Remove a source first or pick fewer files.',
+        type: 'warning',
+      });
+      return;
+    }
+    if (accepted.length > 0) {
+      importSources.mutate(accepted);
+    }
+  };
+
+  useEffect(() => {
+    if (addTriggerRef !== undefined) {
+      addTriggerRef.current = onAdd;
+    }
+  });
+
+  return (
+    <>
+      <CardHeader>
+        <CardTitle>Source documents &amp; extractors</CardTitle>
+        <CardDescription>
+          Uploaded resumes used for profile synthesis. Duplicates are detected by SHA-256 hash.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        {rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No source documents. Add a resume to start.
+          </p>
+        ) : (
+          rows.map((row, i) => (
+            <SourceRow
+              key={row.id}
+              row={row}
+              primary={i === 0}
+              disabled={busy}
+              onError={({ error, retry }) =>
+                setActionFailure({ error, title: 'Remove failed', retry })
+              }
+            />
+          ))
+        )}
+        {!isTauriWebview() ? (
+          <Button variant="outline" className="w-full justify-between" disabled>
+            <span>File upload is available in the desktop app</span>
+            <ChevronDown className="size-4" />
+          </Button>
+        ) : rows.length >= MAX_PROFILE_SOURCES ? (
+          <>
+            <Button variant="outline" className="w-full justify-between" disabled>
+              <span>
+                Source limit reached ({rows.length} of {MAX_PROFILE_SOURCES})
+              </span>
+              <ChevronDown className="size-4" />
+            </Button>
+            <p className="text-xs text-muted-foreground">Remove a source file to add another.</p>
+          </>
+        ) : (
+          <Button
+            variant="outline"
+            className="w-full justify-between"
+            disabled={busy}
+            onClick={onAdd}
+          >
+            <span>Add a source file (PDF, Markdown, TXT)…</span>
+            <ChevronDown className="size-4" />
+          </Button>
+        )}
+      </CardContent>
+
+      <ApiErrorDialog
+        error={actionFailure?.error ?? null}
+        title={actionFailure?.title ?? 'Action failed'}
+        onAction={
+          actionFailure === null
+            ? undefined
+            : () => {
+                const retry = actionFailure.retry;
+                setActionFailure(null);
+                retry();
+              }
+        }
+        onDismiss={() => setActionFailure(null)}
+      />
+    </>
+  );
+}

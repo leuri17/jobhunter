@@ -202,6 +202,9 @@ export function DerivedValueSchema<Value extends z.ZodTypeAny>(value: Value) {
 
 export const ProfileBasicsSchema = z
   .object({
+    fullName: z.string().nullable().default(null),
+    email: z.string().nullable().default(null),
+    phone: z.string().nullable().default(null),
     headline: z.string().nullable(),
     professionalSummary: z.string().nullable(),
     currentLocation: z.string().nullable(),

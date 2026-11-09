@@ -60,7 +60,7 @@ describe('ProfileImportService', () => {
     const imported = result.sources[0]!;
     expect(imported.sourceType).toBe('markdown');
     expect(imported.textExtractionStatus).toBe('success');
-    expect(imported.storedPath).toContain(`profile-sources/${imported.id}/`);
+    expect(imported.storedPath).toContain(`profile-sources/${imported.sha256}/`);
     expect(imported.reused).toBe(false);
     expect(imported.extractedTextHash).toMatch(/^[0-9a-f]{64}$/);
 
@@ -149,6 +149,37 @@ describe('ProfileImportService', () => {
     await expect(service.importSources(['a.md', 'b.md', 'c.md'])).rejects.toBeInstanceOf(
       InvalidArgumentCountError,
     );
+  });
+
+  it('rejects an import that would exceed the total source cap', async () => {
+    writeFileSync(join(tempHome, 'one.md'), '# One', 'utf8');
+    writeFileSync(join(tempHome, 'two.md'), '# Two', 'utf8');
+    await service.importSources([join(tempHome, 'one.md'), join(tempHome, 'two.md')]);
+
+    writeFileSync(join(tempHome, 'three.md'), '# Three', 'utf8');
+    await expect(service.importSources([join(tempHome, 'three.md')])).rejects.toMatchObject({
+      code: 'profile_source_limit_reached',
+    });
+  });
+
+  it('allows imports up to the cap boundary', async () => {
+    writeFileSync(join(tempHome, 'one.md'), '# One', 'utf8');
+    await service.importSources([join(tempHome, 'one.md')]);
+
+    writeFileSync(join(tempHome, 'two.md'), '# Two', 'utf8');
+    const result = await service.importSources([join(tempHome, 'two.md')]);
+    expect(result.status).toBe('success');
+    expect(result.sources).toHaveLength(1);
+  });
+
+  it('rejects a duplicate re-import when the library is at the cap', async () => {
+    writeFileSync(join(tempHome, 'one.md'), '# One', 'utf8');
+    writeFileSync(join(tempHome, 'two.md'), '# Two', 'utf8');
+    await service.importSources([join(tempHome, 'one.md'), join(tempHome, 'two.md')]);
+
+    await expect(service.importSources([join(tempHome, 'one.md')])).rejects.toMatchObject({
+      code: 'profile_source_limit_reached',
+    });
   });
 
   it('records the source row before the copy runs (resilience to copy failure)', async () => {

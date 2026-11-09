@@ -7,8 +7,13 @@
     "core:default",
     {
       "identifier": "core:event:allow-listen",
-      "allow": [{ "event": "sidecar://*" }]
+      "allow": [
+        {
+          "event": "sidecar://*"
+        }
+      ]
     },
+    "dialog:allow-open",
     "allow-sidecar-port",
     "allow-notify-pipeline-complete"
   ]

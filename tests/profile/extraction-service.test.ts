@@ -58,6 +58,9 @@ function ref(sourceId: string, section: string | null = null, excerpt: string | 
 function validExtractedJson(overrides: Record<string, unknown> = {}): string {
   return JSON.stringify({
     basics: {
+      fullName: null,
+      email: null,
+      phone: null,
       headline: 'Senior Engineer',
       professionalSummary: null,
       currentLocation: null,
@@ -547,6 +550,9 @@ describe('ProfileExtractionService', () => {
 
     const extracted = {
       basics: {
+        fullName: null,
+        email: null,
+        phone: null,
         headline: null,
         professionalSummary: null,
         currentLocation: null,

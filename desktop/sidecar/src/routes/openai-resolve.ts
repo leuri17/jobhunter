@@ -10,6 +10,7 @@ export async function resolveOpenAiClientOrNull(
   refusal?: DefaultOpenAIClientRefusalOptions,
   store?: SecretsStore,
   timeoutMs?: number,
+  maxRetries?: number,
 ): Promise<OpenAIClient | null> {
   const resolved = store ?? (await getSecretsBackend()).store;
   const key = await resolveOpenAiApiKey({ store: resolved, env: process.env });
@@ -18,5 +19,6 @@ export async function resolveOpenAiClientOrNull(
     apiKey: key,
     ...(refusal !== undefined ? { refusal } : {}),
     ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+    ...(maxRetries !== undefined ? { maxRetries } : {}),
   });
 }

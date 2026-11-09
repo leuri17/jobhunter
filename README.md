@@ -28,6 +28,13 @@ public search pages, one to OpenAI for scoring).
 2. Drag to Applications (macOS) or run the installer (Windows/Linux).
 3. Optional: set `OPENAI_API_KEY` in your environment, or just launch and save the key in Settings — it is stored in your OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service). The env var stays the fallback for CI and headless runs. (See [docs/env.md](./docs/env.md) for the full env-var map.)
 
+#### Managing your profile
+
+1. Open **Profile** and add your CV(s) — PDF, Markdown, or plain text, up to two files per import (duplicates are detected automatically).
+2. Click **Run extraction**. Your documents are sent to your AI provider to build a structured profile; this consumes API tokens.
+3. Edit anything — contact details, experience, skills, target roles — then **Save draft**.
+4. **Approve & publish** the draft to make it the active profile the scoring engine uses. Previous versions stay in Version history.
+
 ### For developers (build from source)
 
 Requires Node 24.18.0+ and pnpm 12.14.0+.

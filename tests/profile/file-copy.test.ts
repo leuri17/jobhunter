@@ -25,31 +25,38 @@ function adapter(home: string): PlatformAdapter {
   return { platform: 'linux', home, environment: {} };
 }
 
+const SHA = 'a'.repeat(64);
+
 describe('resolveSourceStoragePath', () => {
-  it('joins the profileSources directory with the sourceId and filename', () => {
+  it('joins the profileSources directory with the sha256 and filename', () => {
     const paths = resolvePlatformPaths(adapter('/home/tester'));
-    const result = resolveSourceStoragePath(paths, 7, 'cv.pdf');
-    expect(result).toBe(join(paths.profileSources.directory, '7', 'cv.pdf'));
+    const result = resolveSourceStoragePath(paths, SHA, 'cv.pdf');
+    expect(result).toBe(join(paths.profileSources.directory, SHA, 'cv.pdf'));
   });
 
-  it('rejects zero or negative source ids', () => {
+  it('rejects malformed sha256 values', () => {
     const paths = resolvePlatformPaths(adapter('/home/tester'));
-    expect(() => resolveSourceStoragePath(paths, 0, 'cv.pdf')).toThrow(ProfileSourceStorageError);
-    expect(() => resolveSourceStoragePath(paths, -1, 'cv.pdf')).toThrow(ProfileSourceStorageError);
+    expect(() => resolveSourceStoragePath(paths, 'short', 'cv.pdf')).toThrow(
+      ProfileSourceStorageError,
+    );
+    expect(() => resolveSourceStoragePath(paths, 'z'.repeat(64), 'cv.pdf')).toThrow(
+      ProfileSourceStorageError,
+    );
+    expect(() => resolveSourceStoragePath(paths, '', 'cv.pdf')).toThrow(ProfileSourceStorageError);
   });
 
   it('rejects empty filenames', () => {
     const paths = resolvePlatformPaths(adapter('/home/tester'));
-    expect(() => resolveSourceStoragePath(paths, 1, '')).toThrow(ProfileSourceStorageError);
-    expect(() => resolveSourceStoragePath(paths, 1, '   ')).toThrow(ProfileSourceStorageError);
+    expect(() => resolveSourceStoragePath(paths, SHA, '')).toThrow(ProfileSourceStorageError);
+    expect(() => resolveSourceStoragePath(paths, SHA, '   ')).toThrow(ProfileSourceStorageError);
   });
 
   it('refuses to resolve a path that escapes the per-source directory', () => {
     const paths = resolvePlatformPaths(adapter('/home/tester'));
     // The caller-side check in defaultFilenameFor blocks "..", but resolveSourceStoragePath
     // performs a defense-in-depth check on the joined path.
-    expect(() => resolveSourceStoragePath(paths, 1, '..')).toThrow(ProfileSourceStorageError);
-    expect(() => resolveSourceStoragePath(paths, 1, '../escape.pdf')).toThrow(
+    expect(() => resolveSourceStoragePath(paths, SHA, '..')).toThrow(ProfileSourceStorageError);
+    expect(() => resolveSourceStoragePath(paths, SHA, '../escape.pdf')).toThrow(
       ProfileSourceStorageError,
     );
   });
@@ -108,7 +115,7 @@ describe('copySourceFileToStorage', () => {
     const payload = Buffer.from('PDF-CONTENTS', 'utf8');
     writeFileSync(sourcePath, payload);
 
-    const destination = resolveSourceStoragePath(paths, 42, 'cv.pdf');
+    const destination = resolveSourceStoragePath(paths, SHA, 'cv.pdf');
     await copySourceFileToStorage({ sourcePath, destination, fileSystem });
 
     const copied = await fileSystem.readBytes(destination);
@@ -116,7 +123,7 @@ describe('copySourceFileToStorage', () => {
   });
 
   it('throws SourceUnreadableError when the source does not exist', async () => {
-    const destination = resolveSourceStoragePath(paths, 1, 'cv.pdf');
+    const destination = resolveSourceStoragePath(paths, SHA, 'cv.pdf');
     await expect(
       copySourceFileToStorage({
         sourcePath: join(tempHome, 'missing.pdf'),
@@ -141,7 +148,7 @@ describe('copySourceFileToStorage', () => {
         await fileSystem.writeBytes(path, bytes);
       },
     };
-    const destination = resolveSourceStoragePath(paths, 5, 'cv.pdf');
+    const destination = resolveSourceStoragePath(paths, SHA, 'cv.pdf');
     await expect(
       copySourceFileToStorage({ sourcePath, destination, fileSystem: failingFs }),
     ).rejects.toBeInstanceOf(ProfileSourceStorageError);

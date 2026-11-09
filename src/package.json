@@ -10,6 +10,7 @@
     "./linkedin": "./linkedin/index.ts",
     "./scoring": "./scoring/index.ts",
     "./profile": "./profile/index.ts",
+    "./profile/schema": "./profile/schema.ts",
     "./filter": "./filter/index.ts",
     "./search": "./search/index.ts",
     "./config": "./config/index.ts",

@@ -471,6 +471,9 @@ export function postProcessExtractionResponse(inputs: PostProcessInputs): PostPr
     contentHash: '', // placeholder; filled below.
     sourceIds: [...knownSourceIds],
     basics: {
+      fullName: nullableText(extracted.basics.fullName),
+      email: nullableText(extracted.basics.email),
+      phone: nullableText(extracted.basics.phone),
       headline: nullableText(extracted.basics.headline),
       professionalSummary: nullableText(extracted.basics.professionalSummary),
       currentLocation: nullableText(extracted.basics.currentLocation),

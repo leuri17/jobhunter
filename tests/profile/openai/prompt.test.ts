@@ -210,7 +210,7 @@ describe('buildProfileExtractionPrompt', () => {
 
   it('userMessage includes the source manifest with structuredOutputSchemaVersion', () => {
     const prompt = buildProfileExtractionPrompt(request());
-    expect(prompt.userMessage).toContain('"sourceManifestVersion": 1');
+    expect(prompt.userMessage).toContain('"sourceManifestVersion": 2');
     expect(prompt.userMessage).toContain('"sources"');
   });
 

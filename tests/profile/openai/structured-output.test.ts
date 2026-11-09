@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ExtractedBasicsSchema,
   ExtractedProfileSchema,
   STRUCTURED_OUTPUT_SCHEMA_VERSION,
   createExtractedProfileSchema,
@@ -10,6 +11,9 @@ import {
 function extractedProfile(): ExtractedProfile {
   return {
     basics: {
+      fullName: 'Alex Vance',
+      email: null,
+      phone: null,
       headline: 'Senior Backend Engineer',
       professionalSummary: null,
       currentLocation: 'Lisbon, Portugal',
@@ -88,8 +92,24 @@ function extractedProfile(): ExtractedProfile {
 }
 
 describe('ExtractedProfileSchema', () => {
-  it('exposes schema version 1', () => {
-    expect(STRUCTURED_OUTPUT_SCHEMA_VERSION).toBe(1);
+  it('exposes schema version 2', () => {
+    expect(STRUCTURED_OUTPUT_SCHEMA_VERSION).toBe(2);
+  });
+
+  it('requires identity keys in ExtractedBasicsSchema and rejects unknown ones', () => {
+    const base = {
+      fullName: 'Alex Vance',
+      email: null,
+      phone: null,
+      headline: null,
+      professionalSummary: null,
+      currentLocation: null,
+      totalYearsOfExperience: null,
+    };
+    expect(ExtractedBasicsSchema.safeParse(base).success).toBe(true);
+    const { fullName: _omit, ...missingKey } = base;
+    expect(ExtractedBasicsSchema.safeParse(missingKey).success).toBe(false);
+    expect(ExtractedBasicsSchema.safeParse({ ...base, nickname: 'Lee' }).success).toBe(false);
   });
 
   it('accepts a complete, valid extracted profile', () => {
@@ -129,6 +149,9 @@ describe('ExtractedProfileSchema', () => {
   it('accepts null scalars and empty collections but rejects null collections', () => {
     const empty: ExtractedProfile = {
       basics: {
+        fullName: null,
+        email: null,
+        phone: null,
         headline: null,
         professionalSummary: null,
         currentLocation: null,

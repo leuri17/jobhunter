@@ -52,6 +52,21 @@ describe('ProfileSourceRepository', () => {
     expect(row?.textExtractionStatus).toBe('pending');
   });
 
+  it('delete removes the row', async () => {
+    const id = await repo.insert({
+      sourceType: 'pdf',
+      originalFilename: 'cv.pdf',
+      originalAbsolutePath: '/tmp/cv.pdf',
+      storedPath: '/opt/jobhunter/profile-sources/cv.sha256.pdf',
+      mimeType: 'application/pdf',
+      fileSize: 12345,
+      sha256: 'e'.repeat(64),
+      importTimestamp: '2026-08-05T10:00:00.000Z',
+    });
+    await repo.delete(id);
+    expect(await repo.findById(id)).toBeNull();
+  });
+
   it('throws DuplicateSha256Error on sha256 collision (insert is strict INSERT-OR-ERROR)', async () => {
     const first = await repo.insert({
       sourceType: 'pdf',
@@ -100,22 +115,6 @@ describe('ProfileSourceRepository', () => {
     expect(row?.textExtractionMessage).toBeNull();
     expect(row?.sha256).toBe('c'.repeat(64)); // immutable
     expect(row?.fileSize).toBe(500); // immutable
-  });
-
-  it('updateStoredPath changes the stored path', async () => {
-    const id = await repo.insert({
-      sourceType: 'pdf',
-      originalFilename: 'cv.pdf',
-      originalAbsolutePath: '/tmp/cv.pdf',
-      mimeType: 'application/pdf',
-      fileSize: 12345,
-      sha256: 'g'.repeat(64),
-      importTimestamp: '2026-08-05T10:00:00.000Z',
-    });
-    await repo.updateStoredPath(id, '/opt/jobhunter/profile-sources/1/cv.pdf');
-    const row = await repo.findById(id);
-    expect(row?.storedPath).toBe('/opt/jobhunter/profile-sources/1/cv.pdf');
-    expect(row?.sha256).toBe('g'.repeat(64));
   });
 
   it('list returns all sources', async () => {

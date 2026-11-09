@@ -31,6 +31,9 @@ function ref(
 
 function baselineBasics(): ExtractedBasics {
   return {
+    fullName: 'Alex Vance',
+    email: null,
+    phone: null,
     headline: 'Senior Backend Engineer',
     professionalSummary: 'Built services at scale.',
     currentLocation: 'Lisbon, Portugal',
@@ -128,6 +131,23 @@ function runPostProcess(
 }
 
 describe('postProcessExtractionResponse', () => {
+  it('maps extracted identity fields into canonical basics', () => {
+    const result = runPostProcess(
+      baselineExtracted({
+        basics: {
+          ...baselineBasics(),
+          fullName: 'Alex Vance',
+          email: 'alex@example.com',
+          phone: null,
+        },
+      }),
+      ['source-1'],
+    );
+    expect(result.profile.basics.fullName).toBe('Alex Vance');
+    expect(result.profile.basics.email).toBe('alex@example.com');
+    expect(result.profile.basics.phone).toBeNull();
+  });
+
   it('builds a complete profile with id, normalizedName, derived populated, and a 64-char hex contentHash', () => {
     const result = runPostProcess(baselineExtracted(), ['source-1']);
 

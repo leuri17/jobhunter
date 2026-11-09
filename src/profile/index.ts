@@ -12,6 +12,7 @@ export {
   ExtractionFailedError,
   OcrRequiredError,
   InvalidArgumentCountError,
+  ProfileSourceLimitError,
   ProfileSourceStorageError,
   ProfileImportError,
 } from './errors.js';
@@ -34,6 +35,7 @@ export {
 export {
   ProfileImportService,
   noopLogger,
+  MAX_PROFILE_SOURCES,
   type ImportedSource,
   type ProfileImportResult,
   type ProfileImportCounts,
@@ -128,6 +130,13 @@ export {
 } from './errors.js';
 
 export { resolveProfileVersionId } from './identifier-resolution.js';
+
+export type { ProfileSourceRow } from '../persistence/repositories/profile-sources.js';
+export type {
+  ProfileStatus,
+  ProfileConflictRow,
+  ProfileWarningRow,
+} from '../persistence/repositories/profile-versions.js';
 
 export * from './review/index.js';
 

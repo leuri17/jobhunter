@@ -1,14 +1,19 @@
 import type { FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
+import { rm } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import {
   ProfileImportService,
   ProfileExtractionService,
   ProfileReviewService,
+  ProfileEditingService,
   ProfileApprovalService,
   ProfileRejectionService,
+  InvalidProfileStateError,
   type DefaultOpenAIClientRefusalOptions,
   type OpenAIClient,
 } from '@jobhunter/core/profile';
+import { envelopeFor } from '../errors.js';
 import { openDbHandle, createRepositories } from './db-helper.js';
 import { resolveOpenAiClientOrNull } from './openai-resolve.js';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
@@ -42,6 +47,15 @@ const PROFILE_MULTIPART_LIMITS = {
   fieldSize: 64 * 1024,
   fields: 20,
 } as const;
+
+// gpt-5 profile extraction routinely exceeds the 60 s client default,
+// which killed every attempt mid-generation and stacked SDK retries
+// (3 per call) on top of the service retry policy (3 calls) — a
+// ~9-minute worst case with no feedback (issue #248 follow-up). The
+// extraction budget is single-layered instead: one generous timeout,
+// zero SDK retries, two attempts owned by `runWithRetry`.
+const PROFILE_EXTRACTION_TIMEOUT_MS = 300_000;
+const PROFILE_EXTRACTION_MAX_ATTEMPTS = 2;
 
 export interface ProfileRouteOptions {
   readonly openaiClient?: OpenAIClient;
@@ -79,6 +93,38 @@ export async function registerProfileRoutes(
     }
   });
 
+  app.get('/api/profile/sources', async () => {
+    const handle = await openDbHandle();
+    try {
+      const repos = createRepositories(handle);
+      const sources = await repos.profileSources.list();
+      return { schemaVersion: 1, sources };
+    } finally {
+      handle.close();
+    }
+  });
+
+  app.delete<{ Params: { id: string } }>('/api/profile/sources/:id', async (req, reply) => {
+    const handle = await openDbHandle();
+    try {
+      const repos = createRepositories(handle);
+      const id = Number.parseInt(req.params.id, 10);
+      const row = Number.isNaN(id) ? null : await repos.profileSources.findById(id);
+      if (row === null) {
+        reply.status(404);
+        return {
+          schemaVersion: 1,
+          error: { code: 'profile_source_not_found', message: 'No source document with that id.' },
+        };
+      }
+      await rm(dirname(row.storedPath), { recursive: true, force: true });
+      await repos.profileSources.delete(row.id);
+      return { schemaVersion: 1, removed: true };
+    } finally {
+      handle.close();
+    }
+  });
+
   app.post('/api/profile/import', async (req, reply) => {
     const handle = await openDbHandle();
     try {
@@ -88,6 +134,16 @@ export async function registerProfileRoutes(
       const parts = req.parts();
       const filePaths: string[] = [];
       for await (const part of parts) {
+        // Absolute paths arrive as `path` field parts: WHATWG FormData
+        // normalization strips directory components from file-part
+        // filenames, so a path can never survive inside one.
+        if (part.type === 'field' && part.fieldname === 'path') {
+          const value = String(part.value);
+          if (value !== '') {
+            filePaths.push(value);
+          }
+          continue;
+        }
         if (part.type !== 'file' || typeof part.filename !== 'string') {
           continue;
         }
@@ -133,13 +189,20 @@ export async function registerProfileRoutes(
     }
   });
 
-  app.post('/api/profile/extract', async (_req, reply) => {
+  app.post('/api/profile/extract', async (req, reply) => {
     const handle = await openDbHandle();
     try {
       const repos = createRepositories(handle);
       const sources = await repos.profileSources.list();
       const usable = sources.filter((s) => s.textExtractionStatus === 'success').map((s) => s.id);
-      const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
+      const client =
+        opts.openaiClient ??
+        (await resolveOpenAiClientOrNull(
+          opts.refusal,
+          undefined,
+          PROFILE_EXTRACTION_TIMEOUT_MS,
+          0,
+        ));
       if (client === null) {
         reply.status(503);
         return {
@@ -151,6 +214,8 @@ export async function registerProfileRoutes(
         repositories: repos,
         openaiClient: client,
         config: { model: process.env['OPENAI_MODEL'] ?? 'gpt-5', reasoningEffort: 'medium' },
+        retry: { maxAttempts: PROFILE_EXTRACTION_MAX_ATTEMPTS },
+        logger: req.log,
       });
       const status = await service.extract(usable);
       return { schemaVersion: 1, status };
@@ -187,26 +252,32 @@ export async function registerProfileRoutes(
     }
   });
 
-  app.post<{ Params: { id: string }; Body: { profileJson?: unknown } }>(
+  app.post<{ Params: { id: string }; Body: { profile?: unknown } }>(
     '/api/profile/:id/edit',
     async (req, reply) => {
-      // v1 limitation: the interactive ProfileEditingService prompts over
-      // stdin, which is incompatible with an HTTP sidecar. Calling it would
-      // hang or throw TtyError. Surface this clearly to the desktop UI,
-      // acknowledge the body, and signal the follow-up. The full programmatic
-      // edit (apply profileJson as a new draft version via the repo) is tracked
-      // as a known limitation in .slim/deepwork/progress.md.
-      reply.status(501);
-      return {
-        schemaVersion: 1,
-        error: {
-          code: 'edit_via_http_not_supported',
-          message:
-            'Profile editing is not yet supported over HTTP in v1. The desktop UI should display the profile JSON, edit it locally, and POST the new draft via a follow-up endpoint. Tracked in .slim/deepwork/progress.md.',
-        },
-        receivedProfileJson: req.body?.profileJson,
-        receivedSourceId: req.params.id,
-      };
+      const handle = await openDbHandle();
+      try {
+        const repos = createRepositories(handle);
+        const service = new ProfileEditingService({ repositories: repos });
+        const result = await service.applyBulkEdit(req.params.id, req.body?.profile);
+        return {
+          schemaVersion: 1,
+          profileVersionId: result.profileVersionId,
+          status: 'draft',
+          derived: result.derived,
+        };
+      } catch (error) {
+        // State conflicts (rejected/superseded targets) carry the CLI exit
+        // code for invalid usage; over HTTP they are conflicts, so classify
+        // here like routes/config.ts does for key validation.
+        if (error instanceof InvalidProfileStateError) {
+          reply.status(409);
+          return envelopeFor(error);
+        }
+        throw error;
+      } finally {
+        handle.close();
+      }
     },
   );
 }

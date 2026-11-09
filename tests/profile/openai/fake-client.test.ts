@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { STRUCTURED_OUTPUT_SCHEMA_VERSION } from '../../../src/profile/openai/structured-output.js';
 import { FakeOpenAIClient } from '../../../src/profile/openai/fake-client.js';
 import type {
   OpenAIExtractionRawResponse,
@@ -11,7 +12,7 @@ const REQUEST: OpenAIExtractionRequest = {
   model: 'gpt-5.6-sol',
   reasoningEffort: 'medium',
   responseSchemaName: 'ExtractedProfile',
-  structuredOutputSchemaVersion: 1,
+  structuredOutputSchemaVersion: STRUCTURED_OUTPUT_SCHEMA_VERSION,
   sources: [{ sourceId: 'source_1', originalFilename: 'cv.md', extractedText: 'Hello' }],
   messages: [
     { role: 'system', content: 'system prompt' },

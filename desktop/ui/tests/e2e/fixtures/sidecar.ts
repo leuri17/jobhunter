@@ -140,6 +140,47 @@ const BASE_CONFIG = {
   },
 } as const;
 
+function fullProfileJson(id: string, status: string): Record<string, unknown> {
+  const emptyDerived = {
+    generatedValue: null,
+    overrideActive: false,
+    overrideValue: null,
+    effectiveValue: null,
+    generatedAt: null,
+    overriddenAt: null,
+  };
+  const emptyDerivedList = { ...emptyDerived, generatedValue: [], effectiveValue: [] };
+  return {
+    schemaVersion: 1,
+    id,
+    createdAt: TIMESTAMP,
+    updatedAt: TIMESTAMP,
+    contentHash: `hash_${id}`,
+    sourceIds: ['source_1'],
+    basics: {
+      fullName: status === 'approved' ? 'Active Profile' : 'Draft Profile',
+      email: null,
+      phone: null,
+      headline: null,
+      professionalSummary: null,
+      currentLocation: null,
+      totalYearsOfExperience: null,
+    },
+    experience: [],
+    skills: [],
+    languages: [],
+    education: [],
+    certifications: [],
+    projects: [],
+    derived: {
+      likelySeniority: emptyDerived,
+      primaryRoles: emptyDerivedList,
+      primaryDomains: emptyDerivedList,
+      strongestSkills: emptyDerivedList,
+    },
+  };
+}
+
 function seedProfiles(): {
   profiles: Map<string, ProfileVersionRecord>;
   details: Map<string, ProfileDetailRecord>;
@@ -153,6 +194,11 @@ function seedProfiles(): {
       { id: 'prof_seed_1', status: 'draft', active: false },
       { id: 'prof_seed_2', status: 'approved', active: true },
       { id: 'prof_seed_3', status: 'draft', active: false },
+      // Extraction-shaped id (post-process mints `profile_<hex>`): the
+      // UI addresses versions as `profile_<int>`, so the fixture must
+      // resolve both forms or hex-id drafts 404 like the real sidecar
+      // would if handed the raw JSON id.
+      { id: 'profile_ab12cd34ef56', status: 'draft', active: false },
     ];
   for (const [i, s] of seeds.entries()) {
     profiles.set(s.id, {
@@ -167,7 +213,7 @@ function seedProfiles(): {
       approvedAt: s.status === 'approved' ? TIMESTAMP : null,
     });
     details.set(s.id, {
-      profile: { id: s.id, fullName: s.status === 'approved' ? 'Active Profile' : 'Draft Profile' },
+      profile: fullProfileJson(s.id, s.status),
       status: s.status,
       active: s.active,
       contentHash: `hash_${s.id}`,
@@ -380,13 +426,32 @@ export async function buildFixtureSidecar(
     models: ['e2e-mini', 'e2e-sol'],
   }));
 
+  const resolveProfile = (id: string): ProfileVersionRecord | undefined =>
+    state.profiles.get(id) ??
+    [...state.profiles.values()].find((p) => `profile_${p.profileVersionId}` === id);
+
   app.get('/api/profile', async () => ({
     schemaVersion: 1,
     profiles: [...state.profiles.values()].sort((a, b) => b.profileVersionId - a.profileVersionId),
   }));
 
+  app.get('/api/profile/sources', async () => ({
+    schemaVersion: 1,
+    sources: [],
+  }));
+
+  app.get('/api/secrets/api-key', async () => ({
+    schemaVersion: 1,
+    configured: true,
+    source: 'stored',
+    masked: 'sk-…test',
+    legacyFilePresent: false,
+    backend: 'file',
+  }));
+
   app.get<{ Params: { id: string } }>('/api/profile/:id', async (req, reply) => {
-    const detail = state.profileDetails.get(req.params.id);
+    const record = resolveProfile(req.params.id);
+    const detail = record !== undefined ? state.profileDetails.get(record.profileId) : undefined;
     if (detail === undefined) {
       reply.status(404);
       return {
@@ -404,7 +469,7 @@ export async function buildFixtureSidecar(
   }));
 
   app.post<{ Params: { id: string } }>('/api/profile/:id/approve', async (req, reply) => {
-    const profile = state.profiles.get(req.params.id);
+    const profile = resolveProfile(req.params.id);
     if (profile === undefined) {
       reply.status(404);
       return {
@@ -455,7 +520,7 @@ export async function buildFixtureSidecar(
   });
 
   app.post<{ Params: { id: string } }>('/api/profile/:id/reject', async (req, reply) => {
-    const profile = state.profiles.get(req.params.id);
+    const profile = resolveProfile(req.params.id);
     if (profile === undefined) {
       reply.status(404);
       return {

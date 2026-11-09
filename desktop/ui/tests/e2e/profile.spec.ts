@@ -1,11 +1,21 @@
 import { test, expect } from '@playwright/test';
 
-test('renders the Profile versions heading', async ({ page }) => {
+test('renders the Profile page with its six tabs', async ({ page }) => {
   await page.goto('/profile');
-  await expect(page.getByRole('heading', { name: 'Profile versions' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeVisible();
+  for (const tab of [
+    'Overview',
+    'Experience',
+    'Skills',
+    'Education',
+    'Conflicts',
+    'Version history',
+  ]) {
+    await expect(page.getByRole('tab', { name: new RegExp(tab, 'i') })).toBeVisible();
+  }
 });
 
-test('approving a draft profile invalidates the profiles query and refreshes related queries', async ({
+test('approving a draft from version history invalidates the profiles query and refreshes related queries', async ({
   page,
 }) => {
   const profileGets: string[] = [];
@@ -27,29 +37,21 @@ test('approving a draft profile invalidates the profiles query and refreshes rel
   const listResponse = page.waitForResponse(/\/api\/profile/);
   await page.goto('/profile');
   await listResponse;
-  await expect(page.getByRole('heading', { name: 'Profile versions' })).toBeVisible();
 
-  const profileGetsBefore = profileGets.length;
+  await page.getByRole('tab', { name: /version history/i }).click();
 
-  // Open the draft profile by clicking the row whose font-mono span
-  // matches its id (more specific than accessible-name matching
-  // because the row also renders status text).
-  const detailResponse = page.waitForResponse(/\/api\/profile\/prof_seed_1/);
-  await page.locator('aside button').filter({ hasText: 'prof_seed_1' }).first().click();
-  await detailResponse;
-
-  // Wait for the detail to be visible — that confirms
-  // detail.data.status === 'draft' and the Approve button is
-  // enabled. Going straight to click() races TanStack Query's
-  // state-update after the response arrives.
-  const approveButton = page.getByRole('button', { name: /^approve$/i });
+  // The seeded drafts render Approve actions; wait for the first enabled
+  // one so TanStack Query's post-response state update has landed.
+  const approveButton = page.getByRole('button', { name: /^approve$/i }).first();
   await expect(approveButton).toBeEnabled({ timeout: 5_000 });
 
   const approveResponse = page.waitForResponse(/\/api\/profile\/[^/]+\/approve\b/);
   await approveButton.click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Approve & publish' }).click();
   await approveResponse;
 
   // Wait for the invalidation-driven refetch on /api/profile (list).
+  const profileGetsBefore = profileGets.length;
   await expect
     .poll(() => profileGets.length, { timeout: 5_000 })
     .toBeGreaterThan(profileGetsBefore);
@@ -70,7 +72,7 @@ test('approving a draft profile invalidates the profiles query and refreshes rel
   expect(runsGets.length).toBeGreaterThan(runsBefore);
 });
 
-test('rejecting a draft profile invalidates the profiles query', async ({ page }) => {
+test('rejecting a draft from version history invalidates the profiles query', async ({ page }) => {
   const profileGets: string[] = [];
   page.on('request', (req) => {
     const url = req.url();
@@ -82,23 +84,19 @@ test('rejecting a draft profile invalidates the profiles query', async ({ page }
   const listResponse = page.waitForResponse(/\/api\/profile/);
   await page.goto('/profile');
   await listResponse;
-  await expect(page.getByRole('heading', { name: 'Profile versions' })).toBeVisible();
 
-  // Use a separate draft (prof_seed_3) so the approve test's state
-  // mutation doesn't gate this one — the fixture state is shared
-  // across tests in the same playwright run.
-  const detailResponse = page.waitForResponse(/\/api\/profile\/prof_seed_3/);
-  await page.locator('aside button').filter({ hasText: 'prof_seed_3' }).first().click();
-  await detailResponse;
+  await page.getByRole('tab', { name: /version history/i }).click();
 
-  // Wait for the detail pane's status to render before clicking
-  // — TanStack Query sets the data asynchronously after the response.
-  const rejectButton = page.getByRole('button', { name: /^reject$/i });
+  // Use the last seeded draft so the approve test's state mutation
+  // doesn't gate this one — the fixture state is shared across tests
+  // in the same playwright run.
+  const rejectButton = page.getByRole('button', { name: /^reject$/i }).last();
   await expect(rejectButton).toBeEnabled({ timeout: 5_000 });
 
   const profileGetsBefore = profileGets.length;
   const rejectResponse = page.waitForResponse(/\/api\/profile\/[^/]+\/reject\b/);
   await rejectButton.click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Reject draft' }).click();
   await rejectResponse;
 
   await expect

@@ -7,9 +7,21 @@
 import type { OperationalConfig } from '@jobhunter/core/config';
 import type {
   ProfileApprovalSummary,
+  ProfileExtractionStatus,
   ProfileListEntry,
   ProfileRejectionResult,
   ProfileShowPayload,
+  ProfileSourceRow,
+  ProfileStatus,
+  ProfileConflictRow,
+  ProfileWarningRow,
+  ProfessionalProfile,
+  Certification,
+  Education,
+  Language,
+  Project,
+  Skill,
+  WorkExperience,
 } from '@jobhunter/core/profile';
 import type {
   JobListRow,
@@ -32,6 +44,17 @@ export type {
   ProfileListEntry,
   ProfileRejectionResult,
   ProfileShowPayload,
+  ProfileSourceRow,
+  ProfileStatus,
+  ProfileConflictRow,
+  ProfileWarningRow,
+  ProfessionalProfile,
+  Certification,
+  Education,
+  Language,
+  Project,
+  Skill,
+  WorkExperience,
 };
 
 // --- API response shapes (mirror desktop/sidecar/src/routes/* handlers) ---
@@ -153,6 +176,41 @@ export interface ApproveProfileResponse extends ProfileApprovalSummary {
 
 export interface RejectProfileResponse extends ProfileRejectionResult {
   readonly schemaVersion: 1;
+}
+
+export interface ListSourcesResponse {
+  readonly schemaVersion: 1;
+  readonly sources: readonly ProfileSourceRow[];
+}
+
+export interface DeleteSourceResponse {
+  readonly schemaVersion: 1;
+  readonly removed: true;
+}
+
+export interface ImportSourcesResponse {
+  readonly schemaVersion: 1;
+  readonly status: string;
+  readonly counts: { total: number; extracted: number; failed: number; reused: number };
+  readonly sources: readonly {
+    id: number;
+    path: string;
+    sourceType: string;
+    sha256: string;
+  }[];
+  readonly failedSourcePaths: readonly string[];
+}
+
+export interface ExtractProfileResponse {
+  readonly schemaVersion: 1;
+  readonly status: ProfileExtractionStatus;
+}
+
+export interface EditProfileResponse {
+  readonly schemaVersion: 1;
+  readonly profileVersionId: number;
+  readonly status: 'draft';
+  readonly derived: boolean;
 }
 
 export interface ListJobsResponse {

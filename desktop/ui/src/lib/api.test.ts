@@ -14,6 +14,29 @@ describe('api', () => {
     expect(result.status).toBe('ok');
   });
 
+  it('api.importSources posts multipart with absolute paths as path field parts', async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          schemaVersion: 1,
+          status: 'completed',
+          counts: { total: 1, extracted: 1, failed: 0, reused: 0 },
+          sources: [],
+          failedSourcePaths: [],
+        }),
+        { status: 200 },
+      ),
+    );
+    const result = await api.importSources(['/abs/resume.md']);
+    expect(result.schemaVersion).toBe(1);
+    const [calledUrl, calledInit] = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0] as [string, RequestInit];
+    expect(calledUrl).toMatch(/\/api\/profile\/import$/);
+    expect(calledInit.method).toBe('POST');
+    expect(calledInit.body).toBeInstanceOf(FormData);
+    expect((calledInit.body as FormData).get('path')).toBe('/abs/resume.md');
+  });
+
   it('throws ApiError on non-2xx', async () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       new Response(JSON.stringify({ error: { code: 'bad', message: 'oops' } }), { status: 400 }),
