@@ -4,6 +4,7 @@ import { pino, type Logger as PinoLogger } from 'pino';
 import {
   PipelineOrchestrator,
   assertPipelinePrerequisites,
+  type PipelineProgressEvent,
   type PipelineRunResult,
 } from '@jobhunter/core/pipeline';
 import {
@@ -31,6 +32,8 @@ interface ActiveRun {
   readonly controller: AbortController;
   /** Recent log lines emitted by the orchestrator (ring buffer, max 1000). */
   logs: string[];
+  /** Recent progress events emitted by the orchestrator (ring buffer, max 500). */
+  events: PipelineProgressEvent[];
   status: 'running' | 'cancelled' | 'done' | 'failed';
   result?: PipelineRunResult;
   /** Why a run failed; carried by the terminal SSE `done` event. */
@@ -39,6 +42,7 @@ interface ActiveRun {
 
 const activeRuns = new Map<string, ActiveRun>();
 const LOG_RING_BUFFER_MAX = 1000;
+const EVENTS_RING_BUFFER_MAX = 500;
 
 /**
  * Cancel all currently running pipelines. Called by main() during graceful
@@ -86,6 +90,52 @@ export async function registerPipelineRoutes(
   const rootLogger: PinoLogger = opts.rootLogger ?? pino({ level: 'silent' });
   const openDb = opts.dbOpener ?? openDbHandle;
 
+  app.get('/api/pipeline/prerequisites', async () => {
+    const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
+    const handle = await openDb();
+    try {
+      const repositories = createRepositories(handle);
+      const [activeProfile, activeFilter] = await Promise.all([
+        repositories.profileVersions.findActiveApproved(),
+        repositories.filterConfigurations.findActive(),
+      ]);
+      const loaded = await loadConfig(
+        resolvePlatformPaths(createDefaultPlatformAdapter()),
+        sidecarFileSystem,
+      );
+      return {
+        schemaVersion: 1,
+        openaiKeyConfigured: client !== null,
+        activeProfile:
+          activeProfile === null
+            ? null
+            : { id: activeProfile.id, contentHash: activeProfile.contentHash },
+        activeFilter:
+          activeFilter === null
+            ? null
+            : { id: activeFilter.id, contentHash: activeFilter.contentHash },
+        configHash: loaded.hash,
+      };
+    } finally {
+      handle.close();
+    }
+  });
+
+  app.get('/api/pipeline/active', async () => {
+    let running: ActiveRun | undefined;
+    let latest: ActiveRun | undefined;
+    for (const run of activeRuns.values()) {
+      latest = run;
+      if (run.status === 'running' && running === undefined) running = run;
+    }
+    const selected = running ?? latest;
+    return {
+      schemaVersion: 1,
+      runId: selected?.runId ?? null,
+      status: selected?.status ?? null,
+    };
+  });
+
   app.post('/api/pipeline/run', async (_req, reply) => {
     const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
     if (client === null) {
@@ -116,7 +166,7 @@ export async function registerPipelineRoutes(
 
     const runId = randomUUID();
     const controller = new AbortController();
-    activeRuns.set(runId, { runId, controller, logs: [], status: 'running' });
+    activeRuns.set(runId, { runId, controller, logs: [], events: [], status: 'running' });
 
     void runPipeline(runId, controller, client, rootLogger, openDb);
     reply.status(202);
@@ -157,6 +207,9 @@ export async function registerPipelineRoutes(
         // are forwarded before the `done` event.
         for (const line of run.logs.splice(0)) {
           writeSseEvent(reply.raw, 'log', line);
+        }
+        for (const event of run.events.splice(0)) {
+          writeSseEvent(reply.raw, 'progress', event);
         }
         if (run.status === 'done' || run.status === 'failed' || run.status === 'cancelled') {
           writeSseEvent(reply.raw, 'done', {
@@ -259,6 +312,10 @@ async function runPipeline(
         applicationVersion: '0.1.0-desktop',
         logger: pinoPipelineLogger(makeTeeLogger(rootLogger, run)),
         cancelSignal: controller.signal,
+        onEvent: (event) => {
+          run.events.push(event);
+          if (run.events.length > EVENTS_RING_BUFFER_MAX) run.events.shift();
+        },
       });
       const result = await orchestrator.run({});
       run.result = result;
