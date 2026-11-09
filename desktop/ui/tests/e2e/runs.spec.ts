@@ -23,7 +23,9 @@ test('cancelling a pipeline run invalidates the runs query', async ({ page }) =>
   const runResponse = page.waitForResponse(/\/api\/pipeline\/run\b/);
   await startButton.click();
   await runResponse;
-  await expect(page.getByText(/status: running/i)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText('Running', { exact: true }).first()).toBeVisible({
+    timeout: 10_000,
+  });
 
   const cancelButton = page.getByRole('button', { name: /cancel/i });
   await expect(cancelButton).toBeEnabled();

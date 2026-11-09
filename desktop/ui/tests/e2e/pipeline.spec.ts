@@ -1,12 +1,22 @@
 import { test, expect } from '@playwright/test';
 
-test('renders the Pipeline heading and the Run pipeline button', async ({ page }) => {
+test('renders the mission-control sections', async ({ page }) => {
   await page.goto('/pipeline');
   await expect(page.getByRole('heading', { name: 'Pipeline' })).toBeVisible();
   await expect(page.getByRole('button', { name: /run pipeline/i })).toBeVisible();
+
+  // Prerequisites banner resolved from /api/pipeline/prerequisites.
+  await expect(page.getByText('All gates clear')).toBeVisible({ timeout: 10_000 });
+
+  // Stage strip, search matrix, and scoring plan sections.
+  await expect(page.getByRole('heading', { name: 'Run stages' })).toBeVisible();
+  await expect(page.getByText('Search matrix', { exact: true })).toBeVisible();
+  await expect(page.getByText('Scoring plan', { exact: true })).toBeVisible();
+  // The seeded cross product renders a row.
+  await expect(page.getByText('Frontend developer', { exact: true })).toBeVisible();
 });
 
-test('driving a start-run mutation streams log lines via SSE', async ({ page }) => {
+test('driving a start-run mutation streams progress, logs, and a summary', async ({ page }) => {
   const pipelineRequests: { method: string; url: string }[] = [];
   page.on('request', (req) => {
     if (req.url().includes('/api/pipeline')) {
@@ -29,8 +39,10 @@ test('driving a start-run mutation streams log lines via SSE', async ({ page }) 
   await runResponse;
   await eventsResponse;
 
-  // Status flips to running once the SSE 'heartbeat' arrives.
-  await expect(page.getByText(/status: running/i)).toBeVisible({ timeout: 10_000 });
+  // Status pill flips to Running once the SSE stream opens.
+  await expect(page.getByText('Running', { exact: true }).first()).toBeVisible({
+    timeout: 10_000,
+  });
 
   // Cancel becomes enabled while running; Start is disabled.
   await expect(page.getByRole('button', { name: /cancel/i })).toBeEnabled();
@@ -42,8 +54,12 @@ test('driving a start-run mutation streams log lines via SSE', async ({ page }) 
     timeout: 10_000,
   });
 
-  // Wait for the fixture's terminal transition (1.5 s in fixture).
-  await expect(page.getByText(/status: done/i)).toBeVisible({ timeout: 10_000 });
+  // The run_summary payload renders the summary card; the pill flips
+  // to Completed. (Both texts can coexist — take the first match.)
+  await expect(page.getByTestId('run-summary')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText('Completed', { exact: true }).first()).toBeVisible({
+    timeout: 10_000,
+  });
 
   expect(
     pipelineRequests.some((r) => r.method === 'POST' && r.url.endsWith('/api/pipeline/run')),
