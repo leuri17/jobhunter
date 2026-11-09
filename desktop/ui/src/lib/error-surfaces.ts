@@ -70,6 +70,19 @@ const CODE_GUIDANCE = {
     message: 'Add your OpenAI API key in Settings, under AI Provider.',
     actionLabel: 'Open settings',
   },
+  openai_api_key_missing: {
+    message: 'Add your OpenAI API key in Settings, under AI Provider.',
+    actionLabel: 'Open settings',
+  },
+  no_active_profile: {
+    message: 'Approve a profile on the Profile page, then start the run again.',
+    actionLabel: 'Open Profile',
+  },
+  no_active_filter: {
+    message:
+      'No filter configuration is active. One is created during first-run setup; in-app filter management is tracked in issue #301.',
+    actionLabel: 'OK',
+  },
 } as const satisfies Record<string, ActionGuidance>;
 
 export type ActionRequiredErrorCode = keyof typeof CODE_GUIDANCE;
