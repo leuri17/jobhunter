@@ -29,6 +29,8 @@ export { ScriptedPipelinePrompts, FailingPipelinePrompts } from './prompts.js';
 
 export { getApplicationVersion } from './version.js';
 
+export { assertPipelinePrerequisites } from './prerequisites.js';
+
 export { PipelineOrchestrator } from './orchestrator.js';
 export type {
   PipelineOrchestratorOptions,

@@ -12,17 +12,29 @@ import { Route as rootRoute } from './__root';
 // Pipeline (`/pipeline`). Live pipeline runner UI: Start Run button,
 // SSE-driven status + log lines via `usePipelineEvents`, Cancel
 // button (only enabled while running), and a completion summary
-// rendered from the final `done` event's `result` payload.
+// rendered from the final `done` event's `result` payload. Failures
+// surface through `ApiErrorDialog`: a failed start via the mutation
+// error, a failed run via the terminal event's error payload.
+
+// Error codes whose guidance names a page to open — the copy lives in
+// CODE_GUIDANCE (`lib/error-surfaces.ts`), the destination here.
+const ACTION_ROUTES: Partial<Record<string, string>> = {
+  no_active_profile: '/profile',
+  openai_unavailable: '/settings',
+  openai_api_key_missing: '/settings',
+};
+
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/pipeline',
   component: PipelinePage,
 });
 
-function PipelinePage() {
+export function PipelinePage() {
   const [runId, setRunId] = useState<string | null>(null);
   const [startError, setStartError] = useState<ApiError | null>(null);
   const [cancelError, setCancelError] = useState<ApiError | null>(null);
+  const [runFailure, setRunFailure] = useState<ApiError | null>(null);
   const events = usePipelineEvents(runId);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -72,11 +84,22 @@ function PipelinePage() {
     });
   }, [events.error]);
 
-  const openSettings = () => {
-    setStartError(null);
-    setCancelError(null);
-    void navigate({ to: '/settings' });
-  };
+  // A run that fails server-side reports why through the terminal SSE
+  // event's error payload. Route it to the dialog tier: the user
+  // started the run and must retry or fix something, so an
+  // auto-dismissing toast would read as success (lib/error-surfaces.ts).
+  useEffect(() => {
+    if (events.runError === null) return;
+    setRunFailure(new ApiError(500, events.runError.code, events.runError.message));
+  }, [events.runError]);
+
+  // Starting a new run closes the previous failure's dialog.
+  useEffect(() => {
+    if (runId !== null) setRunFailure(null);
+  }, [runId]);
+
+  const startActionRoute = startError !== null ? ACTION_ROUTES[startError.code] : undefined;
+  const runFailureActionRoute = runFailure !== null ? ACTION_ROUTES[runFailure.code] : undefined;
 
   return (
     <div className="p-8 space-y-4">
@@ -115,17 +138,37 @@ function PipelinePage() {
       )}
 
       <ApiErrorDialog
+        error={runFailure}
+        title="The run failed"
+        onDismiss={() => setRunFailure(null)}
+        onAction={
+          runFailureActionRoute !== undefined
+            ? () => {
+                setRunFailure(null);
+                void navigate({ to: runFailureActionRoute });
+              }
+            : undefined
+        }
+      />
+
+      <ApiErrorDialog
         error={startError}
         title="Couldn't start the pipeline"
         onDismiss={() => setStartError(null)}
-        onAction={openSettings}
+        onAction={
+          startActionRoute !== undefined
+            ? () => {
+                setStartError(null);
+                void navigate({ to: startActionRoute });
+              }
+            : undefined
+        }
       />
 
       <ApiErrorDialog
         error={cancelError}
         title="Couldn't cancel the run"
         onDismiss={() => setCancelError(null)}
-        onAction={openSettings}
       />
     </div>
   );

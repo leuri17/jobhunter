@@ -41,6 +41,29 @@ describe('actionGuidanceFor', () => {
     expect(guidance?.actionLabel).toBe('Open settings');
   });
 
+  it('returns guidance for no_active_profile pointing at the Profile page', () => {
+    const guidance = actionGuidanceFor(
+      new ApiError(409, 'no_active_profile', 'No active approved profile.'),
+    );
+    expect(guidance?.message).toContain('Profile page');
+    expect(guidance?.actionLabel).toBe('Open Profile');
+  });
+
+  it('returns guidance for openai_api_key_missing pointing at Settings', () => {
+    const guidance = actionGuidanceFor(
+      new ApiError(409, 'openai_api_key_missing', 'An OpenAI API key is required.'),
+    );
+    expect(guidance?.message).toContain('Settings');
+    expect(guidance?.actionLabel).toBe('Open settings');
+  });
+
+  it('explains no_active_filter without inventing a navigation target', () => {
+    const guidance = actionGuidanceFor(
+      new ApiError(409, 'no_active_filter', 'No active filter configuration.'),
+    );
+    expect(guidance?.message).toContain('first-run');
+  });
+
   it('returns null for codes without a documented action', () => {
     expect(
       actionGuidanceFor(new ApiError(500, 'internal_error', 'Internal server error')),

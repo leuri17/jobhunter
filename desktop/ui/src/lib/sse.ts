@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { resolveSidecar } from './sidecar-url';
 import { notifyPipelineComplete } from './api';
 
+/** Why a run failed, mirrored from the terminal SSE event's error payload. */
+export interface PipelineRunError {
+  readonly code: string;
+  readonly message: string;
+}
+
 export interface PipelineEvents {
   status: 'idle' | 'running' | 'done' | 'cancelled' | 'failed' | 'error';
   lines: string[];
@@ -13,9 +19,22 @@ export interface PipelineEvents {
    * 'status: error' flip.
    */
   error: Error | null;
+  /**
+   * Non-null when the run itself failed server-side; the terminal
+   * event's error payload (code + message) that the UI routes to an
+   * `ApiErrorDialog`. Distinct from `error`, which reports transport
+   * trouble.
+   */
+  runError: PipelineRunError | null;
 }
 
-const initialEvents: PipelineEvents = { status: 'idle', lines: [], result: null, error: null };
+const initialEvents: PipelineEvents = {
+  status: 'idle',
+  lines: [],
+  result: null,
+  error: null,
+  runError: null,
+};
 
 export function usePipelineEvents(runId: string | null): PipelineEvents {
   const [state, setState] = useState<PipelineEvents>(initialEvents);
@@ -24,7 +43,7 @@ export function usePipelineEvents(runId: string | null): PipelineEvents {
     if (runId === null) return;
     let cancelled = false;
     let es: EventSource | null = null;
-    setState({ status: 'running', lines: [], result: null, error: null });
+    setState({ status: 'running', lines: [], result: null, error: null, runError: null });
     (async () => {
       const baseUrl = (await resolveSidecar()).url;
       if (cancelled) return;
@@ -37,9 +56,17 @@ export function usePipelineEvents(runId: string | null): PipelineEvents {
         // Catch malformed payloads and surface them on the error field
         // rather than letting the throw escape the hook and unmount
         // the route (no ErrorBoundary in v1).
-        let data: { status: string; result: unknown };
+        let data: {
+          status: string;
+          result: unknown;
+          error?: { code: string; message: string } | null;
+        };
         try {
-          data = JSON.parse((ev as MessageEvent).data) as { status: string; result: unknown };
+          data = JSON.parse((ev as MessageEvent).data) as {
+            status: string;
+            result: unknown;
+            error?: { code: string; message: string } | null;
+          };
         } catch (cause) {
           const wrapped = cause instanceof Error ? cause : new Error(String(cause));
           setState((s) => ({
@@ -54,6 +81,7 @@ export function usePipelineEvents(runId: string | null): PipelineEvents {
           ...s,
           status: data.status as PipelineEvents['status'],
           result: data.result,
+          runError: data.error ?? null,
         }));
         es?.close();
         // I1: fire system notification on terminal state
