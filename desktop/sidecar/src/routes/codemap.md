@@ -63,7 +63,17 @@ ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
   UI banner (OpenAI key configured, active approved profile, active
   filter config, config hash). `GET /api/pipeline/active` returns the
   running (or most recent, still-TTL'd) run id + status so the UI can
-  reconnect after navigating away mid-run.
+  reconnect after navigating away mid-run. `POST /api/pipeline/run`
+  optionally takes `{ requireScoringConfirmation?: boolean }` (default
+  off until the redesigned pipeline page ships the confirmation
+  dialog): when on, the orchestrator's `askScoringConfirmation` prompt
+  parks a pending decision via `beginScoringConfirmation()` — a
+  `confirmation_required` event rides the `progress` channel with the
+  request estimate, and `POST /api/pipeline/:runId/scoring-decision`
+  (`{ accepted: boolean }`) resolves it (`409
+no_pending_confirmation` when nothing is pending). An unanswered gate
+  auto-declines after `CONFIRMATION_TIMEOUT_MS` (5 min); cancelling
+  resolves it as declined.
 - **Profile**: `registerProfileRoutes` adds `@fastify/multipart` (10 MiB
   per file, 2 files). `profileImportHandler` accepts multipart filenames (v1 delegates
   to `ProfileImportService.importSources`); `profileExtractHandler` invokes
