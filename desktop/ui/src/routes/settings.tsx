@@ -45,7 +45,7 @@ function RouteComponent() {
         // defaultValues are read once on first render, so the form never
         // picks up the refetched config on its own — re-baseline against
         // the cache that invalidateQueries just refreshed.
-        form.reset(queryClient.getQueryData<ConfigResponse>(['config'])!.config);
+        resetToBaseline();
 
         toast.add({
           title: 'Search configuration updated successfully',
@@ -61,6 +61,9 @@ function RouteComponent() {
     setSaveError(null);
     void form.handleSubmit();
   };
+
+  const resetToBaseline = () =>
+    form.reset(queryClient.getQueryData<ConfigResponse>(['config'])!.config);
 
   return (
     // TODO: Create Page & PageContent component
@@ -122,6 +125,11 @@ function RouteComponent() {
               <Button type="submit" disabled={!canSubmit || isSubmitting}>
                 {isSubmitting ? 'Saving...' : 'Save settings'}
               </Button>
+              {isDirty && (
+                <Button type="button" variant="ghost" onClick={resetToBaseline}>
+                  Discard changes
+                </Button>
+              )}
               {!isDirty && <span className="text-xs text-muted-foreground">No changes</span>}
             </div>
           )}
