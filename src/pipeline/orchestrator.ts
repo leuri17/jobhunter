@@ -289,6 +289,13 @@ export class PipelineOrchestrator {
     }
 
     stats.endTimestamp = this.now().toISOString();
+    // An abort landing after the search loop (e.g. while the scoring
+    // gate is open, or during the endTimestamp read) still yields a
+    // cancelled run.
+    if (!cancelled && signal.aborted) {
+      cancelled = true;
+      cancellationReason = cancellationReason ?? 'user_cancelled';
+    }
     if (cancelled) {
       stats.status = 'cancelled';
       stats.cancellationReason = cancellationReason;

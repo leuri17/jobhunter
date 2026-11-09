@@ -358,6 +358,69 @@ describe('scoring cost gate (integration)', () => {
     }
   }, 10_000);
 
+  it('reports the run as cancelled when cancelled while the gate is open', async () => {
+    vi.stubEnv('OPENAI_API_KEY', 'test-key');
+    const server = await buildServer({
+      env: { port: 0, host: '127.0.0.1' },
+      pipelineDbOpener: makeDbOpener({ profile: true, filter: true }),
+    });
+    const baseUrl = await server.listen();
+    try {
+      const start = await fetch(`${baseUrl}/api/pipeline/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requireScoringConfirmation: true }),
+      });
+      const { runId } = (await start.json()) as { schemaVersion: number; runId: string };
+
+      const eventsRes = await fetch(`${baseUrl}/api/pipeline/${runId}/events`);
+      const reader = SseReader.open(eventsRes);
+      await reader.waitUntil((t) => t.includes('confirmation_required'));
+
+      const cancel = await fetch(`${baseUrl}/api/pipeline/${runId}/cancel`, {
+        method: 'POST',
+      });
+      expect(cancel.status).toBe(200);
+
+      const text = await reader.waitUntil((t) => t.includes('event: done'));
+      const donePayload = parseFrame(text, 'done');
+      expect(donePayload.status).toBe('cancelled');
+    } finally {
+      await server.close();
+    }
+  }, 15_000);
+
+  it('gates by default when the body omits requireScoringConfirmation', async () => {
+    vi.stubEnv('OPENAI_API_KEY', 'test-key');
+    const server = await buildServer({
+      env: { port: 0, host: '127.0.0.1' },
+      pipelineDbOpener: makeDbOpener({ profile: true, filter: true }),
+    });
+    const baseUrl = await server.listen();
+    try {
+      const start = await fetch(`${baseUrl}/api/pipeline/run`, { method: 'POST' });
+      expect(start.status).toBe(202);
+      const { runId } = (await start.json()) as { schemaVersion: number; runId: string };
+
+      const eventsRes = await fetch(`${baseUrl}/api/pipeline/${runId}/events`);
+      const reader = SseReader.open(eventsRes);
+      await reader.waitUntil((t) => t.includes('confirmation_required'));
+
+      const decision = await fetch(`${baseUrl}/api/pipeline/${runId}/scoring-decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accepted: true }),
+      });
+      expect(decision.status).toBe(200);
+
+      await reader.waitUntil((t) => t.includes('event: done'));
+      expect(gate.confirmScoringFlags[0]).toBe(false);
+      expect(gate.confirmed[0]).toBe(true);
+    } finally {
+      await server.close();
+    }
+  }, 15_000);
+
   it('404s a decision for an unknown run', async () => {
     const server = await buildServer({ env: { port: 0, host: '127.0.0.1' } });
     const baseUrl = await server.listen();
