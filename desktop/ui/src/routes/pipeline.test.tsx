@@ -50,6 +50,8 @@ const baseEvents: PipelineEvents = {
   result: null,
   error: null,
   runError: null,
+  progress: [],
+  pendingConfirmation: null,
 };
 
 describe('<PipelinePage /> run-failure surfacing', () => {

@@ -44,6 +44,74 @@ describe('api', () => {
     await expect(api.health()).rejects.toBeInstanceOf(ApiError);
   });
 
+  it('api.runPipeline posts the confirmation option as JSON', async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(JSON.stringify({ schemaVersion: 1, runId: 'run-1' }), { status: 202 }),
+    );
+    const result = await api.runPipeline(true);
+    expect(result.runId).toBe('run-1');
+
+    const [calledUrl, calledInit] = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0] as [string, RequestInit];
+    expect(calledUrl).toMatch(/\/api\/pipeline\/run$/);
+    expect(calledInit.method).toBe('POST');
+    expect(calledInit.body).toBe(JSON.stringify({ requireScoringConfirmation: true }));
+  });
+
+  it('api.getPipelinePrerequisites hits /api/pipeline/prerequisites', async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          schemaVersion: 1,
+          openaiKeyConfigured: true,
+          activeProfile: { id: 1, contentHash: 'profile-hash' },
+          activeFilter: { id: 2, contentHash: 'filter-hash' },
+          configHash: 'config-hash',
+        }),
+        { status: 200 },
+      ),
+    );
+    const result = await api.getPipelinePrerequisites();
+    expect(result.activeProfile?.id).toBe(1);
+
+    const [calledUrl] = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(calledUrl).toMatch(/\/api\/pipeline\/prerequisites$/);
+  });
+
+  it('api.getActivePipelineRun hits /api/pipeline/active', async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(JSON.stringify({ schemaVersion: 1, runId: null, status: null }), {
+        status: 200,
+      }),
+    );
+    const result = await api.getActivePipelineRun();
+    expect(result.runId).toBeNull();
+
+    const [calledUrl] = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(calledUrl).toMatch(/\/api\/pipeline\/active$/);
+  });
+
+  it('api.decideScoring posts the decision', async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(JSON.stringify({ schemaVersion: 1, status: 'decided', accepted: true }), {
+        status: 200,
+      }),
+    );
+    await api.decideScoring('run-1', true);
+
+    const [calledUrl, calledInit] = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0] as [string, RequestInit];
+    expect(calledUrl).toMatch(/\/api\/pipeline\/run-1\/scoring-decision$/);
+    expect(calledInit.method).toBe('POST');
+    expect(calledInit.body).toBe(JSON.stringify({ accepted: true }));
+  });
+
   it('api.geoTypeahead hits /api/linkedin/geo-typeahead with encoded query', async () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       new Response(

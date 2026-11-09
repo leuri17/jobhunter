@@ -26,6 +26,9 @@ import type {
   RejectProfileResponse,
   RunPipelineResponse,
   ValidateConfigResponse,
+  PipelinePrerequisitesResponse,
+  ActivePipelineRunResponse,
+  ScoringDecisionResponse,
 } from './types.js';
 import type { ConfigPatch } from '@jobhunter/core/config';
 import type { ProfessionalProfile } from '@jobhunter/core/profile';
@@ -154,7 +157,17 @@ export const api = {
     request<{ schemaVersion: 1; plan: unknown }>('POST', '/api/jobs/reevaluate', body),
   listRuns: (limit = 20) => request<ListRunsResponse>('GET', `/api/runs?limit=${limit}`),
   getRun: (id: string) => request<GetRunResponse>('GET', `/api/runs/${id}`),
-  runPipeline: () => request<RunPipelineResponse>('POST', '/api/pipeline/run'),
+  runPipeline: (requireScoringConfirmation: boolean) =>
+    request<RunPipelineResponse>('POST', '/api/pipeline/run', {
+      requireScoringConfirmation,
+    }),
+  getPipelinePrerequisites: () =>
+    request<PipelinePrerequisitesResponse>('GET', '/api/pipeline/prerequisites'),
+  getActivePipelineRun: () => request<ActivePipelineRunResponse>('GET', '/api/pipeline/active'),
+  decideScoring: (runId: string, accepted: boolean) =>
+    request<ScoringDecisionResponse>('POST', `/api/pipeline/${runId}/scoring-decision`, {
+      accepted,
+    }),
   cancelPipeline: (runId: string) =>
     request<CancelPipelineResponse>('POST', `/api/pipeline/${runId}/cancel`),
   geoTypeahead: (q: string) =>

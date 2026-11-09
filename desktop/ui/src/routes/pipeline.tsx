@@ -40,7 +40,7 @@ export function PipelinePage() {
   const navigate = useNavigate();
 
   const start = useMutation({
-    mutationFn: api.runPipeline,
+    mutationFn: () => api.runPipeline(true),
     onSuccess: (data) => {
       setStartError(null);
       setRunId(data.runId);
