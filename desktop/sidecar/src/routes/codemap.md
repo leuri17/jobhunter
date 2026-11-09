@@ -47,10 +47,12 @@ ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
   (`pipelineEventsHandler`) opens an SSE channel, `setInterval` polls every
   1s, drains buffered logs, emits `heartbeat`, then emits terminal `done`
   and deletes the run after a 60s TTL.
-- **Profile**: `registerProfileRoutes` adds `@fastify/multipart` (50 MB
-  limit). `profileImportHandler` accepts multipart filenames (v1 delegates
+- **Profile**: `registerProfileRoutes` adds `@fastify/multipart` (10 MiB
+  per file, 2 files). `profileImportHandler` accepts multipart filenames (v1 delegates
   to `ProfileImportService.importSources`); `profileExtractHandler` invokes
-  `ProfileExtractionService.extract(usable)` over `OPENAI_MODEL ?? 'gpt-5'`;
+  `ProfileExtractionService.extract(usable)` over `OPENAI_MODEL ?? 'gpt-5'`
+  with a 300 s client timeout, SDK-internal retries disabled, a two-attempt
+  `runWithRetry` budget, and the Fastify request logger attached (issue #279);
   `profileApproveHandler` / `profileRejectHandler` run approval services
   with auto-confirming prompts; `profileEditHandler` returns `501
 edit_via_http_not_supported` (interactive TUI prompts are out-of-band
