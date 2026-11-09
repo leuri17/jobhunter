@@ -27,22 +27,41 @@ import { sidecarFileSystem } from './fs-adapter.js';
 import { initSseHeaders, writeSseEvent, closeSse } from '../sse.js';
 import { resolveOpenAiClientOrNull } from './openai-resolve.js';
 
-interface ActiveRun {
+export interface ActiveRun {
   readonly runId: string;
   readonly controller: AbortController;
   /** Recent log lines emitted by the orchestrator (ring buffer, max 1000). */
   logs: string[];
-  /** Recent progress events emitted by the orchestrator (ring buffer, max 500). */
-  events: PipelineProgressEvent[];
+  /** Recent progress/confirmation events (ring buffer, max 500). */
+  events: RunEvent[];
   status: 'running' | 'cancelled' | 'done' | 'failed';
   result?: PipelineRunResult;
   /** Why a run failed; carried by the terminal SSE `done` event. */
   error?: { readonly code: string; readonly message: string };
+  /** Set while the run waits for a scoring confirmation decision. */
+  pendingConfirmation: ScoringDecisionHandle | null;
 }
+
+/** Decision handle parked on a run while scoring awaits confirmation. */
+export interface ScoringDecisionHandle {
+  resolve(accepted: boolean): void;
+}
+
+type RunEvent =
+  | PipelineProgressEvent
+  | {
+      readonly type: 'confirmation_required';
+      readonly runId: string;
+      readonly jobsDiscovered: number;
+      readonly newOpenAIRequests: number;
+    };
 
 const activeRuns = new Map<string, ActiveRun>();
 const LOG_RING_BUFFER_MAX = 1000;
 const EVENTS_RING_BUFFER_MAX = 500;
+
+/** How long a run waits for a scoring decision before auto-declining. */
+export const CONFIRMATION_TIMEOUT_MS = 300_000;
 
 /**
  * Cancel all currently running pipelines. Called by main() during graceful
@@ -71,6 +90,39 @@ export function runErrorFrom(err: unknown): { code: string; message: string } {
   }
   const message = err instanceof Error ? err.message : String(err);
   return { code: 'pipeline_failed', message };
+}
+
+/**
+ * Gate an OpenAI scoring batch behind a user decision: push a
+ * `confirmation_required` event onto the run's SSE buffer, park the
+ * decision handle on the run (resolved by the scoring-decision route,
+ * the cancel route, or the timeout — whichever fires first), and
+ * return the decision.
+ */
+export function beginScoringConfirmation(
+  run: ActiveRun,
+  plan: { jobsDiscovered: number; newOpenAIRequests: number },
+): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    run.events.push({
+      type: 'confirmation_required',
+      runId: run.runId,
+      jobsDiscovered: plan.jobsDiscovered,
+      newOpenAIRequests: plan.newOpenAIRequests,
+    });
+    if (run.events.length > EVENTS_RING_BUFFER_MAX) run.events.shift();
+    const timer = setTimeout(() => {
+      run.pendingConfirmation = null;
+      resolve(false);
+    }, CONFIRMATION_TIMEOUT_MS);
+    run.pendingConfirmation = {
+      resolve: (accepted: boolean): void => {
+        clearTimeout(timer);
+        run.pendingConfirmation = null;
+        resolve(accepted);
+      },
+    };
+  });
 }
 
 export interface PipelineRouteOptions {
@@ -137,6 +189,10 @@ export async function registerPipelineRoutes(
   });
 
   app.post('/api/pipeline/run', async (_req, reply) => {
+    const body = _req.body as { requireScoringConfirmation?: boolean } | undefined;
+    // Gate defaults off until the pipeline page ships the confirmation
+    // dialog; the redesign flips the default to on.
+    const requireConfirmation = body?.requireScoringConfirmation === true;
     const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
     if (client === null) {
       reply.status(503);
@@ -166,9 +222,16 @@ export async function registerPipelineRoutes(
 
     const runId = randomUUID();
     const controller = new AbortController();
-    activeRuns.set(runId, { runId, controller, logs: [], events: [], status: 'running' });
+    activeRuns.set(runId, {
+      runId,
+      controller,
+      logs: [],
+      events: [],
+      status: 'running',
+      pendingConfirmation: null,
+    });
 
-    void runPipeline(runId, controller, client, rootLogger, openDb);
+    void runPipeline(runId, controller, client, rootLogger, openDb, requireConfirmation);
     reply.status(202);
     return { schemaVersion: 1, runId };
   });
@@ -184,8 +247,43 @@ export async function registerPipelineRoutes(
     }
     run.controller.abort();
     run.status = 'cancelled';
+    run.pendingConfirmation?.resolve(false);
     return { schemaVersion: 1, status: 'cancelling' };
   });
+
+  app.post<{ Params: { runId: string } }>(
+    '/api/pipeline/:runId/scoring-decision',
+    async (req, reply) => {
+      const run = activeRuns.get(req.params.runId);
+      if (run === undefined) {
+        reply.status(404);
+        return {
+          schemaVersion: 1,
+          error: { code: 'pipeline_run_not_found', message: 'Run not found' },
+        };
+      }
+      if (run.pendingConfirmation === null) {
+        reply.status(409);
+        return {
+          schemaVersion: 1,
+          error: {
+            code: 'no_pending_confirmation',
+            message: 'The run is not waiting for a scoring decision',
+          },
+        };
+      }
+      const body = req.body as { accepted?: unknown } | undefined;
+      if (body === undefined || typeof body.accepted !== 'boolean') {
+        reply.status(400);
+        return {
+          schemaVersion: 1,
+          error: { code: 'invalid_body', message: 'Body must be { accepted: boolean }' },
+        };
+      }
+      run.pendingConfirmation.resolve(body.accepted);
+      return { schemaVersion: 1, status: 'decided', accepted: body.accepted };
+    },
+  );
 
   app.get<{ Params: { runId: string } }>(
     '/api/pipeline/:runId/events',
@@ -237,6 +335,7 @@ async function runPipeline(
   openaiClient: OpenAIClient,
   rootLogger: PinoLogger,
   openDb: () => Promise<DatabaseConnection>,
+  requireConfirmation: boolean,
 ): Promise<void> {
   const run = activeRuns.get(runId);
   if (run === undefined) return;
@@ -300,8 +399,12 @@ async function runPipeline(
         scoringService,
         diagnosticManager,
         config: { rawConfig: loaded.config, hash: loaded.hash, schemaVersion: 1 },
-        prompts: { askScoringConfirmation: async () => true },
-        confirmScoring: true,
+        prompts: {
+          askScoringConfirmation: requireConfirmation
+            ? ({ plan }) => beginScoringConfirmation(run, plan)
+            : async () => true,
+        },
+        confirmScoring: !requireConfirmation,
         env: process.env,
         resolveApiKey: async () => {
           return resolveOpenAiApiKey({
