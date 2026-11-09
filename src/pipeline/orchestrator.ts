@@ -22,6 +22,7 @@ import {
   type TopNRow,
 } from './state.js';
 import { PipelinePrerequisiteError, PipelineOpenAIKeyMissingError } from './errors.js';
+import { assertPipelinePrerequisites } from './prerequisites.js';
 import { buildConfigSnapshot } from './normalize.js';
 import { noopPipelineLogger, type PipelineLogger } from './log.js';
 import type { PipelinePrompts } from './prompts.js';
@@ -625,20 +626,7 @@ export class PipelineOrchestrator {
         'An OpenAI API key is required to run the pipeline. Add one in Settings, or set OPENAI_API_KEY in your environment.',
       );
     }
-    const activeProfile = await this.repositories.profileVersions.findActiveApproved();
-    if (activeProfile === null) {
-      throw new PipelinePrerequisiteError(
-        'no_active_profile',
-        'No active approved profile. Run setup from the Setup Wizard or approve a profile from the Profile page before starting a run.',
-      );
-    }
-    const activeFilter = await this.repositories.filterConfigurations.findActive();
-    if (activeFilter === null) {
-      throw new PipelinePrerequisiteError(
-        'no_active_filter',
-        'No active filter configuration. Open the Filters tab and save a configuration before starting a run.',
-      );
-    }
+    await assertPipelinePrerequisites(this.repositories);
   }
 
   private newRunStats(): MutableRunStats {

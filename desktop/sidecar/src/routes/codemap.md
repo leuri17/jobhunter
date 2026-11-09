@@ -37,16 +37,26 @@ ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
 
 ## Flow
 
-- **Pipeline**: `POST /api/pipeline/run` → `pipelineRunHandler` allocates
-  `runId`, kicks off `runPipeline()` (fire-and-forget), returns `202`. The
+- **Pipeline**: `POST /api/pipeline/run` resolves the OpenAI client
+  (503 `openai_unavailable` without one), then preflights the persisted
+  prerequisites synchronously via `assertPipelinePrerequisites` — a miss
+  returns a `409` envelope with `no_active_profile` /
+  `no_active_filter` — before allocating `runId`, kicking off
+  `runPipeline()` (fire-and-forget), and returning `202` (the
+  database handle is opened through the injectable `dbOpener` seam,
+  defaulting to `db-helper.ts`). The
   background routine assembles `LinkedInDiscoveryService`,
   `LinkedInExtractionService`, `FilterApplyService`, `ScoringService`,
   `PipelineOrchestrator`, and a tee-logger that mirrors pino into the run's
-  log buffer. `POST /api/pipeline/:runId/cancel` (`pipelineCancelHandler`)
+  log buffer; a thrown failure is normalized by `runErrorFrom()` onto
+  `ActiveRun.error` (`ApplicationError` codes are kept, anything else
+  becomes `pipeline_failed`). `POST /api/pipeline/:runId/cancel` (`pipelineCancelHandler`)
   trips the `AbortController`. `GET /api/pipeline/:runId/events`
   (`pipelineEventsHandler`) opens an SSE channel, `setInterval` polls every
   1s, drains buffered logs, emits `heartbeat`, then emits terminal `done`
-  and deletes the run after a 60s TTL.
+  (`{ status, result, error }` — `error` carries the failure code/message
+  the UI routes to remediation guidance) and deletes the run after a 60s
+  TTL.
 - **Profile**: `registerProfileRoutes` adds `@fastify/multipart` (10 MiB
   per file, 2 files). `profileImportHandler` accepts multipart filenames (v1 delegates
   to `ProfileImportService.importSources`); `profileExtractHandler` invokes

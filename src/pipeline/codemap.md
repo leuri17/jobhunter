@@ -24,6 +24,10 @@ cancelled`), `RunSummary` (21-field persisted shape), `TopNRow`,
 - Seams: `PipelineLogger` (log.ts) with `noopPipelineLogger` /
   `pinoPipelineLogger`; `PipelinePrompts` (prompts.ts) with
   `ScriptedPipelinePrompts` / `FailingPipelinePrompts` test adapters.
+- `prerequisites.ts` — `assertPipelinePrerequisites(repositories)`: the
+  shared pre-run check (active approved profile + active filter config).
+  Used by `validatePrerequisites()` and by the sidecar's synchronous
+  POST preflight so the error codes and user-facing copy cannot drift.
 - `normalize.ts` produces a sorted-keys JSON snapshot of
   `OperationalConfig` + SHA-256 hash (`pipelineRuns.configHash`);
   `format.ts` renders `RunSummary` / `TopNRow[]` / `ScoringPlan` as

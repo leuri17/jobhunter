@@ -32,6 +32,7 @@ import {
 } from '@jobhunter/core/config';
 import type { DefaultOpenAIClientRefusalOptions } from '@jobhunter/core/profile';
 import type { PlatformPaths } from '@jobhunter/core/platform';
+import type { DatabaseConnection } from '@jobhunter/core/persistence';
 
 function readLogLevel(env: NodeJS.ProcessEnv = process.env): LogLevel {
   const raw = env['LOG_LEVEL'] ?? 'info';
@@ -226,6 +227,12 @@ export interface BuildServerOptions {
    * through `resolveOpenAiClientOrNull` with a short 10 s timeout.
    */
   readonly listModels?: () => Promise<readonly string[] | null>;
+  /**
+   * Optional test/alternative seam: opens the SQLite handle the
+   * pipeline routes use for run preflight and execution. Defaults to
+   * the real on-disk database.
+   */
+  readonly pipelineDbOpener?: () => Promise<DatabaseConnection>;
 }
 
 async function resolveRootLogger(
@@ -348,7 +355,11 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
 
   await registerRunsRoutes(app);
 
-  await registerPipelineRoutes(app, { rootLogger, refusal });
+  await registerPipelineRoutes(app, {
+    rootLogger,
+    refusal,
+    ...(opts.pipelineDbOpener !== undefined ? { dbOpener: opts.pipelineDbOpener } : {}),
+  });
 
   await registerLinkedinGeoTypeaheadRoute(app);
 

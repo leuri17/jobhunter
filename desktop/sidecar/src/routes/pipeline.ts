@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { pino, type Logger as PinoLogger } from 'pino';
-import { PipelineOrchestrator, type PipelineRunResult } from '@jobhunter/core/pipeline';
+import {
+  PipelineOrchestrator,
+  assertPipelinePrerequisites,
+  type PipelineRunResult,
+} from '@jobhunter/core/pipeline';
 import {
   LinkedInDiscoveryService,
   LinkedInExtractionService,
@@ -12,6 +16,8 @@ import { ScoringService, pinoScoringLogger } from '@jobhunter/core/scoring';
 import { createDefaultDiagnosticManager } from '@jobhunter/core/diagnostics';
 import { type DefaultOpenAIClientRefusalOptions, type OpenAIClient } from '@jobhunter/core/profile';
 import { loadConfig, resolveOpenAiApiKey } from '@jobhunter/core/config';
+import { ApplicationError } from '@jobhunter/core/errors';
+import { type DatabaseConnection } from '@jobhunter/core/persistence';
 import { getSecretsBackend } from '../secrets-backend.js';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { pinoPipelineLogger } from '@jobhunter/core/pipeline';
@@ -27,6 +33,8 @@ interface ActiveRun {
   logs: string[];
   status: 'running' | 'cancelled' | 'done' | 'failed';
   result?: PipelineRunResult;
+  /** Why a run failed; carried by the terminal SSE `done` event. */
+  error?: { readonly code: string; readonly message: string };
 }
 
 const activeRuns = new Map<string, ActiveRun>();
@@ -47,10 +55,26 @@ export function abortAllActiveRuns(): number {
   return count;
 }
 
+/**
+ * Normalize a thrown value from a background run into the payload the
+ * terminal SSE `done` event carries. `ApplicationError`s keep their
+ * code (the UI routes known codes to remediation guidance); anything
+ * else becomes `pipeline_failed`.
+ */
+export function runErrorFrom(err: unknown): { code: string; message: string } {
+  if (err instanceof ApplicationError) {
+    return { code: err.code, message: err.message };
+  }
+  const message = err instanceof Error ? err.message : String(err);
+  return { code: 'pipeline_failed', message };
+}
+
 export interface PipelineRouteOptions {
   readonly openaiClient?: OpenAIClient;
   readonly rootLogger?: PinoLogger;
   readonly refusal?: DefaultOpenAIClientRefusalOptions;
+  /** Opens the SQLite handle for run preflight and execution. */
+  readonly dbOpener?: () => Promise<DatabaseConnection>;
 }
 
 export async function registerPipelineRoutes(
@@ -60,6 +84,7 @@ export async function registerPipelineRoutes(
   // Resolve once per registration. Silent fallback matches the server's
   // own silent fallback for tests that build a server without a logger.
   const rootLogger: PinoLogger = opts.rootLogger ?? pino({ level: 'silent' });
+  const openDb = opts.dbOpener ?? openDbHandle;
 
   app.post('/api/pipeline/run', async (_req, reply) => {
     const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
@@ -71,11 +96,29 @@ export async function registerPipelineRoutes(
       };
     }
 
+    // Preflight the persisted prerequisites synchronously so a blocked
+    // run fails fast with an actionable envelope instead of a 202
+    // followed by a silent background failure. The orchestrator
+    // re-checks between preflight and execution.
+    const handle = await openDb();
+    try {
+      await assertPipelinePrerequisites(createRepositories(handle));
+    } catch (err) {
+      if (!(err instanceof ApplicationError)) throw err;
+      reply.status(409);
+      return {
+        schemaVersion: 1,
+        error: { code: err.code, message: err.message },
+      };
+    } finally {
+      handle.close();
+    }
+
     const runId = randomUUID();
     const controller = new AbortController();
     activeRuns.set(runId, { runId, controller, logs: [], status: 'running' });
 
-    void runPipeline(runId, controller, client, rootLogger);
+    void runPipeline(runId, controller, client, rootLogger, openDb);
     reply.status(202);
     return { schemaVersion: 1, runId };
   });
@@ -116,7 +159,11 @@ export async function registerPipelineRoutes(
           writeSseEvent(reply.raw, 'log', line);
         }
         if (run.status === 'done' || run.status === 'failed' || run.status === 'cancelled') {
-          writeSseEvent(reply.raw, 'done', { status: run.status, result: run.result ?? null });
+          writeSseEvent(reply.raw, 'done', {
+            status: run.status,
+            result: run.result ?? null,
+            error: run.error ?? null,
+          });
           clearInterval(interval);
           closeSse(reply.raw);
           activeRuns.delete(run.runId);
@@ -136,13 +183,14 @@ async function runPipeline(
   controller: AbortController,
   openaiClient: OpenAIClient,
   rootLogger: PinoLogger,
+  openDb: () => Promise<DatabaseConnection>,
 ): Promise<void> {
   const run = activeRuns.get(runId);
   if (run === undefined) return;
 
   try {
     const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
-    const handle = await openDbHandle();
+    const handle = await openDb();
     try {
       const repositories = createRepositories(handle);
       const loaded = await loadConfig(paths, sidecarFileSystem);
@@ -229,6 +277,7 @@ async function runPipeline(
   } catch (err) {
     process.stderr.write(`pipeline run ${runId} failed: ${String(err)}\n`);
     run.status = 'failed';
+    run.error = runErrorFrom(err);
   }
 }
 
