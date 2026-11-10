@@ -98,6 +98,18 @@ describe('src/linkedin/card-id — ', () => {
     expect(parseCardJobId(firstCard(), document)).toBe('999999');
   });
 
+  it('parses guest slugged hrefs with no data-occludable-job-id', () => {
+    const html = `
+      <html><body>
+        <div class="job-search-card">
+          <a href="https://nl.linkedin.com/jobs/view/senior-software-engineer-identity-authorization-platform-at-clickhouse-4488302295?position=1&pageNum=0">Senior Software Engineer</a>
+          <a href="https://www.linkedin.com/company/clickhouseinc?trk=public_jobs_jserp-result_job-search-card">ClickHouse</a>
+        </div>
+      </body></html>`;
+    const { document, firstCard } = makeDocument(html);
+    expect(parseCardJobId(firstCard(), document)).toBe('4488302295');
+  });
+
   it('falls back to the regex-extracted href ID when the data attribute is absent', () => {
     const html = `
       <html><body>
