@@ -88,7 +88,7 @@ export async function detectOverlays(
   const descriptors: OverlayDescriptor[] = [];
   for (const entry of OVERLAY_ENTRIES) {
     const locator = page.locator(entry.selector);
-    if ((await locator.count()) > 0) {
+    if ((await firstVisibleIndex(locator)) >= 0) {
       descriptors.push({
         selector: entry.selector,
         strategy: entry.strategy,
@@ -135,6 +135,12 @@ export async function dismissOverlay(
  * Convenience: detect + dismiss every recoverable overlay. Returns
  * the dismissed set + the undismissable set so the orchestrator can
  * record both via `DiagnosticManager.recordScraperError`.
+ *
+ * After the first pass, each undismissed overlay gets exactly one
+ * bounded retry: an overlay can be unclickable only because another
+ * overlay's backdrop still covers it (e.g. the cookie banner sits
+ * under the sign-in modal's dimming layer), and that blocker may have
+ * been dismissed later in the same pass.
  */
 export async function dismissRecoverableOverlays(
   page: Page,
@@ -154,33 +160,40 @@ export async function dismissRecoverableOverlays(
       undismissed.push(descriptor);
     }
   }
+  for (const descriptor of [...undismissed]) {
+    const result = await dismissOverlay(page, descriptor, opts);
+    if (result.kind !== 'dismissed') continue;
+    dismissed.push(descriptor);
+    undismissed.splice(undismissed.indexOf(descriptor), 1);
+  }
   return { dismissed, undismissed };
 }
 
 /**
  * Apply a single dismissal strategy. Returns `true` if the action was
- * attempted (callers should follow up with a `waitFor` to confirm).
- * Each branch uses Playwright locator semantics that are compatible
- * with both the real `BrowserSession` and the inline test
- * fakes.
+ * attempted and landed (callers follow up with a `waitFor` to confirm
+ * the overlay actually hid). Every click is bounded by
+ * `overlayDismissalMs` — Playwright treats `timeout: 0` as *no
+ * timeout*, so an unbounded click on a present-but-hidden node waits
+ * forever (the discovery-hang root cause). Only VISIBLE matches are
+ * clicked: LinkedIn keeps hidden placeholder overlays (e.g. unused
+ * `button[aria-label="Dismiss"]` instances) in the DOM, and the first
+ * DOM-order match is routinely one of those.
  */
 async function applyStrategy(
   page: Page,
   locator: Locator,
   strategy: OverlayDismissalStrategy,
-  _overlayDismissalMs: number,
+  overlayDismissalMs: number,
 ): Promise<boolean> {
-  void _overlayDismissalMs;
   switch (strategy) {
     case 'close': {
-      // Try the LinkedIn close button first; fall back to clicking the overlay itself.
       const closeButton = page.locator(LINKEDIN_SELECTORS.overlays.closeButton);
-      if ((await closeButton.count()) > 0) {
-        await closeButton.first().click({ timeout: 0 });
-        return true;
+      const visibleClose = await firstVisibleIndex(closeButton);
+      if (visibleClose >= 0) {
+        return boundedClick(closeButton.nth(visibleClose), overlayDismissalMs);
       }
-      await locator.first().click({ timeout: 0 });
-      return true;
+      return clickFirstVisible(locator, overlayDismissalMs);
     }
     case 'escape':
       await page.keyboard.press('Escape');
@@ -191,12 +204,56 @@ async function applyStrategy(
       return true;
     }
     case 'accept':
-      // LinkedIn renders an "Accept" button inside the cookie consent
-      // banner; we approximate by clicking the banner's primary CTA.
-      await locator.first().click({ timeout: 0 });
-      return true;
+      return clickActionButton(locator, 'ACCEPT', overlayDismissalMs);
     case 'reject':
-      await locator.first().click({ timeout: 0 });
-      return true;
+      return clickActionButton(locator, 'REJECT', overlayDismissalMs);
+  }
+}
+
+/**
+ * Index of the first currently-visible match for `locator`, or -1 when
+ * every match (or the selector itself) is absent or hidden.
+ */
+async function firstVisibleIndex(locator: Locator): Promise<number> {
+  const total = await locator.count();
+  for (let i = 0; i < total; i += 1) {
+    if (await locator.nth(i).isVisible()) return i;
+  }
+  return -1;
+}
+
+/** Click `locator`'s first visible match, bounded by `timeoutMs`. */
+async function clickFirstVisible(locator: Locator, timeoutMs: number): Promise<boolean> {
+  const index = await firstVisibleIndex(locator);
+  if (index < 0) return false;
+  return boundedClick(locator.nth(index), timeoutMs);
+}
+
+/**
+ * Click the banner's `button[action-type="ACCEPT"|"REJECT"]` inside the
+ * overlay, falling back to the overlay's own visible match. Clicking
+ * the container itself risks landing on a link (e.g. the Cookie Policy
+ * href) instead of the decision button.
+ */
+async function clickActionButton(
+  overlay: Locator,
+  actionType: 'ACCEPT' | 'REJECT',
+  timeoutMs: number,
+): Promise<boolean> {
+  const actionButton = overlay.locator(`button[action-type="${actionType}"]`);
+  const index = await firstVisibleIndex(actionButton);
+  if (index >= 0) {
+    return boundedClick(actionButton.nth(index), timeoutMs);
+  }
+  return clickFirstVisible(overlay, timeoutMs);
+}
+
+/** Bounded click: a failed/timed-out click is `false`, never a throw or a hang. */
+async function boundedClick(locator: Locator, timeoutMs: number): Promise<boolean> {
+  try {
+    await locator.click({ timeout: timeoutMs });
+    return true;
+  } catch {
+    return false;
   }
 }
