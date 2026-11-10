@@ -112,6 +112,27 @@ describe('api', () => {
     expect(calledInit.body).toBe(JSON.stringify({ accepted: true }));
   });
 
+  it('api.createDefaultFilter hits /api/filters/default', async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          schemaVersion: 1,
+          filter: { id: 1, contentHash: 'filter-hash' },
+          created: true,
+        }),
+        { status: 200 },
+      ),
+    );
+    const result = await api.createDefaultFilter();
+    expect(result.created).toBe(true);
+    expect(result.filter.id).toBe(1);
+
+    const [calledUrl, calledInit] = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0] as [string, RequestInit];
+    expect(calledUrl).toMatch(/\/api\/filters\/default$/);
+    expect(calledInit.method).toBe('POST');
+  });
+
   it('api.geoTypeahead hits /api/linkedin/geo-typeahead with encoded query', async () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       new Response(

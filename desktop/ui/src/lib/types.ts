@@ -271,6 +271,12 @@ export interface ScoringDecisionResponse {
   readonly accepted: boolean;
 }
 
+export interface DefaultFilterResponse {
+  readonly schemaVersion: 1;
+  readonly filter: { readonly id: number; readonly contentHash: string };
+  readonly created: boolean;
+}
+
 export type { PipelineProgressEvent, PipelineRunCounters } from '@jobhunter/core/pipeline';
 
 export interface GeoHit {

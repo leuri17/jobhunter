@@ -57,11 +57,11 @@ describe('actionGuidanceFor', () => {
     expect(guidance?.actionLabel).toBe('Open settings');
   });
 
-  it('explains no_active_filter without inventing a navigation target', () => {
+  it('explains no_active_filter pointing at the default-filter button', () => {
     const guidance = actionGuidanceFor(
       new ApiError(409, 'no_active_filter', 'No active filter configuration.'),
     );
-    expect(guidance?.message).toContain('first-run');
+    expect(guidance?.message).toContain('default filter');
   });
 
   it('returns null for codes without a documented action', () => {

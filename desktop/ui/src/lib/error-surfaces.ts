@@ -80,7 +80,7 @@ const CODE_GUIDANCE = {
   },
   no_active_filter: {
     message:
-      'No filter configuration is active. One is created during first-run setup; in-app filter management is tracked in issue #301.',
+      'No filter configuration is active. Create the default filter from the Pipeline page (in-app filter management is tracked in issue #301).',
     actionLabel: 'OK',
   },
 } as const satisfies Record<string, ActionGuidance>;
