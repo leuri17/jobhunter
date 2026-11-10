@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { resolveSidecar } from './sidecar-url';
 import { notifyPipelineComplete } from './api';
+import type { PipelineProgressEvent } from './types.js';
 
 /** Why a run failed, mirrored from the terminal SSE event's error payload. */
 export interface PipelineRunError {
@@ -26,7 +27,30 @@ export interface PipelineEvents {
    * trouble.
    */
   runError: PipelineRunError | null;
+  /**
+   * Structured progress events received so far this run (stage
+   * transitions, per-search starts, stats snapshots) — see
+   * `PipelineProgressEvent` in lib/types.ts.
+   */
+  progress: readonly PipelineProgressEvent[];
+  /**
+   * Non-null from the `confirmation_required` event until the run
+   * ends: the scoring cost gate is open and awaits a decision
+   * (`api.decideScoring`).
+   */
+  pendingConfirmation: {
+    readonly jobsDiscovered: number;
+    readonly newOpenAIRequests: number;
+  } | null;
 }
+
+type RunProgressPayload =
+  | PipelineProgressEvent
+  | {
+      readonly type: 'confirmation_required';
+      readonly jobsDiscovered: number;
+      readonly newOpenAIRequests: number;
+    };
 
 const initialEvents: PipelineEvents = {
   status: 'idle',
@@ -34,6 +58,8 @@ const initialEvents: PipelineEvents = {
   result: null,
   error: null,
   runError: null,
+  progress: [],
+  pendingConfirmation: null,
 };
 
 export function usePipelineEvents(runId: string | null): PipelineEvents {
@@ -43,7 +69,15 @@ export function usePipelineEvents(runId: string | null): PipelineEvents {
     if (runId === null) return;
     let cancelled = false;
     let es: EventSource | null = null;
-    setState({ status: 'running', lines: [], result: null, error: null, runError: null });
+    setState({
+      status: 'running',
+      lines: [],
+      result: null,
+      error: null,
+      runError: null,
+      progress: [],
+      pendingConfirmation: null,
+    });
     (async () => {
       const baseUrl = (await resolveSidecar()).url;
       if (cancelled) return;
@@ -51,6 +85,31 @@ export function usePipelineEvents(runId: string | null): PipelineEvents {
       es.addEventListener('log', (ev) => {
         const line = (ev as MessageEvent).data as string;
         setState((s) => ({ ...s, lines: [...s.lines, line] }));
+      });
+      es.addEventListener('progress', (ev) => {
+        let event: RunProgressPayload;
+        try {
+          event = JSON.parse((ev as MessageEvent).data) as RunProgressPayload;
+        } catch (cause) {
+          const wrapped = cause instanceof Error ? cause : new Error(String(cause));
+          setState((s) => ({
+            ...s,
+            error: new Error(`SSE 'progress' payload was malformed: ${wrapped.message}`),
+          }));
+          return;
+        }
+        setState((s) => {
+          if (event.type === 'confirmation_required') {
+            return {
+              ...s,
+              pendingConfirmation: {
+                jobsDiscovered: event.jobsDiscovered,
+                newOpenAIRequests: event.newOpenAIRequests,
+              },
+            };
+          }
+          return { ...s, progress: [...s.progress, event] };
+        });
       });
       es.addEventListener('done', async (ev) => {
         // Catch malformed payloads and surface them on the error field
@@ -82,6 +141,7 @@ export function usePipelineEvents(runId: string | null): PipelineEvents {
           status: data.status as PipelineEvents['status'],
           result: data.result,
           runError: data.error ?? null,
+          pendingConfirmation: null,
         }));
         es?.close();
         // I1: fire system notification on terminal state

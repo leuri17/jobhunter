@@ -246,6 +246,33 @@ export interface CancelPipelineResponse {
   readonly status: 'cancelling';
 }
 
+export interface PipelinePrerequisiteRef {
+  readonly id: number;
+  readonly contentHash: string;
+}
+
+export interface PipelinePrerequisitesResponse {
+  readonly schemaVersion: 1;
+  readonly openaiKeyConfigured: boolean;
+  readonly activeProfile: PipelinePrerequisiteRef | null;
+  readonly activeFilter: PipelinePrerequisiteRef | null;
+  readonly configHash: string;
+}
+
+export interface ActivePipelineRunResponse {
+  readonly schemaVersion: 1;
+  readonly runId: string | null;
+  readonly status: 'running' | 'cancelled' | 'done' | 'failed' | null;
+}
+
+export interface ScoringDecisionResponse {
+  readonly schemaVersion: 1;
+  readonly status: 'decided';
+  readonly accepted: boolean;
+}
+
+export type { PipelineProgressEvent, PipelineRunCounters } from '@jobhunter/core/pipeline';
+
 export interface GeoHit {
   readonly id: string;
   readonly type: 'GEO';

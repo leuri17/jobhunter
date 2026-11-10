@@ -65,8 +65,7 @@ ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
   running (or most recent, still-TTL'd) run id + status so the UI can
   reconnect after navigating away mid-run. `POST /api/pipeline/run`
   optionally takes `{ requireScoringConfirmation?: boolean }` (default
-  off until the redesigned pipeline page ships the confirmation
-  dialog): when on, the orchestrator's `askScoringConfirmation` prompt
+  on; pass false to run unattended): when on, the orchestrator's `askScoringConfirmation` prompt
   parks a pending decision via `beginScoringConfirmation()` — a
   `confirmation_required` event rides the `progress` channel with the
   request estimate, and `POST /api/pipeline/:runId/scoring-decision`

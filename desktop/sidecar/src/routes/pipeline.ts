@@ -190,9 +190,9 @@ export async function registerPipelineRoutes(
 
   app.post('/api/pipeline/run', async (_req, reply) => {
     const body = _req.body as { requireScoringConfirmation?: boolean } | undefined;
-    // Gate defaults off until the pipeline page ships the confirmation
-    // dialog; the redesign flips the default to on.
-    const requireConfirmation = body?.requireScoringConfirmation === true;
+    // The cost gate defaults on; pass requireScoringConfirmation: false
+    // to run unattended.
+    const requireConfirmation = body?.requireScoringConfirmation !== false;
     const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
     if (client === null) {
       reply.status(503);
@@ -422,7 +422,12 @@ async function runPipeline(
       });
       const result = await orchestrator.run({});
       run.result = result;
-      run.status = result.summary.status === 'cancelled' ? 'cancelled' : 'done';
+      // The cancel route may have marked the run cancelled while the
+      // orchestrator was finishing (e.g. at the scoring gate); don't
+      // let the summary's status overwrite that.
+      if (run.status !== 'cancelled') {
+        run.status = result.summary.status === 'cancelled' ? 'cancelled' : 'done';
+      }
 
       // Schedule cleanup. The map entry is removed once any SSE consumer
       // has had a chance to read the terminal result (or immediately if no

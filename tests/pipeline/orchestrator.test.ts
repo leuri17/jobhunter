@@ -226,6 +226,45 @@ describe('PipelineOrchestrator', () => {
   // See #109 for the deferred-work ticket.
   it.todo('T9: scoring hard-stop → status completed_with_errors');
 
+  // T8b: an abort landing after the search loop (e.g. while the
+  // scoring confirmation gate is open) still yields a cancelled run,
+  // not a completed one.
+  it('T8b: abort after the search loop still lands on cancelled status', async () => {
+    const oneSearchConfig = {
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      search: {
+        ...DEFAULT_OPERATIONAL_CONFIG.search,
+        searchQueries: ['q1'],
+        locations: [{ name: 'L1', geoId: '1' }],
+      },
+    };
+    const controller = new AbortController();
+    const gateHarness = buildRunHarness({
+      config: oneSearchConfig,
+      prompts: new ScriptedPipelinePrompts([]),
+      cancelSignal: controller.signal,
+      // The first this.now() call after the loop computes
+      // endTimestamp — abort there, deterministically, after the
+      // search has completed.
+      now: () => {
+        controller.abort();
+        return new Date('2026-01-01T00:00:02.000Z');
+      },
+    });
+    try {
+      await insertApprovedProfile(gateHarness.repositories);
+      await insertActiveFilter(gateHarness.repositories);
+      const result = await gateHarness.orchestrator.run({
+        startTimestamp: '2026-01-01T00:00:00.000Z',
+      });
+      expect(result.summary.searchesCompleted).toBe(1);
+      expect(result.summary.status).toBe('cancelled');
+      expect(result.summary.cancellationReason).toBe('user_cancelled');
+    } finally {
+      gateHarness.cleanup();
+    }
+  });
+
   // T10: scraper error in one search continues with the next.
   it('T10: scraper error in one search continues', async () => {
     const twoSearchConfig = {

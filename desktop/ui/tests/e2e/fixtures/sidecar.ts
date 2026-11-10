@@ -77,6 +77,8 @@ interface ActivePipelineRun {
   readonly runId: string;
   readonly controller: { aborted: boolean };
   readonly logs: string[];
+  /** Structured progress frames, drained over SSE like logs. */
+  progress: unknown[];
   timer: NodeJS.Timeout | null;
   status: 'running' | 'cancelled' | 'done' | 'failed';
   result?: unknown;
@@ -96,8 +98,8 @@ const TIMESTAMP = '2026-01-01T00:00:00.000Z';
 const BASE_CONFIG = {
   version: 1,
   search: {
-    searchQueries: [],
-    locations: [],
+    searchQueries: ['Frontend developer'],
+    locations: [{ name: 'Amsterdam Area', geoId: '90010383' }],
     datePosted: 86400,
     workplaceTypes: ['1', '2', '3'],
   },
@@ -682,6 +684,28 @@ export async function buildFixtureSidecar(
       runId,
       controller: { aborted: false },
       logs: [],
+      progress: [
+        { type: 'run_start', runId: 1, searchesPlanned: 1 },
+        {
+          type: 'stats',
+          runId: 1,
+          counters: {
+            searchesAttempted: 1,
+            searchesCompleted: 0,
+            jobsDiscovered: 0,
+            newCompleteJobs: 0,
+            failedExtractions: 0,
+            jobsAccepted: 0,
+            jobsRejected: 0,
+            filterErrors: 0,
+            jobsScored: 0,
+            scoresReused: 0,
+            scoringErrors: 0,
+            promptTokens: 0,
+            completionTokens: 0,
+          },
+        },
+      ],
       timer: null,
       status: 'running',
     };
@@ -703,11 +727,43 @@ export async function buildFixtureSidecar(
     // running status before the done event arrives.
     run.timer = setTimeout(() => {
       if (run.status !== 'running') return;
+      run.progress.push({
+        type: 'scoring_plan',
+        runId: 1,
+        jobsDiscovered: 0,
+        newOpenAIRequests: 0,
+      });
       const completedAt = TIMESTAMP;
       const finalStatus: RunStatus = run.controller.aborted ? 'cancelled' : 'completed';
+      const summary = {
+        schemaVersion: 1,
+        runId: 1,
+        status: run.controller.aborted ? 'cancelled' : 'completed',
+        startTimestamp: TIMESTAMP,
+        endTimestamp: completedAt,
+        searchesPlanned: 1,
+        searchesAttempted: 1,
+        searchesCompleted: 1,
+        searchErrors: [],
+        jobsDiscovered: 0,
+        newCompleteJobs: 0,
+        existingCompleteJobsSkipped: 0,
+        existingPartialJobsSkipped: 0,
+        newPartialJobs: 0,
+        failedExtractions: 0,
+        jobsAccepted: 0,
+        jobsRejected: 0,
+        filterErrors: 0,
+        jobsScored: 0,
+        scoresReused: 0,
+        scoringErrors: 0,
+        scoringDeclinedByUser: false,
+        cancellationReason: run.controller.aborted ? 'user_cancelled' : null,
+      };
       transitionRun(run, run.controller.aborted ? 'cancelled' : 'done', {
-        summary: { status: run.controller.aborted ? 'cancelled' : 'completed' },
-        runs: [],
+        summary,
+        scoringPlan: null,
+        topN: [],
       });
       // Persist the run so /runs lists it after invalidation.
       state.runs.set(`run_${run.runId.slice(0, 8)}`, {
@@ -740,6 +796,25 @@ export async function buildFixtureSidecar(
     run.status = 'cancelled';
     if (run.timer !== null) clearTimeout(run.timer);
     return { schemaVersion: 1, status: 'cancelling' as const };
+  });
+
+  app.get('/api/pipeline/prerequisites', async () => ({
+    schemaVersion: 1,
+    openaiKeyConfigured: true,
+    activeProfile: { id: 2, contentHash: 'hash_prof_seed_2' },
+    activeFilter: { id: 1, contentHash: 'hash_filter_seed_1' },
+    configHash: 'e2e-config-hash',
+  }));
+
+  app.get('/api/pipeline/active', async () => {
+    let running: ActivePipelineRun | undefined;
+    let latest: ActivePipelineRun | undefined;
+    for (const run of state.pipelineRuns.values()) {
+      latest = run;
+      if (run.status === 'running' && running === undefined) running = run;
+    }
+    const selected = running ?? latest;
+    return { schemaVersion: 1, runId: selected?.runId ?? null, status: selected?.status ?? null };
   });
 
   app.get<{ Params: { runId: string } }>(
@@ -776,6 +851,9 @@ export async function buildFixtureSidecar(
       const interval = setInterval(() => {
         for (const line of run.logs.splice(0)) {
           sseWrite(reply.raw, 'log', line);
+        }
+        for (const frame of run.progress.splice(0)) {
+          sseWrite(reply.raw, 'progress', frame);
         }
         if (run.status === 'done' || run.status === 'cancelled' || run.status === 'failed') {
           sseWrite(reply.raw, 'done', { status: run.status, result: run.result ?? null });
