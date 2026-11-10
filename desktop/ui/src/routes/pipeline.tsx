@@ -310,6 +310,15 @@ export function PipelinePage() {
             Live updates stopped: {events.error.message}
           </p>
         )}
+        {events.status === 'idle' && (
+          <p className="text-sm text-muted-foreground">
+            Past runs and their summaries live on the{' '}
+            <Link to="/runs" className="underline underline-offset-4 hover:text-foreground">
+              Runs
+            </Link>{' '}
+            page.
+          </p>
+        )}
       </section>
 
       {summary !== null && (

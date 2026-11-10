@@ -169,3 +169,35 @@ describe('<PipelinePage /> run-failure surfacing', () => {
     expect(navigateSpy).toHaveBeenCalledWith({ to: '/profile' });
   });
 });
+
+describe('<PipelinePage /> idle history pointer', () => {
+  beforeEach(() => {
+    vi.mocked(usePipelineEvents).mockReturnValue(baseEvents);
+    vi.mocked(api.getPipelinePrerequisites).mockResolvedValue(prerequisitesFixture);
+    vi.mocked(api.getConfig).mockResolvedValue(configFixture);
+    vi.mocked(api.getActivePipelineRun).mockResolvedValue(noActiveRunFixture);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.mocked(api.getPipelinePrerequisites).mockReset();
+    vi.mocked(api.getConfig).mockReset();
+    vi.mocked(api.getActivePipelineRun).mockReset();
+  });
+
+  it('links to the Runs page when idle (no run adopted or active)', async () => {
+    renderPage();
+
+    const link = await screen.findByRole('link', { name: 'Runs' });
+    expect(link.getAttribute('href')).toBe('/runs');
+  });
+
+  it('hides the Runs pointer while a run is live', async () => {
+    vi.mocked(usePipelineEvents).mockReturnValue({ ...baseEvents, status: 'running' });
+
+    renderPage();
+
+    await screen.findByRole('button', { name: /cancel/i });
+    expect(screen.queryByRole('link', { name: 'Runs' })).toBeNull();
+  });
+});
