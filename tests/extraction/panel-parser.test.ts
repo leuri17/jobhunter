@@ -90,10 +90,10 @@ function firstMatchingSelectors(doc: FakeDocument, selectorList: string): FakeEl
 
 function makeFakePage(args: FakePageArgs): {
   readonly page: Page;
-  readonly callLog: { readonly op: string; readonly selector: string }[];
+  readonly callLog: { readonly op: string; readonly selector: string; readonly timeout?: number }[];
 } {
   const doc = parseDocument(args.html);
-  const callLog: { op: string; selector: string }[] = [];
+  const callLog: { op: string; selector: string; timeout?: number }[] = [];
 
   const urlValue = args.url;
 
@@ -105,14 +105,25 @@ function makeFakePage(args: FakePageArgs): {
         return fakeLocator(selector);
       },
       // Text read — used for the 4 field reads.
-      textContent: async () => {
+      textContent: async (opts?: { timeout?: number }) => {
         callLog.push({ op: 'textContent', selector });
         const node = pickNode(doc, selector);
-        return node?.textContent ?? null;
+        if (node === null) {
+          // Real Playwright throws when the locator resolves to zero
+          // nodes within the timeout (verified live against guest
+          // LinkedIn pages) — missing fields must be caught upstream,
+          // never silently null here.
+          const err = new Error(
+            `locator.textContent: Timeout ${opts?.timeout ?? 30000}ms exceeded.`,
+          );
+          err.name = 'TimeoutError';
+          throw err;
+        }
+        return node.textContent;
       },
       // Attribute read — used for the panel title anchor href.
-      getAttribute: async (name: string) => {
-        callLog.push({ op: `getAttribute(${name})`, selector });
+      getAttribute: async (name: string, options?: { timeout?: number }) => {
+        callLog.push({ op: `getAttribute(${name})`, selector, timeout: options?.timeout });
         const node = pickNode(doc, selector);
         return node?.getAttribute(name) ?? null;
       },
@@ -380,6 +391,49 @@ describe('src/linkedin/extraction/panel-parser.ts', () => {
     // delegates to Playwright, which does first-match winning).
     expect(LINKEDIN_SELECTORS.panel.description).toContain('.jobs-description__content');
     expect(LINKEDIN_SELECTORS.panel.description).toContain(', ');
+  });
+
+  it('verify loop bounds each href read by PANEL_VERIFY_RETRY_MS (never Playwright\u2019s default 30s)', async () => {
+    // On guest pages the panel title anchor never resolves; without an
+    // explicit timeout each getAttribute burns Playwright's 30s default,
+    // making the 3-attempt verify loop cost ~90s per job (measured
+    // live). Every href read must carry the 500ms retry budget.
+    const html = loadFixture('panel-complete');
+    const { page, callLog } = makeFakePage({
+      html,
+      url: 'https://www.linkedin.com/jobs/search/?keywords=engineer',
+      href: 'https://www.linkedin.com/jobs/view/1234567890/',
+      sourceJobId: '1234567890',
+      expectMismatch: false,
+    });
+    await parsePanel(page, { sourceJobId: '1234567890' });
+
+    const hrefReads = callLog.filter(
+      (entry) =>
+        entry.op === 'getAttribute(href)' &&
+        entry.selector === LINKEDIN_SELECTORS.panel.titleAnchor,
+    );
+    expect(hrefReads.length).toBeGreaterThanOrEqual(1);
+    for (const read of hrefReads) {
+      expect(read.timeout).toBe(PANEL_VERIFY_RETRY_MS);
+    }
+  });
+
+  it('field reads resolve missing elements to null instead of throwing (partial, not failed)', async () => {
+    // Real Playwright textContent() throws TimeoutError on a zero-match
+    // locator; the parser must catch it so a missing field classifies
+    // as `partial` rather than failing the whole method.
+    const html = loadFixture('panel-partial');
+    const { page } = makeFakePage({
+      html,
+      url: 'https://www.linkedin.com/jobs/search/?keywords=engineer',
+      href: null,
+      sourceJobId: '1234567890',
+      expectMismatch: false,
+    });
+    const fields = await parsePanel(page, { sourceJobId: '1234567890' });
+    expect(fields.location).toBeNull();
+    expect(computeExtractionStatus(fields)).toBe('partial');
   });
 });
 

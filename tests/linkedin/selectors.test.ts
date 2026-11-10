@@ -9,8 +9,27 @@ import {
 } from '../../src/linkedin/selectors.js';
 
 describe('src/linkedin/selectors — ', () => {
-  it('LINKEDIN_SELECTORS_MAP_VERSION === 2 (bumped in  for panel + dedicated)', () => {
-    expect(LINKEDIN_SELECTORS_MAP_VERSION).toBe(2);
+  it('LINKEDIN_SELECTORS_MAP_VERSION === 3 (bumped for guest public-jobs field alternatives)', () => {
+    expect(LINKEDIN_SELECTORS_MAP_VERSION).toBe(3);
+  });
+
+  it('panel field selectors include the guest public-jobs alternatives', () => {
+    // Logged-out visitors get the public-jobs template (evidenced
+    // 2026-11-10): top-card-layout title, topcard org-name link,
+    // flavor-row location bullet. The authenticated unified-top-card
+    // classes come first so authenticated pages keep winning first-match.
+    expect(LINKEDIN_SELECTORS.panel.titleElement).toContain(
+      '.job-details-jobs-unified-top-card__job-title',
+    );
+    expect(LINKEDIN_SELECTORS.panel.titleElement).toContain('h1.top-card-layout__title');
+    expect(LINKEDIN_SELECTORS.panel.company).toContain(
+      '.job-details-jobs-unified-top-card__company-name',
+    );
+    expect(LINKEDIN_SELECTORS.panel.company).toContain('a.topcard__org-name-link');
+    expect(LINKEDIN_SELECTORS.panel.location).toContain(
+      '.job-details-jobs-unified-top-card__primary-description-container',
+    );
+    expect(LINKEDIN_SELECTORS.panel.location).toContain('span.topcard__flavor--bullet');
   });
 
   it('exposes the six selector groups after ', () => {
@@ -151,16 +170,16 @@ describe('src/linkedin/selectors —  (panel + dedicated + FIELDS map)', () => {
     ]);
     expect(LINKEDIN_SELECTORS.panel.container).toBe('div.jobs-search__job-details--wrapper');
     expect(LINKEDIN_SELECTORS.panel.titleElement).toBe(
-      '.job-details-jobs-unified-top-card__job-title',
+      '.job-details-jobs-unified-top-card__job-title, h1.top-card-layout__title',
     );
     expect(LINKEDIN_SELECTORS.panel.titleAnchor).toBe(
       '.job-details-jobs-unified-top-card__job-title a',
     );
     expect(LINKEDIN_SELECTORS.panel.company).toBe(
-      '.job-details-jobs-unified-top-card__company-name',
+      '.job-details-jobs-unified-top-card__company-name, a.topcard__org-name-link',
     );
     expect(LINKEDIN_SELECTORS.panel.location).toBe(
-      '.job-details-jobs-unified-top-card__primary-description-container',
+      '.job-details-jobs-unified-top-card__primary-description-container, span.topcard__flavor--bullet',
     );
   });
 
