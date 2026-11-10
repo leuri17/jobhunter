@@ -125,13 +125,19 @@ export async function parseDedicatedPage(
 
 /**
  * Read the locator's text content with `null`-preservation.
- * Playwright's `textContent()` returns `null` for empty / detached
- * nodes; we keep that semantic so the orchestrator can distinguish
- * "the field is empty" from "the field is missing entirely".
+ * Playwright's `textContent()` THROWS `TimeoutError` when the locator
+ * resolves to zero nodes within the timeout; a missing field is
+ * "rendered without this field", so the timeout resolves to `null`
+ * (the orchestrator's `partial` classification path). Anything that
+ * is not a timeout rethrows.
  */
 async function readFieldText(locator: Locator): Promise<string | null> {
-  const value = await locator.textContent({ timeout: DEDICATED_DESCRIPTION_WAIT_MS });
-  return value;
+  try {
+    return await locator.textContent({ timeout: DEDICATED_DESCRIPTION_WAIT_MS });
+  } catch (cause) {
+    if (cause instanceof Error && /Timeout/i.test(cause.name)) return null;
+    throw cause;
+  }
 }
 
 /**

@@ -201,13 +201,17 @@ async function verifyPanelHrefMatches(args: {
 }
 
 /**
- * Read an attribute from a Playwright locator, swallowing the
- * "no nodes" error Playwright throws when the locator resolves to
- * zero elements (we treat that as "not yet rendered").
+ * Read an attribute from a Playwright locator with the retry budget
+ * as the timeout, swallowing the "no nodes" error Playwright throws
+ * when the locator resolves to zero elements (we treat that as "not
+ * yet rendered"). Without the explicit timeout each read would burn
+ * Playwright's 30s default — the 3-attempt verify loop would cost
+ * ~90s per job on pages whose title anchor never resolves (measured
+ * live on guest pages).
  */
 async function safeGetAttribute(locator: Locator): Promise<string | null> {
   try {
-    return await locator.getAttribute('href');
+    return await locator.getAttribute('href', { timeout: PANEL_VERIFY_RETRY_MS });
   } catch {
     return null;
   }
@@ -227,13 +231,19 @@ function safeReadUrl(page: Page): string {
 
 /**
  * Read the locator's text content with `null`-preservation.
- * Playwright's `textContent()` returns `null` for empty / detached
- * nodes; we keep that semantic so the orchestrator can distinguish
- * "the field is empty" from "the field is missing entirely".
+ * Playwright's `textContent()` THROWS `TimeoutError` when the locator
+ * resolves to zero nodes within the timeout; a missing field is
+ * "rendered without this field", so the timeout resolves to `null`
+ * (the orchestrator's `partial` classification path). Anything that
+ * is not a timeout rethrows.
  */
 async function readFieldText(locator: Locator): Promise<string | null> {
-  const value = await locator.textContent({ timeout: PANEL_DESCRIPTION_WAIT_MS });
-  return value;
+  try {
+    return await locator.textContent({ timeout: PANEL_DESCRIPTION_WAIT_MS });
+  } catch (cause) {
+    if (cause instanceof Error && /Timeout/i.test(cause.name)) return null;
+    throw cause;
+  }
 }
 
 /**

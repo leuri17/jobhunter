@@ -19,7 +19,7 @@
  * during A/B rollouts).  adds the `panel.*` + `dedicated.*`
  * groups used by 's job-detail parsers.
  */
-export const LINKEDIN_SELECTORS_MAP_VERSION = 2 as const;
+export const LINKEDIN_SELECTORS_MAP_VERSION = 3 as const;
 
 export const LINKEDIN_SELECTORS = {
   cards: {
@@ -67,14 +67,23 @@ export const LINKEDIN_SELECTORS = {
   panel: {
     /** Wrapper container the panel root renders into. */
     container: 'div.jobs-search__job-details--wrapper',
+    /**
+     * The three field selectors below are multi-selector lists: the
+     * first entry targets the authenticated unified-top-card DOM, the
+     * second the guest public-jobs template logged-out visitors get
+     * (top-card-layout / topcard classes, evidenced 2026-11-10).
+     * Authenticated matches win first-match order; guest pages only
+     * render the guest classes.
+     */
     /** `<h1>` whose text equals the displayed job title. */
-    titleElement: '.job-details-jobs-unified-top-card__job-title',
+    titleElement: '.job-details-jobs-unified-top-card__job-title, h1.top-card-layout__title',
     /** `<a>` inside the title element — its `href` carries the job ID. */
     titleAnchor: '.job-details-jobs-unified-top-card__job-title a',
     /** Company name (single text node). */
-    company: '.job-details-jobs-unified-top-card__company-name',
+    company: '.job-details-jobs-unified-top-card__company-name, a.topcard__org-name-link',
     /** Primary description container (location + secondary metadata). */
-    location: '.job-details-jobs-unified-top-card__primary-description-container',
+    location:
+      '.job-details-jobs-unified-top-card__primary-description-container, span.topcard__flavor--bullet',
     /**
      * Description body — multi-selector list (LinkedIn rotates between
      * `jobs-description__content`, `jobs-box__html-content`,

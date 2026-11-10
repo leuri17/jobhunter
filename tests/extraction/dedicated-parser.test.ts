@@ -74,9 +74,18 @@ function makeFakePage(args: FakePageArgs): Page {
 
   const fakeLocator = (selector: string) => ({
     first: () => fakeLocator(selector),
-    textContent: async () => {
+    textContent: async (opts?: { timeout?: number }) => {
       const node = pickNode(doc, selector);
-      return node?.textContent ?? null;
+      if (node === null) {
+        // Real Playwright throws when the locator resolves to zero
+        // nodes within the timeout (verified live against guest
+        // LinkedIn pages) — missing fields must be caught upstream,
+        // never silently null here.
+        const err = new Error(`locator.textContent: Timeout ${opts?.timeout ?? 30000}ms exceeded.`);
+        err.name = 'TimeoutError';
+        throw err;
+      }
+      return node.textContent;
     },
     getAttribute: async (name: string) => {
       void name;
@@ -257,5 +266,29 @@ describe('src/linkedin/extraction/dedicated-parser.ts', () => {
     // First-match wins: .jobs-description__content exists first.
     expect(fields.description).toBe('via .A');
     expect(fields.title).toBeNull();
+  });
+
+  it('parseDedicatedPage reads all 4 fields from the guest public-jobs layout (status = complete)', async () => {
+    // Logged-out visitors get the public-jobs template: a
+    // top-card-layout title, a topcard org-name link, a flavor-row
+    // location bullet, and the show-more-less description markup.
+    // None of the authenticated unified-top-card classes exist.
+    const html = `
+      <html><body>
+        <h1 class="top-card-layout__title">Senior Software Engineer (Typescript / FrontEnd)</h1>
+        <a class="topcard__org-name-link topcard__flavor--black-link" href="https://www.linkedin.com/company/clickhouseinc">ClickHouse</a>
+        <span class="topcard__flavor topcard__flavor--bullet">Amsterdam, North Holland, Netherlands</span>
+        <div class="show-more-less-html__markup">About the job. We build fast databases.</div>
+      </body></html>`;
+    const page = makeFakePage({
+      html,
+      url: 'https://www.linkedin.com/jobs/view/4488303193/',
+    });
+    const fields = await parseDedicatedPage(page);
+    expect(fields.title).toBe('Senior Software Engineer (Typescript / FrontEnd)');
+    expect(fields.company).toContain('ClickHouse');
+    expect(fields.location).toContain('Amsterdam');
+    expect(fields.description).toContain('About the job.');
+    expect(computeExtractionStatus(fields)).toBe('complete');
   });
 });
