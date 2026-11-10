@@ -337,7 +337,8 @@ export async function registerPipelineRoutes(
       let sentLogs = run.droppedLogs;
       let sentEvents = run.droppedEvents;
 
-      const interval = setInterval(() => {
+      let interval: ReturnType<typeof setInterval> | undefined;
+      const flush = (): void => {
         // Send only the entries this connection has not sent yet; the
         // buffers themselves are retained (never spliced) so a later
         // connection can still replay them.
@@ -359,7 +360,10 @@ export async function registerPipelineRoutes(
             result: run.result ?? null,
             error: run.error ?? null,
           });
-          clearInterval(interval);
+          if (interval !== undefined) {
+            clearInterval(interval);
+            interval = undefined;
+          }
           closeSse(reply.raw);
           // Reap after the reconnect window rather than immediately:
           // a client connecting (or reconnecting) within the TTL still
@@ -371,7 +375,13 @@ export async function registerPipelineRoutes(
         } else {
           writeSseEvent(reply.raw, 'heartbeat', { status: run.status });
         }
-      }, 1000);
+      };
+
+      // Flush on connect so an entering page paints the real run state
+      // in the first chunk — otherwise it flashes the empty 'matrix
+      // running' view for up to one interval tick.
+      flush();
+      interval = setInterval(flush, 1000);
 
       req.raw.on('close', () => clearInterval(interval));
       return reply;

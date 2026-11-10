@@ -241,4 +241,44 @@ describe('pipeline reconnect replay', () => {
       await server.close();
     }
   }, 15_000);
+
+  it('flushes the replay immediately on connect, before the first interval tick', async () => {
+    vi.stubEnv('OPENAI_API_KEY', 'test-key');
+    const server = await buildServer({
+      env: { port: 0, host: '127.0.0.1' },
+      pipelineDbOpener: makeDbOpener(),
+    });
+    const baseUrl = await server.listen();
+    try {
+      const start = await fetch(`${baseUrl}/api/pipeline/run`, { method: 'POST' });
+      const { runId } = (await start.json()) as { schemaVersion: number; runId: string };
+
+      // Let the run reach the gate (events buffered), then finish it.
+      let decided = false;
+      for (let attempt = 0; attempt < 20 && !decided; attempt += 1) {
+        const res = await fetch(`${baseUrl}/api/pipeline/${runId}/scoring-decision`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ accepted: false }),
+        });
+        decided = res.status === 200;
+        if (!decided) await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      expect(decided).toBe(true);
+
+      // The FIRST chunk off the stream must already carry the replay —
+      // not just the ': connected' comment — so an entering page paints
+      // the real state immediately instead of a 1s 'matrix running'
+      // flash while waiting for the first interval tick.
+      const res = await fetch(`${baseUrl}/api/pipeline/${runId}/events`);
+      const reader = res.body!.getReader();
+      const { value } = await reader.read();
+      const firstChunk = new TextDecoder().decode(value);
+      await reader.cancel();
+      expect(firstChunk).toContain('run_start');
+      expect(firstChunk).toContain('search_start');
+    } finally {
+      await server.close();
+    }
+  }, 15_000);
 });
