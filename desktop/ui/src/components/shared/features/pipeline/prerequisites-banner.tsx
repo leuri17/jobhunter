@@ -5,8 +5,13 @@
 
 import { Link } from '@tanstack/react-router';
 import { CheckIcon, XIcon } from 'lucide-react';
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ApiErrorDialog } from '@/components/shared/ui/api-error-dialog';
+import { api, ApiError } from '@/lib/api';
 import { cn } from 'cn';
 import type { PipelinePrerequisitesResponse } from '@/lib/types';
 
@@ -21,6 +26,21 @@ function shortHash(hash: string): string {
 }
 
 export function PrerequisitesBanner({ data, failed }: PrerequisitesBannerProps) {
+  const queryClient = useQueryClient();
+  const [createError, setCreateError] = useState<ApiError | null>(null);
+  // First-run unblock (issue #307): with no filter UI yet, the missing
+  // filter gate offers the one-click accept-all default.
+  const createFilter = useMutation({
+    mutationFn: api.createDefaultFilter,
+    onSuccess: () => {
+      setCreateError(null);
+      void queryClient.invalidateQueries({ queryKey: ['pipeline', 'prerequisites'] });
+    },
+    onError: (err: unknown) => {
+      setCreateError(err as ApiError);
+    },
+  });
+
   if (data === undefined) {
     return (
       <section
@@ -138,9 +158,19 @@ export function PrerequisitesBanner({ data, failed }: PrerequisitesBannerProps) 
                 {shortHash(data.activeFilter.contentHash)}
               </span>
             ) : (
-              <span className="text-foreground">
-                none. Created during first-run setup; in-app filter management is tracked in issue
-                #301.
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-foreground">
+                none
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => createFilter.mutate()}
+                  disabled={createFilter.isPending}
+                >
+                  {createFilter.isPending ? 'Creating…' : 'Create default filter'}
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  accept-all · full filter management is tracked in issue #301
+                </span>
               </span>
             )}
           </span>
@@ -150,6 +180,12 @@ export function PrerequisitesBanner({ data, failed }: PrerequisitesBannerProps) 
       <p className="mt-3 font-mono text-xs text-muted-foreground/80" title={data.configHash}>
         config {shortHash(data.configHash)}…
       </p>
+
+      <ApiErrorDialog
+        error={createError}
+        title="Couldn't create the default filter"
+        onDismiss={() => setCreateError(null)}
+      />
     </section>
   );
 }

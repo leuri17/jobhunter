@@ -29,6 +29,7 @@ import type {
   PipelinePrerequisitesResponse,
   ActivePipelineRunResponse,
   ScoringDecisionResponse,
+  DefaultFilterResponse,
 } from './types.js';
 import type { ConfigPatch } from '@jobhunter/core/config';
 import type { ProfessionalProfile } from '@jobhunter/core/profile';
@@ -172,4 +173,5 @@ export const api = {
     request<CancelPipelineResponse>('POST', `/api/pipeline/${runId}/cancel`),
   geoTypeahead: (q: string) =>
     request<GeoTypeaheadResponse>('GET', `/api/linkedin/geo-typeahead?q=${encodeURIComponent(q)}`),
+  createDefaultFilter: () => request<DefaultFilterResponse>('POST', '/api/filters/default'),
 };

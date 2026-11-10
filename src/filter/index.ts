@@ -88,6 +88,11 @@ export {
   type ConfigureFiltersOutcome,
 } from './configure-service.js';
 export {
+  DEFAULT_JOB_FILTER_CONFIG,
+  ensureDefaultFilterConfig,
+  type DefaultFilterResult,
+} from './default-filter.js';
+export {
   createFailingFilterPrompts,
   ScriptedFilterPrompts,
   type FilterConfigurationPreview,

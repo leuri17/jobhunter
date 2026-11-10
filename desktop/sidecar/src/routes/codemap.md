@@ -73,6 +73,7 @@ ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
 no_pending_confirmation` when nothing is pending). An unanswered gate
   auto-declines after `CONFIRMATION_TIMEOUT_MS` (5 min); cancelling
   resolves it as declined.
+- **Filters**: `registerFilterRoutes` (`routes/filters.ts`) exposes `POST /api/filters/default` — the first-run unblock (issue #307): creates and activates the accept-all default filter configuration via core's `ensureDefaultFilterConfig` when none is active; idempotent (`created: false` + the existing row when one exists). The database handle is opened through the injectable `dbOpener` seam (`filtersDbOpener` on `buildServer`), defaulting to `db-helper.ts`.
 - **Profile**: `registerProfileRoutes` adds `@fastify/multipart` (10 MiB
   per file, 2 files). `profileImportHandler` accepts multipart filenames (v1 delegates
   to `ProfileImportService.importSources`); `profileExtractHandler` invokes
