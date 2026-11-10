@@ -33,8 +33,12 @@ export interface ActiveRun {
   readonly controller: AbortController;
   /** Recent log lines emitted by the orchestrator (ring buffer, max 1000). */
   logs: string[];
+  /** Count of log lines evicted by the ring cap — keeps replay cursors absolute. */
+  droppedLogs: number;
   /** Recent progress/confirmation events (ring buffer, max 500). */
   events: RunEvent[];
+  /** Count of events evicted by the ring cap — keeps replay cursors absolute. */
+  droppedEvents: number;
   status: 'running' | 'cancelled' | 'done' | 'failed';
   result?: PipelineRunResult;
   /** Why a run failed; carried by the terminal SSE `done` event. */
@@ -60,6 +64,30 @@ type RunEvent =
 const activeRuns = new Map<string, ActiveRun>();
 const LOG_RING_BUFFER_MAX = 1000;
 const EVENTS_RING_BUFFER_MAX = 500;
+
+/**
+ * Push onto a run's ring buffer without destroying history for
+ * reconnecting clients: the buffers are retained until the run entry
+ * is reaped (see the SSE route + the post-run TTL) so a client that
+ * reconnects mid-run — the user navigating away and back — replays
+ * everything it missed. The dropped-counters keep per-connection
+ * cursors absolute when the cap evicts the oldest entries.
+ */
+function pushLog(run: ActiveRun, line: string): void {
+  run.logs.push(line);
+  if (run.logs.length > LOG_RING_BUFFER_MAX) {
+    run.logs.shift();
+    run.droppedLogs += 1;
+  }
+}
+
+function pushEvent(run: ActiveRun, event: RunEvent): void {
+  run.events.push(event);
+  if (run.events.length > EVENTS_RING_BUFFER_MAX) {
+    run.events.shift();
+    run.droppedEvents += 1;
+  }
+}
 
 /** How long a run waits for a scoring decision before auto-declining. */
 export const CONFIRMATION_TIMEOUT_MS = 300_000;
@@ -105,13 +133,12 @@ export function beginScoringConfirmation(
   plan: { jobsDiscovered: number; newOpenAIRequests: number },
 ): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
-    run.events.push({
+    pushEvent(run, {
       type: 'confirmation_required',
       runId: run.runId,
       jobsDiscovered: plan.jobsDiscovered,
       newOpenAIRequests: plan.newOpenAIRequests,
     });
-    if (run.events.length > EVENTS_RING_BUFFER_MAX) run.events.shift();
     const timer = setTimeout(() => {
       run.pendingConfirmation = null;
       resolve(false);
@@ -227,7 +254,9 @@ export async function registerPipelineRoutes(
       runId,
       controller,
       logs: [],
+      droppedLogs: 0,
       events: [],
+      droppedEvents: 0,
       status: 'running',
       pendingConfirmation: null,
     });
@@ -301,15 +330,29 @@ export async function registerPipelineRoutes(
       initSseHeaders(reply.raw, typeof origin === 'string' ? origin : undefined);
       reply.raw.write(`: connected to ${run.runId}\n\n`);
 
+      // Per-connection replay cursors (absolute indices). A fresh
+      // connection starts at the oldest retained entry, so a client
+      // reconnecting mid-run — the user navigating away and back —
+      // replays the full history before streaming live frames.
+      let sentLogs = run.droppedLogs;
+      let sentEvents = run.droppedEvents;
+
       const interval = setInterval(() => {
-        // Drain any buffered logs first so tail logs from terminal transition
-        // are forwarded before the `done` event.
-        for (const line of run.logs.splice(0)) {
+        // Send only the entries this connection has not sent yet; the
+        // buffers themselves are retained (never spliced) so a later
+        // connection can still replay them.
+        const logStart = sentLogs - run.droppedLogs;
+        for (const line of run.logs.slice(logStart)) {
           writeSseEvent(reply.raw, 'log', line);
         }
-        for (const event of run.events.splice(0)) {
+        sentLogs = run.droppedLogs + run.logs.length;
+
+        const eventStart = sentEvents - run.droppedEvents;
+        for (const event of run.events.slice(eventStart)) {
           writeSseEvent(reply.raw, 'progress', event);
         }
+        sentEvents = run.droppedEvents + run.events.length;
+
         if (run.status === 'done' || run.status === 'failed' || run.status === 'cancelled') {
           writeSseEvent(reply.raw, 'done', {
             status: run.status,
@@ -318,7 +361,13 @@ export async function registerPipelineRoutes(
           });
           clearInterval(interval);
           closeSse(reply.raw);
-          activeRuns.delete(run.runId);
+          // Reap after the reconnect window rather than immediately:
+          // a client connecting (or reconnecting) within the TTL still
+          // gets the full replay + terminal frame. Idempotent when
+          // several consumers schedule the same reap.
+          setTimeout(() => {
+            activeRuns.delete(run.runId);
+          }, 60_000);
         } else {
           writeSseEvent(reply.raw, 'heartbeat', { status: run.status });
         }
@@ -418,8 +467,7 @@ async function runPipeline(
         logger: pinoPipelineLogger(makeTeeLogger(rootLogger, run)),
         cancelSignal: controller.signal,
         onEvent: (event) => {
-          run.events.push(event);
-          if (run.events.length > EVENTS_RING_BUFFER_MAX) run.events.shift();
+          pushEvent(run, event);
         },
       });
       const result = await orchestrator.run({});
@@ -463,8 +511,7 @@ function makeTeeLogger(base: PinoLogger, run: ActiveRun): PinoLogger {
     (obj: unknown, msg?: string): void => {
       base[level](obj, msg);
       const payload = msg ?? (typeof obj === 'string' ? obj : JSON.stringify(obj));
-      run.logs.push(`[${level}] ${payload}`);
-      if (run.logs.length > LOG_RING_BUFFER_MAX) run.logs.shift();
+      pushLog(run, `[${level}] ${payload}`);
     };
   return {
     info: tee('info'),
