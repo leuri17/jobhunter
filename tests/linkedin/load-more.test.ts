@@ -18,6 +18,13 @@ interface Snapshot {
   readonly cardIds: readonly string[];
   readonly loadMorePresent: boolean;
   readonly endOfResultsVisible: boolean;
+  /**
+   * Raw HTML for each card. When omitted, cards render in the
+   * authenticated shape (`<li>` with a canonical `/jobs/view/<id>/`
+   * href + `data-occludable-job-id`). Guest-shape tests supply the
+   * slugged-href markup LinkedIn serves logged-out visitors.
+   */
+  readonly cardHtmls?: readonly string[];
 }
 
 interface FakeState {
@@ -81,15 +88,20 @@ class FakePage {
        * match what real Chromium returns.
        */
       evaluateAll: async <R, _E>(pageFunction: (nodes: Element[]) => R): Promise<R> => {
-        const ids = this.currentSnapshot().cardIds;
-        const html = ids
-          .map(
-            (id) =>
-              `<li class="jobs-search-results__list-item"><a href="/jobs/view/${id}/" data-occludable-job-id="${id}">${id}</a></li>`,
-          )
-          .join('');
+        const snap = this.currentSnapshot();
+        const html =
+          snap.cardHtmls !== undefined
+            ? snap.cardHtmls.join('')
+            : snap.cardIds
+                .map(
+                  (id) =>
+                    `<li class="jobs-search-results__list-item"><a href="/jobs/view/${id}/" data-occludable-job-id="${id}">${id}</a></li>`,
+                )
+                .join('');
         const { document } = parseHTML(`<html><body>${html}</body></html>`);
-        const nodes = Array.from(document.querySelectorAll('li')) as Element[];
+        const nodes = Array.from(
+          document.querySelectorAll('li.jobs-search-results__list-item, div.job-search-card'),
+        ) as Element[];
         return pageFunction(nodes);
       },
       click: async (opts?: { timeout?: number }): Promise<void> => {
@@ -113,6 +125,24 @@ const BASE_OPTS: LoadMoreOptions = {
 };
 
 describe('src/linkedin/load-more — ', () => {
+  it('parses job IDs from guest slugged hrefs with no data-occludable-job-id', async () => {
+    const page = new FakePage([
+      {
+        cardIds: ['4488302295', '4487905956', '4487986945'],
+        loadMorePresent: false,
+        endOfResultsVisible: false,
+        cardHtmls: [
+          '<div class="job-search-card"><a href="https://nl.linkedin.com/jobs/view/senior-software-engineer-identity-authorization-platform-at-clickhouse-4488302295?position=1&amp;pageNum=0">Senior Software Engineer</a><a href="https://www.linkedin.com/company/clickhouseinc?trk=public_jobs_jserp-result_job-search-card">ClickHouse</a></div>',
+          '<div class="job-search-card"><a href="https://nl.linkedin.com/jobs/view/software-engineer-ii-%C2%A0java-application-core-components-at-adyen-4487905956?position=2">Software Engineer II</a></div>',
+          '<div class="job-search-card"><a href="https://www.linkedin.com/jobs/view/senior-software-engineer-backend-ai-ml-at-clickhouse-4487986945/">Senior Software Engineer Backend</a></div>',
+        ],
+      },
+    ]);
+    const { cards, outcome } = await discoverAllCards(page as unknown as Page, BASE_OPTS);
+    expect(outcome.kind).toBe('complete');
+    expect(cards.map((c) => c.sourceJobId)).toEqual(['4488302295', '4487905956', '4487986945']);
+  });
+
   it('returns 5 cards in 1 iteration when the snapshot has 5 cards and no load-more', async () => {
     const ids = ['100001', '100002', '100003', '100004', '100005'];
     const page = new FakePage([

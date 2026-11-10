@@ -126,12 +126,22 @@ export const OVERLAY_DISMISSAL_STRATEGY: Readonly<
 };
 
 /**
- * Regex that captures the LinkedIn numeric job ID in an anchor href.
- * Anchored to the start (optionally with an `https://*.linkedin.com`
- * host) so non-LinkedIn URLs are rejected by `parseCardJobId`.
+ * Regex that captures the LinkedIn numeric job ID in a job-view href.
+ *
+ * Accepts both shapes LinkedIn renders:
+ * - canonical: `/jobs/view/4055619287/` (digits immediately after
+ *   `/jobs/view/`)
+ * - guest slugged: `/jobs/view/senior-swe-identity-at-clickhouse-4488302295?position=1`
+ *   (logged-out visitors get title-slug URLs whose slug ENDS with the
+ *   numeric ID; hosts may be country subdomains like `nl.linkedin.com`
+ *   and tracking query strings follow)
+ *
+ * The ID is always the final 6+ digit run of the path segment, so
+ * slugs that themselves contain digits (`level-123456-...-4488302295`)
+ * still resolve to the trailing job ID.
  */
 export const JOB_ID_HREF_PATTERN =
-  /^(?:https?:\/\/(?:[\w-]+\.)?linkedin\.com)?\/jobs\/view\/(\d{6,})\/?$/;
+  /^(?:https?:\/\/(?:[\w-]+\.)?linkedin\.com)?\/jobs\/view\/(?:[^/?#\s]*-)?(\d{6,})\/?(?:\?[^#\s]*)?(?:#.*)?$/;
 
 /**
  * Shared field → selector map ( ).

@@ -111,9 +111,30 @@ describe('src/linkedin/selectors — ', () => {
       'https://example.com/jobs/view/123456789/', // wrong host
       '/jobs/123456', // no `/view/` segment
       '/jobs/view/999/', // 3 digits
+      '/jobs/view/guest-slug-12345/', // slugged but trailing ID < 6 digits
     ];
     for (const href of rejects) {
       expect(JOB_ID_HREF_PATTERN.exec(href)).toBeNull();
+    }
+  });
+
+  it('JOB_ID_HREF_PATTERN captures guest slugged hrefs (title-slug ends with the numeric ID)', () => {
+    const samples = [
+      [
+        'https://nl.linkedin.com/jobs/view/senior-software-engineer-identity-authorization-platform-at-clickhouse-4488302295?position=1&pageNum=0&refId=a0AbnvcH2WWOuaJgGzXQ3g%3D%3D',
+        '4488302295',
+      ],
+      ['https://www.linkedin.com/jobs/view/some-role-at-acme-1234567/', '1234567'],
+      ['/jobs/view/software-engineer-ii-%C2%A0java-core-4487905956?position=2', '4487905956'],
+      // The last 6+ digit run wins when the slug itself contains digits.
+      ['/jobs/view/level-123456-senior-at-acme-4488302295', '4488302295'],
+    ] as const;
+    for (const [href, expected] of samples) {
+      const match = JOB_ID_HREF_PATTERN.exec(href);
+      expect(match).not.toBeNull();
+      if (match !== null) {
+        expect(match[1]).toBe(expected);
+      }
     }
   });
 });

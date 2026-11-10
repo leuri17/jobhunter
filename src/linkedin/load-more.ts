@@ -243,9 +243,11 @@ interface CardAnchorAttrs {
  * Pure parser for the two attributes that `parseCardJobId` (in
  * `card-id.ts`) inspects. Mirrors its logic so the production path
  * can decode the bulk-extracted attrs client-side without a second
- * round-trip. Kept inline rather than exported because the browser-
- * side `evaluateAll` callback re-uses the same rule on its side of
- * the protocol boundary.
+ * round-trip. Handles both canonical digit-only hrefs and the guest
+ * slugged hrefs (`/jobs/view/<title-slug>-<id>`) served to
+ * logged-out visitors — see `JOB_ID_HREF_PATTERN`. Kept inline rather
+ * than exported because the browser-side `evaluateAll` callback
+ * re-uses the same rule on its side of the protocol boundary.
  */
 function parseSourceJobIdFromAnchor(occludable: string | null, href: string | null): string | null {
   if (occludable !== null) {
@@ -254,7 +256,7 @@ function parseSourceJobIdFromAnchor(occludable: string | null, href: string | nu
   if (href === null) {
     return null;
   }
-  const match = /\/jobs\/view\/(\d+)/.exec(href);
+  const match = /\/jobs\/view\/(?:[^/?#\s]*-)?(\d+)/.exec(href);
   return match?.[1] ?? null;
 }
 
