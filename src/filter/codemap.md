@@ -11,6 +11,7 @@ The evaluator is total: helper exceptions are caught by `safeEvaluate` and surfa
 - **Service layer.** Two application services own the public surface:
   - `FilterApplyService` (`src/filter/service.ts`) is the cache ledger. It consults `filterResults.findActiveByJob(jobId, fingerprint)` and only writes a new active row on a cache miss.
   - `ConfigureFiltersService` (`src/filter/configure-service.ts`) drives the interactive configuration flow and performs the atomic version transition (`insert` inactive → `activate`).
+  - `ensureDefaultFilterConfig` (`src/filter/default-filter.ts`) is the first-run unblock (issue #307): it idempotently installs `DEFAULT_JOB_FILTER_CONFIG` (accept-all) through the same validate → normalize → hash → insert → activate path, for callers with no interactive flow (the desktop sidecar's `POST /api/filters/default`).
     Both accept `now?` for test-time wall-clock injection and depend only on the `Repositories` facade.
 - **Deterministic rule primitives.**
   - Keyword matching: `matchKeywords` (`src/filter/keyword-matcher.ts`) drives `evaluateJob`'s four keyword rules. Underlying helpers are `normalizeKeyword`, `keywordMatches`, and `findKeywordMatchIndex` in `keyword-normalize.ts`, plus the frozen `ALIAS_MAP` (`KEYWORD_ALIAS_VERSION`) in `keyword-aliases.ts`. The matcher folds `.`, `-`, `_`, `/` to spaces, collapses whitespace, applies per-token alias resolution (`js → javascript`, `k8s → kubernetes`, `postgres → postgresql`, …), and walks a token-window match.

@@ -15,6 +15,7 @@ import { registerProfileRoutes } from './routes/profile.js';
 import { registerJobsRoutes } from './routes/jobs.js';
 import { registerRunsRoutes } from './routes/runs.js';
 import { registerPipelineRoutes, abortAllActiveRuns } from './routes/pipeline.js';
+import { registerFilterRoutes } from './routes/filters.js';
 import { registerLinkedinGeoTypeaheadRoute } from './routes/linkedin-geo-typeahead.js';
 import { registerOpenAiRoutes } from './routes/openai.js';
 import {
@@ -233,6 +234,11 @@ export interface BuildServerOptions {
    * the real on-disk database.
    */
   readonly pipelineDbOpener?: () => Promise<DatabaseConnection>;
+  /**
+   * Optional test/alternative seam: opens the SQLite handle the filter
+   * routes use. Defaults to the real on-disk database.
+   */
+  readonly filtersDbOpener?: () => Promise<DatabaseConnection>;
 }
 
 async function resolveRootLogger(
@@ -359,6 +365,10 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
     rootLogger,
     refusal,
     ...(opts.pipelineDbOpener !== undefined ? { dbOpener: opts.pipelineDbOpener } : {}),
+  });
+
+  await registerFilterRoutes(app, {
+    ...(opts.filtersDbOpener !== undefined ? { dbOpener: opts.filtersDbOpener } : {}),
   });
 
   await registerLinkedinGeoTypeaheadRoute(app);
