@@ -13,6 +13,11 @@ export type StageKey = 'matrix' | 'discovery' | 'extraction' | 'filter' | 'scori
 /** Lifecycle of one stage card. `waiting` is the open cost gate; `skipped` is a declined gate. */
 export type StagePhase = 'pending' | 'active' | 'done' | 'waiting' | 'skipped';
 
+/** The three sequential phases inside one search, in execution order. */
+type SearchLoopPhase = 'discovery' | 'extraction' | 'filter';
+
+const SEARCH_PHASE_ORDER: readonly SearchLoopPhase[] = ['discovery', 'extraction', 'filter'];
+
 export interface ScoringPlanSnapshot {
   readonly jobsDiscovered: number;
   readonly newOpenAIRequests: number;
@@ -56,6 +61,7 @@ export function deriveRunView(
   let scoringDeclined = false;
   let summary: RunSummary | null = null;
   let lastSearchKey: string | null = null;
+  let lastPhase: SearchLoopPhase | null = null;
   const startedSearchKeys: string[] = [];
 
   for (const event of progress) {
@@ -69,6 +75,9 @@ export function deriveRunView(
         lastSearchKey = key;
         break;
       }
+      case 'search_phase':
+        lastPhase = event.phase;
+        break;
       case 'stats':
         counters = event.counters;
         break;
@@ -111,6 +120,19 @@ export function deriveRunView(
         ? 'done'
         : 'pending';
 
+  // With `search_phase` events, exactly one of the three search-loop
+  // stages is active; earlier phases of the current search are done,
+  // later ones pending. Without them (streams predating the events),
+  // fall back to the shared loopPhase so nothing regresses on replay.
+  const searchStagePhase = (stage: SearchLoopPhase): StagePhase => {
+    if (searchLoopDone || !runStarted || lastPhase === null) return loopPhase;
+    if (terminal) return 'done';
+    if (stage === lastPhase) return 'active';
+    return SEARCH_PHASE_ORDER.indexOf(stage) < SEARCH_PHASE_ORDER.indexOf(lastPhase)
+      ? 'done'
+      : 'pending';
+  };
+
   let scoringPhase: StagePhase;
   if (summary !== null) {
     scoringPhase = scoringDeclined ? 'skipped' : 'done';
@@ -129,9 +151,9 @@ export function deriveRunView(
   return {
     stages: {
       matrix: matrixPhase,
-      discovery: loopPhase,
-      extraction: loopPhase,
-      filter: loopPhase,
+      discovery: searchStagePhase('discovery'),
+      extraction: searchStagePhase('extraction'),
+      filter: searchStagePhase('filter'),
       scoring: scoringPhase,
     },
     counters,
