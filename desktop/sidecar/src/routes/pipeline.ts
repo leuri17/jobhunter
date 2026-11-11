@@ -11,6 +11,7 @@ import {
   LinkedInDiscoveryService,
   LinkedInExtractionService,
   createDefaultBrowserSession,
+  pinoLinkedInExtractionLogger,
   pinoLinkedInScraperLogger,
 } from '@jobhunter/core/linkedin';
 import { FilterApplyService } from '@jobhunter/core/filter';
@@ -433,6 +434,7 @@ async function runPipeline(
         repositories,
         browserSession,
         diagnosticManager,
+        logger: pinoLinkedInExtractionLogger(makeTeeLogger(rootLogger, run)),
         config: {
           navigationMs: loaded.config.scraper.timeouts.navigationMs,
           detailPanelMs: loaded.config.scraper.timeouts.detailPanelMs,
