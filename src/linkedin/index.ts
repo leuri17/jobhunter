@@ -79,3 +79,5 @@ export {
 
 export { noopLinkedInScraperLogger, pinoLinkedInScraperLogger } from './log.js';
 export type { LinkedInScraperLogger } from './log.js';
+export { noopLinkedInExtractionLogger, pinoLinkedInExtractionLogger } from './extraction/log.js';
+export type { LinkedInExtractionLogger } from './extraction/log.js';
