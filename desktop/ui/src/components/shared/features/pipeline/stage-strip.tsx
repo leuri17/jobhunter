@@ -40,6 +40,8 @@ interface CellModel {
   readonly blurb: string;
   readonly metric: string;
   readonly metricMuted: boolean;
+  /** Dynamic content (the current search) must stay on one line — truncate instead of wrapping. */
+  readonly singleLine: boolean;
 }
 
 function buildCells(props: StageStripProps): CellModel[] {
@@ -48,12 +50,21 @@ function buildCells(props: StageStripProps): CellModel[] {
   const planned = view.searchesPlanned ?? matrixSize;
   const tokens = counters === null ? 0 : counters.promptTokens + counters.completionTokens;
 
+  // While the search loop runs, the matrix cell becomes the loop's
+  // identity: the search executing now (query in location, position)
+  // instead of the whole planned cross product.
+  const current = view.currentSearch;
+  const loopRunning =
+    current !== null && view.scoringPlan === null && view.runSummaryEvent === null;
+
   const matrixMetric =
-    planned === null
-      ? '—'
-      : counters !== null
-        ? `${counters.searchesCompleted}/${planned} searches`
-        : `${planned} searches`;
+    current !== null && loopRunning
+      ? `${current.index + 1}/${current.total} searches`
+      : planned === null
+        ? '—'
+        : counters !== null
+          ? `${counters.searchesCompleted}/${planned} searches`
+          : `${planned} searches`;
 
   const scoringPhase = view.stages.scoring;
   const scoringMetric =
@@ -70,10 +81,11 @@ function buildCells(props: StageStripProps): CellModel[] {
   return [
     {
       key: 'matrix',
-      name: 'Search matrix',
-      blurb: 'Every query × location pair',
+      name: current !== null && loopRunning ? current.query : 'Search matrix',
+      blurb: current !== null && loopRunning ? current.locationName : 'Every query × location pair',
       metric: matrixMetric,
-      metricMuted: planned === null,
+      metricMuted: planned === null && !loopRunning,
+      singleLine: loopRunning,
     },
     {
       key: 'discovery',
@@ -81,6 +93,7 @@ function buildCells(props: StageStripProps): CellModel[] {
       blurb: 'Headless LinkedIn searches',
       metric: counters === null ? '—' : `${nf(counters.jobsDiscovered)} jobs found`,
       metricMuted: counters === null,
+      singleLine: false,
     },
     {
       key: 'extraction',
@@ -93,6 +106,7 @@ function buildCells(props: StageStripProps): CellModel[] {
               counters.failedExtractions > 0 ? ` · ${nf(counters.failedExtractions)} failed` : ''
             }`,
       metricMuted: counters === null,
+      singleLine: false,
     },
     {
       key: 'filter',
@@ -103,6 +117,7 @@ function buildCells(props: StageStripProps): CellModel[] {
           ? '—'
           : `${nf(counters.jobsAccepted)} passed · ${nf(counters.jobsRejected)} rejected`,
       metricMuted: counters === null,
+      singleLine: false,
     },
     {
       key: 'scoring',
@@ -113,6 +128,7 @@ function buildCells(props: StageStripProps): CellModel[] {
           : 'Scores jobs against your profile',
       metric: scoringMetric,
       metricMuted: scoringMetric === '—',
+      singleLine: false,
     },
   ];
 }
@@ -146,11 +162,20 @@ export function StageStrip(props: StageStripProps) {
                 </span>
                 <span className={cn('size-2 rounded-full', PHASE_DOT[phase])} aria-hidden="true" />
               </div>
-              <div className="text-sm font-medium">
+              <div
+                className="truncate text-sm font-medium"
+                title={cell.singleLine ? cell.name : undefined}
+              >
                 {cell.name}
                 <span className="sr-only"> — {PHASE_LABEL[phase]}</span>
               </div>
-              <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+              <p
+                className={cn(
+                  'text-xs leading-snug text-muted-foreground',
+                  cell.singleLine ? 'truncate' : 'line-clamp-2',
+                )}
+                title={cell.singleLine ? cell.blurb : undefined}
+              >
                 {cell.blurb}
               </p>
               <div

@@ -14,7 +14,6 @@ import { PageHeader, PageHeaderTitle } from '@/components/shared/layout/page-hea
 import { deriveRunView } from '@/components/shared/features/pipeline/derive-run-view';
 import { PrerequisitesBanner } from '@/components/shared/features/pipeline/prerequisites-banner';
 import { StageStrip } from '@/components/shared/features/pipeline/stage-strip';
-import { SearchMatrix } from '@/components/shared/features/pipeline/search-matrix';
 import { ScoringPanel } from '@/components/shared/features/pipeline/scoring-panel';
 import { ScoringConfirmationDialog } from '@/components/shared/features/pipeline/scoring-confirmation-dialog';
 import { RunStateIndicator } from '@/components/shared/features/pipeline/run-state-indicator';
@@ -25,12 +24,13 @@ import {
 import { Route as rootRoute } from './__root';
 
 // Pipeline (`/pipeline`). Mission-control for one run, top to bottom in
-// the run's own order: prerequisites, the five-stage strip, the
-// configured search matrix, the scoring plan + cost gate, the live log,
-// and the summary once the terminal event lands. SSE-driven state comes
-// from `usePipelineEvents`; failures surface through `ApiErrorDialog`
-// per lib/error-surfaces.ts (failed start/cancel/run and a failed
-// scoring decision are all user-initiated actions).
+// the run's own order: prerequisites, the five-stage strip (whose first
+// cell carries the current search while the loop runs), the scoring
+// plan + cost gate, the live log, and the summary once the terminal
+// event lands. SSE-driven state comes from `usePipelineEvents`; failures
+// surface through `ApiErrorDialog` per lib/error-surfaces.ts (failed
+// start/cancel/run and a failed scoring decision are all user-initiated
+// actions).
 
 // Error codes whose guidance names a page to open — the copy lives in
 // CODE_GUIDANCE (`lib/error-surfaces.ts`), the destination here.
@@ -274,8 +274,6 @@ export function PipelinePage() {
         model={jobScoring?.model}
         concurrency={jobScoring?.concurrency}
       />
-
-      <SearchMatrix search={search} view={view} failed={config.isError} />
 
       <ScoringPanel
         jobScoring={jobScoring}

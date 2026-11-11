@@ -38,6 +38,13 @@ export type PipelineProgressEvent =
       readonly query: string;
       readonly locationName: string;
     }
+  | {
+      /** Which of the three sequential phases inside one search is executing. */
+      readonly type: 'search_phase';
+      readonly runId: number;
+      readonly index: number;
+      readonly phase: 'discovery' | 'extraction' | 'filter';
+    }
   | { readonly type: 'stats'; readonly runId: number; readonly counters: PipelineRunCounters }
   | {
       readonly type: 'scoring_plan';

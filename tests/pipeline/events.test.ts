@@ -67,6 +67,9 @@ describe('PipelineOrchestrator progress events', () => {
         'run_start',
         'stats',
         'search_start',
+        'search_phase',
+        'search_phase',
+        'search_phase',
         'stats',
         'run_summary',
       ]);
@@ -77,6 +80,9 @@ describe('PipelineOrchestrator progress events', () => {
         query: 'q1',
         locationName: 'L1',
       });
+      expect(events[3]).toMatchObject({ type: 'search_phase', index: 0, phase: 'discovery' });
+      expect(events[4]).toMatchObject({ type: 'search_phase', index: 0, phase: 'extraction' });
+      expect(events[5]).toMatchObject({ type: 'search_phase', index: 0, phase: 'filter' });
     } finally {
       harness.cleanup();
     }
