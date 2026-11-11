@@ -229,6 +229,7 @@ export class PipelineOrchestrator {
         }
         const searchSucceeded = await this.runOneSearch(
           runId,
+          i,
           searchExecution,
           signal,
           perJobs,
@@ -356,12 +357,14 @@ export class PipelineOrchestrator {
    */
   private async runOneSearch(
     runId: number,
+    index: number,
     searchExecution: SearchExecutionRow,
     signal: AbortSignal,
     perJobs: PerJobState[],
     stats: MutableRunStats,
   ): Promise<boolean> {
     const run = { id: runId };
+    this.emit({ type: 'search_phase', runId, index, phase: 'discovery' });
     try {
       await this.discoveryService.discover({ run, searchExecution, signal });
     } catch (error) {
@@ -382,6 +385,7 @@ export class PipelineOrchestrator {
 
     let page: Page | null = null;
     let extractionOutcome: ExtractionBatchOutcome | undefined;
+    this.emit({ type: 'search_phase', runId, index, phase: 'extraction' });
     // Hoisted out of the try block so the post-extraction filter loop
     // can reuse the already-fetched JobRows instead of issuing a
     // redundant findById per complete-outcome job (audit B3-C.1.3).
@@ -471,6 +475,7 @@ export class PipelineOrchestrator {
 
     // Apply the filter to every job whose extraction is complete.
     if (extractionOutcome !== undefined) {
+      this.emit({ type: 'search_phase', runId, index, phase: 'filter' });
       for (const outcome of extractionOutcome.perJob) {
         if (outcome.kind !== 'complete') continue;
         // Reuse the already-batched JobRows from the extraction step
