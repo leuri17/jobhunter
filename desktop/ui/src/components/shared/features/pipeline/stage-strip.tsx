@@ -48,12 +48,26 @@ function buildCells(props: StageStripProps): CellModel[] {
   const planned = view.searchesPlanned ?? matrixSize;
   const tokens = counters === null ? 0 : counters.promptTokens + counters.completionTokens;
 
+  // While the search loop runs, the matrix cell becomes the loop's
+  // identity: the search executing now (query in location, position)
+  // instead of the whole planned cross product.
+  const current = view.currentSearch;
+  const loopRunning =
+    current !== null && view.scoringPlan === null && view.runSummaryEvent === null;
+
+  const matrixBlurb =
+    current !== null && loopRunning
+      ? `${current.query} in ${current.locationName}`
+      : 'Every query × location pair';
+
   const matrixMetric =
-    planned === null
-      ? '—'
-      : counters !== null
-        ? `${counters.searchesCompleted}/${planned} searches`
-        : `${planned} searches`;
+    current !== null && loopRunning
+      ? `${current.index + 1}/${current.total} searches`
+      : planned === null
+        ? '—'
+        : counters !== null
+          ? `${counters.searchesCompleted}/${planned} searches`
+          : `${planned} searches`;
 
   const scoringPhase = view.stages.scoring;
   const scoringMetric =
@@ -71,9 +85,9 @@ function buildCells(props: StageStripProps): CellModel[] {
     {
       key: 'matrix',
       name: 'Search matrix',
-      blurb: 'Every query × location pair',
+      blurb: matrixBlurb,
       metric: matrixMetric,
-      metricMuted: planned === null,
+      metricMuted: planned === null && !loopRunning,
     },
     {
       key: 'discovery',

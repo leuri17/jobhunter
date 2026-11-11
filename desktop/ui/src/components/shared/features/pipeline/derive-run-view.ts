@@ -28,6 +28,8 @@ export interface RunView {
   /** Latest `stats` counters snapshot, once one has arrived. */
   readonly counters: PipelineRunCounters | null;
   readonly searchesPlanned: number | null;
+  /** The search the loop is on (or last finished), from the latest `search_start`. */
+  readonly currentSearch: CurrentSearch | null;
   readonly scoringPlan: ScoringPlanSnapshot | null;
   readonly scoringDeclined: boolean;
   /** `run_summary` progress payload — the terminal `done` result may differ, prefer that one. */
@@ -39,14 +41,14 @@ export interface RunView {
    */
   readonly gateAwaitingDecision: boolean;
   readonly runStarted: boolean;
-  /** Row keys of every `search_start` seen, in order. */
-  readonly startedSearchKeys: readonly string[];
-  readonly lastSearchKey: string | null;
 }
 
-/** Stable identity for a matrix row — the same pair `search_start` echoes back. */
-export function searchRowKey(query: string, locationName: string): string {
-  return `${query}\u0000${locationName}`;
+/** Identity + position of the search the loop is executing, echoed by `search_start`. */
+export interface CurrentSearch {
+  readonly query: string;
+  readonly locationName: string;
+  readonly index: number;
+  readonly total: number;
 }
 
 export function deriveRunView(
@@ -60,21 +62,22 @@ export function deriveRunView(
   let scoringConfirmed = false;
   let scoringDeclined = false;
   let summary: RunSummary | null = null;
-  let lastSearchKey: string | null = null;
+  let currentSearch: CurrentSearch | null = null;
   let lastPhase: SearchLoopPhase | null = null;
-  const startedSearchKeys: string[] = [];
 
   for (const event of progress) {
     switch (event.type) {
       case 'run_start':
         searchesPlanned = event.searchesPlanned;
         break;
-      case 'search_start': {
-        const key = searchRowKey(event.query, event.locationName);
-        if (!startedSearchKeys.includes(key)) startedSearchKeys.push(key);
-        lastSearchKey = key;
+      case 'search_start':
+        currentSearch = {
+          query: event.query,
+          locationName: event.locationName,
+          index: event.index,
+          total: event.total,
+        };
         break;
-      }
       case 'search_phase':
         lastPhase = event.phase;
         break;
@@ -163,7 +166,6 @@ export function deriveRunView(
     runSummaryEvent: summary,
     gateAwaitingDecision,
     runStarted,
-    startedSearchKeys,
-    lastSearchKey,
+    currentSearch,
   };
 }

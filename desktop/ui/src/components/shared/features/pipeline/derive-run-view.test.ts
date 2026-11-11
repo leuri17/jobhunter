@@ -30,6 +30,28 @@ function phase(index: number, p: 'discovery' | 'extraction' | 'filter'): Pipelin
   return { type: 'search_phase', runId: 1, index, phase: p };
 }
 
+describe('deriveRunView current search', () => {
+  it('is null before any search starts', () => {
+    const view = deriveRunView(events(runStart), 'running', false);
+    expect(view.currentSearch).toBeNull();
+  });
+
+  it('exposes the current search from the latest search_start', () => {
+    const view = deriveRunView(events(runStart, searchStart0), 'running', false);
+    expect(view.currentSearch).toEqual({
+      query: 'q1',
+      locationName: 'L1',
+      index: 0,
+      total: 2,
+    });
+  });
+
+  it('moves to the next search when its search_start arrives', () => {
+    const view = deriveRunView(events(runStart, searchStart0, searchStart1), 'running', false);
+    expect(view.currentSearch).toMatchObject({ query: 'q2', locationName: 'L1', index: 1 });
+  });
+});
+
 describe('deriveRunView search-loop stage phases', () => {
   it('keeps the legacy shared-active fold for streams without search_phase events', () => {
     const view = deriveRunView(events(runStart, searchStart0), 'running', false);
