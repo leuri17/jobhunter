@@ -92,12 +92,18 @@ export function RunSummaryCard({ summary, tokens }: RunSummaryCardProps) {
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-6">
           <Stat
             value={`${summary.searchesCompleted}/${summary.searchesPlanned}`}
             label="Searches"
           />
           <Stat value={summary.jobsDiscovered.toLocaleString()} label="Jobs discovered" />
+          <Stat
+            value={(
+              summary.existingCompleteJobsSkipped + summary.existingPartialJobsSkipped
+            ).toLocaleString()}
+            label="Jobs skipped"
+          />
           <Stat
             value={`${summary.jobsAccepted}/${summary.jobsAccepted + summary.jobsRejected}`}
             label="Passed filter"

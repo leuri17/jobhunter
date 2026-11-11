@@ -1,7 +1,28 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import type { RunSummary } from '@jobhunter/core/pipeline';
-import { asRunSummary } from './run-summary-card';
+import { asRunSummary, RunSummaryCard } from './run-summary-card';
+
+// The card renders outside a router instance here, so Link gets a
+// context-free anchor stub (same pattern as pipeline.test.tsx).
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>();
+  const stubLink = ({
+    to,
+    children,
+    ...rest
+  }: {
+    to: string;
+    children?: ReactNode;
+  } & Record<string, unknown>) => (
+    <a href={to} {...rest}>
+      {children}
+    </a>
+  );
+  return { ...actual, Link: stubLink };
+});
 
 const realSummary: RunSummary = {
   schemaVersion: 1,
@@ -42,5 +63,20 @@ describe('asRunSummary', () => {
       asRunSummary({ summary: { schemaVersion: 2, runId: 1, status: 'completed' } }),
     ).toBeNull();
     expect(asRunSummary({ schemaVersion: 1, runId: 1, status: 'completed' })).toBeNull();
+  });
+});
+
+describe('RunSummaryCard', () => {
+  afterEach(cleanup);
+
+  it('renders Jobs skipped as the sum of the two extraction-skip counters', () => {
+    const summary: RunSummary = {
+      ...realSummary,
+      existingCompleteJobsSkipped: 7,
+      existingPartialJobsSkipped: 2,
+    };
+    render(<RunSummaryCard summary={summary} tokens={null} />);
+    const label = screen.getByText('Jobs skipped');
+    expect(label.previousElementSibling?.textContent).toBe('9');
   });
 });
