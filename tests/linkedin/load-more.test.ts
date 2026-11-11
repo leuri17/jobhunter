@@ -33,15 +33,24 @@ interface FakeState {
   clickCount: number;
 }
 
+/** FakePage options: `hydrateOnWait` flips to the next snapshot when the
+ * card locator's `waitFor` runs — simulating lazy guest hydration where
+ * cards attach ~1–3s after domcontentloaded. */
+interface FakePageOptions {
+  readonly hydrateOnWait?: boolean;
+}
+
 class FakePage {
   public readonly state: FakeState;
+  private readonly hydrateOnWait: boolean;
 
-  constructor(snapshots: readonly Snapshot[]) {
+  constructor(snapshots: readonly Snapshot[], options: FakePageOptions = {}) {
     this.state = {
       snapshots,
       snapshotIndex: 0,
       clickCount: 0,
     };
+    this.hydrateOnWait = options.hydrateOnWait === true;
   }
 
   currentSnapshot(): Snapshot {
@@ -56,7 +65,8 @@ class FakePage {
   locator = (selector: string): Locator => {
     const isListItem =
       selector === LINKEDIN_SELECTORS.cards.listItem ||
-      selector === LINKEDIN_SELECTORS.cards.listItemAlt;
+      selector === LINKEDIN_SELECTORS.cards.listItemAlt ||
+      selector === `${LINKEDIN_SELECTORS.cards.listItem}, ${LINKEDIN_SELECTORS.cards.listItemAlt}`;
     const isLoadMore = selector === LINKEDIN_SELECTORS.loadMore.button;
     const isEndOfResults =
       selector === LINKEDIN_SELECTORS.endOfResults.noResults ||
@@ -112,7 +122,20 @@ class FakePage {
           this.state.snapshotIndex += 1;
         }
       },
-      waitFor: async (): Promise<void> => undefined,
+      waitFor: async (): Promise<void> => {
+        if (
+          isListItem &&
+          this.hydrateOnWait &&
+          this.state.snapshotIndex < this.state.snapshots.length - 1
+        ) {
+          this.state.snapshotIndex += 1;
+        }
+        // Mirror Playwright: waiting for an element that never attaches
+        // times out (rejects). Production must tolerate this.
+        if (listItemCount() === 0) {
+          throw new Error(`FakePage: waitFor timed out on "${selector}"`);
+        }
+      },
     } as unknown as Locator;
   };
 }
@@ -161,6 +184,30 @@ describe('src/linkedin/load-more — ', () => {
     const page = new FakePage([{ cardIds: [], loadMorePresent: false, endOfResultsVisible: true }]);
     const { cards, outcome } = await discoverAllCards(page as unknown as Page, BASE_OPTS);
     expect(cards).toEqual([]);
+    expect(outcome.kind).toBe('complete');
+  });
+
+  it('waits for the first card before collecting when hydration is slow (#317)', async () => {
+    const page = new FakePage(
+      [
+        { cardIds: [], loadMorePresent: false, endOfResultsVisible: false },
+        { cardIds: ['300001', '300002'], loadMorePresent: false, endOfResultsVisible: false },
+      ],
+      { hydrateOnWait: true },
+    );
+    const { cards, outcome } = await discoverAllCards(page as unknown as Page, BASE_OPTS);
+    expect(cards.map((c) => c.sourceJobId)).toEqual(['300001', '300002']);
+    expect(outcome.kind).toBe('complete');
+  });
+
+  it('tolerates the initial wait timing out when no results ever appear', async () => {
+    const page = new FakePage([
+      { cardIds: [], loadMorePresent: false, endOfResultsVisible: false },
+    ]);
+    const { cards, outcome } = await discoverAllCards(page as unknown as Page, BASE_OPTS);
+    expect(cards).toEqual([]);
+    // No end sentinel and no load-more button: the loop ends via the
+    // absent button; the point is the rejected waitFor never escapes.
     expect(outcome.kind).toBe('complete');
   });
 

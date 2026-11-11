@@ -69,6 +69,17 @@ export async function discoverAllCards(
   const scrollDelayMs = opts.scrollDelayMs ?? Math.max(1, Math.floor(opts.initialResultsMs / 4));
   const idToCard = new Map<string, DiscoveredCard>();
 
+  // Guest pages hydrate the results list lazily (~1–3s after
+  // domcontentloaded); collecting before the first card attaches zeroed
+  // out whole searches (#317). Bounded best-effort wait on either card
+  // selector — guest pages render the alt selector (see #312) — and a
+  // genuine no-results page simply waits out the bound.
+  await page
+    .locator(`${LINKEDIN_SELECTORS.cards.listItem}, ${LINKEDIN_SELECTORS.cards.listItemAlt}`)
+    .first()
+    .waitFor({ state: 'attached', timeout: opts.initialResultsMs })
+    .catch(() => undefined);
+
   while (state.iteration < maxIterations) {
     if (opts.signal?.aborted === true) {
       return {
