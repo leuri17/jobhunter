@@ -131,6 +131,34 @@ describe('PipelineOrchestrator', () => {
     }
   });
 
+  it('counts jobs discovered per search, not cumulative across searches (#326)', async () => {
+    const twoSearchConfig = {
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      search: {
+        ...DEFAULT_OPERATIONAL_CONFIG.search,
+        searchQueries: ['q1', 'q2'],
+        locations: [{ name: 'L1', geoId: '1' }],
+      },
+    };
+    const counterHarness = buildRunHarness({
+      config: twoSearchConfig,
+      prompts: new ScriptedPipelinePrompts([]),
+      // Both searches surface the same card: one discovery event per
+      // search. The pre-#326 code re-added the run's cumulative event
+      // count every search (1 + 2 = 3); the truthful count is 2.
+      createPage: fakePageWithCard(['4242']),
+    });
+    try {
+      await insertApprovedProfile(counterHarness.repositories);
+      await insertActiveFilter(counterHarness.repositories);
+      const result = await counterHarness.orchestrator.run({});
+      expect(result.summary.searchesAttempted).toBe(2);
+      expect(result.summary.jobsDiscovered).toBe(2);
+    } finally {
+      counterHarness.cleanup();
+    }
+  });
+
   // T6: declined scoring → scoringDeclinedByUser = true.
   it('T6: declined scoring → scoringDeclinedByUser = true (when scoring branch fires)', async () => {
     const oneSearchConfig = {

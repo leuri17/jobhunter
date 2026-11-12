@@ -379,9 +379,13 @@ export class PipelineOrchestrator {
       return false;
     }
 
-    // Fetch the discovery events for this run (post-discovery state).
+    // Fetch the discovery events for this run (post-discovery state)
+    // and keep this search's slice: the cumulative run-wide list must
+    // not feed the counters — re-adding it per search inflated
+    // jobsDiscovered (#326: 11 events × 24 searches = 264).
     const events = await this.repositories.jobs.findEventsByRun(runId);
-    stats.jobsDiscovered += events.length;
+    const searchEvents = events.filter((e) => e.searchExecutionId === searchExecution.id);
+    stats.jobsDiscovered += searchEvents.length;
 
     let page: Page | null = null;
     let extractionOutcome: ExtractionBatchOutcome | undefined;
@@ -402,7 +406,6 @@ export class PipelineOrchestrator {
       // batch the lookup into a single `inArray` SELECT + in-memory
       // Map walk instead of issuing one `findById` per event
       // (audit B3-C.1.2).
-      const searchEvents = events.filter((e) => e.searchExecutionId === searchExecution.id);
       const dedupedIds = Array.from(new Set(searchEvents.map((e) => e.jobId)));
       const fetched = await this.repositories.jobs.findByIds(dedupedIds);
       fetchedByJobId = new Map(fetched.map((row) => [row.id, row]));
