@@ -71,6 +71,67 @@ describe('PipelineRunRepository', () => {
     expect(searches.map((s) => s.searchQuery).sort()).toEqual(['engineer', 'scientist']);
   });
 
+  describe('cancelStaleRunningRuns (startup sweep, #318)', () => {
+    async function seedRun(status?: 'running' | 'completed') {
+      return repo.createRunWithSearches(
+        {
+          status,
+          startTimestamp: '2026-11-10T00:07:00.000Z',
+          configSnapshotJson: { version: 1 },
+          configSchemaVersion: 1,
+          configHash: 'cfg-hash',
+          applicationVersion: '0.1.0',
+        },
+        [
+          {
+            pipelineRunId: 0,
+            searchQuery: 'engineer',
+            locationName: 'Rotterdam',
+            geoId: '100467493',
+            generatedUrl: 'https://www.linkedin.com/jobs/search/?keywords=engineer',
+            startTimestamp: '2026-11-10T00:07:00.000Z',
+          },
+        ],
+      );
+    }
+
+    it('marks a stale running run and its pending search cancelled with app_shutdown', async () => {
+      const { runId } = await seedRun('running');
+      const settled = repo.cancelStaleRunningRuns('2026-11-12T09:00:00.000Z');
+      expect(settled).toEqual([runId]);
+
+      const run = await repo.findRunById(runId);
+      expect(run?.status).toBe('cancelled');
+      expect(run?.endTimestamp).toBe('2026-11-12T09:00:00.000Z');
+      expect(run?.cancellationReason).toBe('app_shutdown');
+
+      const searches = await repo.listSearchesByRun(runId);
+      expect(searches[0]?.finalStatus).toBe('cancelled');
+    });
+
+    it('leaves terminal runs untouched and returns an empty list', async () => {
+      const { runId } = await seedRun('completed');
+      const settled = repo.cancelStaleRunningRuns('2026-11-12T09:00:00.000Z');
+      expect(settled).toEqual([]);
+      const run = await repo.findRunById(runId);
+      expect(run?.status).toBe('completed');
+      expect(run?.endTimestamp).toBeNull();
+      expect(run?.cancellationReason).toBeNull();
+    });
+
+    it('leaves already-final searches of a stale run as they were', async () => {
+      const { runId, searchIds } = await seedRun('running');
+      const searchId = searchIds[0];
+      if (searchId === undefined) throw new Error('seed returned no searches');
+      await repo.updateSearchStatus(searchId, { finalStatus: 'completed' });
+      repo.cancelStaleRunningRuns('2026-11-12T09:00:00.000Z');
+
+      const searches = await repo.listSearchesByRun(runId);
+      expect(searches[0]?.finalStatus).toBe('completed');
+      expect((await repo.findRunById(runId))?.status).toBe('cancelled');
+    });
+  });
+
   it('createRunWithSearches rolls back when the in-tx write fails (no orphan rows)', async () => {
     // The repository overrides each search's pipelineRunId to the just-created
     // run id, so a user-supplied bad pipelineRunId does NOT trigger an FK

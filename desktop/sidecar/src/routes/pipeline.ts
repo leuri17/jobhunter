@@ -171,6 +171,32 @@ export async function registerPipelineRoutes(
   const rootLogger: PinoLogger = opts.rootLogger ?? pino({ level: 'silent' });
   const openDb = opts.dbOpener ?? openDbHandle;
 
+  // Startup sweep (#318): settle runs left non-terminal by a previous
+  // session (app quit or crash mid-run) — nothing in-memory can be
+  // running yet at registration, so any non-terminal row belongs to a
+  // dead session. Failure logs but never blocks boot: a broken sweep
+  // must not take down config/profile routes too.
+  try {
+    const handle = await openDb();
+    try {
+      const repositories = createRepositories(handle);
+      const settled = repositories.pipelineRuns.cancelStaleRunningRuns(new Date().toISOString());
+      if (settled.length > 0) {
+        rootLogger.warn(
+          { component: 'sidecar', runIds: settled },
+          'startup sweep cancelled runs orphaned by a previous session',
+        );
+      }
+    } finally {
+      handle.close();
+    }
+  } catch (err) {
+    rootLogger.error(
+      { component: 'sidecar', err: String(err) },
+      'startup sweep failed; stale runs may surface as phantom in-flight runs',
+    );
+  }
+
   app.get('/api/pipeline/prerequisites', async () => {
     const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
     const handle = await openDb();

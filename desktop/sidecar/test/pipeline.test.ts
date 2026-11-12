@@ -255,7 +255,10 @@ describe('GET /api/pipeline/active', () => {
     let opens = 0;
     const dbOpener = async (): Promise<DatabaseConnection> => {
       opens += 1;
-      if (opens > 1) return new Promise<DatabaseConnection>(() => {});
+      // Open #1 is the #318 startup sweep; #2 the run preflight. The
+      // orchestrator's mid-run open (#3) hangs forever so the run
+      // stays in-flight for the /active probe.
+      if (opens > 2) return new Promise<DatabaseConnection>(() => {});
       return seededOpener();
     };
     await withServer(
@@ -285,7 +288,11 @@ describe('pipeline run failure reporting', () => {
     let opens = 0;
     const dbOpener = async (): Promise<DatabaseConnection> => {
       opens += 1;
-      if (opens > 1) throw new Error('second open failed (test-injected)');
+      // Open #1 is the #318 startup sweep at registration; #2 is the
+      // run route's preflight. The injected failure must land on the
+      // orchestrator's own mid-run open (#3) so it surfaces in the
+      // terminal done event instead of failing the request outright.
+      if (opens > 2) throw new Error('second open failed (test-injected)');
       return seededOpener();
     };
     await withServer(
