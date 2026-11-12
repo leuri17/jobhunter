@@ -56,6 +56,13 @@ export interface RunHarnessOptions {
    * orchestrator uses this signal instead of creating its own.
    */
   readonly cancelSignal?: AbortSignal;
+  /**
+   * Service overrides for tests that need to drive a specific stage
+   * with a stub while keeping the rest of the chain real (e.g. feed
+   * the filter + scoring stages a known-complete extraction outcome).
+   */
+  readonly extractionServiceOverride?: LinkedInExtractionService;
+  readonly scoringServiceOverride?: ScoringService;
 }
 
 export interface RunHarness {
@@ -116,15 +123,17 @@ export function buildRunHarness(options: RunHarnessOptions = {}): RunHarness {
   // the scoring pipeline persists its own diagnostic metadata via
   // `openaiMetadata`. The scorer logs go through the
   // `ScoringLogger` seam, not the run-level `DiagnosticManager`.
-  const scoringService = new ScoringService({
-    repositories,
-    openaiClient: openAIClient,
-    config: {
-      model: config.openai.jobScoring.model,
-      reasoningEffort: config.openai.jobScoring.reasoningEffort,
-      concurrency: config.openai.jobScoring.concurrency,
-    },
-  });
+  const scoringService =
+    options.scoringServiceOverride ??
+    new ScoringService({
+      repositories,
+      openaiClient: openAIClient,
+      config: {
+        model: config.openai.jobScoring.model,
+        reasoningEffort: config.openai.jobScoring.reasoningEffort,
+        concurrency: config.openai.jobScoring.concurrency,
+      },
+    });
 
   const filterApplyService = new FilterApplyService({ repositories });
 
@@ -141,17 +150,19 @@ export function buildRunHarness(options: RunHarnessOptions = {}): RunHarness {
     },
   });
 
-  const extractionService = new LinkedInExtractionService({
-    repositories,
-    browserSession,
-    diagnosticManager,
-    config: {
-      navigationMs: config.scraper.timeouts.navigationMs,
-      detailPanelMs: config.scraper.timeouts.detailPanelMs,
-      dedicatedPageMs: config.scraper.timeouts.dedicatedPageMs,
-      overlayDismissalMs: config.scraper.timeouts.overlayDismissalMs,
-    },
-  });
+  const extractionService =
+    options.extractionServiceOverride ??
+    new LinkedInExtractionService({
+      repositories,
+      browserSession,
+      diagnosticManager,
+      config: {
+        navigationMs: config.scraper.timeouts.navigationMs,
+        detailPanelMs: config.scraper.timeouts.detailPanelMs,
+        dedicatedPageMs: config.scraper.timeouts.dedicatedPageMs,
+        overlayDismissalMs: config.scraper.timeouts.overlayDismissalMs,
+      },
+    });
 
   const orchestrator = new PipelineOrchestrator({
     repositories,

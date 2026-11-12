@@ -217,6 +217,112 @@ describe('PipelineOrchestrator', () => {
     expect(captured[0]?.scoreKinds.get(1)).toBe('complete');
   });
 
+  it('feeds post-extraction job state to the filter and the scoring batch', async () => {
+    const { buildScoringPlan } = await import('../../src/scoring/plan.js');
+    const captured: import('../../src/scoring/service.js').ScoreBatchInput[] = [];
+
+    class StubExtractionService {
+      async extractBatch(
+        input: import('../../src/linkedin/extraction/service.js').ExtractBatchInput,
+      ): Promise<import('../../src/linkedin/extraction/state.js').ExtractionBatchOutcome> {
+        const job = input.jobs[0];
+        if (job === undefined) {
+          return {
+            schemaVersion: 1,
+            runId: input.run.id,
+            searchExecutionId: input.searchExecution.id,
+            perJob: [],
+            totals: { complete: 0, partial: 0, failed: 0, skipped: 0, cancelled: 0 },
+          };
+        }
+        return {
+          schemaVersion: 1,
+          runId: input.run.id,
+          searchExecutionId: input.searchExecution.id,
+          perJob: [
+            {
+              schemaVersion: 1,
+              jobId: job.id,
+              sourceJobId: job.sourceJobId,
+              kind: 'complete',
+              fields: {
+                title: 'Extracted Title',
+                company: 'Extracted Co',
+                location: 'Berlin',
+                description: 'Extracted description.',
+              },
+              attemptedMethods: ['search_detail_panel'],
+              errorCode: null,
+              errorMessage: null,
+              artifactIds: [],
+            },
+          ],
+          totals: { complete: 1, partial: 0, failed: 0, skipped: 0, cancelled: 0 },
+        };
+      }
+    }
+
+    class SpyScoringService {
+      buildScoringPlan(
+        input: Parameters<typeof buildScoringPlan>[0],
+      ): ReturnType<typeof buildScoringPlan> {
+        return buildScoringPlan(input);
+      }
+      async scoreBatch(input: import('../../src/scoring/service.js').ScoreBatchInput) {
+        captured.push(input);
+        return {
+          schemaVersion: 1 as const,
+          runId: input.run.id,
+          searchExecutionId: input.searchExecution.id,
+          perJob: [],
+          totals: {
+            complete: 0,
+            reused: 0,
+            failed: 0,
+            skipped: 0,
+            cancelled: 0,
+            promptTokens: 0,
+            completionTokens: 0,
+          },
+        };
+      }
+    }
+
+    const oneSearchConfig = {
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      search: {
+        ...DEFAULT_OPERATIONAL_CONFIG.search,
+        searchQueries: ['q1'],
+        locations: [{ name: 'L1', geoId: '1' }],
+      },
+    };
+    const freshHarness = buildRunHarness({
+      config: oneSearchConfig,
+      prompts: new ScriptedPipelinePrompts([]),
+      confirmScoring: true,
+      createPage: fakePageWithCard(['4242']),
+      extractionServiceOverride: new StubExtractionService() as never,
+      scoringServiceOverride: new SpyScoringService() as never,
+    });
+    try {
+      await insertApprovedProfile(freshHarness.repositories);
+      await insertActiveFilter(freshHarness.repositories);
+      const result = await freshHarness.orchestrator.run({});
+      expect(result.summary.jobsAccepted).toBe(1);
+
+      expect(captured).toHaveLength(1);
+      const scored = captured[0]?.jobs[0];
+      // Pre-#334 the perJobs carried the pre-extraction row snapshot:
+      // extractionStatus 'pending' and empty fields, so every job hit
+      // the 'ineligible' branch in scoreOne.
+      expect(scored?.job.extractionStatus).toBe('complete');
+      expect(scored?.job.normalizedTitle).toBe('Extracted Title');
+      expect(scored?.job.normalizedCompany).toBe('Extracted Co');
+    } finally {
+      freshHarness.cleanup();
+    }
+  });
+
   // T6: declined scoring → scoringDeclinedByUser = true.
   it('T6: declined scoring → scoringDeclinedByUser = true (when scoring branch fires)', async () => {
     const oneSearchConfig = {

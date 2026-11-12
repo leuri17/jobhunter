@@ -486,18 +486,36 @@ export class PipelineOrchestrator {
         // (audit B3-C.1.3).
         const jobRow = fetchedByJobId.get(outcome.jobId);
         if (jobRow === undefined) continue;
+        // The batched rows predate extraction — they were fetched to
+        // build the extraction input. Overlay what extraction produced
+        // so the filter (and the scoring eligibility check later, via
+        // perJobs) sees the persisted fields and 'complete' status,
+        // not the stale pre-extraction snapshot (#334 symptom: every
+        // job skipped as 'ineligible', filter running on empty fields).
+        const extractedJob = {
+          ...jobRow,
+          extractionStatus: 'complete' as const,
+          title: outcome.fields.title ?? jobRow.title,
+          company: outcome.fields.company ?? jobRow.company,
+          location: outcome.fields.location ?? jobRow.location,
+          description: outcome.fields.description ?? jobRow.description,
+        };
         try {
           const filterResult = await this.filterApplyService.apply({
-            jobId: jobRow.id,
+            jobId: extractedJob.id,
             job: {
-              title: jobRow.title,
-              company: jobRow.company,
-              location: jobRow.location,
-              description: jobRow.description,
+              title: extractedJob.title,
+              company: extractedJob.company,
+              location: extractedJob.location,
+              description: extractedJob.description,
             },
             pipelineRunId: runId,
           });
-          perJobs.push({ job: jobRow, filterResult, searchExecutionId: searchExecution.id });
+          perJobs.push({
+            job: extractedJob,
+            filterResult,
+            searchExecutionId: searchExecution.id,
+          });
           if (filterResult.outcome === 'accepted') {
             stats.jobsAccepted += 1;
           } else {
@@ -505,7 +523,7 @@ export class PipelineOrchestrator {
           }
           this.logger.jobFiltered({
             runId,
-            jobId: jobRow.id,
+            jobId: extractedJob.id,
             outcome: filterResult.outcome,
             rejectionReasons: filterResult.rejectionReasons,
             reused: filterResult.reused,
@@ -516,7 +534,7 @@ export class PipelineOrchestrator {
           const message = formatError(error).message;
           this.logger.jobFilterFail({
             runId,
-            jobId: jobRow.id,
+            jobId: extractedJob.id,
             errorCode: 'filter_apply_failed',
             message,
           });
