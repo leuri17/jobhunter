@@ -646,7 +646,12 @@ export class PipelineOrchestrator {
       filterResult: {
         id: p.filterResult.filterResultId,
         outcome: 'accepted' as const,
-        fingerprint: p.filterResult.fingerprint,
+        // The config hash that produced this acceptance — the same
+        // namespace as activeFilterFingerprint, which eligibility
+        // compares it against. The per-job `fingerprint` (job+config+
+        // profile digest) can never equal a config hash; passing it
+        // here marked every job 'ineligible'.
+        fingerprint: p.filterResult.filterConfigHash,
       },
       activeFilterFingerprint,
       signal,

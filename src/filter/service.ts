@@ -76,6 +76,13 @@ export interface FilterApplyResult {
   readonly outcome: FilterOutcome;
   readonly filterResultId: number;
   readonly fingerprint: string;
+  /**
+   * Content hash of the filter config that produced this result — the
+   * value scoring eligibility compares against the currently active
+   * config. Distinct from `fingerprint`, which also digests the job
+   * and profile and is unique per job.
+   */
+  readonly filterConfigHash: string;
   readonly ruleEvaluations: readonly RuleEvaluation[];
   readonly rejectionReasons: readonly string[];
   readonly reused: boolean;
@@ -121,6 +128,7 @@ export class FilterApplyService {
         outcome: existing.overallOutcome,
         filterResultId: existing.id,
         fingerprint: existing.fingerprint,
+        filterConfigHash: existing.filterConfigHash,
         ruleEvaluations: existing.rulesEvaluated as readonly RuleEvaluation[],
         rejectionReasons: (existing.rejectionReasons ?? []) as readonly string[],
         reused: true,
@@ -153,6 +161,7 @@ export class FilterApplyService {
       outcome: evaluation.overallOutcome,
       filterResultId,
       fingerprint,
+      filterConfigHash: configRow.contentHash,
       ruleEvaluations: evaluation.rulesEvaluated,
       rejectionReasons: evaluation.rejectionReasons,
       reused: false,
