@@ -657,18 +657,25 @@ export class PipelineOrchestrator {
       signal,
     }));
 
-    const outcome = await this.scoringService.scoreBatch({
+    await this.scoringService.scoreBatch({
       run: { id: runId },
       searchExecution: { id: searchExecutionId },
       jobs,
       signal,
+      // Live counters (#335): apply each outcome's delta and emit a
+      // stats event per finished job so the stage card climbs during
+      // scoring instead of jumping from 0 in the run summary.
+      onOutcome: (o) => {
+        if (o.kind === 'complete') stats.jobsScored += 1;
+        else if (o.kind === 'reused') stats.scoresReused += 1;
+        else if (o.kind === 'failed') stats.scoringErrors += 1;
+        if (o.tokenUsage !== null && o.tokenUsage !== undefined) {
+          stats.promptTokens += o.tokenUsage.promptTokens;
+          stats.completionTokens += o.tokenUsage.completionTokens;
+        }
+        this.emit({ type: 'stats', runId, counters: this.countersFrom(stats) });
+      },
     });
-
-    stats.jobsScored += outcome.totals.complete;
-    stats.scoresReused += outcome.totals.reused;
-    stats.scoringErrors += outcome.totals.failed;
-    stats.promptTokens += outcome.totals.promptTokens;
-    stats.completionTokens += outcome.totals.completionTokens;
   }
 
   private async computeTopN(runId: number, limit: number): Promise<readonly TopNRow[]> {

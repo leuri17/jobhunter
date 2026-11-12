@@ -91,6 +91,13 @@ export interface ScoreBatchInput {
   readonly searchExecution: { readonly id: number };
   readonly jobs: readonly ScoreOneInput[];
   readonly signal: AbortSignal;
+  /**
+   * Live progress seam: invoked once per finished outcome (scored,
+   * reused, failed, cancelled, or flushed as skipped on a hard stop)
+   * as the batch executes. Lets the orchestrator update counters and
+   * emit `stats` events while scoring runs (#335).
+   */
+  readonly onOutcome?: (outcome: ScoringOutcome) => void;
 }
 
 function makeOutcome(input: {
@@ -504,13 +511,17 @@ export class ScoringService {
     const outcomes: ScoringOutcome[] = [];
     const queue = [...input.jobs];
     let consecutiveAuthFailures = 0;
+    const record = (outcome: ScoringOutcome): void => {
+      outcomes.push(outcome);
+      input.onOutcome?.(outcome);
+    };
 
     const processNext = async (): Promise<void> => {
       while (queue.length > 0) {
         if (input.signal.aborted) {
           while (queue.length > 0) {
             const job = queue.shift()!;
-            outcomes.push(
+            record(
               makeOutcome({
                 job: job.job,
                 kind: 'cancelled',
@@ -528,7 +539,7 @@ export class ScoringService {
         }
         const job = queue.shift()!;
         const outcome = await this.scoreOne({ ...job, signal: input.signal });
-        outcomes.push(outcome);
+        record(outcome);
         if (outcome.kind === 'failed' && outcome.errorCode === 'openai_authentication') {
           consecutiveAuthFailures += 1;
           if (consecutiveAuthFailures >= CONSECUTIVE_AUTH_FAILURE_LIMIT) {
@@ -551,7 +562,7 @@ export class ScoringService {
       if (cause instanceof ScoringHardStopError) {
         while (queue.length > 0) {
           const job = queue.shift()!;
-          outcomes.push(
+          record(
             makeOutcome({
               job: job.job,
               kind: 'skipped',
