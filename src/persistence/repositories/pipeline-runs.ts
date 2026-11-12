@@ -1,4 +1,4 @@
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
@@ -228,6 +228,38 @@ export class PipelineRunRepository {
       }
 
       return { runId, searchIds };
+    });
+  }
+
+  /**
+   * Startup sweep (#318): settle runs left non-terminal by a previous
+   * session (app quit or crash mid-run) and their non-final searches.
+   * Returns the settled run ids — empty when the DB is already
+   * consistent, so callers can skip logging.
+   */
+  cancelStaleRunningRuns(at: string): readonly number[] {
+    return this.ctx.db.transaction((tx) => {
+      const staleIds = tx
+        .select({ id: pipelineRuns.id })
+        .from(pipelineRuns)
+        .where(inArray(pipelineRuns.status, ['running', 'cancelling']))
+        .all()
+        .map((row) => row.id);
+      if (staleIds.length === 0) return [];
+      tx.update(pipelineRuns)
+        .set({ status: 'cancelled', endTimestamp: at, cancellationReason: 'app_shutdown' })
+        .where(inArray(pipelineRuns.id, staleIds))
+        .run();
+      tx.update(searchExecutions)
+        .set({ finalStatus: 'cancelled', endTimestamp: at })
+        .where(
+          and(
+            inArray(searchExecutions.pipelineRunId, staleIds),
+            inArray(searchExecutions.finalStatus, ['pending', 'running']),
+          ),
+        )
+        .run();
+      return staleIds;
     });
   }
 
