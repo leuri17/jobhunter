@@ -159,6 +159,64 @@ describe('PipelineOrchestrator', () => {
     }
   });
 
+  it('marks every accepted job as a new OpenAI request in the scoring plan (#327)', async () => {
+    const { PipelineOrchestrator } = await import('../../src/pipeline/orchestrator.js');
+    const { buildScoringPlan } = await import('../../src/scoring/plan.js');
+
+    // Spy scoring service: run the real aggregation over what the
+    // orchestrator passed, so the assertion covers the orchestrator's
+    // eligibility/score-kind maps (the #327 bug lived there).
+    const captured: Parameters<typeof buildScoringPlan>[0][] = [];
+    const scoringService = {
+      buildScoringPlan(input: Parameters<typeof buildScoringPlan>[0]) {
+        captured.push(input);
+        return buildScoringPlan(input);
+      },
+    };
+    const orchestrator = new PipelineOrchestrator({
+      repositories: {} as never,
+      browserSession: {} as never,
+      discoveryService: {} as never,
+      extractionService: {} as never,
+      filterApplyService: {} as never,
+      scoringService: scoringService as never,
+      diagnosticManager: {} as never,
+      config: {
+        rawConfig: DEFAULT_OPERATIONAL_CONFIG,
+        hash: 'test-hash',
+        schemaVersion: 1,
+      },
+      prompts: { askScoringConfirmation: async () => true },
+    });
+    const perJobs = [
+      {
+        job: { id: 1, sourceJobId: '4242' },
+        filterResult: { outcome: 'accepted' },
+      },
+      {
+        job: { id: 2, sourceJobId: '4243' },
+        filterResult: { outcome: 'rejected' },
+      },
+    ] as never[];
+
+    const plan = (
+      orchestrator as unknown as {
+        buildScoringPlan(
+          runId: number,
+          searchIds: readonly number[],
+          perJobs: readonly never[],
+        ): ReturnType<typeof buildScoringPlan>;
+      }
+    ).buildScoringPlan(1, [10], perJobs);
+
+    expect(plan.jobsAccepted).toBe(1);
+    // The cost gate opens only when newOpenAIRequests > 0; the plan is
+    // an upper-bound estimate — scoring-time fingerprint reuse may
+    // still downgrade individual jobs to 'reused'.
+    expect(plan.newOpenAIRequests).toBe(1);
+    expect(captured[0]?.scoreKinds.get(1)).toBe('complete');
+  });
+
   // T6: declined scoring → scoringDeclinedByUser = true.
   it('T6: declined scoring → scoringDeclinedByUser = true (when scoring branch fires)', async () => {
     const oneSearchConfig = {

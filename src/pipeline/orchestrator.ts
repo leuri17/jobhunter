@@ -549,7 +549,13 @@ export class PipelineOrchestrator {
     const scoreKinds = new Map<number, ScoringKind>();
     for (const p of accepted) {
       eligibleFlags.set(p.job.id, { isEligible: true, reason: null });
-      scoreKinds.set(p.job.id, 'skipped' satisfies ScoringKind);
+      // Upper-bound cost estimate for the gate: the plan cannot
+      // recompute scoreOne's fingerprint, so every accepted job counts
+      // as a new request. Scoring-time fingerprint reuse still
+      // downgrades individual jobs to 'reused' (#327 — a hard-coded
+      // 'skipped' here zeroed newOpenAIRequests and the gate never
+      // opened at all).
+      scoreKinds.set(p.job.id, 'complete' satisfies ScoringKind);
     }
     const searchExecutionId = searchIds[0] ?? 0;
     return this.scoringService.buildScoringPlan({
