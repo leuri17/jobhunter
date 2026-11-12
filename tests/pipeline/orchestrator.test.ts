@@ -10,6 +10,54 @@ import { DEFAULT_OPERATIONAL_CONFIG } from '../../src/config/schema.js';
 import { FakePage } from '../../src/linkedin/fake-page.js';
 import { insertActiveFilter, insertApprovedProfile } from './helpers/fixtures.js';
 import { fakePageWithCard } from './helpers/fake-page-with-card.js';
+import { makeValidResponse } from '../scoring/fixtures/fake-scoring-pipeline.js';
+import { loadScoringFixture } from '../scoring/fixtures/loadFixture.js';
+import type {
+  ExtractBatchInput,
+  ExtractionBatchOutcome,
+} from '../../src/linkedin/extraction/index.js';
+
+/** Extraction stub: marks the first discovered job complete with
+ * known fields, so downstream filter/scoring stages run on real
+ * extraction-shaped data without the FakePage DOM stubs. */
+class StubExtractionService {
+  async extractBatch(input: ExtractBatchInput): Promise<ExtractionBatchOutcome> {
+    const job = input.jobs[0];
+    if (job === undefined) {
+      return {
+        schemaVersion: 1,
+        runId: input.run.id,
+        searchExecutionId: input.searchExecution.id,
+        perJob: [],
+        totals: { complete: 0, partial: 0, failed: 0, skipped: 0, cancelled: 0 },
+      };
+    }
+    return {
+      schemaVersion: 1,
+      runId: input.run.id,
+      searchExecutionId: input.searchExecution.id,
+      perJob: [
+        {
+          schemaVersion: 1,
+          jobId: job.id,
+          sourceJobId: job.sourceJobId,
+          kind: 'complete',
+          fields: {
+            title: 'Extracted Title',
+            company: 'Extracted Co',
+            location: 'Berlin',
+            description: 'Extracted description.',
+          },
+          attemptedMethods: ['search_detail_panel'],
+          errorCode: null,
+          errorMessage: null,
+          artifactIds: [],
+        },
+      ],
+      totals: { complete: 1, partial: 0, failed: 0, skipped: 0, cancelled: 0 },
+    };
+  }
+}
 
 /**
  * Integration tests for `PipelineOrchestrator`.
@@ -215,6 +263,103 @@ describe('PipelineOrchestrator', () => {
     // still downgrade individual jobs to 'reused'.
     expect(plan.newOpenAIRequests).toBe(1);
     expect(captured[0]?.scoreKinds.get(1)).toBe('complete');
+  });
+
+  it('feeds post-extraction job state to the filter and the scoring batch', async () => {
+    const { buildScoringPlan } = await import('../../src/scoring/plan.js');
+    const captured: import('../../src/scoring/service.js').ScoreBatchInput[] = [];
+
+    class SpyScoringService {
+      buildScoringPlan(
+        input: Parameters<typeof buildScoringPlan>[0],
+      ): ReturnType<typeof buildScoringPlan> {
+        return buildScoringPlan(input);
+      }
+      async scoreBatch(input: import('../../src/scoring/service.js').ScoreBatchInput) {
+        captured.push(input);
+        return {
+          schemaVersion: 1 as const,
+          runId: input.run.id,
+          searchExecutionId: input.searchExecution.id,
+          perJob: [],
+          totals: {
+            complete: 0,
+            reused: 0,
+            failed: 0,
+            skipped: 0,
+            cancelled: 0,
+            promptTokens: 0,
+            completionTokens: 0,
+          },
+        };
+      }
+    }
+
+    const oneSearchConfig = {
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      search: {
+        ...DEFAULT_OPERATIONAL_CONFIG.search,
+        searchQueries: ['q1'],
+        locations: [{ name: 'L1', geoId: '1' }],
+      },
+    };
+    const freshHarness = buildRunHarness({
+      config: oneSearchConfig,
+      prompts: new ScriptedPipelinePrompts([]),
+      confirmScoring: true,
+      createPage: fakePageWithCard(['4242']),
+      extractionServiceOverride: new StubExtractionService() as never,
+      scoringServiceOverride: new SpyScoringService() as never,
+    });
+    try {
+      await insertApprovedProfile(freshHarness.repositories);
+      await insertActiveFilter(freshHarness.repositories);
+      const result = await freshHarness.orchestrator.run({});
+      expect(result.summary.jobsAccepted).toBe(1);
+
+      expect(captured).toHaveLength(1);
+      const scored = captured[0]?.jobs[0];
+      // Pre-#334 the perJobs carried the pre-extraction row snapshot:
+      // extractionStatus 'pending' and empty fields, so every job hit
+      // the 'ineligible' branch in scoreOne.
+      expect(scored?.job.extractionStatus).toBe('complete');
+      expect(scored?.job.normalizedTitle).toBe('Extracted Title');
+      expect(scored?.job.normalizedCompany).toBe('Extracted Co');
+    } finally {
+      freshHarness.cleanup();
+    }
+  });
+
+  it('scores an accepted job end-to-end through the real scoring service', async () => {
+    const oneSearchConfig = {
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      search: {
+        ...DEFAULT_OPERATIONAL_CONFIG.search,
+        searchQueries: ['q1'],
+        locations: [{ name: 'L1', geoId: '1' }],
+      },
+    };
+    const scoringHarness = buildRunHarness({
+      config: oneSearchConfig,
+      prompts: new ScriptedPipelinePrompts([]),
+      confirmScoring: true,
+      createPage: fakePageWithCard(['4242']),
+      extractionServiceOverride: new StubExtractionService() as never,
+      fakeScripts: [{ responses: [makeValidResponse(loadScoringFixture('scoring-output-valid'))] }],
+    });
+    try {
+      await insertApprovedProfile(scoringHarness.repositories);
+      await insertActiveFilter(scoringHarness.repositories);
+      const result = await scoringHarness.orchestrator.run({});
+      expect(result.summary.jobsAccepted).toBe(1);
+      // End of the #327/#334 chain: the real ScoringService must pass
+      // its eligibility check and record a score. The pre-fix state
+      // skipped every job as 'ineligible' (fingerprint namespace
+      // mismatch) and jobsScored stayed 0.
+      expect(result.summary.jobsScored).toBe(1);
+    } finally {
+      scoringHarness.cleanup();
+    }
   });
 
   // T6: declined scoring → scoringDeclinedByUser = true.
