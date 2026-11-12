@@ -4,6 +4,10 @@ import { buildRunHarness, type RunHarness } from '../helpers/run-harness.js';
 import { ScriptedPipelinePrompts } from '../../src/pipeline/prompts.js';
 import { DEFAULT_OPERATIONAL_CONFIG } from '../../src/config/schema.js';
 import { insertActiveFilter, insertApprovedProfile } from './helpers/fixtures.js';
+import { StubExtractionService } from './helpers/stub-extraction-service.js';
+import { fakePageWithCard } from './helpers/fake-page-with-card.js';
+import { makeValidResponse } from '../scoring/fixtures/fake-scoring-pipeline.js';
+import { loadScoringFixture } from '../scoring/fixtures/loadFixture.js';
 import type { PipelineProgressEvent } from '../../src/pipeline/events.js';
 
 /**
@@ -83,6 +87,52 @@ describe('PipelineOrchestrator progress events', () => {
       expect(events[3]).toMatchObject({ type: 'search_phase', index: 0, phase: 'discovery' });
       expect(events[4]).toMatchObject({ type: 'search_phase', index: 0, phase: 'extraction' });
       expect(events[5]).toMatchObject({ type: 'search_phase', index: 0, phase: 'filter' });
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  it('emits stats per scored job so the stage counters climb live (#335)', async () => {
+    const events: PipelineProgressEvent[] = [];
+    const harness = buildRunHarness({
+      config: {
+        ...DEFAULT_OPERATIONAL_CONFIG,
+        search: {
+          ...DEFAULT_OPERATIONAL_CONFIG.search,
+          searchQueries: ['q1'],
+          locations: [{ name: 'L1', geoId: '1' }],
+        },
+      },
+      prompts: new ScriptedPipelinePrompts([]),
+      confirmScoring: true,
+      createPage: fakePageWithCard(['4242', '4243']),
+      extractionServiceOverride: new StubExtractionService() as never,
+      fakeScripts: [
+        {
+          responses: [
+            makeValidResponse(loadScoringFixture('scoring-output-valid')),
+            makeValidResponse(loadScoringFixture('scoring-output-valid')),
+          ],
+        },
+      ],
+      onEvent: (event) => {
+        events.push(event);
+      },
+    });
+    try {
+      await insertApprovedProfile(harness.repositories);
+      await insertActiveFilter(harness.repositories);
+      await harness.orchestrator.run({});
+
+      const scoringStats = events.filter(
+        (e): e is Extract<PipelineProgressEvent, { type: 'stats' }> =>
+          e.type === 'stats' && e.counters.jobsScored > 0,
+      );
+      // One stats event per finished job, with the counter climbing:
+      // 1 after the first score, 2 after the second.
+      expect(scoringStats.map((e) => e.counters.jobsScored)).toEqual([1, 2]);
+      const tokens = scoringStats[1]?.counters;
+      expect((tokens?.promptTokens ?? 0) + (tokens?.completionTokens ?? 0)).toBeGreaterThan(0);
     } finally {
       harness.cleanup();
     }
