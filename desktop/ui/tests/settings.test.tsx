@@ -134,4 +134,32 @@ describe('settings route form re-baseline', () => {
     expect((screen.getByLabelText('Run top N') as HTMLInputElement).value).toBe('20');
     expect(api.patchConfig).not.toHaveBeenCalled();
   });
+
+  it('toggles scraper.headless off and submits it in the config patch', async () => {
+    renderSettings();
+
+    expect(await screen.findByText('No changes')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Advanced' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Show advanced settings' }));
+    const headless = await screen.findByLabelText('Headless browser');
+    expect(headless.getAttribute('aria-checked')).toBe('true');
+
+    fireEvent.click(headless);
+
+    await waitFor(() => {
+      expect(screen.queryByText('No changes')).toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+
+    await waitFor(() => {
+      expect(api.patchConfig).toHaveBeenCalledTimes(1);
+    });
+    expect(api.patchConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scraper: expect.objectContaining({ headless: false }),
+      }),
+    );
+  });
 });

@@ -6,6 +6,7 @@ import type { FileSystem } from './file-system.js';
 import { hashOperationalConfig } from './hash.js';
 import {
   DEFAULT_OPERATIONAL_CONFIG,
+  OperationalConfigFileSchema,
   OperationalConfigSchema,
   type OperationalConfig,
 } from './schema.js';
@@ -81,7 +82,7 @@ export async function loadConfig(
     throw toUnknownKeysError(unknownKeys);
   }
 
-  const result = OperationalConfigSchema.safeParse(parsed);
+  const result = OperationalConfigFileSchema.safeParse(parsed);
   if (!result.success) {
     throw toValidationError(result.error.issues);
   }

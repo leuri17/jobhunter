@@ -10,6 +10,7 @@ export function createDefaultBrowserSession(config: {
   readonly navigationMs: number;
   readonly initialResultsMs: number;
   readonly overlayDismissalMs: number;
+  readonly headless?: boolean;
 }): BrowserSession {
   return new PlaywrightBrowserSession({ config });
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_OPERATIONAL_CONFIG,
+  OperationalConfigFileSchema,
   OperationalConfigSchema,
   type OperationalConfig,
 } from '../../src/config/schema.js';
@@ -89,5 +90,45 @@ describe('OperationalConfigSchema', () => {
     const parsed: OperationalConfig = OperationalConfigSchema.parse(DEFAULT_OPERATIONAL_CONFIG);
     const round = OperationalConfigSchema.parse(JSON.parse(JSON.stringify(parsed)));
     expect(round).toEqual(parsed);
+  });
+
+  it('defaults scraper.headless to true when the key is missing (legacy configs)', () => {
+    const { headless: _omit, ...legacyScraper } = DEFAULT_OPERATIONAL_CONFIG.scraper;
+    const result = OperationalConfigFileSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      scraper: legacyScraper,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.scraper.headless).toBe(true);
+    }
+  });
+
+  it('keeps the canonical schema strict: missing scraper.headless is a validation error', () => {
+    const { headless: _omit, ...legacyScraper } = DEFAULT_OPERATIONAL_CONFIG.scraper;
+    const result = OperationalConfigSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      scraper: legacyScraper,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts scraper.headless false for headful runs', () => {
+    const result = OperationalConfigSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      scraper: { ...DEFAULT_OPERATIONAL_CONFIG.scraper, headless: false },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.scraper.headless).toBe(false);
+    }
+  });
+
+  it('rejects a non-boolean scraper.headless', () => {
+    const result = OperationalConfigFileSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      scraper: { ...DEFAULT_OPERATIONAL_CONFIG.scraper, headless: 'no' },
+    });
+    expect(result.success).toBe(false);
   });
 });

@@ -113,4 +113,43 @@ describe('updateConfig', () => {
     const onDisk = JSON.parse(readFileSync(paths.config.file('config.json'), 'utf8'));
     expect(onDisk.logging).toEqual({ level: 'warn', prettyTerminal: false });
   });
+
+  it('fills scraper.headless with true when the seeded config predates the key', async () => {
+    const paths = resolvePlatformPaths(adapter(tempHome));
+    const seeded = {
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      scraper: {
+        timeouts: DEFAULT_OPERATIONAL_CONFIG.scraper.timeouts,
+        maxNoProgressAttempts: DEFAULT_OPERATIONAL_CONFIG.scraper.maxNoProgressAttempts,
+      },
+    };
+    const configPath = paths.config.file('config.json');
+    mkdirSync(dirname(configPath), { recursive: true });
+    writeFileSync(configPath, JSON.stringify(seeded, null, 2));
+
+    const result = await updateConfig(
+      paths,
+      { logging: { level: 'debug', prettyTerminal: false } },
+      { confirm: async () => true },
+    );
+
+    expect(result.config.scraper.headless).toBe(true);
+  });
+
+  it('persists scraper.headless false through a scraper patch', async () => {
+    const paths = resolvePlatformPaths(adapter(tempHome));
+    const configPath = paths.config.file('config.json');
+    mkdirSync(dirname(configPath), { recursive: true });
+    writeFileSync(configPath, JSON.stringify(DEFAULT_OPERATIONAL_CONFIG, null, 2));
+
+    const result = await updateConfig(
+      paths,
+      { scraper: { ...DEFAULT_OPERATIONAL_CONFIG.scraper, headless: false } },
+      { confirm: async () => true },
+    );
+
+    expect(result.config.scraper.headless).toBe(false);
+    const onDisk = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(onDisk.scraper.headless).toBe(false);
+  });
 });

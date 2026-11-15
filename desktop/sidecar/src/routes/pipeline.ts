@@ -437,6 +437,7 @@ async function runPipeline(
         navigationMs: loaded.config.scraper.timeouts.navigationMs,
         initialResultsMs: loaded.config.scraper.timeouts.initialResultsMs,
         overlayDismissalMs: loaded.config.scraper.timeouts.overlayDismissalMs,
+        headless: loaded.config.scraper.headless,
       });
       const diagnosticManager = createDefaultDiagnosticManager({
         config: loaded.config.diagnostics.onScraperError,
