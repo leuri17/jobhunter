@@ -34,11 +34,16 @@ type ChromiumLike = {
 
 /** Configuration the session needs at construction time. */
 interface PlaywrightBrowserSessionOptions {
-  /** The timeout trio the session enforces. All values are positive integers (ms). */
+  /**
+   * The timeout trio the session enforces plus the launch mode. All
+   * timeout values are positive integers (ms); `headless` defaults to
+   * `true` when omitted.
+   */
   readonly config: {
     readonly navigationMs: number;
     readonly initialResultsMs: number;
     readonly overlayDismissalMs: number;
+    readonly headless?: boolean;
   };
   /** Optional logger seam. Defaults to `noopLinkedInScraperLogger`. */
   readonly logger?: LinkedInScraperLogger;
@@ -89,7 +94,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
       return { browser: this.browser, context: this.context };
     }
     try {
-      this.browser = await this.chromiumImpl.launch({ headless: true });
+      this.browser = await this.chromiumImpl.launch({ headless: this.config.headless ?? true });
       this.context = await this.browser.newContext({ serviceWorkers: 'block' });
     } catch (cause) {
       throw new BrowserLaunchError(

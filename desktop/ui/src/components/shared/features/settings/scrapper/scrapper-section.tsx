@@ -1,6 +1,7 @@
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import type {
   AnyFieldApi,
   SectionForm,
@@ -66,8 +67,42 @@ export function ScrapperSection({ form }: ScrapperSectionProps) {
             </form.Field>
           ))}
         </div>
+        <form.Field name="scraper.headless">
+          {(field: AnyFieldApi) => (
+            <HeadlessRow
+              field={field}
+              label="Headless browser"
+              description="Show the browser window while scraping. Useful for debugging; slightly slower."
+            />
+          )}
+        </form.Field>
       </CardContent>
     </>
+  );
+}
+
+function HeadlessRow({
+  field,
+  label,
+  description,
+}: {
+  field: AnyFieldApi;
+  label: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-background/40 p-4">
+      <div className="flex flex-col gap-1">
+        <div className="text-sm font-medium">{label}</div>
+        <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
+      </div>
+      <Switch
+        checked={field.state.value === true}
+        onCheckedChange={(checked) => field.handleChange(checked)}
+        onBlur={field.handleBlur}
+        aria-label={label}
+      />
+    </div>
   );
 }
 

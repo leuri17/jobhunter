@@ -75,6 +75,7 @@ const scraperSchema = z
   .object({
     timeouts: timeoutsSchema,
     maxNoProgressAttempts: positiveInt,
+    headless: z.boolean(),
   })
   .strict();
 
@@ -122,6 +123,17 @@ export const OperationalConfigSchema = z
 
 export type OperationalConfig = z.infer<typeof OperationalConfigSchema>;
 
+/**
+ * Load-time variant of `OperationalConfigSchema`: fills
+ * `scraper.headless` for config files written before the key existed.
+ * The output shape is identical; only the input side accepts the key
+ * being absent. Everything downstream of loading (patches, Settings
+ * validation) uses the strict canonical schema.
+ */
+export const OperationalConfigFileSchema = OperationalConfigSchema.extend({
+  scraper: scraperSchema.extend({ headless: z.boolean().default(true) }),
+});
+
 export const DEFAULT_OPERATIONAL_CONFIG: OperationalConfig = {
   version: 1,
   search: {
@@ -162,6 +174,7 @@ export const DEFAULT_OPERATIONAL_CONFIG: OperationalConfig = {
       overlayDismissalMs: 5000,
     },
     maxNoProgressAttempts: 3,
+    headless: true,
   },
   output: {
     runTopN: 20,
