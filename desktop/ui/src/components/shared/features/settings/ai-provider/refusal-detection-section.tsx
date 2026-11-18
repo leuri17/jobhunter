@@ -22,11 +22,11 @@ export function RefusalDetectionSection({ form }: RefusalDetectionSectionProps) 
         <CardDescription>Phrases that signal the model refused to answer.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
-        <form.Field name="openai.refusalDetection.refusalMarkers" mode="array">
+        <form.Field name="aiProvider.refusalDetection.refusalMarkers" mode="array">
           {(field: AnyFieldApi) => <RefusalMarkersField field={field} />}
         </form.Field>
 
-        <form.Field name="openai.refusalDetection.flagEmptyBodies">
+        <form.Field name="aiProvider.refusalDetection.flagEmptyBodies">
           {(field: AnyFieldApi) => <FlagEmptyBodiesField field={field} />}
         </form.Field>
       </CardContent>
@@ -45,7 +45,7 @@ function RefusalMarkersField({ field }: { field: AnyFieldApi }) {
       onSubmit: ({ value }) => {
         const trimmed = value.marker.trim();
         if (trimmed === '') return 'Type a phrase before adding.';
-        return OperationalConfigSchema.shape.openai.shape.refusalDetection.shape.refusalMarkers.element.safeParse(
+        return OperationalConfigSchema.shape.aiProvider.shape.refusalDetection.shape.refusalMarkers.element.safeParse(
           trimmed,
         ).success
           ? undefined

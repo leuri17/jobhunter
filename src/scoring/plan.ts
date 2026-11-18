@@ -34,7 +34,7 @@ export interface BuildScoringPlanInput {
  *   kind entry is treated as not-yet-scored).
  * - `jobsAccepted`: number of `perJob` entries with `isEligible: true`.
  * - `scoresReused`: number of `perJob` entries with `kind: 'reused'`.
- * - `newOpenAIRequests`: number of `perJob` entries with `kind: 'complete'`.
+ * - `newAiProviderRequests`: number of `perJob` entries with `kind: 'complete'`.
  * - `skippedScoringCategories`: defaults to `[]` when omitted.
  * - `scoringConcurrency`: carried through unchanged.
  */
@@ -54,7 +54,7 @@ export function buildScoringPlan(input: BuildScoringPlanInput): ScoringPlan {
 
   const jobsAccepted = perJob.filter((entry) => entry.isEligible).length;
   const scoresReused = perJob.filter((entry) => entry.kind === 'reused').length;
-  const newOpenAIRequests = perJob.filter((entry) => entry.kind === 'complete').length;
+  const newAiProviderRequests = perJob.filter((entry) => entry.kind === 'complete').length;
 
   return {
     schemaVersion: LINKEDIN_SCORING_SCHEMA_VERSION,
@@ -63,7 +63,7 @@ export function buildScoringPlan(input: BuildScoringPlanInput): ScoringPlan {
     jobsDiscovered: input.jobs.length,
     jobsAccepted,
     scoresReused,
-    newOpenAIRequests,
+    newAiProviderRequests,
     skippedScoringCategories: input.skippedScoringCategories ?? [],
     scoringConcurrency: input.scoringConcurrency,
     perJob,

@@ -39,6 +39,9 @@ function parseUnknownKeys(raw: unknown): readonly string[] {
   if (typeof raw !== 'object' || raw === null) return [];
   const record = raw as Record<string, unknown>;
   const known = new Set(Object.keys(OperationalConfigSchema.shape));
+  // Legacy section name renamed to `aiProvider`; the FileSchema
+  // preprocess performs the migration, so it is known-at-load.
+  known.add('openai');
   return Object.keys(record).filter((key) => !known.has(key));
 }
 

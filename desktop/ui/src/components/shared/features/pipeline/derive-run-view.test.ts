@@ -152,7 +152,7 @@ describe('deriveRunView search-loop stage phases', () => {
           type: 'scoring_plan',
           runId: 1,
           jobsDiscovered: 0,
-          newOpenAIRequests: 0,
+          newAiProviderRequests: 0,
         },
       ),
       'running',

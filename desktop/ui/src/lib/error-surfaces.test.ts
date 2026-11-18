@@ -34,10 +34,10 @@ describe('isActionRequiredError', () => {
 describe('actionGuidanceFor', () => {
   it('returns guidance for openai_unavailable', () => {
     const guidance = actionGuidanceFor(
-      new ApiError(503, 'openai_unavailable', 'No OpenAI API key is configured'),
+      new ApiError(503, 'openai_unavailable', 'No AiProvider API key is configured'),
     );
     expect(guidance).not.toBeNull();
-    expect(guidance?.message).toBe('Add your OpenAI API key in Settings, under AI Provider.');
+    expect(guidance?.message).toBe('Add your AiProvider API key in Settings, under AI Provider.');
     expect(guidance?.actionLabel).toBe('Open settings');
   });
 
@@ -51,7 +51,7 @@ describe('actionGuidanceFor', () => {
 
   it('returns guidance for openai_api_key_missing pointing at Settings', () => {
     const guidance = actionGuidanceFor(
-      new ApiError(409, 'openai_api_key_missing', 'An OpenAI API key is required.'),
+      new ApiError(409, 'openai_api_key_missing', 'An AiProvider API key is required.'),
     );
     expect(guidance?.message).toContain('Settings');
     expect(guidance?.actionLabel).toBe('Open settings');
@@ -74,8 +74,10 @@ describe('actionGuidanceFor', () => {
 describe('formatErrorTrace', () => {
   it('puts status, code, and message on separate lines', () => {
     expect(
-      formatErrorTrace(new ApiError(503, 'openai_unavailable', 'No OpenAI API key is configured')),
-    ).toBe('status: 503\ncode: openai_unavailable\nmessage: No OpenAI API key is configured');
+      formatErrorTrace(
+        new ApiError(503, 'openai_unavailable', 'No AiProvider API key is configured'),
+      ),
+    ).toBe('status: 503\ncode: openai_unavailable\nmessage: No AiProvider API key is configured');
   });
 });
 

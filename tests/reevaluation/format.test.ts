@@ -76,7 +76,7 @@ const SCORING_PLAN: ScoringPlan = {
   jobsDiscovered: 1,
   jobsAccepted: 1,
   scoresReused: 0,
-  newOpenAIRequests: 1,
+  newAiProviderRequests: 1,
   skippedScoringCategories: [],
   scoringConcurrency: 3,
   perJob: [
@@ -265,7 +265,7 @@ describe('formatScoringPlanForReevaluation', () => {
     const out = formatScoringPlanForReevaluation(SCORING_PLAN, 120);
     expect(out).toContain('scoring plan:');
     expect(out).toContain('jobs discovered: 1');
-    expect(out).toContain('new OpenAI requests: 1');
+    expect(out).toContain('new AiProvider requests: 1');
     expect(out).toContain('scoring concurrency: 3');
   });
 });

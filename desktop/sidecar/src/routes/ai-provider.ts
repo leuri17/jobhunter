@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import { resolveOpenAiClientOrNull } from './openai-resolve.js';
+import { resolveAiProviderClientOrNull } from './ai-provider-resolve.js';
 import { classifyKeyValidationFailure } from './config.js';
 
-export interface OpenAiRouteDeps {
+export interface AiProviderRouteDeps {
   /**
    * Test/alternative seam for the model listing. `null` means "no key
    * configured"; rejects with a typed `ProfileExtractionError` family
@@ -13,15 +13,15 @@ export interface OpenAiRouteDeps {
 }
 
 const defaultListModels = async (): Promise<readonly string[] | null> => {
-  const client = await resolveOpenAiClientOrNull(undefined, undefined, 10_000);
+  const client = await resolveAiProviderClientOrNull(undefined, undefined, 10_000);
   return client === null ? null : client.listModels();
 };
 
-export async function registerOpenAiRoutes(
+export async function registerAiProviderRoutes(
   app: FastifyInstance,
-  deps: OpenAiRouteDeps = {},
+  deps: AiProviderRouteDeps = {},
 ): Promise<void> {
-  app.get('/api/openai/models', async (_req, reply) => {
+  app.get('/api/ai-provider/models', async (_req, reply) => {
     const listModels = deps.listModels ?? defaultListModels;
     let models: readonly string[] | null;
     try {

@@ -16,7 +16,7 @@ export interface RubricEntry {
 /**
  * Frozen 7-category scoring rubric from . Weights must sum
  * to exactly 1.0 (asserted in `tests/scoring/rubric.test.ts`); JobHunter
- * computes the weighted overall score from this table — OpenAI does
+ * computes the weighted overall score from this table — AiProvider does
  * NOT.
  */
 export const RUBRIC: Readonly<Record<ScoringCategory, RubricEntry>> = {

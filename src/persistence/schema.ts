@@ -478,7 +478,7 @@ export const scoreResults = sqliteTable(
 
 // 17. openai_request_metadata ---------------------------------------------
 // Per-request audit trail. Does not store raw prompts/responses.
-export const openaiRequestMetadata = sqliteTable(
+export const aiProviderRequestMetadata = sqliteTable(
   'openai_request_metadata',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
@@ -565,7 +565,7 @@ export const schema = {
   extractionAttempts,
   filterResults,
   scoreResults,
-  openaiRequestMetadata,
+  aiProviderRequestMetadata,
   diagnosticArtifacts,
 };
 

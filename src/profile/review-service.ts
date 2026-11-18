@@ -12,7 +12,7 @@
  *
  * The service depends on the repositories and the pure review helpers; it
  * never touches Playwright, Drizzle directly, or the
- * OpenAI SDK. It does NOT validate the stored `profileJson` against
+ * AiProvider SDK. It does NOT validate the stored `profileJson` against
  * `ProfessionalProfileSchema` itself — the caller's persistence boundary
  * already does that — but `show` rejects rows whose JSON fails Zod with
  * `InvalidProfilePayloadError` so the desktop app can surface the

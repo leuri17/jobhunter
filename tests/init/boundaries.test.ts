@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
  * Domain-boundary guard for `src/init/`.
  *
  * AGENTS.md §5 / §9: domain code must not depend on Playwright, Drizzle,
- * OpenAI, or Pino. This test enumerates every `.ts` file under `src/init/`
+ * AiProvider, or Pino. This test enumerates every `.ts` file under `src/init/`
  * and asserts that none of them import any of the banned modules.
  *
  * Type-only `import type { ... } from 'pino'` is permitted via the literal

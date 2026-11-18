@@ -63,7 +63,7 @@ describe('createLogger', () => {
     expect(records[0]!.event).toBe('warning');
   });
 
-  it('redacts OpenAI API keys, raw prompts, and raw responses', () => {
+  it('redacts AiProvider API keys, raw prompts, and raw responses', () => {
     const { stream, records } = captureSink();
     const logger = createLogger({ level: 'info', prettyTerminal: false }, { stdout: stream });
 
@@ -72,7 +72,7 @@ describe('createLogger', () => {
         component: 'openai',
         event: 'request',
         apiKey: 'sk-very-secret-value',
-        openai: { key: 'sk-other' },
+        aiProvider: { key: 'sk-other' },
         prompt: 'tell me about yourself',
         rawResponse: 'top-secret response',
       },

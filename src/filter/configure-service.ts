@@ -42,7 +42,7 @@
  * Domain-boundary note (AGENTS.md §5, §9): this module imports only the
  * sibling `src/filter/*` modules and the `Repositories` facade from
  * `src/persistence/repositories/index.js`. It does NOT import
- * Playwright, Drizzle directly, OpenAI, or Pino. The
+ * Playwright, Drizzle directly, AiProvider, or Pino. The
  * `tests/filter/boundaries.test.ts` guard enforces this.
  */
 

@@ -23,7 +23,7 @@ import type { CaptureContext, CaptureResult, CaptureStrategy } from './types.js'
  * context guarantees no cookies, session tokens, or `localStorage` in the
  * page content. However, job-description HTML may contain recruiter contact
  * information (email addresses, phone numbers). The built-in redactor covers
- * emails and OpenAI key prefixes but not phone numbers. Users who want
+ * emails and AiProvider key prefixes but not phone numbers. Users who want
  * stricter PII redaction should set `diagnostics.onScraperError.htmlSnapshot
  * = false` in `config.json` or run JobHunter without persisting scraper
  * errors. See `docs/responsible-use.md` for the user-facing policy.

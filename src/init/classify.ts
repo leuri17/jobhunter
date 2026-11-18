@@ -31,7 +31,7 @@ export interface ClassifyMigrationsInput {
   readonly errorMessage?: string;
 }
 
-export interface ClassifyOpenAiKeyInput {
+export interface ClassifyAiProviderKeyInput {
   readonly source: ApiKeySource;
 }
 
@@ -213,15 +213,15 @@ export function classifyMigrations(input: ClassifyMigrationsInput): InitStepRepo
 }
 
 /**
- * `classifyOpenAiKey` always returns `complete` — absence is
+ * `classifyAiProviderKey` always returns `complete` — absence is
  * a skip, not a failure; the orchestrator reads the missing-key signal
  * from `classifyExtract`'s `reason === 'openai_key_missing'` instead.
  * `source` records where the key came from
  * (`'stored' | 'environment' | 'none'`) via `resolveApiKeySource`.
  */
-export function classifyOpenAiKey(input: ClassifyOpenAiKeyInput): InitStepReport {
+export function classifyAiProviderKey(input: ClassifyAiProviderKeyInput): InitStepReport {
   return {
-    id: 'openaiKey',
+    id: 'aiProviderKey',
     status: 'complete',
     errorCode: null,
     reason: null,

@@ -93,7 +93,7 @@ export class InitImportFailedError extends InitLifecycleError {
   }
 }
 
-/** OpenAI extraction failed at the runtime layer (auth / billing / server). Exit 5. */
+/** AiProvider extraction failed at the runtime layer (auth / billing / server). Exit 5. */
 export class InitExtractRuntimeFailedError extends InitLifecycleError {
   constructor(
     code: string,
@@ -101,7 +101,7 @@ export class InitExtractRuntimeFailedError extends InitLifecycleError {
     metadata: ApplicationErrorMetadata = {},
     cause?: Error,
   ) {
-    super(code, message, ExitCode.OpenAIFailure, metadata, cause);
+    super(code, message, ExitCode.AiProviderFailure, metadata, cause);
   }
 }
 

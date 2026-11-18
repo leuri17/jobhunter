@@ -24,11 +24,11 @@ export function ProfileExtractionSection({ form }: ProfileExtractionSectionProps
         <CardDescription>Model used during profile ingestion.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
-        <form.Field name="openai.profileExtraction.model">
+        <form.Field name="aiProvider.profileExtraction.model">
           {(field: AnyFieldApi) => <ModelField field={field} />}
         </form.Field>
 
-        <form.Field name="openai.profileExtraction.reasoningEffort">
+        <form.Field name="aiProvider.profileExtraction.reasoningEffort">
           {(field: AnyFieldApi) => <ReasoningEffortField field={field} />}
         </form.Field>
       </CardContent>

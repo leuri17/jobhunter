@@ -47,7 +47,7 @@ export interface BuildReevaluationPlanInput {
  *   - `scoresRerun`          — count of `scoreEntries` whose action
  *                              is NOT `'reused'` AND NOT `'failed'`
  *                              (a `'reused'` entry did not trigger an
- *                              OpenAI call; a `'failed'` entry ran but
+ *                              AiProvider call; a `'failed'` entry ran but
  *                              produced no result, audit B1-H3).
  *   - `scoresFailed`         — count of `scoreEntries` whose action
  *                              IS `'failed'` (per-job scoring or

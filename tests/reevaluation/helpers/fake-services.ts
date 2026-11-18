@@ -111,7 +111,7 @@ interface ReadResult {
 export interface FakeScoringServiceOptions {
   readonly model?: string;
   readonly reasoningEffort?: string;
-  readonly openAIClient?: unknown;
+  readonly aiProviderClient?: unknown;
 }
 
 export class FakeScoringService {
@@ -230,7 +230,7 @@ function realBuildScoringPlan(input: BuildScoringPlanInput): ScoringPlan {
   });
   const jobsAccepted = perJob.filter((entry) => entry.isEligible).length;
   const scoresReused = perJob.filter((entry) => entry.kind === 'reused').length;
-  const newOpenAIRequests = perJob.filter((entry) => entry.kind === 'complete').length;
+  const newAiProviderRequests = perJob.filter((entry) => entry.kind === 'complete').length;
   return {
     schemaVersion: 1 as const,
     runId: input.run.id,
@@ -238,7 +238,7 @@ function realBuildScoringPlan(input: BuildScoringPlanInput): ScoringPlan {
     jobsDiscovered: input.jobs.length,
     jobsAccepted,
     scoresReused,
-    newOpenAIRequests,
+    newAiProviderRequests,
     skippedScoringCategories: input.skippedScoringCategories ?? [],
     scoringConcurrency: input.scoringConcurrency,
     perJob,

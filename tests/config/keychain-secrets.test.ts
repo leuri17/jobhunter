@@ -9,7 +9,7 @@ import {
   type BridgeResponse,
   type KeychainTransport,
 } from '../../src/config/keychain-secrets.js';
-import { resolveOpenAiApiKey } from '../../src/config/api-key.js';
+import { resolveAiProviderApiKey } from '../../src/config/api-key.js';
 import type { SecretsStore } from '../../src/config/secrets.js';
 
 /**
@@ -35,7 +35,7 @@ describe('KeychainSecretsStore', () => {
     const transport = new FakeTransport(() => okValue('sk-keychain-1'));
     const store = new KeychainSecretsStore({ transport });
 
-    expect(await store.read()).toEqual({ openaiApiKey: 'sk-keychain-1' });
+    expect(await store.read()).toEqual({ aiProviderApiKey: 'sk-keychain-1' });
     expect(transport.requests).toEqual([{ auth: '', op: 'get' }]);
   });
 
@@ -50,7 +50,7 @@ describe('KeychainSecretsStore', () => {
     const transport = new FakeTransport(() => okAck);
     const store = new KeychainSecretsStore({ transport });
 
-    await store.write({ openaiApiKey: 'sk-set-me' });
+    await store.write({ aiProviderApiKey: 'sk-set-me' });
 
     expect(transport.requests).toEqual([{ auth: '', op: 'set', value: 'sk-set-me' }]);
   });
@@ -85,7 +85,7 @@ describe('KeychainSecretsStore', () => {
     }));
     const store = new KeychainSecretsStore({ transport });
 
-    await expect(store.write({ openaiApiKey: 'sk-nope' })).rejects.toMatchObject({
+    await expect(store.write({ aiProviderApiKey: 'sk-nope' })).rejects.toMatchObject({
       code: 'secrets_backend_failed',
     });
   });
@@ -193,7 +193,7 @@ describe('SocketKeychainTransport', () => {
   });
 });
 
-describe('resolveOpenAiApiKey precedence with an unreadable store', () => {
+describe('resolveAiProviderApiKey precedence with an unreadable store', () => {
   it('falls back to OPENAI_API_KEY when the store read throws', async () => {
     const broken: SecretsStore = {
       read: () => {
@@ -203,8 +203,8 @@ describe('resolveOpenAiApiKey precedence with an unreadable store', () => {
       clear: async () => {},
     };
 
-    expect(await resolveOpenAiApiKey({ store: broken, env: { OPENAI_API_KEY: 'sk-env' } })).toBe(
-      'sk-env',
-    );
+    expect(
+      await resolveAiProviderApiKey({ store: broken, env: { OPENAI_API_KEY: 'sk-env' } }),
+    ).toBe('sk-env');
   });
 });

@@ -191,7 +191,7 @@ describe('formatError', () => {
       const wrapped = new ApplicationError(
         'request_failed',
         'request failed',
-        ExitCode.OpenAIFailure,
+        ExitCode.AiProviderFailure,
         { endpoint: '/v1/chat' },
         root,
       );

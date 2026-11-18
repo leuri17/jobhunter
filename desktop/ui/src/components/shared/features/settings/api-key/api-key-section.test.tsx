@@ -94,10 +94,10 @@ const SAVED_TO_FILE: PutApiKeyResponse = {
 };
 
 const REJECTED_WITH_KEY_COPY =
-  'OpenAI rejected this key. Nothing was saved — the previously configured key is still active.';
-const REJECTED_WITHOUT_KEY_COPY = 'OpenAI rejected this key. Nothing was saved.';
+  'AiProvider rejected this key. Nothing was saved — the previously configured key is still active.';
+const REJECTED_WITHOUT_KEY_COPY = 'AiProvider rejected this key. Nothing was saved.';
 const UNREACHABLE_COPY =
-  "Couldn't reach OpenAI to validate the key. Nothing was saved — try again.";
+  "Couldn't reach AiProvider to validate the key. Nothing was saved — try again.";
 const KEYCHAIN_LINE_COPY = 'Stored in your OS keychain.';
 const NO_KEYCHAIN_NOTICE_COPY =
   'No OS keychain is available on this machine, so a saved key is written to a local secrets file. The file is protected by its permissions, not by OS encryption.';
@@ -109,8 +109,8 @@ const MIGRATE_FAILED_COPY = 'The old secrets file was left unchanged. You can tr
 const LEGACY_SHADOWED_MESSAGE =
   'The keychain already holds an API key, so it stays the active source; the secrets file was not changed.';
 
-function rejectedByOpenAI(): ApiError {
-  return new ApiError(401, 'openai_authentication', 'OpenAI authentication failed.');
+function rejectedByAiProvider(): ApiError {
+  return new ApiError(401, 'openai_authentication', 'AiProvider authentication failed.');
 }
 
 // The backend status line renders only once the status query has
@@ -171,7 +171,7 @@ describe('<ApiKeySection />', () => {
 
   it('shows the rejection dialog with prior-key copy and keeps the typed key in the input', async () => {
     vi.mocked(api.getApiKeyStatus).mockResolvedValue(CONFIGURED);
-    vi.mocked(api.setApiKey).mockRejectedValue(rejectedByOpenAI());
+    vi.mocked(api.setApiKey).mockRejectedValue(rejectedByAiProvider());
 
     renderSection();
     await typeAndSave('sk-typed');
@@ -185,7 +185,7 @@ describe('<ApiKeySection />', () => {
 
   it('offers only Close on the rejection dialog', async () => {
     vi.mocked(api.getApiKeyStatus).mockResolvedValue(CONFIGURED);
-    vi.mocked(api.setApiKey).mockRejectedValue(rejectedByOpenAI());
+    vi.mocked(api.setApiKey).mockRejectedValue(rejectedByAiProvider());
 
     renderSection();
     await typeAndSave('sk-typed');
@@ -196,7 +196,7 @@ describe('<ApiKeySection />', () => {
 
   it('keeps the typed key when the rejection dialog is dismissed', async () => {
     vi.mocked(api.getApiKeyStatus).mockResolvedValue(CONFIGURED);
-    vi.mocked(api.setApiKey).mockRejectedValue(rejectedByOpenAI());
+    vi.mocked(api.setApiKey).mockRejectedValue(rejectedByAiProvider());
 
     renderSection();
     await typeAndSave('sk-typed');
@@ -209,7 +209,7 @@ describe('<ApiKeySection />', () => {
   });
 
   it('drops the prior-key claim when nothing was configured before the rejection', async () => {
-    vi.mocked(api.setApiKey).mockRejectedValue(rejectedByOpenAI());
+    vi.mocked(api.setApiKey).mockRejectedValue(rejectedByAiProvider());
 
     renderSection();
     await typeAndSave('sk-typed');
@@ -220,9 +220,9 @@ describe('<ApiKeySection />', () => {
     expect(toast.add).not.toHaveBeenCalled();
   });
 
-  it('shows the retry copy when OpenAI cannot be reached to validate', async () => {
+  it('shows the retry copy when AiProvider cannot be reached to validate', async () => {
     vi.mocked(api.setApiKey).mockRejectedValue(
-      new ApiError(503, 'openai_network_error', 'OpenAI network failure.'),
+      new ApiError(503, 'openai_network_error', 'AiProvider network failure.'),
     );
 
     renderSection();
@@ -236,7 +236,7 @@ describe('<ApiKeySection />', () => {
 
   it('keeps the rejection reason inside the dialog trace disclosure', async () => {
     vi.mocked(api.getApiKeyStatus).mockResolvedValue(CONFIGURED);
-    vi.mocked(api.setApiKey).mockRejectedValue(rejectedByOpenAI());
+    vi.mocked(api.setApiKey).mockRejectedValue(rejectedByAiProvider());
 
     renderSection();
     await typeAndSave('sk-typed');

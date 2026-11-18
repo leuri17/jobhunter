@@ -53,7 +53,7 @@ describe('OperationalConfigSchema', () => {
         },
         maxNoProgressAttempts: 3,
       },
-      openai: {
+      aiProvider: {
         profileExtraction: { model: 'gpt-5.6-sol', reasoningEffort: 'medium' },
         jobScoring: { model: 'gpt-5.6-sol', reasoningEffort: 'medium', concurrency: 0 },
       },

@@ -21,7 +21,7 @@ export interface SecretsStore {
 }
 
 export interface Secrets {
-  readonly openaiApiKey?: string;
+  readonly aiProviderApiKey?: string;
 }
 
 export interface FileSecretsStoreOptions {
@@ -74,12 +74,12 @@ export class FileSecretsStore implements SecretsStore {
 
     if (typeof parsed !== 'object' || parsed === null) return {};
     const value = (parsed as Record<string, unknown>)[OPENAI_API_KEY];
-    return typeof value === 'string' && value.length > 0 ? { openaiApiKey: value } : {};
+    return typeof value === 'string' && value.length > 0 ? { aiProviderApiKey: value } : {};
   }
 
   async write(secrets: Secrets): Promise<void> {
     const payload =
-      secrets.openaiApiKey === undefined ? {} : { [OPENAI_API_KEY]: secrets.openaiApiKey };
+      secrets.aiProviderApiKey === undefined ? {} : { [OPENAI_API_KEY]: secrets.aiProviderApiKey };
     const text = `${JSON.stringify(payload, null, 2)}\n`;
     const tempPath = `${this.path}.${randomUUID()}.tmp`;
 

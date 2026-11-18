@@ -25,15 +25,15 @@ export function JobScoringSection({ form }: JobScoringSectionProps) {
         <CardDescription>Model and parallelism used when ranking matched jobs.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
-        <form.Field name="openai.jobScoring.model">
+        <form.Field name="aiProvider.jobScoring.model">
           {(field: AnyFieldApi) => <ModelField field={field} />}
         </form.Field>
 
-        <form.Field name="openai.jobScoring.reasoningEffort">
+        <form.Field name="aiProvider.jobScoring.reasoningEffort">
           {(field: AnyFieldApi) => <ReasoningEffortField field={field} />}
         </form.Field>
 
-        <form.Field name="openai.jobScoring.concurrency">
+        <form.Field name="aiProvider.jobScoring.concurrency">
           {(field: AnyFieldApi) => <ConcurrencyField field={field} />}
         </form.Field>
       </CardContent>

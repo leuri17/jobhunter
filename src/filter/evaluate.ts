@@ -37,7 +37,7 @@ import { formatError } from '../logging/format-error.js';
  * the schema, the keyword matcher, the seniority detector / rule, the
  * language detector, and the `FilterOutcome` type alias from the
  * persistence layer (no database IO). It is a pure helper that does
- * not depend on Playwright, Drizzle, OpenAI, or Pino. The
+ * not depend on Playwright, Drizzle, AiProvider, or Pino. The
  * `tests/filter/boundaries.test.ts` guard enforces this.
  */
 

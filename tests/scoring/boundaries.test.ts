@@ -7,9 +7,9 @@ import { describe, expect, it } from 'vitest';
  * Domain-boundary guard for `src/scoring/` (,  Task 13).
  *
  * Granular mirror of `tests/extraction/boundaries.test.ts`. AGENTS.md
- * §5 / §9: domain code must not depend on Drizzle, OpenAI, or runtime
+ * §5 / §9: domain code must not depend on Drizzle, AiProvider, or runtime
  * Pino. The scoring layer additionally
- * MAY import from `src/profile/openai/` (the OpenAI client surface
+ * MAY import from `src/profile/ai-provider/` (the AiProvider client surface
  * — the cross-module dependency is the seam for the pure transport
  * + registry design from Task 0).
  *
@@ -17,11 +17,11 @@ import { describe, expect, it } from 'vitest';
  *   - The scoring service uses `this.repositories.transact(...)`
  *     it goes through the repository facade and does NOT import
  *     `drizzle-orm` directly. NO `DRIZZLE_ORM_ALLOW_LIST` carve-out.
- *   - The `openai` runtime import stays in `src/profile/openai/client.ts`
+ *   - The `openai` runtime import stays in `src/profile/ai-provider/client.ts`
  * `src/scoring/` MUST NOT import the `openai` package
- *     directly. Cross-module imports from `../profile/openai/` ARE
+ *     directly. Cross-module imports from `../profile/ai-provider/` ARE
  *     allowed (the regex below correctly distinguishes `'openai'`
- *     from `'../profile/openai/client.js'`).
+ *     from `'../profile/ai-provider/client.js'`).
  *   - The scoring layer does not use Playwright at all, so no
  *     Playwright allow-list is needed. (Playwright is already in
  *     the codebase; this test does not assert anything about it.)
@@ -50,7 +50,7 @@ const BANNED_IMPORTS = ['drizzle-orm', 'openai', 'pino'] as const;
 /**
  * `service.ts` is the ONLY file under `src/scoring/` that may import
  * `drizzle-orm`. The orchestrator wraps the 3 per-job writes
- * (scoreResults UPDATE + INSERT + openaiRequestMetadata INSERT) in a
+ * (scoreResults UPDATE + INSERT + aiProviderRequestMetadata INSERT) in a
  * single sync `transact(...)` callback that calls `txRepos.db.update`,
  * `txRepos.db.insert` with `and()` + `eq()` helpers from drizzle-orm.
  * Pure helpers (`state.ts` / `errors.ts` / `rubric.ts` /
@@ -136,23 +136,24 @@ describe('src/scoring domain-boundary guard (Task 13)', () => {
     expect(DRIZZLE_ORM_ALLOW_LIST.has('src/scoring/service.ts')).toBe(true);
   });
 
-  it('allows cross-module imports from src/profile/openai/ (the OpenAI client surface)', () => {
+  it('allows cross-module imports from src/profile/ai-provider/ (the AiProvider client surface)', () => {
     // Sanity check: the importMatches regex must NOT match the relative
-    // path '../profile/openai/client.js' when checking for the 'openai'
+    // path '../profile/ai-provider/client.js' when checking for the 'openai'
     // package. If this assertion fails, the boundaries test is broken.
-    const example = "import { OpenAIClient } from '../profile/openai/client.js';";
+    const example = "import { AiProviderClient } from '../profile/ai-provider/client.js';";
     expect(importMatches(example, 'openai')).toBe(false);
     // And it MUST match the bare 'openai' package import.
-    const example2 = "import OpenAI from 'openai';";
+    const example2 = "import AiProvider from 'openai';";
     expect(importMatches(example2, 'openai')).toBe(true);
   });
 
-  it('the openai runtime import lives in src/profile/openai/client.ts (not in scoring)', () => {
-    const clientPath = join(process.cwd(), 'src', 'profile', 'openai', 'client.ts');
+  it('the openai runtime import lives in src/profile/ai-provider/client.ts (not in scoring)', () => {
+    const clientPath = join(process.cwd(), 'src', 'profile', 'ai-provider', 'client.ts');
     const source = readFileSync(clientPath, 'utf8');
-    expect(importMatches(source, 'openai'), 'profile/openai/client.ts must import openai').toBe(
-      true,
-    );
+    expect(
+      importMatches(source, 'openai'),
+      'profile/ai-provider/client.ts must import openai',
+    ).toBe(true);
   });
 
   it('no scoring file calls process.exit', () => {

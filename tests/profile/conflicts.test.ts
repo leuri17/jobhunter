@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ExtractedProfile } from '../../src/profile/openai/structured-output.js';
+import type { ExtractedProfile } from '../../src/profile/ai-provider/structured-output.js';
 import type { SourceReference } from '../../src/profile/schema.js';
 import { detectProfileConflicts } from '../../src/profile/conflicts.js';
 

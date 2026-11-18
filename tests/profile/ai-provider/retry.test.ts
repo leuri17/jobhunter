@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  OpenAIInvalidOutputError,
-  OpenAIRateLimitError,
-  OpenAIServerError,
+  AiProviderInvalidOutputError,
+  AiProviderRateLimitError,
+  AiProviderServerError,
   ProfileExtractionError,
-} from '../../../src/profile/openai/errors.js';
+} from '../../../src/profile/ai-provider/errors.js';
 import {
   ScoringInvalidStructuredOutputError,
   ScoringPersistenceError,
@@ -14,7 +14,7 @@ import {
   runWithRetry,
   type AttemptRecord,
   type RetryOptions,
-} from '../../../src/profile/openai/retry.js';
+} from '../../../src/profile/ai-provider/retry.js';
 
 function baseOptions(overrides: Partial<RetryOptions> = {}): RetryOptions {
   return {
@@ -48,7 +48,7 @@ describe('runWithRetry', () => {
     const result = await runWithRetry(async () => {
       calls += 1;
       if (calls === 1) {
-        throw new OpenAIServerError();
+        throw new AiProviderServerError();
       }
       return 'ok';
     }, baseOptions());
@@ -65,7 +65,7 @@ describe('runWithRetry', () => {
     const result = await runWithRetry(async () => {
       calls += 1;
       if (calls < 3) {
-        throw new OpenAIServerError();
+        throw new AiProviderServerError();
       }
       return 'ok';
     }, baseOptions());
@@ -78,9 +78,9 @@ describe('runWithRetry', () => {
   it('throws after the third attempt on a persistent retryable error', async () => {
     await expect(
       runWithRetry(async () => {
-        throw new OpenAIServerError();
+        throw new AiProviderServerError();
       }, baseOptions()),
-    ).rejects.toBeInstanceOf(OpenAIServerError);
+    ).rejects.toBeInstanceOf(AiProviderServerError);
   });
 
   it('aborts immediately on a non-retryable error', async () => {
@@ -94,14 +94,14 @@ describe('runWithRetry', () => {
     expect(calls).toBe(1);
   });
 
-  it('only allows one corrective retry for OpenAIInvalidOutputError', async () => {
+  it('only allows one corrective retry for AiProviderInvalidOutputError', async () => {
     let calls = 0;
     await expect(
       runWithRetry(async () => {
         calls += 1;
-        throw new OpenAIInvalidOutputError();
+        throw new AiProviderInvalidOutputError();
       }, baseOptions()),
-    ).rejects.toBeInstanceOf(OpenAIInvalidOutputError);
+    ).rejects.toBeInstanceOf(AiProviderInvalidOutputError);
     expect(calls).toBe(2);
   });
 
@@ -113,9 +113,9 @@ describe('runWithRetry', () => {
         async () => {
           calls += 1;
           if (calls === 1) {
-            throw new OpenAIRateLimitError(2_500);
+            throw new AiProviderRateLimitError(2_500);
           }
-          throw new OpenAIServerError();
+          throw new AiProviderServerError();
         },
         baseOptions({
           sleep: async (ms) => {
@@ -123,7 +123,7 @@ describe('runWithRetry', () => {
           },
         }),
       ),
-    ).rejects.toBeInstanceOf(OpenAIServerError);
+    ).rejects.toBeInstanceOf(AiProviderServerError);
 
     expect(sleepCalls[0]).toBe(2_500);
     expect(sleepCalls).toHaveLength(2);
@@ -134,7 +134,7 @@ describe('runWithRetry', () => {
     await expect(
       runWithRetry(
         async () => {
-          throw new OpenAIServerError();
+          throw new AiProviderServerError();
         },
         baseOptions({
           sleep: async (ms) => {
@@ -142,7 +142,7 @@ describe('runWithRetry', () => {
           },
         }),
       ),
-    ).rejects.toBeInstanceOf(OpenAIServerError);
+    ).rejects.toBeInstanceOf(AiProviderServerError);
 
     // First retry: attempt 1 just failed, ceiling = 500 * 2^0 = 500
     expect(sleepCalls[0]).toBeGreaterThanOrEqual(0);
@@ -158,7 +158,7 @@ describe('runWithRetry', () => {
       runWithRetry(
         async () => {
           calls += 1;
-          throw new OpenAIServerError();
+          throw new AiProviderServerError();
         },
         {
           baseDelayMs: 500,
@@ -169,7 +169,7 @@ describe('runWithRetry', () => {
           // maxAttempts intentionally omitted
         } as RetryOptions,
       ),
-    ).rejects.toBeInstanceOf(OpenAIServerError);
+    ).rejects.toBeInstanceOf(AiProviderServerError);
     expect(calls).toBe(3);
   });
 
@@ -178,7 +178,7 @@ describe('runWithRetry', () => {
     await expect(
       runWithRetry(
         async () => {
-          throw new OpenAIServerError();
+          throw new AiProviderServerError();
         },
         {
           maxAttempts: 3,
@@ -191,7 +191,7 @@ describe('runWithRetry', () => {
           // baseDelayMs intentionally omitted
         } as RetryOptions,
       ),
-    ).rejects.toBeInstanceOf(OpenAIServerError);
+    ).rejects.toBeInstanceOf(AiProviderServerError);
     expect(sleepCalls[0]).toBe(500);
     expect(sleepCalls[1]).toBe(1000);
   });
@@ -201,7 +201,7 @@ describe('runWithRetry', () => {
     await expect(
       runWithRetry(
         async () => {
-          throw new OpenAIServerError();
+          throw new AiProviderServerError();
         },
         {
           maxAttempts: 3,
@@ -214,7 +214,7 @@ describe('runWithRetry', () => {
           // maxDelayMs intentionally omitted
         } as RetryOptions,
       ),
-    ).rejects.toBeInstanceOf(OpenAIServerError);
+    ).rejects.toBeInstanceOf(AiProviderServerError);
     // 500 * 2^0 = 500, 500 * 2^1 = 1000 — both within the default 8000 ceiling,
     // so the values are passed through unchanged.
     expect(sleepCalls[0]).toBe(500);
@@ -226,7 +226,7 @@ describe('runWithRetry', () => {
     await expect(
       runWithRetry(
         async () => {
-          throw new OpenAIServerError();
+          throw new AiProviderServerError();
         },
         baseOptions({
           jitter: 'none',
@@ -235,7 +235,7 @@ describe('runWithRetry', () => {
           },
         }),
       ),
-    ).rejects.toBeInstanceOf(OpenAIServerError);
+    ).rejects.toBeInstanceOf(AiProviderServerError);
 
     expect(sleepCalls).toEqual([500, 1000]);
   });
@@ -248,9 +248,9 @@ describe('runWithRetry', () => {
         async () => {
           calls += 1;
           if (calls === 1) {
-            throw new OpenAIRateLimitError(60_000);
+            throw new AiProviderRateLimitError(60_000);
           }
-          throw new OpenAIServerError();
+          throw new AiProviderServerError();
         },
         baseOptions({
           maxDelayMs: 1_000,
@@ -259,7 +259,7 @@ describe('runWithRetry', () => {
           },
         }),
       ),
-    ).rejects.toBeInstanceOf(OpenAIServerError);
+    ).rejects.toBeInstanceOf(AiProviderServerError);
 
     // 60_000 server hint was clamped to maxDelayMs (1_000).
     expect(sleepCalls[0]).toBe(1_000);
@@ -273,16 +273,16 @@ describe('runWithRetry', () => {
     try {
       await runWithRetry(
         async () => {
-          throw new OpenAIServerError();
+          throw new AiProviderServerError();
         },
         baseOptions({ sleep: async () => undefined }),
       );
     } catch (err) {
       caught = err;
     }
-    expect(caught).toBeInstanceOf(OpenAIServerError);
+    expect(caught).toBeInstanceOf(AiProviderServerError);
     const recorded = (
-      caught as OpenAIServerError & {
+      caught as AiProviderServerError & {
         attempts?: readonly AttemptRecord[];
       }
     ).attempts;
@@ -326,15 +326,15 @@ describe('runWithRetry', () => {
 
     await expect(
       runWithRetry(async () => {
-        throw new OpenAIServerError();
+        throw new AiProviderServerError();
       }, baseOptionsNoSleep),
-    ).rejects.toBeInstanceOf(OpenAIServerError);
+    ).rejects.toBeInstanceOf(AiProviderServerError);
 
     await expect(
       runWithRetry(async () => {
-        throw new OpenAIServerError();
+        throw new AiProviderServerError();
       }, baseOptionsNoSleep2),
-    ).rejects.toBeInstanceOf(OpenAIServerError);
+    ).rejects.toBeInstanceOf(AiProviderServerError);
 
     // Same `now` source (default `() => 0` in the test baseOptions) and
     // same jitter seed → identical delays across runs.
@@ -346,7 +346,7 @@ describe('runWithRetry', () => {
   // Regression tests for issue #18 / audit B1-H5: the documented
   // "retryable once" corrective retry was dead code because
   // `runWithRetry` only classified `ProfileExtractionError`. These
-  // tests prove the `RetryableOpenAIError` marker covers
+  // tests prove the `RetryableAiProviderError` marker covers
   // `ScoringInvalidStructuredOutputError` (out of the
   // `ProfileExtractionError` hierarchy) and applies the
   // corrective-once budget to it.
@@ -405,7 +405,7 @@ describe('runWithRetry', () => {
     expect(result.attempts).toHaveLength(2);
     expect(result.attempts[0]?.succeeded).toBe(false);
     // The semantic code recorded on the failed attempt is the scoring
-    // code, not the OpenAI invalid-output code — the marker preserves
+    // code, not the AiProvider invalid-output code — the marker preserves
     // the layer's vocabulary for logs and persistence.
     expect(result.attempts[0]?.errorCode).toBe('scoring_invalid_structured_output');
     expect(result.attempts[1]?.succeeded).toBe(true);

@@ -1,16 +1,16 @@
 import { PROFILE_EXTRACTION_PROMPT_VERSION } from './fingerprint.js';
 import { ExtractedProfileSchema, STRUCTURED_OUTPUT_SCHEMA_VERSION } from './structured-output.js';
-import type { OpenAIExtractionSource } from './types.js';
+import type { AiProviderExtractionSource } from './types.js';
 
 /**
- * JSON Schema sent to OpenAI in `response_format.json_schema.schema`.
+ * JSON Schema sent to AiProvider in `response_format.json_schema.schema`.
  *
  * The shape is the JSON Schema projection of `ExtractedProfileSchema` with
  * the strict-mode quirks worked around at the request boundary:
  *
  * 1. `ExtractedSkill.category` and `ExtractedLanguage.level` are `.optional()`
  *    in the Zod schema (the post-processor substitutes `'other'` and
- *    `null` defaults), but OpenAI's strict mode requires every property
+ *    `null` defaults), but AiProvider's strict mode requires every property
  *    to be present in `required`. We move those keys into `required` and
  *    also widen their type to `['string', 'null']` plus add `null` to
  *    the enum so the model can still signal "I don't know" without
@@ -33,7 +33,7 @@ function buildStructuredOutputSchema(): Record<string, unknown> {
 /**
  * Transforms the projected JSON Schema so the two fields we know are
  * post-processor-defaulted in `ExtractedProfileSchema` are both
- * **required** (per OpenAI strict mode) and **nullable** (so the model
+ * **required** (per AiProvider strict mode) and **nullable** (so the model
  * can still emit `null` when the sources do not state the field).
  *
  * Touched fields:
@@ -109,7 +109,7 @@ function makeNullableStringWithNullEnum(field: Record<string, unknown>): void {
 /**
  * Inputs the profile-extraction prompt builder actually reads.
  *
- * The full `OpenAIExtractionRequest` includes the pre-built `messages`
+ * The full `AiProviderExtractionRequest` includes the pre-built `messages`
  * field, but the prompt builder runs BEFORE the caller knows the
  * messages. Declaring a narrow input type here keeps the request
  * contract (`messages` is required) and the prompt builder contract
@@ -118,14 +118,14 @@ function makeNullableStringWithNullEnum(field: Record<string, unknown>): void {
  */
 export interface ProfileExtractionPromptInput {
   readonly promptVersion: string;
-  readonly sources: readonly OpenAIExtractionSource[];
+  readonly sources: readonly AiProviderExtractionSource[];
 }
 
 /**
  * Versioned profile-extraction prompt (, prompt version
  * `profile-extraction-prompt@v2`).
  *
- * Returns the `systemMessage` and `userMessage` that the OpenAI SDK
+ * Returns the `systemMessage` and `userMessage` that the AiProvider SDK
  * adapter sends to the model. The system message instructs the model
  * to return JSON matching the response schema, to use `null` for missing
  * scalars and empty arrays for missing collections, to never invent

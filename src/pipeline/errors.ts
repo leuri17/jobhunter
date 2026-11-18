@@ -50,7 +50,7 @@ export class PipelinePrerequisiteError extends PipelineLifecycleError {
  *
  * Exit code: 3 (MissingRequired) — per .
  */
-export class PipelineOpenAIKeyMissingError extends PipelinePrerequisiteError {
+export class PipelineAiProviderKeyMissingError extends PipelinePrerequisiteError {
   constructor(
     code: string,
     message: string,

@@ -103,7 +103,7 @@ describe('ProfileImportService', () => {
     expect(all).toHaveLength(0);
   });
 
-  it('records ocr_required for an image-only PDF without invoking OpenAI', async () => {
+  it('records ocr_required for an image-only PDF without invoking AiProvider', async () => {
     const pdfBytes = loadFixture('image-only.pdf');
     const sourcePath = join(tempHome, 'image-only.pdf');
     writeFileSync(sourcePath, pdfBytes);

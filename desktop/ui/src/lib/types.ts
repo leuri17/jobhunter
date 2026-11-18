@@ -79,7 +79,7 @@ export interface ValidateConfigResponse {
   readonly valid: true;
 }
 
-/** Where the sidecar persists the OpenAI API key (issue #211). */
+/** Where the sidecar persists the AiProvider API key (issue #211). */
 export type SecretsBackend = 'keychain' | 'file';
 
 /**
@@ -122,12 +122,12 @@ export interface PutApiKeyResponse extends SecretsBackendFields {
 }
 
 /**
- * GET /api/openai/models response. `configured: false` with an empty
+ * GET /api/ai-provider/models response. `configured: false` with an empty
  * list is the no-key outcome, not a failure — the UI keeps free-text
  * entry. Real failures (401 rejected / 503 unverifiable) reject as
  * `ApiError`.
  */
-export interface OpenAiModelsResponse {
+export interface AiProviderModelsResponse {
   readonly schemaVersion: 1;
   readonly configured: boolean;
   readonly models: readonly string[];
@@ -253,7 +253,7 @@ export interface PipelinePrerequisiteRef {
 
 export interface PipelinePrerequisitesResponse {
   readonly schemaVersion: 1;
-  readonly openaiKeyConfigured: boolean;
+  readonly aiProviderKeyConfigured: boolean;
   readonly activeProfile: PipelinePrerequisiteRef | null;
   readonly activeFilter: PipelinePrerequisiteRef | null;
   readonly configHash: string;

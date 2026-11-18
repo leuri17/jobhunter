@@ -5,7 +5,7 @@ import { SCORING_CATEGORIES } from './types.js';
 /**
  * Compute the full-precision weighted overall score.
  *
- * JobHunter calculates this — OpenAI does NOT. The weighted sum is
+ * JobHunter calculates this — AiProvider does NOT. The weighted sum is
  * computed across the 7 categories with weights from `RUBRIC`; the
  * result is a JavaScript `number` (IEEE-754 double), which carries
  * the full precision needed for ranking and tie-breaking.

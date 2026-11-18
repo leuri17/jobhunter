@@ -1,7 +1,7 @@
 /**
- * Unit test for `resolveOpenAiClientOrNull` — audit B2-M8 follow-up
+ * Unit test for `resolveAiProviderClientOrNull` — audit B2-M8 follow-up
  * (#52). Asserts the resolver threads operator-set
- * `config.openai.refusalDetection` into the `createDefaultOpenAIClient`
+ * `config.aiProvider.refusalDetection` into the `createDefaultAiProviderClient`
  * factory so the detector inside the returned client is bound to the
  * configured marker list (and `flagEmptyBodies`), not to the
  * module-level `DEFAULT_REFUSAL_MARKERS`.
@@ -15,9 +15,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../src/profile/openai/refusal-detector.js', async (importOriginal) => {
+vi.mock('../../src/profile/ai-provider/refusal-detector.js', async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import('../../src/profile/openai/refusal-detector.js')>();
+    await importOriginal<typeof import('../../src/profile/ai-provider/refusal-detector.js')>();
   return {
     ...actual,
     createRefusalDetector: vi.fn(actual.createRefusalDetector),
@@ -27,8 +27,8 @@ vi.mock('../../src/profile/openai/refusal-detector.js', async (importOriginal) =
 import {
   createRefusalDetector,
   DEFAULT_REFUSAL_MARKERS,
-} from '../../src/profile/openai/refusal-detector.js';
-import { resolveOpenAiClientOrNull } from '../../src/init/openai-resolve.js';
+} from '../../src/profile/ai-provider/refusal-detector.js';
+import { resolveAiProviderClientOrNull } from '../../src/init/ai-provider-resolve.js';
 
 const mockCreateRefusalDetector = vi.mocked(createRefusalDetector);
 
@@ -41,18 +41,18 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe('resolveOpenAiClientOrNull — refusal-detection wiring (audit B2-M8 follow-up)', () => {
+describe('resolveAiProviderClientOrNull — refusal-detection wiring (audit B2-M8 follow-up)', () => {
   it('returns null when OPENAI_API_KEY is unset, regardless of `refusal`', async () => {
     vi.unstubAllEnvs();
-    expect(await resolveOpenAiClientOrNull()).toBeNull();
+    expect(await resolveAiProviderClientOrNull()).toBeNull();
     expect(
-      await resolveOpenAiClientOrNull({ refusalMarkers: ['X'], flagEmptyBodies: false }),
+      await resolveAiProviderClientOrNull({ refusalMarkers: ['X'], flagEmptyBodies: false }),
     ).toBeNull();
     expect(mockCreateRefusalDetector).not.toHaveBeenCalled();
   });
 
   it('binds DEFAULT_REFUSAL_MARKERS + flagEmpty=true when called with no options', async () => {
-    await resolveOpenAiClientOrNull();
+    await resolveAiProviderClientOrNull();
     expect(mockCreateRefusalDetector).toHaveBeenCalledTimes(1);
     // No `refusal` passed → the factory's `toRefusalDetectorOptions`
     // returns `undefined` and `createRefusalDetector(undefined)` falls
@@ -65,7 +65,7 @@ describe('resolveOpenAiClientOrNull — refusal-detection wiring (audit B2-M8 fo
       refusalMarkers: ['CUSTOM_REFUSAL_PHRASE'],
       flagEmptyBodies: false,
     };
-    await resolveOpenAiClientOrNull(refusal);
+    await resolveAiProviderClientOrNull(refusal);
     expect(mockCreateRefusalDetector).toHaveBeenCalledTimes(1);
     // `toRefusalDetectorOptions` translates `refusalMarkers` → `markers`
     // and `flagEmptyBodies` → `flagEmpty` before binding.
@@ -76,7 +76,7 @@ describe('resolveOpenAiClientOrNull — refusal-detection wiring (audit B2-M8 fo
   });
 
   it('passes through partial refusal overrides (markers only; flagEmpty resolved at scan time)', async () => {
-    await resolveOpenAiClientOrNull({ refusalMarkers: ['ONLY_MARKERS'] });
+    await resolveAiProviderClientOrNull({ refusalMarkers: ['ONLY_MARKERS'] });
     // The factory's `toRefusalDetectorOptions` only writes `flagEmpty`
     // when the caller passed `flagEmptyBodies`. The detector defaults
     // `flagEmpty` to `true` at scan time (see refusal-detector.ts),

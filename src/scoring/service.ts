@@ -1,9 +1,9 @@
 import { and, eq } from 'drizzle-orm';
 import { hashString } from '../profile/hashing.js';
-import { runWithRetry } from '../profile/openai/retry.js';
-import type { OpenAIClient } from '../profile/openai/types.js';
+import { runWithRetry } from '../profile/ai-provider/retry.js';
+import type { AiProviderClient } from '../profile/ai-provider/types.js';
 import type { Repositories } from '../persistence/repositories/index.js';
-import { openaiRequestMetadata, scoreResults } from '../persistence/schema.js';
+import { aiProviderRequestMetadata, scoreResults } from '../persistence/schema.js';
 import { RUBRIC, RUBRIC_VERSION } from './rubric.js';
 import { SCORER_IMPLEMENTATION_VERSION, computeScoreFingerprint } from './fingerprint.js';
 import { computeOverallScore, formatDisplayScore } from './score-formula.js';
@@ -19,7 +19,7 @@ import { buildScoringPlan, type BuildScoringPlanInput } from './plan.js';
 import { ApplicationError } from '../errors/index.js';
 import { ScoringHardStopError, ScoringInvalidStructuredOutputError } from './errors.js';
 import { formatError } from '../logging/format-error.js';
-import { detectRefusal } from '../profile/openai/refusal-detector.js';
+import { detectRefusal } from '../profile/ai-provider/refusal-detector.js';
 import { noopScoringLogger, type ScoringLogger } from './log.js';
 import {
   LINKEDIN_SCORING_SCHEMA_VERSION,
@@ -44,7 +44,7 @@ export interface ScoringServiceConfig {
 
 export interface ScoringServiceOptions {
   readonly repositories: Repositories;
-  readonly openaiClient: OpenAIClient;
+  readonly aiProviderClient: AiProviderClient;
   readonly logger?: ScoringLogger;
   readonly config: ScoringServiceConfig;
   readonly now?: () => Date;
@@ -142,14 +142,14 @@ function extractScores(
 
 export class ScoringService {
   private readonly repositories: Repositories;
-  private readonly openaiClient: OpenAIClient;
+  private readonly aiProviderClient: AiProviderClient;
   private readonly logger: ScoringLogger;
   private readonly config: ScoringServiceConfig;
   private readonly now: () => Date;
 
   constructor(options: ScoringServiceOptions) {
     this.repositories = options.repositories;
-    this.openaiClient = options.openaiClient;
+    this.aiProviderClient = options.aiProviderClient;
     this.logger = options.logger ?? noopScoringLogger();
     this.config = options.config;
     this.now = options.now ?? ((): Date => new Date());
@@ -282,7 +282,7 @@ export class ScoringService {
       });
     }
 
-    // (e) Call OpenAI via runWithRetry.
+    // (e) Call AiProvider via runWithRetry.
     let attemptCount = 0;
     let raw: ScoringStructuredOutput;
     let tokenUsage: { readonly promptTokens: number; readonly completionTokens: number } | null =
@@ -293,7 +293,7 @@ export class ScoringService {
           if (input.signal.aborted) {
             throw new DOMException('Aborted', 'AbortError');
           }
-          const response = await this.openaiClient.extract({
+          const response = await this.aiProviderClient.extract({
             promptVersion: `v${SCORING_PROMPT_VERSION}`,
             model: this.config.model,
             reasoningEffort: this.config.reasoningEffort,
@@ -308,15 +308,15 @@ export class ScoringService {
 
           // B2-M8: refusal-detector scans `rawJsonText` for empty
           // bodies, empty JSON objects, and known refusal phrases
-          // ("I can't", "as an AI", etc.). The default OpenAI client
+          // ("I can't", "as an AI", etc.). The default AiProvider client
           // also scans, but the production scorer wires that
           // boundary loosely — `scoreBatch` also accepts an
-          // arbitrary `OpenAIClient` (see the FakeOpenAIClient used
+          // arbitrary `AiProviderClient` (see the FakeAiProviderClient used
           // by tests), and a custom client may skip the scan. Belt-
           // and-braces: surface the refusal here as
           // `ScoringInvalidStructuredOutputError` so the existing
           // `runWithRetry` classifier picks it up (corrective-retry
-          // budget via the `RetryableOpenAIError` marker; see #18).
+          // budget via the `RetryableAiProviderError` marker; see #18).
           const refusal = detectRefusal(response.rawJsonText);
           if (refusal.isRefusal) {
             throw new ScoringInvalidStructuredOutputError({
@@ -396,7 +396,7 @@ export class ScoringService {
       });
     }
 
-    // (f) Compute overall score in JobHunter (not OpenAI).
+    // (f) Compute overall score in JobHunter (not AiProvider).
     const categoryScoreNumbers = extractScores(raw.categoryScores);
     const overallScore = computeOverallScore(categoryScoreNumbers);
     const displayScore = formatDisplayScore(overallScore);
@@ -447,13 +447,13 @@ export class ScoringService {
         throw new Error('ScoringService.scoreOne: scoreResults insert returned no rows.');
       }
       newScoreResultId = row.id;
-      // Write 3: insert the openaiMetadata row. The Drizzle schema
+      // Write 3: insert the aiProviderMetadata row. The Drizzle schema
       //     columns are plain `text` (not `text({ mode: 'json' })`),
       //     so we JSON-stringify the values explicitly (the
       //     repository's `insert` method does the same via
       //     `unknownJson.encode(...)`).
       txRepos.db
-        .insert(openaiRequestMetadata)
+        .insert(aiProviderRequestMetadata)
         .values({
           operationType: 'job_scoring',
           relatedEntityType: 'score_result',

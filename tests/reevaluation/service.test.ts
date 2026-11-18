@@ -187,7 +187,7 @@ describe('ReevaluationService', () => {
   // -----------------------------------------------------------------
   // T2: scope 'filters-only' with 2 stale filters.
   // -----------------------------------------------------------------
-  it('T2: scope "filters-only" with 2 stale filters → 2 filter entries, 0 score entries, no OpenAI calls', async () => {
+  it('T2: scope "filters-only" with 2 stale filters → 2 filter entries, 0 score entries, no AiProvider calls', async () => {
     const job1 = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -280,9 +280,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T4: scope 'scores-only' with stale filter → skipped, no OpenAI calls.
+  // T4: scope 'scores-only' with stale filter → skipped, no AiProvider calls.
   // -----------------------------------------------------------------
-  it('T4: scope "scores-only" with a stale filter → skipped + no OpenAI calls', async () => {
+  it('T4: scope "scores-only" with a stale filter → skipped + no AiProvider calls', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -307,9 +307,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T5: scope 'scores-only' with fresh accepted filter + stale score → OpenAI call.
+  // T5: scope 'scores-only' with fresh accepted filter + stale score → AiProvider call.
   // -----------------------------------------------------------------
-  it('T5: scope "scores-only" with a fresh accepted filter + stale score → OpenAI call', async () => {
+  it('T5: scope "scores-only" with a fresh accepted filter + stale score → AiProvider call', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -512,9 +512,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T12: scope 'job' + dryRun → dryRun: true, no DB writes, no OpenAI calls.
+  // T12: scope 'job' + dryRun → dryRun: true, no DB writes, no AiProvider calls.
   // -----------------------------------------------------------------
-  it('T12: scope "job" + dryRun → dryRun: true, all would-rerun, no DB writes, no OpenAI calls', async () => {
+  it('T12: scope "job" + dryRun → dryRun: true, all would-rerun, no DB writes, no AiProvider calls', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '1010',
@@ -541,7 +541,7 @@ describe('ReevaluationService', () => {
   // -----------------------------------------------------------------
   // T13: dryRun (no jobId) → every action would-rerun.
   // -----------------------------------------------------------------
-  it('T13: dryRun (no jobId) → every action would-rerun, no DB writes, no OpenAI calls', async () => {
+  it('T13: dryRun (no jobId) → every action would-rerun, no DB writes, no AiProvider calls', async () => {
     await insertCompleteJobForReeval(repositories, '1111', pipelineRunId, searchExecutionId);
     await insertCompleteJobForReeval(repositories, '2222', pipelineRunId, searchExecutionId);
 
@@ -624,7 +624,7 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T15: Default scope + scoring declined → no OpenAI calls beyond plan check.
+  // T15: Default scope + scoring declined → no AiProvider calls beyond plan check.
   // -----------------------------------------------------------------
   it('T15: default scope + declined scoring → scoringDeclinedByUser=true + no score calls', async () => {
     const jobId = await insertCompleteJobForReeval(
@@ -697,7 +697,7 @@ describe('ReevaluationService', () => {
   // -----------------------------------------------------------------
   // T17: scope 'filters-only' + confirmScoring:false → scoring proceeds trivially.
   // -----------------------------------------------------------------
-  it('T17: scope "filters-only" + confirmScoring=false → scoring proceeds trivially (no OpenAI required)', async () => {
+  it('T17: scope "filters-only" + confirmScoring=false → scoring proceeds trivially (no AiProvider required)', async () => {
     const jobId = await insertCompleteJobForReeval(
       repositories,
       '111',
@@ -759,7 +759,7 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T20: Missing active profile (OpenAI-required scope) → no_active_profile.
+  // T20: Missing active profile (AiProvider-required scope) → no_active_profile.
   // -----------------------------------------------------------------
   it('T20: missing active profile + default scope → no_active_profile', async () => {
     // Deactivate the active approved profile by calling `approve(0)`.
@@ -781,7 +781,7 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T21: Missing OPENAI_API_KEY (OpenAI-required scope) → openai_api_key_missing.
+  // T21: Missing OPENAI_API_KEY (AiProvider-required scope) → openai_api_key_missing.
   // -----------------------------------------------------------------
   it('T21: missing OPENAI_API_KEY + default scope → openai_api_key_missing', async () => {
     await expect(

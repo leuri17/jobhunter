@@ -17,8 +17,11 @@ import {
 import { FilterApplyService } from '@jobhunter/core/filter';
 import { ScoringService, pinoScoringLogger } from '@jobhunter/core/scoring';
 import { createDefaultDiagnosticManager } from '@jobhunter/core/diagnostics';
-import { type DefaultOpenAIClientRefusalOptions, type OpenAIClient } from '@jobhunter/core/profile';
-import { loadConfig, resolveOpenAiApiKey } from '@jobhunter/core/config';
+import {
+  type DefaultAiProviderClientRefusalOptions,
+  type AiProviderClient,
+} from '@jobhunter/core/profile';
+import { loadConfig, resolveAiProviderApiKey } from '@jobhunter/core/config';
 import { ApplicationError } from '@jobhunter/core/errors';
 import { type DatabaseConnection } from '@jobhunter/core/persistence';
 import { getSecretsBackend } from '../secrets-backend.js';
@@ -27,7 +30,7 @@ import { pinoPipelineLogger } from '@jobhunter/core/pipeline';
 import { openDbHandle, createRepositories } from './db-helper.js';
 import { sidecarFileSystem } from './fs-adapter.js';
 import { initSseHeaders, writeSseEvent, closeSse } from '../sse.js';
-import { resolveOpenAiClientOrNull } from './openai-resolve.js';
+import { resolveAiProviderClientOrNull } from './ai-provider-resolve.js';
 
 export interface ActiveRun {
   readonly runId: string;
@@ -59,7 +62,7 @@ type RunEvent =
       readonly type: 'confirmation_required';
       readonly runId: string;
       readonly jobsDiscovered: number;
-      readonly newOpenAIRequests: number;
+      readonly newAiProviderRequests: number;
     };
 
 const activeRuns = new Map<string, ActiveRun>();
@@ -123,7 +126,7 @@ export function runErrorFrom(err: unknown): { code: string; message: string } {
 }
 
 /**
- * Gate an OpenAI scoring batch behind a user decision: push a
+ * Gate an AiProvider scoring batch behind a user decision: push a
  * `confirmation_required` event onto the run's SSE buffer, park the
  * decision handle on the run (resolved by the scoring-decision route,
  * the cancel route, or the timeout — whichever fires first), and
@@ -131,14 +134,14 @@ export function runErrorFrom(err: unknown): { code: string; message: string } {
  */
 export function beginScoringConfirmation(
   run: ActiveRun,
-  plan: { jobsDiscovered: number; newOpenAIRequests: number },
+  plan: { jobsDiscovered: number; newAiProviderRequests: number },
 ): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     pushEvent(run, {
       type: 'confirmation_required',
       runId: run.runId,
       jobsDiscovered: plan.jobsDiscovered,
-      newOpenAIRequests: plan.newOpenAIRequests,
+      newAiProviderRequests: plan.newAiProviderRequests,
     });
     const timer = setTimeout(() => {
       run.pendingConfirmation = null;
@@ -155,9 +158,9 @@ export function beginScoringConfirmation(
 }
 
 export interface PipelineRouteOptions {
-  readonly openaiClient?: OpenAIClient;
+  readonly aiProviderClient?: AiProviderClient;
   readonly rootLogger?: PinoLogger;
-  readonly refusal?: DefaultOpenAIClientRefusalOptions;
+  readonly refusal?: DefaultAiProviderClientRefusalOptions;
   /** Opens the SQLite handle for run preflight and execution. */
   readonly dbOpener?: () => Promise<DatabaseConnection>;
 }
@@ -198,7 +201,7 @@ export async function registerPipelineRoutes(
   }
 
   app.get('/api/pipeline/prerequisites', async () => {
-    const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
+    const client = opts.aiProviderClient ?? (await resolveAiProviderClientOrNull(opts.refusal));
     const handle = await openDb();
     try {
       const repositories = createRepositories(handle);
@@ -212,7 +215,7 @@ export async function registerPipelineRoutes(
       );
       return {
         schemaVersion: 1,
-        openaiKeyConfigured: client !== null,
+        aiProviderKeyConfigured: client !== null,
         activeProfile:
           activeProfile === null
             ? null
@@ -248,12 +251,12 @@ export async function registerPipelineRoutes(
     // The cost gate defaults on; pass requireScoringConfirmation: false
     // to run unattended.
     const requireConfirmation = body?.requireScoringConfirmation !== false;
-    const client = opts.openaiClient ?? (await resolveOpenAiClientOrNull(opts.refusal));
+    const client = opts.aiProviderClient ?? (await resolveAiProviderClientOrNull(opts.refusal));
     if (client === null) {
       reply.status(503);
       return {
         schemaVersion: 1,
-        error: { code: 'openai_unavailable', message: 'No OpenAI API key is configured' },
+        error: { code: 'openai_unavailable', message: 'No AiProvider API key is configured' },
       };
     }
 
@@ -419,7 +422,7 @@ export async function registerPipelineRoutes(
 async function runPipeline(
   runId: string,
   controller: AbortController,
-  openaiClient: OpenAIClient,
+  aiProviderClient: AiProviderClient,
   rootLogger: PinoLogger,
   openDb: () => Promise<DatabaseConnection>,
   requireConfirmation: boolean,
@@ -471,12 +474,12 @@ async function runPipeline(
       const filterApplyService = new FilterApplyService({ repositories });
       const scoringService = new ScoringService({
         repositories,
-        openaiClient,
+        aiProviderClient,
         logger: pinoScoringLogger(makeTeeLogger(rootLogger, run)),
         config: {
-          model: loaded.config.openai.jobScoring.model,
-          reasoningEffort: loaded.config.openai.jobScoring.reasoningEffort,
-          concurrency: loaded.config.openai.jobScoring.concurrency,
+          model: loaded.config.aiProvider.jobScoring.model,
+          reasoningEffort: loaded.config.aiProvider.jobScoring.reasoningEffort,
+          concurrency: loaded.config.aiProvider.jobScoring.concurrency,
         },
       });
       const orchestrator = new PipelineOrchestrator({
@@ -496,7 +499,7 @@ async function runPipeline(
         confirmScoring: !requireConfirmation,
         env: process.env,
         resolveApiKey: async () => {
-          return resolveOpenAiApiKey({
+          return resolveAiProviderApiKey({
             store: (await getSecretsBackend()).store,
             env: process.env,
           });

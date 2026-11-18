@@ -175,13 +175,13 @@ describe('GET /api/pipeline/prerequisites', () => {
         expect(res.status).toBe(200);
         const body = (await res.json()) as {
           schemaVersion: number;
-          openaiKeyConfigured: boolean;
+          aiProviderKeyConfigured: boolean;
           activeProfile: { id: number; contentHash: string } | null;
           activeFilter: { id: number; contentHash: string } | null;
           configHash: string;
         };
         expect(body.schemaVersion).toBe(1);
-        expect(body.openaiKeyConfigured).toBe(true);
+        expect(body.aiProviderKeyConfigured).toBe(true);
         expect(body.activeProfile).toMatchObject({ contentHash: 'test-profile-hash-1' });
         expect(body.activeFilter).toMatchObject({ contentHash: 'test-filter-hash-1' });
         expect(typeof body.configHash).toBe('string');
@@ -210,7 +210,7 @@ describe('GET /api/pipeline/prerequisites', () => {
     );
   }, 10_000);
 
-  it('reports a missing OpenAI key', async () => {
+  it('reports a missing AiProvider key', async () => {
     vi.stubEnv('OPENAI_API_KEY', '');
     await withServer(
       {
@@ -221,10 +221,10 @@ describe('GET /api/pipeline/prerequisites', () => {
         const res = await fetch(`${baseUrl}/api/pipeline/prerequisites`);
         expect(res.status).toBe(200);
         const body = (await res.json()) as {
-          openaiKeyConfigured: boolean;
+          aiProviderKeyConfigured: boolean;
           activeProfile: { id: number; contentHash: string } | null;
         };
-        expect(body.openaiKeyConfigured).toBe(false);
+        expect(body.aiProviderKeyConfigured).toBe(false);
         expect(body.activeProfile).not.toBeNull();
       },
     );

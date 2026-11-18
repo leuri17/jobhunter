@@ -1,7 +1,7 @@
 import type { SecretsStore } from './secrets.js';
 
 /**
- * Resolve the effective OpenAI API key.
+ * Resolve the effective AiProvider API key.
  *
  * Precedence: a stored secret wins over `OPENAI_API_KEY`, because the
  * stored value is the deliberate per-user choice made in Settings. The
@@ -17,11 +17,13 @@ export interface ResolveApiKeyOptions {
   readonly env: Readonly<Record<string, string | undefined>>;
 }
 
-export async function resolveOpenAiApiKey(options: ResolveApiKeyOptions): Promise<string | null> {
+export async function resolveAiProviderApiKey(
+  options: ResolveApiKeyOptions,
+): Promise<string | null> {
   try {
     const stored = await options.store.read();
-    if (stored.openaiApiKey !== undefined && stored.openaiApiKey.length > 0) {
-      return stored.openaiApiKey;
+    if (stored.aiProviderApiKey !== undefined && stored.aiProviderApiKey.length > 0) {
+      return stored.aiProviderApiKey;
     }
   } catch {
     // A missing or unreadable store must not make the app unusable; fall
@@ -42,9 +44,10 @@ export type ApiKeySource = 'stored' | 'environment' | 'none';
 export async function resolveApiKeySource(options: ResolveApiKeyOptions): Promise<ApiKeySource> {
   try {
     const stored = await options.store.read();
-    if (stored.openaiApiKey !== undefined && stored.openaiApiKey.length > 0) return 'stored';
+    if (stored.aiProviderApiKey !== undefined && stored.aiProviderApiKey.length > 0)
+      return 'stored';
   } catch {
-    // Treated as "not stored"; see resolveOpenAiApiKey.
+    // Treated as "not stored"; see resolveAiProviderApiKey.
   }
   const fromEnv = options.env['OPENAI_API_KEY'];
   if (typeof fromEnv === 'string' && fromEnv.length > 0) return 'environment';

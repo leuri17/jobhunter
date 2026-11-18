@@ -31,7 +31,7 @@ export type InitStepId =
   | 'directories'
   | 'migrations'
   | 'config'
-  | 'openaiKey'
+  | 'aiProviderKey'
   | 'search'
   | 'sources'
   | 'extract'
@@ -43,7 +43,7 @@ export const INIT_STEPS: readonly InitStepId[] = [
   'directories',
   'migrations',
   'config',
-  'openaiKey',
+  'aiProviderKey',
   'search',
   'sources',
   'extract',
@@ -61,7 +61,7 @@ export const INIT_STEP_LABELS: Readonly<Record<InitStepId, string>> = {
   directories: 'Create required runtime directories',
   migrations: 'Initialize SQLite + apply Drizzle migrations',
   config: 'Materialize default config.json when missing',
-  openaiKey: 'Check that an OpenAI API key is configured',
+  aiProviderKey: 'Check that an AiProvider API key is configured',
   search: 'Configure LinkedIn search settings',
   sources: 'Import one or two CV sources',
   extract: 'Generate AI profile draft',
@@ -84,7 +84,7 @@ export interface InitStepReport {
   /** Identifier of the persisted artifact referenced by the step (e.g. `profile_42`). */
   readonly artifactId: string | null;
   /**
-   * Where the OpenAI key came from — set only on the `openaiKey`
+   * Where the AiProvider key came from — set only on the `aiProviderKey`
    * step report (`'stored' | 'environment' | 'none'`). Other steps
    * omit it.
    */
@@ -109,8 +109,8 @@ export interface SetupSummary {
    */
   readonly nextStep: InitStepId | null;
   /**
-   * OpenAI key absence is NOT a failure. When `true`, the operator
+   * AiProvider key absence is NOT a failure. When `true`, the operator
    * must set OPENAI_API_KEY and re-run init.
    */
-  readonly openAiKeyMissing: boolean;
+  readonly aiProviderKeyMissing: boolean;
 }

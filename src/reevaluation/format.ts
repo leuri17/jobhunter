@@ -81,7 +81,7 @@ const REASON_COL_MAX = 24;
  * formatter does not consult terminal width.
  *
  * The sidecar route renders the scoring plan via this function
- * when the plan requires new OpenAI requests. The
+ * when the plan requires new AiProvider requests. The
  * boundaries test excludes this single `src/pipeline/format.js`
  * import from the reevaluation-module ban.
  */

@@ -63,7 +63,7 @@ describe('api', () => {
       new Response(
         JSON.stringify({
           schemaVersion: 1,
-          openaiKeyConfigured: true,
+          aiProviderKeyConfigured: true,
           activeProfile: { id: 1, contentHash: 'profile-hash' },
           activeFilter: { id: 2, contentHash: 'filter-hash' },
           configHash: 'config-hash',

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 /**
  * Domain-boundary guard for `src/linkedin/`.
  *
- * AGENTS.md §5 / §9: domain code must not depend on Drizzle, OpenAI, or
+ * AGENTS.md §5 / §9: domain code must not depend on Drizzle, AiProvider, or
  * runtime Pino. The Playwright allow-list covers
  * every file that imports Playwright (type-only OR runtime). The
  * `fake-session.ts` + `fake-page.ts` modules are exempt because they

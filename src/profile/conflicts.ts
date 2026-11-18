@@ -6,7 +6,7 @@ import type {
   ExtractedProfile,
   ExtractedProject,
   ExtractedWorkExperience,
-} from './openai/structured-output.js';
+} from './ai-provider/structured-output.js';
 
 /**
  * Multi-source conflict detection for extracted profiles (SPEC.md §14.3, §15.1).

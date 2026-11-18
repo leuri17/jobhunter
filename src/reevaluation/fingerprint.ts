@@ -7,7 +7,7 @@
  * so the reevaluation service can compute the "current fingerprint" for
  * cache-hit/staleness checks WITHOUT calling
  * `FilterApplyService.apply()` (which writes a new row) or
- * `ScoringService.scoreOne()` (which can call OpenAI).
+ * `ScoringService.scoreOne()` (which can call AiProvider).
  *
  * The fingerprint values these helpers return must match byte-for-byte
  * the values produced by `FilterApplyService.apply()` /

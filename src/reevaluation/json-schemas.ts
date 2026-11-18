@@ -82,7 +82,7 @@ export const ScoringPlanJsonSchema = z
     jobsDiscovered: z.number().int().nonnegative(),
     jobsAccepted: z.number().int().nonnegative(),
     scoresReused: z.number().int().nonnegative(),
-    newOpenAIRequests: z.number().int().nonnegative(),
+    newAiProviderRequests: z.number().int().nonnegative(),
     skippedScoringCategories: z.array(SCORING_CATEGORY_LITERAL),
     scoringConcurrency: z.number().int().positive(),
     perJob: z.array(ScoringPlanEntryJsonSchema),

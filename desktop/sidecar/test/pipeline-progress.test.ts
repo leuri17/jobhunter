@@ -44,7 +44,7 @@ vi.mock('@jobhunter/core/pipeline', async (importOriginal) => {
         query: 'q1',
         locationName: 'L1',
       });
-      sink?.({ type: 'scoring_plan', runId: 1, jobsDiscovered: 2, newOpenAIRequests: 2 });
+      sink?.({ type: 'scoring_plan', runId: 1, jobsDiscovered: 2, newAiProviderRequests: 2 });
       return { summary: makeRunSummary(), scoringPlan: null, topN: [] };
     }
   }
@@ -161,7 +161,7 @@ describe('pipeline progress streaming', () => {
         'scoring_plan',
       ]);
       expect(progressPayloads[1]).toMatchObject({ query: 'q1', locationName: 'L1' });
-      expect(progressPayloads[2]).toMatchObject({ jobsDiscovered: 2, newOpenAIRequests: 2 });
+      expect(progressPayloads[2]).toMatchObject({ jobsDiscovered: 2, newAiProviderRequests: 2 });
 
       const doneFrame = frames.find((f) => f.startsWith('event: done'));
       expect(doneFrame).toBeDefined();

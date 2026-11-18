@@ -44,7 +44,7 @@ export const JOB_DESCRIPTION_DELIMITER = {
  * source excerpts, original paths, extraction diagnostics, previous
  * filter results, previous scores, run metadata, logs, and
  * diagnostic artifacts. Only the fields listed below cross the
- * scoring boundary into OpenAI.
+ * scoring boundary into AiProvider.
  */
 export interface ScoringPromptInput {
   readonly promptVersion: number;

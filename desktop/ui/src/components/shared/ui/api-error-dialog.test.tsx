@@ -9,8 +9,8 @@ afterEach(() => {
   cleanup();
 });
 
-function openaiUnavailable(): ApiError {
-  return new ApiError(503, 'openai_unavailable', 'No OpenAI API key is configured');
+function aiProviderUnavailable(): ApiError {
+  return new ApiError(503, 'openai_unavailable', 'No AiProvider API key is configured');
 }
 
 function mockClipboardWriteText(): ReturnType<typeof vi.fn> {
@@ -39,7 +39,7 @@ describe('<ApiErrorDialog />', () => {
   it('shows the plain-language help and keeps the technical trace hidden by default', () => {
     render(
       <ApiErrorDialog
-        error={openaiUnavailable()}
+        error={aiProviderUnavailable()}
         title="Couldn't start the pipeline"
         onDismiss={() => {}}
       />,
@@ -48,7 +48,7 @@ describe('<ApiErrorDialog />', () => {
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     expect(screen.getByText("Couldn't start the pipeline")).toBeTruthy();
     expect(
-      screen.getByText('Add your OpenAI API key in Settings, under AI Provider.'),
+      screen.getByText('Add your AiProvider API key in Settings, under AI Provider.'),
     ).toBeTruthy();
     expect(screen.queryByTestId('api-error-dialog-trace')).toBeNull();
 
@@ -72,7 +72,7 @@ describe('<ApiErrorDialog />', () => {
   it('reveals the status/code/message trace when More info is pressed', () => {
     render(
       <ApiErrorDialog
-        error={openaiUnavailable()}
+        error={aiProviderUnavailable()}
         title="Couldn't start the pipeline"
         onDismiss={() => {}}
       />,
@@ -80,7 +80,7 @@ describe('<ApiErrorDialog />', () => {
 
     const trace = openTrace();
     expect(trace.textContent).toBe(
-      'status: 503\ncode: openai_unavailable\nmessage: No OpenAI API key is configured',
+      'status: 503\ncode: openai_unavailable\nmessage: No AiProvider API key is configured',
     );
     expect(screen.getByTestId('api-error-dialog-trace-toggle').getAttribute('aria-expanded')).toBe(
       'true',
@@ -91,7 +91,7 @@ describe('<ApiErrorDialog />', () => {
     const writeText = mockClipboardWriteText();
     render(
       <ApiErrorDialog
-        error={openaiUnavailable()}
+        error={aiProviderUnavailable()}
         title="Couldn't start the pipeline"
         onDismiss={() => {}}
       />,
@@ -107,7 +107,7 @@ describe('<ApiErrorDialog />', () => {
     );
     expect(writeText).toHaveBeenCalledTimes(1);
     expect(writeText).toHaveBeenCalledWith(
-      'status: 503\ncode: openai_unavailable\nmessage: No OpenAI API key is configured',
+      'status: 503\ncode: openai_unavailable\nmessage: No AiProvider API key is configured',
     );
   });
 
@@ -133,7 +133,7 @@ describe('<ApiErrorDialog />', () => {
   it('lets code guidance win over the action fallback when both apply', () => {
     render(
       <ApiErrorDialog
-        error={openaiUnavailable()}
+        error={aiProviderUnavailable()}
         title="Couldn't save settings"
         guidance={ACTION_GUIDANCE.settingsSave}
         onAction={() => {}}
@@ -142,7 +142,7 @@ describe('<ApiErrorDialog />', () => {
     );
 
     expect(
-      screen.getByText('Add your OpenAI API key in Settings, under AI Provider.'),
+      screen.getByText('Add your AiProvider API key in Settings, under AI Provider.'),
     ).toBeTruthy();
     expect(screen.getByTestId('api-error-dialog-action').textContent).toBe('Open settings');
   });
@@ -151,7 +151,7 @@ describe('<ApiErrorDialog />', () => {
     const onAction = vi.fn();
     const { rerender } = render(
       <ApiErrorDialog
-        error={openaiUnavailable()}
+        error={aiProviderUnavailable()}
         title="Couldn't start the pipeline"
         onDismiss={() => {}}
         onAction={onAction}
@@ -178,7 +178,7 @@ describe('<ApiErrorDialog />', () => {
     const onDismiss = vi.fn();
     render(
       <ApiErrorDialog
-        error={openaiUnavailable()}
+        error={aiProviderUnavailable()}
         title="Couldn't start the pipeline"
         onDismiss={onDismiss}
       />,

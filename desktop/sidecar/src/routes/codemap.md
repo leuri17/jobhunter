@@ -22,8 +22,8 @@ decoding, `AbortController` bookkeeping, and SSE framing.
     `FileSystem` interface over `node:fs/promises` (`readFile`, `writeFile`,
     `rename`, `mkdir`, `access`, `rm`), injected into `loadConfig` /
     `updateConfig`.
-  - `openai-resolve.ts` — `resolveOpenAiClientOrNull()` lazily builds an
-    `OpenAIClient` from the resolved secrets backend's store (falling back
+  - `ai-provider-resolve.ts` — `resolveOpenAiClientOrNull()` lazily builds an
+    `AiProviderClient` from the resolved secrets backend's store (falling back
     to `OPENAI_API_KEY`), with an optional `timeoutMs` override; returns
     `null` when unset so handlers can reply `503 openai_unavailable`.
   - `openai.ts` — `registerOpenAiRoutes()` exposes `GET /api/openai/models`
@@ -110,7 +110,7 @@ secrets_backend_unavailable`); DELETE clears through the backend;
   `secrets_migration_verification_failed` 500 on mismatch). `jobs.ts` /
   `pipeline.ts` resolve their API key through the same backend store.
 - **OpenAI**: `openai.ts` registers `GET /api/openai/models` — the sorted
-  model ids the effective key can access, via `OpenAIClient.listModels()`
+  model ids the effective key can access, via `AiProviderClient.listModels()`
   (`models.list()` auto-pagination, no token cost) on a 10 s client
   timeout. No key configured → `200 { configured: false, models: [] }`
   (a distinguishable outcome, not an error); probe failures reuse
@@ -129,7 +129,7 @@ createDefaultPlatformAdapter())` directories.
   `pipeline/` (`PipelineOrchestrator`, `pinoPipelineLogger`),
   `profile/` (`ProfileImportService`, `ProfileExtractionService`,
   `ProfileReviewService`, `ProfileApprovalService`,
-  `ProfileRejectionService`, `createDefaultOpenAIClient`, `OpenAIClient`),
+  `ProfileRejectionService`, `createDefaultAiProviderClient`, `AiProviderClient`),
   `inspection/` (`JobsListService`, `JobsShowService`, `RunsListService`,
   `RunsShowService`), `reevaluation/` (`ReevaluationService`,
   `pinoReevaluationLogger`), `linkedin/`, `scoring/`, `filter/`,

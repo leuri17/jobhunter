@@ -103,7 +103,7 @@ const BASE_CONFIG = {
     datePosted: 86400,
     workplaceTypes: ['1', '2', '3'],
   },
-  openai: {
+  aiProvider: {
     profileExtraction: { model: 'gpt-5.6-sol', reasoningEffort: 'medium' },
     jobScoring: { model: 'gpt-5.6-sol', reasoningEffort: 'medium', concurrency: 3 },
     refusalDetection: {
@@ -422,7 +422,7 @@ export async function buildFixtureSidecar(
 
   app.post('/api/config/validate', async () => ({ schemaVersion: 1, valid: true as const }));
 
-  app.get('/api/openai/models', async () => ({
+  app.get('/api/ai-provider/models', async () => ({
     schemaVersion: 1,
     configured: true as const,
     models: ['e2e-mini', 'e2e-sol'],
@@ -731,7 +731,7 @@ export async function buildFixtureSidecar(
         type: 'scoring_plan',
         runId: 1,
         jobsDiscovered: 0,
-        newOpenAIRequests: 0,
+        newAiProviderRequests: 0,
       });
       const completedAt = TIMESTAMP;
       const finalStatus: RunStatus = run.controller.aborted ? 'cancelled' : 'completed';
@@ -800,7 +800,7 @@ export async function buildFixtureSidecar(
 
   app.get('/api/pipeline/prerequisites', async () => ({
     schemaVersion: 1,
-    openaiKeyConfigured: true,
+    aiProviderKeyConfigured: true,
     activeProfile: { id: 2, contentHash: 'hash_prof_seed_2' },
     activeFilter: { id: 1, contentHash: 'hash_filter_seed_1' },
     configHash: 'e2e-config-hash',

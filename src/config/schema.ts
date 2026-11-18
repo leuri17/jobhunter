@@ -53,7 +53,7 @@ const refusalDetectionSchema = z
   })
   .strict();
 
-const openaiSchema = z
+const aiProviderSchema = z
   .object({
     profileExtraction: profileExtractionSchema,
     jobScoring: jobScoringSchema,
@@ -113,7 +113,7 @@ export const OperationalConfigSchema = z
   .object({
     version: z.literal(1),
     search: searchSchema,
-    openai: openaiSchema,
+    aiProvider: aiProviderSchema,
     scraper: scraperSchema,
     output: outputSchema,
     logging: loggingSchema,
@@ -124,15 +124,30 @@ export const OperationalConfigSchema = z
 export type OperationalConfig = z.infer<typeof OperationalConfigSchema>;
 
 /**
- * Load-time variant of `OperationalConfigSchema`: fills
- * `scraper.headless` for config files written before the key existed.
- * The output shape is identical; only the input side accepts the key
- * being absent. Everything downstream of loading (patches, Settings
- * validation) uses the strict canonical schema.
+ * Load-time variant of `OperationalConfigSchema`:
+ * - fills `scraper.headless` for config files written before the key
+ *   existed (#338 pattern);
+ * - renames the legacy `openai` section to `aiProvider` for config
+ *   files written before the provider-generic rename.
+ * The output shape is identical to the canonical schema; only the
+ * input side tolerates older files. Everything downstream of loading
+ * (patches, Settings validation) uses the strict canonical schema.
  */
-export const OperationalConfigFileSchema = OperationalConfigSchema.extend({
-  scraper: scraperSchema.extend({ headless: z.boolean().default(true) }),
-});
+export const OperationalConfigFileSchema: z.ZodType<OperationalConfig> = z.preprocess(
+  (raw) => {
+    if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
+      const record = raw as Record<string, unknown>;
+      if (record['aiProvider'] === undefined && record['openai'] !== undefined) {
+        const { openai: legacyOpenAi, ...rest } = record;
+        return { ...rest, aiProvider: legacyOpenAi };
+      }
+    }
+    return raw;
+  },
+  OperationalConfigSchema.extend({
+    scraper: scraperSchema.extend({ headless: z.boolean().default(true) }),
+  }),
+);
 
 export const DEFAULT_OPERATIONAL_CONFIG: OperationalConfig = {
   version: 1,
@@ -142,7 +157,7 @@ export const DEFAULT_OPERATIONAL_CONFIG: OperationalConfig = {
     datePosted: 86400,
     workplaceTypes: ['1', '2', '3'],
   },
-  openai: {
+  aiProvider: {
     profileExtraction: {
       model: 'gpt-5.6-sol',
       reasoningEffort: 'medium',

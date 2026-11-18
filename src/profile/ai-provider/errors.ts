@@ -21,19 +21,19 @@ export interface RetryAttemptSummary {
 /**
  * Marker interface for errors that `runWithRetry` should classify.
  *
- * Implementations expose the OpenAI-side error `code` so the retry
+ * Implementations expose the AiProvider-side error `code` so the retry
  * policy can match it against `OPENAI_RETRYABLE_ERROR_CODES`, and an
  * optional `correctiveRetry` flag that opts into the "retryable once"
  * budget reserved for structured-output failures (a second invalid
  * payload aborts the call).
  *
  * `ProfileExtractionError` and its subclasses already satisfy this
- * interface via the inherited `code` field; `OpenAIInvalidOutputError`
- * sets `correctiveRetry: true`. Other OpenAI-driven modules (e.g.
+ * interface via the inherited `code` field; `AiProviderInvalidOutputError`
+ * sets `correctiveRetry: true`. Other AiProvider-driven modules (e.g.
  * scoring) opt in by implementing the interface on the relevant
  * subclass — see `ScoringInvalidStructuredOutputError`.
  */
-export interface RetryableOpenAIError {
+export interface RetryableAiProviderError {
   readonly code: string;
   readonly correctiveRetry?: boolean;
 }
@@ -41,7 +41,7 @@ export interface RetryableOpenAIError {
 /**
  * Base class for every error raised by the profile-extraction pipeline.
  *
- * Every subclass maps to exit code 5 (`ExitCode.OpenAIFailure`) at
+ * Every subclass maps to exit code 5 (`ExitCode.AiProviderFailure`) at
  * the sidecar's HTTP error mapper per .
  *
  * `attempts` is populated by the retry policy (`runWithRetry`) when the
@@ -49,11 +49,11 @@ export interface RetryableOpenAIError {
  * `caught.attempts?.length` to record the attempt count on the persisted
  * `openai_request_metadata` row.
  *
- * Implements `RetryableOpenAIError` via the inherited `code` field so
+ * Implements `RetryableAiProviderError` via the inherited `code` field so
  * the retry policy can classify any subclass without an `instanceof`
- * chain that has to know about every OpenAI-driven module.
+ * chain that has to know about every AiProvider-driven module.
  */
-export class ProfileExtractionError extends ApplicationError implements RetryableOpenAIError {
+export class ProfileExtractionError extends ApplicationError implements RetryableAiProviderError {
   readonly attempts?: readonly RetryAttemptSummary[];
 
   constructor(
@@ -62,16 +62,16 @@ export class ProfileExtractionError extends ApplicationError implements Retryabl
     metadata: ApplicationErrorMetadata = {},
     cause?: Error,
   ) {
-    super(code, message, ExitCode.OpenAIFailure, metadata, cause);
+    super(code, message, ExitCode.AiProviderFailure, metadata, cause);
   }
 }
 
 /**
- * Retryable OpenAI failures. These carry an optional `retryAfterMs` derived
+ * Retryable AiProvider failures. These carry an optional `retryAfterMs` derived
  * from the server (e.g. `Retry-After` header on a 429) so the retry policy
  * can honor it without re-parsing the response.
  */
-export class OpenAITransientError extends ProfileExtractionError {
+export class AiProviderTransientError extends ProfileExtractionError {
   readonly retryAfterMs: number | null;
 
   constructor(
@@ -86,27 +86,27 @@ export class OpenAITransientError extends ProfileExtractionError {
   }
 }
 
-export class OpenAIRateLimitError extends OpenAITransientError {
+export class AiProviderRateLimitError extends AiProviderTransientError {
   constructor(retryAfterMs: number | null, metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_rate_limit', 'OpenAI rate limit reached.', retryAfterMs, metadata, cause);
+    super('openai_rate_limit', 'AiProvider rate limit reached.', retryAfterMs, metadata, cause);
   }
 }
 
-export class OpenAIServerError extends OpenAITransientError {
+export class AiProviderServerError extends AiProviderTransientError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_server_error', 'OpenAI server error.', null, metadata, cause);
+    super('openai_server_error', 'AiProvider server error.', null, metadata, cause);
   }
 }
 
-export class OpenAITimeoutError extends OpenAITransientError {
+export class AiProviderTimeoutError extends AiProviderTransientError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_timeout', 'OpenAI request timed out.', null, metadata, cause);
+    super('openai_timeout', 'AiProvider request timed out.', null, metadata, cause);
   }
 }
 
-export class OpenAINetworkError extends OpenAITransientError {
+export class AiProviderNetworkError extends AiProviderTransientError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_network_error', 'OpenAI network failure.', null, metadata, cause);
+    super('openai_network_error', 'AiProvider network failure.', null, metadata, cause);
   }
 }
 
@@ -116,7 +116,7 @@ export class OpenAINetworkError extends OpenAITransientError {
  * corrective retry internally; callers do not need to track that state.
  * See `runWithRetry` in `./retry.ts` for the corrective-retry budget.
  */
-export class OpenAIInvalidOutputError extends OpenAITransientError {
+export class AiProviderInvalidOutputError extends AiProviderTransientError {
   // Opt into the "retryable once" budget. The retry policy treats any
   // error with `correctiveRetry: true` as eligible for exactly one
   // additional attempt before aborting; a second structured-output
@@ -126,7 +126,7 @@ export class OpenAIInvalidOutputError extends OpenAITransientError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
     super(
       'openai_invalid_output',
-      'OpenAI returned output that failed Zod validation.',
+      'AiProvider returned output that failed Zod validation.',
       null,
       metadata,
       cause,
@@ -135,38 +135,38 @@ export class OpenAIInvalidOutputError extends OpenAITransientError {
 }
 
 /**
- * Non-retryable OpenAI failures. These signal that retries will not help
+ * Non-retryable AiProvider failures. These signal that retries will not help
  * (bad credentials, account-state problems, programmer errors, etc.).
  */
-export class OpenAIAuthenticationError extends ProfileExtractionError {
+export class AiProviderAuthenticationError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_authentication', 'OpenAI authentication failed.', metadata, cause);
+    super('openai_authentication', 'AiProvider authentication failed.', metadata, cause);
   }
 }
 
-export class OpenAIPermissionError extends ProfileExtractionError {
+export class AiProviderPermissionError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_permission', 'OpenAI permission denied.', metadata, cause);
+    super('openai_permission', 'AiProvider permission denied.', metadata, cause);
   }
 }
 
-export class OpenAIBillingError extends ProfileExtractionError {
+export class AiProviderBillingError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_billing', 'OpenAI billing or quota configuration error.', metadata, cause);
+    super('openai_billing', 'AiProvider billing or quota configuration error.', metadata, cause);
   }
 }
 
-export class OpenAIInvalidRequestError extends ProfileExtractionError {
+export class AiProviderInvalidRequestError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_invalid_request', 'OpenAI rejected the request as invalid.', metadata, cause);
+    super('openai_invalid_request', 'AiProvider rejected the request as invalid.', metadata, cause);
   }
 }
 
-export class OpenAIUnsupportedModelError extends ProfileExtractionError {
+export class AiProviderUnsupportedModelError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
     super(
       'openai_unsupported_model',
-      'OpenAI rejected the model or configuration.',
+      'AiProvider rejected the model or configuration.',
       metadata,
       cause,
     );
@@ -174,7 +174,7 @@ export class OpenAIUnsupportedModelError extends ProfileExtractionError {
 }
 
 /**
- * Raised before any OpenAI call when the source text — across all stored
+ * Raised before any AiProvider call when the source text — across all stored
  * sources — cannot fit into the request size limit. We fail loud rather than
  * silently truncate, in line with 's posture.
  */
@@ -182,7 +182,7 @@ export class ProfileExtractionInputTooLargeError extends ProfileExtractionError 
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
     super(
       'profile_extraction_input_too_large',
-      'Source text exceeds the OpenAI request size limit.',
+      'Source text exceeds the AiProvider request size limit.',
       metadata,
       cause,
     );
@@ -196,11 +196,11 @@ export class ProfileExtractionInputTooLargeError extends ProfileExtractionError 
  * `refusalText` so the caller can surface it (or persist it for audit)
  * verbatim.
  */
-export class OpenAIRefusalError extends ProfileExtractionError {
+export class AiProviderRefusalError extends ProfileExtractionError {
   readonly refusalText: string;
 
   constructor(refusalText: string, metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_refusal', 'OpenAI declined the request.', metadata, cause);
+    super('openai_refusal', 'AiProvider declined the request.', metadata, cause);
     this.refusalText = refusalText;
   }
 }
@@ -214,11 +214,11 @@ export class OpenAIRefusalError extends ProfileExtractionError {
  * surface it as a typed error instead of passing an empty string up
  * the stack.
  */
-export class OpenAIEmptyResponseError extends ProfileExtractionError {
+export class AiProviderEmptyResponseError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
     super(
       'openai_empty_response',
-      'OpenAI returned an empty structured-output body.',
+      'AiProvider returned an empty structured-output body.',
       metadata,
       cause,
     );
@@ -244,7 +244,7 @@ export class ProfileExtractionSourceUnusableError extends ProfileExtractionError
  * Refusal detector found a refusal marker / empty body in the raw
  * `rawJsonText` returned by the model. Audit B2-M8.
  *
- * Distinct from {@link OpenAIRefusalError}: that error fires when
+ * Distinct from {@link AiProviderRefusalError}: that error fires when
  * the SDK's `choices[0].message.refusal` field is non-empty, which
  * is the upstream signal that the model declined the request
  * wholesale (non-retryable, by policy). This class fires when the
@@ -252,12 +252,12 @@ export class ProfileExtractionSourceUnusableError extends ProfileExtractionError
  * content itself is a refusal, an empty body, or a syntactic `{}` —
  * signals the upstream signal missed. Opt into the "retryable once"
  * budget via `correctiveRetry: true` (mirroring
- * {@link OpenAIInvalidOutputError}) so a transient content-filter
+ * {@link AiProviderInvalidOutputError}) so a transient content-filter
  * trigger gets one chance; the second occurrence aborts the call.
  */
 export class ProfileExtractionRefusalError
   extends ProfileExtractionError
-  implements RetryableOpenAIError
+  implements RetryableAiProviderError
 {
   readonly correctiveRetry = true;
 
@@ -274,14 +274,14 @@ export class ProfileExtractionRefusalError
 /**
  * Set of error codes that the retry policy treats as retryable. Using a
  * Set of string codes means the retry policy does not need `instanceof` and
- * can classify errors raised by the OpenAI SDK adapter or by the retry
+ * can classify errors raised by the AiProvider SDK adapter or by the retry
  * policy itself consistently.
  *
  * `scoring_invalid_structured_output` is included so the scoring layer's
  * `ScoringInvalidStructuredOutputError` (which lives outside the
  * `ProfileExtractionError` hierarchy) is classified as retryable-once.
  * The error class declares `correctiveRetry: true` via the
- * `RetryableOpenAIError` marker so the policy also enforces the
+ * `RetryableAiProviderError` marker so the policy also enforces the
  * single-permitted retry budget for it.
  */
 export const OPENAI_RETRYABLE_ERROR_CODES: ReadonlySet<string> = new Set([

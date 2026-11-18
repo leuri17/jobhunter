@@ -17,7 +17,7 @@ import { registerRunsRoutes } from './routes/runs.js';
 import { registerPipelineRoutes, abortAllActiveRuns } from './routes/pipeline.js';
 import { registerFilterRoutes } from './routes/filters.js';
 import { registerLinkedinGeoTypeaheadRoute } from './routes/linkedin-geo-typeahead.js';
-import { registerOpenAiRoutes } from './routes/openai.js';
+import { registerAiProviderRoutes } from './routes/ai-provider.js';
 import {
   DEFAULT_REDACT_PATHS,
   LOG_LEVELS,
@@ -31,7 +31,7 @@ import {
   type FileSystem,
   type LoadedConfig,
 } from '@jobhunter/core/config';
-import type { DefaultOpenAIClientRefusalOptions } from '@jobhunter/core/profile';
+import type { DefaultAiProviderClientRefusalOptions } from '@jobhunter/core/profile';
 import type { PlatformPaths } from '@jobhunter/core/platform';
 import type { DatabaseConnection } from '@jobhunter/core/persistence';
 
@@ -211,8 +211,8 @@ export interface BuildServerOptions {
   readonly processEnv?: NodeJS.ProcessEnv;
   readonly fileSystem?: FileSystem;
   /**
-   * Optional test/alternative seam: probes a candidate OpenAI key.
-   * Defaults to a throwaway `createDefaultOpenAIClient` with a short
+   * Optional test/alternative seam: probes a candidate AiProvider key.
+   * Defaults to a throwaway `createDefaultAiProviderClient` with a short
    * 10 s timeout. Resolves = key accepted; rejects = rejected or
    * unverifiable (the route maps typed errors to outcomes).
    */
@@ -225,7 +225,7 @@ export interface BuildServerOptions {
   /**
    * Optional test/alternative seam: lists the models the effective key
    * can access. `null` means "no key configured". Defaults to listing
-   * through `resolveOpenAiClientOrNull` with a short 10 s timeout.
+   * through `resolveAiProviderClientOrNull` with a short 10 s timeout.
    */
   readonly listModels?: () => Promise<readonly string[] | null>;
   /**
@@ -313,7 +313,7 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
       'secrets backend resolved',
     );
   }
-  const refusal: DefaultOpenAIClientRefusalOptions = resolveRefusalDetection(loaded);
+  const refusal: DefaultAiProviderClientRefusalOptions = resolveRefusalDetection(loaded);
   const app = Fastify({ loggerInstance: asFastifyBaseLogger(rootLogger) });
 
   // CORS for the two legitimate caller origins: the Tauri webview
@@ -373,7 +373,7 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
 
   await registerLinkedinGeoTypeaheadRoute(app);
 
-  await registerOpenAiRoutes(app, {
+  await registerAiProviderRoutes(app, {
     ...(opts.listModels !== undefined ? { listModels: opts.listModels } : {}),
   });
 

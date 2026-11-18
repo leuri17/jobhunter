@@ -73,7 +73,7 @@ export interface ReevaluationLogger {
 
   /**
    * Emitted when the user was prompted for scoring confirmation and
-   * declined. The score batch is then skipped (no OpenAI calls are
+   * declined. The score batch is then skipped (no AiProvider calls are
    * made).
    */
   reevaluationDecline(input: { scope: ReevaluationScope }): void;

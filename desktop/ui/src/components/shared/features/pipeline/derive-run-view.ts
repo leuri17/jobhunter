@@ -20,7 +20,7 @@ const SEARCH_PHASE_ORDER: readonly SearchLoopPhase[] = ['discovery', 'extraction
 
 export interface ScoringPlanSnapshot {
   readonly jobsDiscovered: number;
-  readonly newOpenAIRequests: number;
+  readonly newAiProviderRequests: number;
 }
 
 export interface RunView {
@@ -87,7 +87,7 @@ export function deriveRunView(
       case 'scoring_plan':
         scoringPlan = {
           jobsDiscovered: event.jobsDiscovered,
-          newOpenAIRequests: event.newOpenAIRequests,
+          newAiProviderRequests: event.newAiProviderRequests,
         };
         break;
       case 'scoring_confirmed':

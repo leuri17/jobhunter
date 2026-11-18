@@ -53,9 +53,9 @@ describe('Reevaluation errors', () => {
     const error = new ReevaluationError(
       'reevaluation_custom',
       'custom failure',
-      ExitCode.OpenAIFailure,
+      ExitCode.AiProviderFailure,
     );
-    expect(error.exitCode).toBe(ExitCode.OpenAIFailure);
+    expect(error.exitCode).toBe(ExitCode.AiProviderFailure);
   });
 
   it('ReevaluationValidationError preserves the cause chain', () => {

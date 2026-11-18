@@ -67,11 +67,11 @@ export interface ActionGuidance {
  */
 const CODE_GUIDANCE = {
   openai_unavailable: {
-    message: 'Add your OpenAI API key in Settings, under AI Provider.',
+    message: 'Add your AiProvider API key in Settings, under AI Provider.',
     actionLabel: 'Open settings',
   },
   openai_api_key_missing: {
-    message: 'Add your OpenAI API key in Settings, under AI Provider.',
+    message: 'Add your AiProvider API key in Settings, under AI Provider.',
     actionLabel: 'Open settings',
   },
   no_active_profile: {

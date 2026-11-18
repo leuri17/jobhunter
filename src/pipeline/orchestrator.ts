@@ -21,7 +21,7 @@ import {
   type PipelineRunStatus,
   type TopNRow,
 } from './state.js';
-import { PipelinePrerequisiteError, PipelineOpenAIKeyMissingError } from './errors.js';
+import { PipelinePrerequisiteError, PipelineAiProviderKeyMissingError } from './errors.js';
 import { assertPipelinePrerequisites } from './prerequisites.js';
 import type { PipelineEventSink, PipelineProgressEvent, PipelineRunCounters } from './events.js';
 import { buildConfigSnapshot } from './normalize.js';
@@ -56,7 +56,7 @@ export interface PipelineOrchestratorOptions {
   readonly confirmScoring: boolean;
   readonly env: Readonly<Record<string, string | undefined>>;
   /**
-   * Resolves the effective OpenAI API key. When omitted, `env` is read
+   * Resolves the effective AiProvider API key. When omitted, `env` is read
    * directly, which keeps the pre-Settings contract working for callers
    * that only supply `OPENAI_API_KEY`.
    */
@@ -251,20 +251,20 @@ export class PipelineOrchestrator {
 
     // Scoring plan + confirmation.
     const plan = this.buildScoringPlan(runId, searchIds, perJobs);
-    if (plan.newOpenAIRequests > 0) {
+    if (plan.newAiProviderRequests > 0) {
       this.emit({
         type: 'scoring_plan',
         runId,
         jobsDiscovered: plan.jobsDiscovered,
-        newOpenAIRequests: plan.newOpenAIRequests,
+        newAiProviderRequests: plan.newAiProviderRequests,
       });
     }
     let scoringDeclined = false;
-    if (plan.newOpenAIRequests > 0 && !this.confirmScoring && !cancelled) {
+    if (plan.newAiProviderRequests > 0 && !this.confirmScoring && !cancelled) {
       this.logger.scoringPlanDisplayed({
         runId,
         jobsDiscovered: plan.jobsDiscovered,
-        newRequests: plan.newOpenAIRequests,
+        newRequests: plan.newAiProviderRequests,
       });
       const confirmed = await this.prompts.askScoringConfirmation({ plan });
       if (confirmed) {
@@ -277,7 +277,7 @@ export class PipelineOrchestrator {
       }
     }
 
-    if (!scoringDeclined && !cancelled && plan.newOpenAIRequests > 0) {
+    if (!scoringDeclined && !cancelled && plan.newAiProviderRequests > 0) {
       try {
         await this.runScoring(runId, searchIds, perJobs, signal, stats);
       } catch (cause) {
@@ -571,7 +571,7 @@ export class PipelineOrchestrator {
       // recompute scoreOne's fingerprint, so every accepted job counts
       // as a new request. Scoring-time fingerprint reuse still
       // downgrades individual jobs to 'reused' (#327 — a hard-coded
-      // 'skipped' here zeroed newOpenAIRequests and the gate never
+      // 'skipped' here zeroed newAiProviderRequests and the gate never
       // opened at all).
       scoreKinds.set(p.job.id, 'complete' satisfies ScoringKind);
     }
@@ -582,7 +582,7 @@ export class PipelineOrchestrator {
       jobs,
       eligibleFlags,
       scoreKinds,
-      scoringConcurrency: this.config.rawConfig.openai.jobScoring.concurrency,
+      scoringConcurrency: this.config.rawConfig.aiProvider.jobScoring.concurrency,
     });
   }
 
@@ -712,9 +712,9 @@ export class PipelineOrchestrator {
   private async validatePrerequisites(): Promise<void> {
     const openAiKey = await this.resolveApiKeyForRun();
     if (openAiKey === null) {
-      throw new PipelineOpenAIKeyMissingError(
+      throw new PipelineAiProviderKeyMissingError(
         'openai_api_key_missing',
-        'An OpenAI API key is required to run the pipeline. Add one in Settings, or set OPENAI_API_KEY in your environment.',
+        'An AiProvider API key is required to run the pipeline. Add one in Settings, or set OPENAI_API_KEY in your environment.',
       );
     }
     await assertPipelinePrerequisites(this.repositories);

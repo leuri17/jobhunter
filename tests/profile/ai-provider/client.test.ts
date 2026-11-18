@@ -1,23 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { STRUCTURED_OUTPUT_SCHEMA_VERSION } from '../../../src/profile/openai/structured-output.js';
+import { STRUCTURED_OUTPUT_SCHEMA_VERSION } from '../../../src/profile/ai-provider/structured-output.js';
 import {
-  OpenAIAuthenticationError,
-  OpenAIBillingError,
-  OpenAIEmptyResponseError,
-  OpenAINetworkError,
-  OpenAIInvalidRequestError,
-  OpenAIRateLimitError,
-  OpenAIRefusalError,
-  OpenAIServerError,
-  OpenAIUnsupportedModelError,
+  AiProviderAuthenticationError,
+  AiProviderBillingError,
+  AiProviderEmptyResponseError,
+  AiProviderNetworkError,
+  AiProviderInvalidRequestError,
+  AiProviderRateLimitError,
+  AiProviderRefusalError,
+  AiProviderServerError,
+  AiProviderUnsupportedModelError,
   ProfileExtractionError,
   ProfileExtractionRefusalError,
-} from '../../../src/profile/openai/errors.js';
+} from '../../../src/profile/ai-provider/errors.js';
 
-import type { OpenAIExtractionRequest } from '../../../src/profile/openai/types.js';
+import type { AiProviderExtractionRequest } from '../../../src/profile/ai-provider/types.js';
 
-const REQUEST: OpenAIExtractionRequest = {
+const REQUEST: AiProviderExtractionRequest = {
   promptVersion: 'profile-extraction-prompt@v2',
   model: 'gpt-5.6-sol',
   reasoningEffort: 'medium',
@@ -43,7 +43,7 @@ vi.mock('openai', async (importOriginal) => {
   const actual = await importOriginal<typeof import('openai')>();
   return {
     ...actual,
-    default: class FakeOpenAI {
+    default: class FakeAiProvider {
       constructor(options: Record<string, unknown>) {
         fakeConstructor(options);
       }
@@ -59,7 +59,7 @@ vi.mock('openai', async (importOriginal) => {
   };
 });
 
-let createDefaultOpenAIClient: typeof import('../../../src/profile/openai/client.js').createDefaultOpenAIClient;
+let createDefaultAiProviderClient: typeof import('../../../src/profile/ai-provider/client.js').createDefaultAiProviderClient;
 let ApiError: typeof import('openai').APIError;
 let AuthenticationError: typeof import('openai').AuthenticationError;
 let PermissionDeniedError: typeof import('openai').PermissionDeniedError;
@@ -85,14 +85,14 @@ beforeEach(async () => {
     InternalServerError,
     APIConnectionError,
   } = sdk);
-  ({ createDefaultOpenAIClient } = await import('../../../src/profile/openai/client.js'));
+  ({ createDefaultAiProviderClient } = await import('../../../src/profile/ai-provider/client.js'));
 });
 
 afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('createDefaultOpenAIClient', () => {
+describe('createDefaultAiProviderClient', () => {
   it('returns the raw response text and the token usage on 200', async () => {
     fakeCreate.mockResolvedValueOnce({
       choices: [
@@ -105,7 +105,7 @@ describe('createDefaultOpenAIClient', () => {
       },
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     const result = await client.extract(REQUEST);
 
     expect(result.rawJsonText).toBe('{"basics":{"headline":"x"}}');
@@ -118,29 +118,29 @@ describe('createDefaultOpenAIClient', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     const result = await client.extract(REQUEST);
 
     expect(result.tokenUsage).toBeNull();
   });
 
-  it('passes apiKey and timeout into the OpenAI SDK constructor', async () => {
+  it('passes apiKey and timeout into the AiProvider SDK constructor', async () => {
     fakeCreate.mockResolvedValueOnce({
       choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop', index: 0 }],
       usage: null,
     });
 
-    createDefaultOpenAIClient({ apiKey: 'sk-test', timeoutMs: 12_345 });
+    createDefaultAiProviderClient({ apiKey: 'sk-test', timeoutMs: 12_345 });
     expect(fakeConstructor).toHaveBeenCalledWith({ apiKey: 'sk-test', timeout: 12_345 });
   });
 
-  it('passes request.messages through to the OpenAI SDK unchanged', async () => {
+  it('passes request.messages through to the AiProvider SDK unchanged', async () => {
     fakeCreate.mockResolvedValueOnce({
       choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop', index: 0 }],
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     await client.extract(REQUEST);
 
     expect(fakeCreate).toHaveBeenCalledTimes(1);
@@ -160,7 +160,7 @@ describe('createDefaultOpenAIClient', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     await client.extract({ ...REQUEST, maxCompletionTokens: 2000 });
 
     const call = fakeCreate.mock.calls[0]?.[0] as { max_completion_tokens?: number };
@@ -173,7 +173,7 @@ describe('createDefaultOpenAIClient', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     await client.extract(REQUEST);
 
     const call = fakeCreate.mock.calls[0]?.[0] as Record<string, unknown>;
@@ -186,7 +186,7 @@ describe('createDefaultOpenAIClient', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     await client.extract(REQUEST);
 
     const call = fakeCreate.mock.calls[0]?.[0] as {
@@ -205,20 +205,20 @@ describe('createDefaultOpenAIClient', () => {
   });
 
   it('throws UnknownResponseSchemaError when the request uses an unregistered name', async () => {
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     await expect(
       client.extract({ ...REQUEST, responseSchemaName: 'NoSuchSchema' }),
     ).rejects.toThrow(/Unknown response schema name/);
   });
 
   it('throws ResponseSchemaVersionMismatchError when the request version does not match', async () => {
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     await expect(
       client.extract({ ...REQUEST, structuredOutputSchemaVersion: 999 }),
     ).rejects.toThrow(/version mismatch/);
   });
 
-  it('translates 401 / AuthenticationError to OpenAIAuthenticationError', async () => {
+  it('translates 401 / AuthenticationError to AiProviderAuthenticationError', async () => {
     const sdkError = new AuthenticationError(
       401,
       { type: 'invalid_request_error', message: 'bad api key' },
@@ -227,11 +227,11 @@ describe('createDefaultOpenAIClient', () => {
     );
     fakeCreate.mockRejectedValueOnce(sdkError);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
-    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(OpenAIAuthenticationError);
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
+    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(AiProviderAuthenticationError);
   });
 
-  it('translates 403 / PermissionDeniedError to OpenAIPermissionError', async () => {
+  it('translates 403 / PermissionDeniedError to AiProviderPermissionError', async () => {
     const sdkError = new PermissionDeniedError(
       403,
       { type: 'invalid_request_error', message: 'no access' },
@@ -240,14 +240,14 @@ describe('createDefaultOpenAIClient', () => {
     );
     fakeCreate.mockRejectedValueOnce(sdkError);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     await expect(client.extract(REQUEST)).rejects.toMatchObject({
       code: 'openai_permission',
-      name: 'OpenAIPermissionError',
+      name: 'AiProviderPermissionError',
     });
   });
 
-  it('translates 429 with Retry-After: 2 to OpenAIRateLimitError(retryAfterMs = 2000)', async () => {
+  it('translates 429 with Retry-After: 2 to AiProviderRateLimitError(retryAfterMs = 2000)', async () => {
     const sdkError = new RateLimitError(
       429,
       { type: 'rate_limit_error', message: 'slow down' },
@@ -256,13 +256,13 @@ describe('createDefaultOpenAIClient', () => {
     );
     fakeCreate.mockRejectedValueOnce(sdkError);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
-    expect(rejected).toBeInstanceOf(OpenAIRateLimitError);
-    expect((rejected as OpenAIRateLimitError).retryAfterMs).toBe(2000);
+    expect(rejected).toBeInstanceOf(AiProviderRateLimitError);
+    expect((rejected as AiProviderRateLimitError).retryAfterMs).toBe(2000);
   });
 
-  it('translates 429 with insufficient_quota to OpenAIBillingError (not retryable)', async () => {
+  it('translates 429 with insufficient_quota to AiProviderBillingError (not retryable)', async () => {
     const sdkError = new RateLimitError(
       429,
       { type: 'insufficient_quota', code: 'insufficient_quota', message: 'no more credits' },
@@ -271,13 +271,13 @@ describe('createDefaultOpenAIClient', () => {
     );
     fakeCreate.mockRejectedValueOnce(sdkError);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
-    expect(rejected).toBeInstanceOf(OpenAIBillingError);
-    expect(rejected).not.toBeInstanceOf(OpenAIRateLimitError);
+    expect(rejected).toBeInstanceOf(AiProviderBillingError);
+    expect(rejected).not.toBeInstanceOf(AiProviderRateLimitError);
   });
 
-  it('translates 400 invalid_request_error to OpenAIInvalidRequestError', async () => {
+  it('translates 400 invalid_request_error to AiProviderInvalidRequestError', async () => {
     const sdkError = new BadRequestError(
       400,
       { type: 'invalid_request_error', message: 'bad schema' },
@@ -286,11 +286,11 @@ describe('createDefaultOpenAIClient', () => {
     );
     fakeCreate.mockRejectedValueOnce(sdkError);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
-    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(OpenAIInvalidRequestError);
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
+    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(AiProviderInvalidRequestError);
   });
 
-  it('translates 404 model_not_found to OpenAIUnsupportedModelError', async () => {
+  it('translates 404 model_not_found to AiProviderUnsupportedModelError', async () => {
     const sdkError = new NotFoundError(
       404,
       { type: 'model_not_found', code: 'model_not_found', message: 'unknown model' },
@@ -299,11 +299,11 @@ describe('createDefaultOpenAIClient', () => {
     );
     fakeCreate.mockRejectedValueOnce(sdkError);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
-    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(OpenAIUnsupportedModelError);
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
+    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(AiProviderUnsupportedModelError);
   });
 
-  it('translates 404 without model_not_found to OpenAIInvalidRequestError', async () => {
+  it('translates 404 without model_not_found to AiProviderInvalidRequestError', async () => {
     const sdkError = new NotFoundError(
       404,
       { type: 'invalid_request_error', message: 'no such endpoint' },
@@ -312,14 +312,14 @@ describe('createDefaultOpenAIClient', () => {
     );
     fakeCreate.mockRejectedValueOnce(sdkError);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
-    expect(rejected).toBeInstanceOf(OpenAIInvalidRequestError);
-    expect(rejected).not.toBeInstanceOf(OpenAIUnsupportedModelError);
+    expect(rejected).toBeInstanceOf(AiProviderInvalidRequestError);
+    expect(rejected).not.toBeInstanceOf(AiProviderUnsupportedModelError);
   });
 
-  it('translates 402 / quota to OpenAIBillingError', async () => {
-    // The OpenAI SDK has no dedicated 402 class; `APIError` is the
+  it('translates 402 / quota to AiProviderBillingError', async () => {
+    // The AiProvider SDK has no dedicated 402 class; `APIError` is the
     // base class for any status code without a more specific subclass.
     const sdkError = new ApiError(
       402,
@@ -329,11 +329,11 @@ describe('createDefaultOpenAIClient', () => {
     );
     fakeCreate.mockRejectedValueOnce(sdkError);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
-    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(OpenAIBillingError);
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
+    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(AiProviderBillingError);
   });
 
-  it('translates 500 server errors to OpenAIServerError', async () => {
+  it('translates 500 server errors to AiProviderServerError', async () => {
     const sdkError = new InternalServerError(
       500,
       { type: 'server_error', message: 'kaboom' },
@@ -342,23 +342,23 @@ describe('createDefaultOpenAIClient', () => {
     );
     fakeCreate.mockRejectedValueOnce(sdkError);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
-    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(OpenAIServerError);
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
+    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(AiProviderServerError);
   });
 
-  it('translates transport failures to OpenAINetworkError', async () => {
+  it('translates transport failures to AiProviderNetworkError', async () => {
     const sdkError = new APIConnectionError({ message: 'ECONNRESET', cause: new Error('reset') });
     fakeCreate.mockRejectedValueOnce(sdkError);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
-    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(OpenAINetworkError);
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
+    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(AiProviderNetworkError);
   });
 
   it('re-throws existing ProfileExtractionError subclasses unchanged', async () => {
-    const preserved = new OpenAIAuthenticationError();
+    const preserved = new AiProviderAuthenticationError();
     fakeCreate.mockRejectedValueOnce(preserved);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     let caught: unknown;
     try {
       await client.extract(REQUEST);
@@ -369,10 +369,10 @@ describe('createDefaultOpenAIClient', () => {
     expect(caught).toBeInstanceOf(ProfileExtractionError);
   });
 
-  it('raises OpenAIRefusalError when the model returns a refusal', async () => {
-    // The OpenAI SDK returns HTTP 200 on refusal; the model signals the
+  it('raises AiProviderRefusalError when the model returns a refusal', async () => {
+    // The AiProvider SDK returns HTTP 200 on refusal; the model signals the
     // decline via `choices[0].message.refusal` (with `content: null`).
-    // The client must surface this as a typed `OpenAIRefusalError`
+    // The client must surface this as a typed `AiProviderRefusalError`
     // instead of letting the caller parse an empty body as a real
     // extraction.
     fakeCreate.mockResolvedValueOnce({
@@ -386,22 +386,24 @@ describe('createDefaultOpenAIClient', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
-    expect(rejected).toBeInstanceOf(OpenAIRefusalError);
+    expect(rejected).toBeInstanceOf(AiProviderRefusalError);
     expect(rejected).toBeInstanceOf(ProfileExtractionError);
     // Refusals are policy decisions — retrying won't help, so the error
     // must NOT carry the corrective-retry marker.
-    expect((rejected as OpenAIRefusalError).refusalText).toBe('I cannot help with that request.');
+    expect((rejected as AiProviderRefusalError).refusalText).toBe(
+      'I cannot help with that request.',
+    );
     expect((rejected as ProfileExtractionError).code).toBe('openai_refusal');
   });
 
-  it('raises OpenAIEmptyResponseError when the model returns an empty content', async () => {
+  it('raises AiProviderEmptyResponseError when the model returns an empty content', async () => {
     // Some models emit `content: ""` on refusal-like behaviour without
     // populating the `refusal` field, or when truncation /
     // content-filter removes the completion. The client must fail loud
     // instead of returning an empty string that would later fail Zod
-    // validation as a generic `OpenAIInvalidOutputError`.
+    // validation as a generic `AiProviderInvalidOutputError`.
     fakeCreate.mockResolvedValueOnce({
       choices: [
         { message: { content: '', refusal: null }, finish_reason: 'content_filter', index: 0 },
@@ -409,14 +411,14 @@ describe('createDefaultOpenAIClient', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
-    expect(rejected).toBeInstanceOf(OpenAIEmptyResponseError);
+    expect(rejected).toBeInstanceOf(AiProviderEmptyResponseError);
     expect(rejected).toBeInstanceOf(ProfileExtractionError);
-    expect((rejected as OpenAIEmptyResponseError).code).toBe('openai_empty_response');
+    expect((rejected as AiProviderEmptyResponseError).code).toBe('openai_empty_response');
   });
 
-  it('raises OpenAIEmptyResponseError when the completion is missing choices', async () => {
+  it('raises AiProviderEmptyResponseError when the completion is missing choices', async () => {
     // Defensive: an SDK response with no `choices` array should be
     // treated identically to an empty content, not surfaced as `{}` or
     // `null` upstream.
@@ -425,8 +427,8 @@ describe('createDefaultOpenAIClient', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
-    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(OpenAIEmptyResponseError);
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
+    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(AiProviderEmptyResponseError);
   });
 
   it('treats a whitespace-only content as empty', async () => {
@@ -440,12 +442,12 @@ describe('createDefaultOpenAIClient', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
-    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(OpenAIEmptyResponseError);
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
+    await expect(client.extract(REQUEST)).rejects.toBeInstanceOf(AiProviderEmptyResponseError);
   });
 });
 
-describe('createDefaultOpenAIClient — refusal detector (audit B2-M8)', () => {
+describe('createDefaultAiProviderClient — refusal detector (audit B2-M8)', () => {
   it('raises ProfileExtractionRefusalError when the raw content contains a default refusal marker', async () => {
     // Pre-fix this would have returned the refusal text as a successful
     // (but empty) extraction; post-fix it surfaces as a typed refusal
@@ -465,7 +467,7 @@ describe('createDefaultOpenAIClient — refusal detector (audit B2-M8)', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
     expect(rejected).toBeInstanceOf(ProfileExtractionRefusalError);
     expect(rejected).toBeInstanceOf(ProfileExtractionError);
@@ -489,7 +491,7 @@ describe('createDefaultOpenAIClient — refusal detector (audit B2-M8)', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
     expect(rejected).toBeInstanceOf(ProfileExtractionRefusalError);
     const metadata = (rejected as ProfileExtractionError).metadata as Record<string, unknown>;
@@ -511,7 +513,7 @@ describe('createDefaultOpenAIClient — refusal detector (audit B2-M8)', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({
+    const client = createDefaultAiProviderClient({
       apiKey: 'sk-test',
       refusal: {
         refusalMarkers: ['Custom refusal phrase XYZ'],
@@ -539,7 +541,7 @@ describe('createDefaultOpenAIClient — refusal detector (audit B2-M8)', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({
+    const client = createDefaultAiProviderClient({
       apiKey: 'sk-test',
       refusal: { refusalMarkers: [], flagEmptyBodies: true },
     });
@@ -565,13 +567,13 @@ describe('createDefaultOpenAIClient — refusal detector (audit B2-M8)', () => {
       usage: null,
     });
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     const result = await client.extract(REQUEST);
     expect(result.rawJsonText).toBe('{"basics":{"headline":"Senior Engineer"}}');
   });
 });
 
-describe('createDefaultOpenAIClient — listModels', () => {
+describe('createDefaultAiProviderClient — listModels', () => {
   /**
    * Minimal stand-in for the SDK's `ModelsPage`: an object that is only
    * async-iterable, exactly the surface `listModels()` consumes.
@@ -597,7 +599,7 @@ describe('createDefaultOpenAIClient — listModels', () => {
       fakeModelsPage(['gpt-5.6-sol', 'gpt-4.1-nano', 'gpt-5.6-mini']),
     );
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     await expect(client.listModels()).resolves.toEqual([
       'gpt-4.1-nano',
       'gpt-5.6-mini',
@@ -605,7 +607,7 @@ describe('createDefaultOpenAIClient — listModels', () => {
     ]);
   });
 
-  it('translates an SDK authentication error from models.list to OpenAIAuthenticationError', async () => {
+  it('translates an SDK authentication error from models.list to AiProviderAuthenticationError', async () => {
     const sdkError = new AuthenticationError(
       401,
       { type: 'invalid_request_error', message: 'bad api key' },
@@ -614,7 +616,7 @@ describe('createDefaultOpenAIClient — listModels', () => {
     );
     fakeModelsList.mockRejectedValueOnce(sdkError);
 
-    const client = createDefaultOpenAIClient({ apiKey: 'sk-test' });
-    await expect(client.listModels()).rejects.toBeInstanceOf(OpenAIAuthenticationError);
+    const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
+    await expect(client.listModels()).rejects.toBeInstanceOf(AiProviderAuthenticationError);
   });
 });

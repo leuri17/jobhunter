@@ -11,10 +11,10 @@ import {
 } from '../../src/scoring/errors.js';
 
 describe('ScoringError', () => {
-  it('inherits from Error and uses ExitCode.OpenAIFailure (5)', () => {
+  it('inherits from Error and uses ExitCode.AiProviderFailure (5)', () => {
     const error = new ScoringError('test_code', 'test message');
     expect(error).toBeInstanceOf(Error);
-    expect(error.exitCode).toBe(ExitCode.OpenAIFailure);
+    expect(error.exitCode).toBe(ExitCode.AiProviderFailure);
     expect(error.exitCode).toBe(5);
     expect(error.code).toBe('test_code');
     expect(error.message).toBe('test message');

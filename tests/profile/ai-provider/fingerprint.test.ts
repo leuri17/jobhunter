@@ -5,7 +5,7 @@ import {
   PROFILE_EXTRACTION_PROMPT_VERSION,
   calculateExtractionFingerprint,
   type ExtractionFingerprintInputs,
-} from '../../../src/profile/openai/fingerprint.js';
+} from '../../../src/profile/ai-provider/fingerprint.js';
 
 function baseInputs(): ExtractionFingerprintInputs {
   return {

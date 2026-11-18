@@ -12,7 +12,7 @@ import type {
   ExtractedProject,
   ExtractedSkill,
   ExtractedWorkExperience,
-} from './openai/structured-output.js';
+} from './ai-provider/structured-output.js';
 import {
   PROFILE_SCHEMA_VERSION,
   type Certification,
@@ -27,7 +27,7 @@ import {
 } from './schema.js';
 
 /**
- * Deterministic post-processor that turns a validated OpenAI
+ * Deterministic post-processor that turns a validated AiProvider
  * `ExtractedProfile` into a canonical `ProfessionalProfile`.
  *
  * Pure domain module: depends only on `zod`, `node:crypto`, and the helper

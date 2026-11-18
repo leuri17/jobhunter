@@ -16,11 +16,11 @@ import { FilterApplyService } from '../../src/filter/service.js';
 import { ScoringService } from '../../src/scoring/service.js';
 import { DiagnosticManager } from '../../src/diagnostics/manager.js';
 import {
-  FakeOpenAIClient,
-  type FakeOpenAIClientScript,
-} from '../../src/profile/openai/fake-client.js';
-import type { OpenAIClient } from '../../src/profile/openai/types.js';
-import type { OpenAIExtractionRawResponse } from '../../src/profile/openai/types.js';
+  FakeAiProviderClient,
+  type FakeAiProviderClientScript,
+} from '../../src/profile/ai-provider/fake-client.js';
+import type { AiProviderClient } from '../../src/profile/ai-provider/types.js';
+import type { AiProviderExtractionRawResponse } from '../../src/profile/ai-provider/types.js';
 import { PipelineOrchestrator } from '../../src/pipeline/orchestrator.js';
 import { ScriptedPipelinePrompts } from '../../src/pipeline/prompts.js';
 import { noopPipelineLogger, type PipelineLogger } from '../../src/pipeline/log.js';
@@ -36,10 +36,10 @@ export interface RunHarnessOptions {
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly applicationVersion?: string;
   readonly now?: () => Date;
-  readonly fakeResponses?: readonly OpenAIExtractionRawResponse[];
-  readonly fakeScripts?: readonly FakeOpenAIClientScript[];
+  readonly fakeResponses?: readonly AiProviderExtractionRawResponse[];
+  readonly fakeScripts?: readonly FakeAiProviderClientScript[];
   readonly logger?: PipelineLogger;
-  readonly openAIClient?: OpenAIClient;
+  readonly aiProviderClient?: AiProviderClient;
   /** Forwarded to the orchestrator for progress-event tests. */
   readonly onEvent?: PipelineEventSink;
   /**
@@ -69,7 +69,7 @@ export interface RunHarness {
   readonly repositories: Repositories;
   readonly connection: DatabaseConnection;
   readonly browserSession: FakeBrowserSession;
-  readonly openAIClient: OpenAIClient;
+  readonly aiProviderClient: AiProviderClient;
   readonly scoringService: ScoringService;
   readonly filterApplyService: FilterApplyService;
   readonly discoveryService: LinkedInDiscoveryService;
@@ -94,13 +94,13 @@ export function buildRunHarness(options: RunHarnessOptions = {}): RunHarness {
     options.createPage !== undefined
       ? new FakeBrowserSession({ createPage: options.createPage })
       : new FakeBrowserSession();
-  const openAIClient: OpenAIClient = (() => {
-    if (options.openAIClient !== undefined) return options.openAIClient;
-    if (options.fakeScripts !== undefined) return new FakeOpenAIClient(options.fakeScripts);
+  const aiProviderClient: AiProviderClient = (() => {
+    if (options.aiProviderClient !== undefined) return options.aiProviderClient;
+    if (options.fakeScripts !== undefined) return new FakeAiProviderClient(options.fakeScripts);
     if (options.fakeResponses !== undefined) {
-      return new FakeOpenAIClient({ responses: options.fakeResponses });
+      return new FakeAiProviderClient({ responses: options.fakeResponses });
     }
-    return new FakeOpenAIClient({ responses: [] });
+    return new FakeAiProviderClient({ responses: [] });
   })();
   const diagnosticManager = new DiagnosticManager({
     config: {
@@ -121,17 +121,17 @@ export function buildRunHarness(options: RunHarnessOptions = {}): RunHarness {
 
   // Note: `ScoringService` does NOT accept a `diagnosticManager`
   // the scoring pipeline persists its own diagnostic metadata via
-  // `openaiMetadata`. The scorer logs go through the
+  // `aiProviderMetadata`. The scorer logs go through the
   // `ScoringLogger` seam, not the run-level `DiagnosticManager`.
   const scoringService =
     options.scoringServiceOverride ??
     new ScoringService({
       repositories,
-      openaiClient: openAIClient,
+      aiProviderClient: aiProviderClient,
       config: {
-        model: config.openai.jobScoring.model,
-        reasoningEffort: config.openai.jobScoring.reasoningEffort,
-        concurrency: config.openai.jobScoring.concurrency,
+        model: config.aiProvider.jobScoring.model,
+        reasoningEffort: config.aiProvider.jobScoring.reasoningEffort,
+        concurrency: config.aiProvider.jobScoring.concurrency,
       },
     });
 
@@ -190,7 +190,7 @@ export function buildRunHarness(options: RunHarnessOptions = {}): RunHarness {
     repositories,
     connection,
     browserSession,
-    openAIClient,
+    aiProviderClient,
     scoringService,
     filterApplyService,
     discoveryService,

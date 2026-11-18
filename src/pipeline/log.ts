@@ -4,7 +4,7 @@ import type { Logger } from '../logging/logger.js';
  * Structured-logger seam for the pipeline orchestrator.
  *
  * The orchestrator calls each method on transition events with
- * no secrets, no prompt transcripts, no raw OpenAI responses.
+ * no secrets, no prompt transcripts, no raw AiProvider responses.
  */
 export interface PipelineLogger {
   runStart(input: { runId: number }): void;

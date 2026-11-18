@@ -1,4 +1,4 @@
-// Prerequisites banner: the three persisted gates a run needs (OpenAI
+// Prerequisites banner: the three persisted gates a run needs (AiProvider
 // key, approved profile, active filter) plus the config hash. Missing
 // gates link to where they're fixed — except the filter, which has no
 // in-app management yet (issue #301) and says so instead of linking.
@@ -64,7 +64,7 @@ export function PrerequisitesBanner({ data, failed }: PrerequisitesBannerProps) 
   }
 
   const missing = [
-    !data.openaiKeyConfigured,
+    !data.aiProviderKeyConfigured,
     data.activeProfile === null,
     data.activeFilter === null,
   ].filter(Boolean).length;
@@ -95,14 +95,14 @@ export function PrerequisitesBanner({ data, failed }: PrerequisitesBannerProps) 
 
       <div className="mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
         <div className="flex items-start gap-2 text-sm">
-          {data.openaiKeyConfigured ? (
+          {data.aiProviderKeyConfigured ? (
             <CheckIcon className="mt-0.5 size-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
           ) : (
             <XIcon className="mt-0.5 size-3.5 shrink-0 text-amber-500" aria-hidden="true" />
           )}
           <span className="text-muted-foreground">
-            OpenAI API key:{' '}
-            {data.openaiKeyConfigured ? (
+            AiProvider API key:{' '}
+            {data.aiProviderKeyConfigured ? (
               <span className="text-foreground">configured</span>
             ) : (
               <span className="text-foreground">

@@ -1,19 +1,19 @@
 import { and, desc, eq, gte } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { openaiRequestMetadata } from '../schema.js';
+import { aiProviderRequestMetadata } from '../schema.js';
 import { jsonColumn } from './codecs.js';
 import type { RepositoryContext } from './types.js';
 
 const unknownJson = jsonColumn<unknown>(z.unknown());
 
-type OpenAIOperationType = 'profile_extraction' | 'job_scoring';
-type OpenAIEntityRefType = 'profile_version' | 'score_result';
+type AiProviderOperationType = 'profile_extraction' | 'job_scoring';
+type AiProviderEntityRefType = 'profile_version' | 'score_result';
 
-interface OpenAIRequestMetadataRow {
+interface AiProviderRequestMetadataRow {
   readonly id: number;
-  readonly operationType: OpenAIOperationType;
-  readonly relatedEntityType: OpenAIEntityRefType | null;
+  readonly operationType: AiProviderOperationType;
+  readonly relatedEntityType: AiProviderEntityRefType | null;
   readonly relatedEntityId: number | null;
   readonly inputHashes: readonly unknown[];
   readonly promptVersion: string;
@@ -31,9 +31,9 @@ interface OpenAIRequestMetadataRow {
   readonly errorMessage: string | null;
 }
 
-interface OpenAIRequestMetadataInsert {
-  readonly operationType: OpenAIOperationType;
-  readonly relatedEntityType?: OpenAIEntityRefType | null;
+interface AiProviderRequestMetadataInsert {
+  readonly operationType: AiProviderOperationType;
+  readonly relatedEntityType?: AiProviderEntityRefType | null;
   readonly relatedEntityId?: number | null;
   readonly inputHashes: readonly unknown[];
   readonly promptVersion: string;
@@ -52,8 +52,8 @@ interface OpenAIRequestMetadataInsert {
 }
 
 function rowFromRecord(
-  record: typeof openaiRequestMetadata.$inferSelect,
-): OpenAIRequestMetadataRow {
+  record: typeof aiProviderRequestMetadata.$inferSelect,
+): AiProviderRequestMetadataRow {
   return {
     id: record.id,
     operationType: record.operationType,
@@ -76,12 +76,12 @@ function rowFromRecord(
   };
 }
 
-export class OpenAIRequestMetadataRepository {
+export class AiProviderRequestMetadataRepository {
   constructor(private readonly ctx: RepositoryContext) {}
 
-  async insert(input: OpenAIRequestMetadataInsert): Promise<number> {
+  async insert(input: AiProviderRequestMetadataInsert): Promise<number> {
     const result = this.ctx.db
-      .insert(openaiRequestMetadata)
+      .insert(aiProviderRequestMetadata)
       .values({
         operationType: input.operationType,
         relatedEntityType: input.relatedEntityType ?? null,
@@ -107,57 +107,57 @@ export class OpenAIRequestMetadataRepository {
         errorCode: input.errorCode ?? null,
         errorMessage: input.errorMessage ?? null,
       })
-      .returning({ id: openaiRequestMetadata.id })
+      .returning({ id: aiProviderRequestMetadata.id })
       .all();
     const row = result[0];
     if (row === undefined) throw new Error('insert returned no rows');
     return row.id;
   }
 
-  async findById(id: number): Promise<OpenAIRequestMetadataRow | null> {
+  async findById(id: number): Promise<AiProviderRequestMetadataRow | null> {
     const rows = this.ctx.db
       .select()
-      .from(openaiRequestMetadata)
-      .where(eq(openaiRequestMetadata.id, id))
+      .from(aiProviderRequestMetadata)
+      .where(eq(aiProviderRequestMetadata.id, id))
       .all();
     const row = rows[0];
     return row === undefined ? null : rowFromRecord(row);
   }
 
   async listByOperation(
-    operationType: OpenAIOperationType,
+    operationType: AiProviderOperationType,
     opts?: { sinceTimestamp?: string; limit?: number },
-  ): Promise<readonly OpenAIRequestMetadataRow[]> {
-    const base = this.ctx.db.select().from(openaiRequestMetadata);
+  ): Promise<readonly AiProviderRequestMetadataRow[]> {
+    const base = this.ctx.db.select().from(aiProviderRequestMetadata);
     const filtered =
       opts?.sinceTimestamp === undefined
-        ? base.where(eq(openaiRequestMetadata.operationType, operationType))
+        ? base.where(eq(aiProviderRequestMetadata.operationType, operationType))
         : base.where(
             and(
-              eq(openaiRequestMetadata.operationType, operationType),
-              gte(openaiRequestMetadata.startTimestamp, opts.sinceTimestamp),
+              eq(aiProviderRequestMetadata.operationType, operationType),
+              gte(aiProviderRequestMetadata.startTimestamp, opts.sinceTimestamp),
             ),
           );
-    const ordered = filtered.orderBy(desc(openaiRequestMetadata.startTimestamp));
+    const ordered = filtered.orderBy(desc(aiProviderRequestMetadata.startTimestamp));
     const limited = opts?.limit === undefined ? ordered : ordered.limit(opts.limit);
     const rows = limited.all();
     return rows.map(rowFromRecord);
   }
 
   async listByRelatedEntity(
-    entityType: OpenAIEntityRefType,
+    entityType: AiProviderEntityRefType,
     entityId: number,
-  ): Promise<readonly OpenAIRequestMetadataRow[]> {
+  ): Promise<readonly AiProviderRequestMetadataRow[]> {
     const rows = this.ctx.db
       .select()
-      .from(openaiRequestMetadata)
+      .from(aiProviderRequestMetadata)
       .where(
         and(
-          eq(openaiRequestMetadata.relatedEntityType, entityType),
-          eq(openaiRequestMetadata.relatedEntityId, entityId),
+          eq(aiProviderRequestMetadata.relatedEntityType, entityType),
+          eq(aiProviderRequestMetadata.relatedEntityId, entityId),
         ),
       )
-      .orderBy(desc(openaiRequestMetadata.startTimestamp))
+      .orderBy(desc(aiProviderRequestMetadata.startTimestamp))
       .all();
     return rows.map(rowFromRecord);
   }

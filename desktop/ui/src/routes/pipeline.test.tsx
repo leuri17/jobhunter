@@ -61,7 +61,7 @@ vi.mock('@/lib/sse', () => ({
 
 const prerequisitesFixture: PipelinePrerequisitesResponse = {
   schemaVersion: 1,
-  openaiKeyConfigured: true,
+  aiProviderKeyConfigured: true,
   activeProfile: { id: 7, contentHash: 'a'.repeat(64) },
   activeFilter: { id: 3, contentHash: 'b'.repeat(64) },
   configHash: 'c'.repeat(64),

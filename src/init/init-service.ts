@@ -48,10 +48,10 @@ import type { SearchPrompts } from '../search/index.js';
 import { SearchCancelledError } from '../search/errors.js';
 import { UserCancelledFilterConfigError } from '../filter/errors.js';
 import type { FileSystem } from '../config/file-system.js';
-import type { OpenAIClient } from '../profile/openai/types.js';
+import type { AiProviderClient } from '../profile/ai-provider/types.js';
 import { resolveApiKeySource } from '../config/api-key.js';
 import type { SecretsStore } from '../config/secrets.js';
-import { emptySecretsStore } from './openai-resolve.js';
+import { emptySecretsStore } from './ai-provider-resolve.js';
 
 import {
   InitApprovalFailedError,
@@ -78,7 +78,7 @@ import {
   classifyExtract,
   classifyFilters,
   classifyMigrations,
-  classifyOpenAiKey,
+  classifyAiProviderKey,
   classifyPaths,
   classifySearch,
   classifySources,
@@ -100,7 +100,7 @@ export interface InitOrchestratorOptions {
   /** Injected by the desktop sidecar; tests may supply a scripted or failing adapter. */
   readonly prompts: InitPrompts;
   /** Injected by the desktop sidecar (or by tests); null when `OPENAI_API_KEY` is absent. */
-  readonly openaiClient: OpenAIClient | null;
+  readonly aiProviderClient: AiProviderClient | null;
   /** Optional. Wired by the sidecar to the search prompts adapter; tests inject scripted. */
   readonly searchPrompts?: SearchPrompts;
   /** Optional. Wired by the sidecar to the filter prompts adapter; tests inject scripted. */
@@ -154,7 +154,7 @@ export class InitOrchestrator {
    * `secretsStore` option) wins over `env`, and an unreadable store
    * falls through to `env`. Tests inject an `env` record (and, when
    * the scenario needs it, a scripted store) while passing
-   * `openaiClient: null` when the client itself is irrelevant.
+   * `aiProviderClient: null` when the client itself is irrelevant.
    */
   async run(env: Readonly<Record<string, string | undefined>>): Promise<SetupSummary> {
     const opts = this.options;
@@ -164,11 +164,11 @@ export class InitOrchestrator {
       InitStepId,
       InitStepReport
     >;
-    // `openaiClient` is the constructed client (may be null even when
+    // `aiProviderClient` is the constructed client (may be null even when
     // the key is set, e.g. when the test injects env without a real
     // client). The orchestrator treats key absence as skip-not-fail
-    // for the extract step regardless of whether `openaiClient` is
-    // null — tests inject `openaiClient: null` to simulate the
+    // for the extract step regardless of whether `aiProviderClient` is
+    // null — tests inject `aiProviderClient: null` to simulate the
     // absence side of the gate.
     const openAiKeySource = await resolveApiKeySource({
       store: opts.secretsStore ?? emptySecretsStore(),
@@ -229,7 +229,7 @@ export class InitOrchestrator {
           artifactId: null,
         };
         logger.stepFail({ stepId: 'config', errorCode: 'config_invalid', message: error.message });
-        return this.buildSummary(stepReports, /* openAiKeyMissing */ false, opts);
+        return this.buildSummary(stepReports, /* aiProviderKeyMissing */ false, opts);
       }
       throw error;
     }
@@ -262,8 +262,8 @@ export class InitOrchestrator {
       logger.stepComplete({ stepId: 'config', artifactId: null });
     }
 
-    // === step 5: openaiKey ===
-    stepReports['openaiKey'] = classifyOpenAiKey({ source: openAiKeySource });
+    // === step 5: aiProviderKey ===
+    stepReports['aiProviderKey'] = classifyAiProviderKey({ source: openAiKeySource });
 
     // === step 6: search ===
     const persistedSearch = normalizePersistedSearchConfig(loadedConfig.config.search);
@@ -447,19 +447,19 @@ export class InitOrchestrator {
       logger.stepStart({ stepId: 'extract' });
       stepReports['extract'] = extractReport;
       logger.stepComplete({ stepId: 'extract', artifactId: null });
-      return this.buildSummary(stepReports, /* openAiKeyMissing */ true, opts);
+      return this.buildSummary(stepReports, /* aiProviderKeyMissing */ true, opts);
     }
     if (extractReport.status === 'not_started') {
       // No usable sources — the sources step was skipped or failed
       // silently. Skip extract too.
       stepReports['extract'] = extractReport;
-      return this.buildSummary(stepReports, /* openAiKeyMissing */ false, opts);
+      return this.buildSummary(stepReports, /* aiProviderKeyMissing */ false, opts);
     }
     if (extractReport.status === 'complete') {
       stepReports['extract'] = extractReport;
     } else {
       // `incomplete` with `reason: null` — needs a fresh extract run.
-      if (opts.openaiClient === null) {
+      if (opts.aiProviderClient === null) {
         // Defensive: the classifier said "incomplete without key" but
         // we already passed that branch. The key must have been
         // dropped between the classify call and here (impossible in
@@ -472,21 +472,21 @@ export class InitOrchestrator {
       logger.stepStart({ stepId: 'extract' });
       try {
         const extractionConfig: ProfileExtractionConfig = {
-          model: loadedConfig!.config.openai.profileExtraction.model,
-          reasoningEffort: loadedConfig!.config.openai.profileExtraction.reasoningEffort,
+          model: loadedConfig!.config.aiProvider.profileExtraction.model,
+          reasoningEffort: loadedConfig!.config.aiProvider.profileExtraction.reasoningEffort,
         };
         const service = new ProfileExtractionService(
           opts.extractionLogger !== undefined
             ? {
                 repositories: opts.repositories,
-                openaiClient: opts.openaiClient,
+                aiProviderClient: opts.aiProviderClient,
                 config: extractionConfig,
                 now,
                 logger: opts.extractionLogger,
               }
             : {
                 repositories: opts.repositories,
-                openaiClient: opts.openaiClient,
+                aiProviderClient: opts.aiProviderClient,
                 config: extractionConfig,
                 now,
               },
@@ -771,13 +771,13 @@ export class InitOrchestrator {
   /**
    * Build the typed `SetupSummary` from the per-step reports recorded so
    * far. `ready` is `true` only when every step is `complete`.
-   * `openAiKeyMissing` is the explicit Decision-4 flag (derived from
-   * the `extract` step's `reason` — NOT from `classifyOpenAiKey`,
+   * `aiProviderKeyMissing` is the explicit Decision-4 flag (derived from
+   * the `extract` step's `reason` — NOT from `classifyAiProviderKey`,
    * which always returns `complete` per Finding 4a).
    */
   private buildSummary(
     stepReports: Record<InitStepId, InitStepReport>,
-    openAiKeyMissing: boolean,
+    aiProviderKeyMissing: boolean,
     _opts: InitOrchestratorOptions,
   ): SetupSummary {
     const steps: InitStepReport[] = INIT_STEPS.map(
@@ -798,7 +798,7 @@ export class InitOrchestrator {
       ready,
       steps,
       nextStep,
-      openAiKeyMissing,
+      aiProviderKeyMissing,
     };
   }
 }

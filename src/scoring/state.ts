@@ -13,7 +13,7 @@ import type { ScoringCategory } from './types.js';
  * or related shapes. This is separate from
  * `SCORING_STRUCTURED_OUTPUT_SCHEMA_VERSION` (the Zod schema
  * version) because the state vocabulary can evolve independently
- * of the OpenAI structured-output projection.
+ * of the AiProvider structured-output projection.
  */
 export const LINKEDIN_SCORING_SCHEMA_VERSION = 1 as const;
 export type LinkedinScoringSchemaVersion = typeof LINKEDIN_SCORING_SCHEMA_VERSION;
@@ -26,11 +26,11 @@ export { SCORING_CATEGORIES } from './types.js';
 /** Outcome kind for a single job's scoring attempt. */
 export type ScoringKind = 'reused' | 'complete' | 'failed' | 'skipped' | 'cancelled';
 
-/** Tag for the only scoring method in MVP — OpenAI structured output. */
+/** Tag for the only scoring method in MVP — AiProvider structured output. */
 export type ScoringMethod = 'openai_structured_output';
 
 /**
- * The structured fields returned by OpenAI for one scoring request.
+ * The structured fields returned by AiProvider for one scoring request.
  * Derived from the Zod source of truth via `z.infer` (H6) so the
  * type and the validator stay in lock-step.
  */
@@ -91,7 +91,7 @@ export interface ScoringPlan {
   readonly jobsDiscovered: number;
   readonly jobsAccepted: number;
   readonly scoresReused: number;
-  readonly newOpenAIRequests: number;
+  readonly newAiProviderRequests: number;
   readonly skippedScoringCategories: readonly ScoringCategory[];
   readonly scoringConcurrency: number;
   readonly perJob: readonly ScoringPlanEntry[];

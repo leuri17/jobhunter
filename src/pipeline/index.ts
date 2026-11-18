@@ -16,7 +16,7 @@ export {
 export {
   PipelineLifecycleError,
   PipelinePrerequisiteError,
-  PipelineOpenAIKeyMissingError,
+  PipelineAiProviderKeyMissingError,
 } from './errors.js';
 
 export { noopPipelineLogger, pinoPipelineLogger, type PipelineLogger } from './log.js';

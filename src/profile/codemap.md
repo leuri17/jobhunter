@@ -27,7 +27,7 @@ Pino.
   content-addressable extraction fingerprint (source SHA-256s + schema +
   prompt + model + structured-output + extractor versions) for draft reuse,
   re-reads stored bytes through the same extractor + normalizer, builds
-  the prompt via `openai/prompt.ts`, calls `OpenAIClient.extract` under
+  the prompt via `openai/prompt.ts`, calls `AiProviderClient.extract` under
   `runWithRetry`, Zod-parses against
   `createExtractedProfileSchema(knownSourceIds)`, then funnels through the
   pure `postProcessExtractionResponse` (rehash via
@@ -98,20 +98,20 @@ Pure helpers live in `review/` (`renderReviewSummary`,
   - `src/init/init-service.ts`: wires `ProfileImportService`,
     `ProfileExtractionService`, `ProfileApprovalService`,
     `ProfileRejectionService` for the first-run init flow.
-  - `src/init/openai-resolve.ts`: instantiates `createDefaultOpenAIClient`.
+  - `src/init/ai-provider-resolve.ts`: instantiates `createDefaultAiProviderClient`.
   - `src/reevaluation/fingerprint.ts`: imports `hashString` and
     `ProfessionalProfile` for candidate versioning.
   - `src/scoring/service.ts`, `src/scoring/fingerprint.ts`: reuse
-    `hashString`, `runWithRetry`, `OpenAIClient`, response-schema registry.
+    `hashString`, `runWithRetry`, `AiProviderClient`, response-schema registry.
   - `src/pipeline/orchestrator.ts`: drives the lifecycle across init,
     filtering, scoring, and reevaluation.
   - `src/filter/`: imports `SeniorityLevelSchema`, `SENIORITY_LEVELS`,
     `normalizeLanguageName`, `ProfessionalProfile` for rule matching.
 - **Collaborators** —
-  - `src/profile/openai/`: `OpenAIClient`, `runWithRetry`,
+  - `src/profile/ai-provider/`: `AiProviderClient`, `runWithRetry`,
     `buildProfileExtractionPrompt`, `calculateExtractionFingerprint`,
     `STRUCTURED_OUTPUT_SCHEMA_VERSION`, `createExtractedProfileSchema`,
-    `FakeOpenAIClient`, typed error family.
+    `FakeAiProviderClient`, typed error family.
   - `src/profile/extractors/`: `resolveExtractor` → `PdfExtractor`,
     `MarkdownExtractor`, `PlainTextExtractor`.
   - `src/profile/review/`: `renderReviewSummary`,

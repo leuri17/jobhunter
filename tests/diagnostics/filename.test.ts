@@ -47,8 +47,8 @@ describe('resolveScopeDirectory', () => {
     expect(resolveScopeDirectory({ pipelineRunId: 0, jobId: -1 })).toBe('unscoped');
   });
 
-  it('emits openai-<id> segment when openaiRequestId is set', () => {
-    expect(resolveScopeDirectory({ openaiRequestId: 42 })).toBe('openai-42');
+  it('emits openai-<id> segment when aiProviderRequestId is set', () => {
+    expect(resolveScopeDirectory({ aiProviderRequestId: 42 })).toBe('openai-42');
   });
 
   it('nests openai-<id> after the other segments', () => {
@@ -57,15 +57,15 @@ describe('resolveScopeDirectory', () => {
         pipelineRunId: 7,
         searchExecutionId: 42,
         jobId: 99,
-        openaiRequestId: 123,
+        aiProviderRequestId: 123,
       }),
     ).toBe('run-7/search-42/job-99/openai-123');
   });
 
-  it('skips openaiRequestId when zero, negative, or null', () => {
-    expect(resolveScopeDirectory({ openaiRequestId: 0 })).toBe('unscoped');
-    expect(resolveScopeDirectory({ openaiRequestId: -1 })).toBe('unscoped');
-    expect(resolveScopeDirectory({ openaiRequestId: null })).toBe('unscoped');
+  it('skips aiProviderRequestId when zero, negative, or null', () => {
+    expect(resolveScopeDirectory({ aiProviderRequestId: 0 })).toBe('unscoped');
+    expect(resolveScopeDirectory({ aiProviderRequestId: -1 })).toBe('unscoped');
+    expect(resolveScopeDirectory({ aiProviderRequestId: null })).toBe('unscoped');
   });
 });
 
@@ -95,7 +95,7 @@ describe('buildSafeFilename', () => {
   it('includes openai-<id> in the basename and the relative path', () => {
     const { basename, relativePath } = buildSafeFilename({
       artifactType: 'openai_error',
-      scope: { pipelineRunId: 7, jobId: 99, openaiRequestId: 123 },
+      scope: { pipelineRunId: 7, jobId: 99, aiProviderRequestId: 123 },
       extension: 'json',
       timestamp: '2026-08-13T10:00:00.000Z',
     });
@@ -107,7 +107,7 @@ describe('buildSafeFilename', () => {
     );
   });
 
-  it('omits the openai segment when openaiRequestId is absent', () => {
+  it('omits the openai segment when aiProviderRequestId is absent', () => {
     const { basename } = buildSafeFilename({
       artifactType: 'screenshot',
       scope: { pipelineRunId: 7 },

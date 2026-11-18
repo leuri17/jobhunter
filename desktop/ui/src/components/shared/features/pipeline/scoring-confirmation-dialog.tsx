@@ -19,7 +19,7 @@ import {
 interface ScoringConfirmationDialogProps {
   readonly open: boolean;
   readonly jobsDiscovered: number;
-  readonly newOpenAIRequests: number;
+  readonly newAiProviderRequests: number;
   readonly model: string | undefined;
   readonly deciding: boolean;
   readonly onScore: () => void;
@@ -31,14 +31,14 @@ interface ScoringConfirmationDialogProps {
 export function ScoringConfirmationDialog({
   open,
   jobsDiscovered,
-  newOpenAIRequests,
+  newAiProviderRequests,
   model,
   deciding,
   onScore,
   onSkip,
   onDismiss,
 }: ScoringConfirmationDialogProps) {
-  const requestsLabel = `${newOpenAIRequests} new OpenAI ${newOpenAIRequests === 1 ? 'request' : 'requests'}`;
+  const requestsLabel = `${newAiProviderRequests} new AiProvider ${newAiProviderRequests === 1 ? 'request' : 'requests'}`;
   return (
     <AlertDialog
       open={open}

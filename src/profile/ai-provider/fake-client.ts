@@ -1,11 +1,11 @@
 import type {
-  OpenAIExtractionRawResponse,
-  OpenAIExtractionRequest,
-  OpenAIClient,
+  AiProviderExtractionRawResponse,
+  AiProviderExtractionRequest,
+  AiProviderClient,
 } from './types.js';
 
 /**
- * Script entry for `FakeOpenAIClient`.
+ * Script entry for `FakeAiProviderClient`.
  *
  * Tests provide either a queue of `responses` (dequeued in order across
  * calls) or an `error` to reject the next call with. When the queue is
@@ -15,14 +15,14 @@ import type {
  * the given number of milliseconds so the caller can exercise retry
  * timing without sleeping the whole test process.
  */
-export interface FakeOpenAIClientScript {
-  readonly responses?: readonly OpenAIExtractionRawResponse[];
+export interface FakeAiProviderClientScript {
+  readonly responses?: readonly AiProviderExtractionRawResponse[];
   readonly error?: Error;
   readonly delayMs?: number;
 }
 
 /**
- * Deterministic `OpenAIClient` for tests.
+ * Deterministic `AiProviderClient` for tests.
  *
  * The constructor accepts either a single script (reused for every call —
  * the `responses` array is a queue consumed across calls) or an array of
@@ -30,9 +30,9 @@ export interface FakeOpenAIClientScript {
  * recorded in `requests` so the test can assert what the production
  * service sent.
  */
-export class FakeOpenAIClient implements OpenAIClient {
-  readonly requests: OpenAIExtractionRequest[];
-  private readonly scripts: FakeOpenAIClientScript[];
+export class FakeAiProviderClient implements AiProviderClient {
+  readonly requests: AiProviderExtractionRequest[];
+  private readonly scripts: FakeAiProviderClientScript[];
   private scriptIndex = 0;
   private readonly scriptCursor: number[];
 
@@ -45,13 +45,13 @@ export class FakeOpenAIClient implements OpenAIClient {
   /** When set, `listModels()` rejects with it; otherwise it resolves. */
   modelsError: Error | null = null;
 
-  constructor(script: FakeOpenAIClientScript | readonly FakeOpenAIClientScript[]) {
+  constructor(script: FakeAiProviderClientScript | readonly FakeAiProviderClientScript[]) {
     this.requests = [];
     this.scripts = Array.isArray(script) ? [...script] : [script];
     this.scriptCursor = this.scripts.map(() => 0);
   }
 
-  async extract(request: OpenAIExtractionRequest): Promise<OpenAIExtractionRawResponse> {
+  async extract(request: AiProviderExtractionRequest): Promise<AiProviderExtractionRawResponse> {
     this.requests.push(request);
 
     let index: number;
@@ -76,7 +76,7 @@ export class FakeOpenAIClient implements OpenAIClient {
 
     const responses = script.responses ?? [];
     if (responses.length === 0) {
-      throw new Error('FakeOpenAIClient: script has no responses and no error.');
+      throw new Error('FakeAiProviderClient: script has no responses and no error.');
     }
 
     const responseIndex = Math.min(cursor, responses.length - 1);

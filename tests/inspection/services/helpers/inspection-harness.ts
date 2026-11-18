@@ -23,7 +23,7 @@ const MIGRATIONS_FOLDER = join(REPO_ROOT, 'drizzle');
  * orchestrator-level harness) and `tests/scoring/helpers/fake-scoring-pipeline.ts`
  * (the scoring-service harness). The inspection services are
  * read-only — they don't need a fake browser session, a fake
- * OpenAI client, or a configured orchestrator. Only the SQLite
+ * AiProvider client, or a configured orchestrator. Only the SQLite
  * connection + `Repositories` facade are required.
  *
  * - Uses `:memory:` SQLite per test (via a temporary file path so

@@ -19,7 +19,7 @@ describe('buildScoringPlan', () => {
     expect(plan.jobsDiscovered).toBe(0);
     expect(plan.jobsAccepted).toBe(0);
     expect(plan.scoresReused).toBe(0);
-    expect(plan.newOpenAIRequests).toBe(0);
+    expect(plan.newAiProviderRequests).toBe(0);
     expect(plan.perJob).toEqual([]);
     expect(plan.skippedScoringCategories).toEqual([]);
     expect(plan.scoringConcurrency).toBe(3);
@@ -51,7 +51,7 @@ describe('buildScoringPlan', () => {
     expect(plan.jobsDiscovered).toBe(3);
     expect(plan.jobsAccepted).toBe(3);
     expect(plan.scoresReused).toBe(0);
-    expect(plan.newOpenAIRequests).toBe(3);
+    expect(plan.newAiProviderRequests).toBe(3);
   });
 
   it('counts mixed: 3 jobs, 1 reused, 2 new', () => {
@@ -76,7 +76,7 @@ describe('buildScoringPlan', () => {
       scoringConcurrency: 3,
     });
     expect(plan.scoresReused).toBe(1);
-    expect(plan.newOpenAIRequests).toBe(2);
+    expect(plan.newAiProviderRequests).toBe(2);
   });
 
   it('counts ineligible: 3 jobs, 1 ineligible', () => {

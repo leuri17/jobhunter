@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 import type { OperationalConfig } from '@/lib/types';
 
 interface ScoringPanelProps {
-  readonly jobScoring: OperationalConfig['openai']['jobScoring'] | undefined;
+  readonly jobScoring: OperationalConfig['aiProvider']['jobScoring'] | undefined;
   /** Query settled with an error — say so instead of skeletoning forever. */
   readonly failed: boolean;
   readonly gateOn: boolean;
@@ -70,8 +70,8 @@ export function ScoringPanel({
               <Badge variant="secondary">Cost gate</Badge>
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Pause the run after filtering, show how many OpenAI requests it needs, and wait for
-              your OK before spending credits. Applies the next time you start a run.
+              Pause the run after filtering, show how many AiProvider requests it needs, and wait
+              for your OK before spending credits. Applies the next time you start a run.
             </p>
           </div>
           <Switch

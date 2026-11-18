@@ -25,8 +25,8 @@ import {
   type SearchPrompts,
   type SearchConfigurationPreview,
 } from '../../src/search/index.js';
-import { FakeOpenAIClient } from '../../src/profile/openai/fake-client.js';
-import type { OpenAIExtractionRawResponse } from '../../src/profile/openai/types.js';
+import { FakeAiProviderClient } from '../../src/profile/ai-provider/fake-client.js';
+import type { AiProviderExtractionRawResponse } from '../../src/profile/ai-provider/types.js';
 import type { SecretsStore } from '../../src/config/secrets.js';
 import { PROFILE_SCHEMA_VERSION, type ProfessionalProfile } from '../../src/profile/schema.js';
 import { hashString } from '../../src/profile/hashing.js';
@@ -106,7 +106,7 @@ function minimalProfileJson(id: string): ProfessionalProfile {
   };
 }
 
-function openAiResponse(): OpenAIExtractionRawResponse {
+function openAiResponse(): AiProviderExtractionRawResponse {
   return {
     rawJsonText: JSON.stringify({
       basics: {
@@ -163,12 +163,14 @@ function scriptedCancellingSearchPrompts(): SearchPrompts {
 }
 
 function fakeSecretsStore(
-  overrides: { openaiApiKey?: string; throws?: boolean } = {},
+  overrides: { aiProviderApiKey?: string; throws?: boolean } = {},
 ): SecretsStore {
   return {
     read: async () => {
       if (overrides.throws === true) throw new Error('store unavailable');
-      return overrides.openaiApiKey !== undefined ? { openaiApiKey: overrides.openaiApiKey } : {};
+      return overrides.aiProviderApiKey !== undefined
+        ? { aiProviderApiKey: overrides.aiProviderApiKey }
+        : {};
     },
     write: async () => undefined,
     clear: async () => undefined,
@@ -327,13 +329,13 @@ describe('InitOrchestrator', () => {
   }
 
   // -------------------------------------------------------------------
-  // Scenario 1: Fresh HOME, no OpenAI key — pre-seeded everything
+  // Scenario 1: Fresh HOME, no AiProvider key — pre-seeded everything
   // (config + search + sources + approved profile + filter config);
   // the orchestrator walks every step, finds the extract step
   // incomplete due to the missing key, and returns `ready: false,
-  // openAiKeyMissing: true`.
+  // aiProviderKeyMissing: true`.
   // -------------------------------------------------------------------
-  it('fresh HOME, no OpenAI key: ready=false, openAiKeyMissing=true', async () => {
+  it('fresh HOME, no AiProvider key: ready=false, aiProviderKeyMissing=true', async () => {
     await materializeConfig();
     await seedApprovedProfile();
     await seedActiveFilterConfig();
@@ -343,7 +345,7 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({ confirmSummary: true }),
-      openaiClient: null,
+      aiProviderClient: null,
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
@@ -352,7 +354,7 @@ describe('InitOrchestrator', () => {
 
     const summary = await orchestrator.run(ENV_WITHOUT_KEY);
     expect(summary.ready).toBe(false);
-    expect(summary.openAiKeyMissing).toBe(true);
+    expect(summary.aiProviderKeyMissing).toBe(true);
     expect(summary.nextStep).toBe('extract');
     const extractStep = summary.steps.find((s) => s.id === 'extract');
     expect(extractStep?.status).toBe('incomplete');
@@ -376,7 +378,7 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({ confirmSummary: true }),
-      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      aiProviderClient: new FakeAiProviderClient({ responses: [openAiResponse()] }),
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
@@ -386,7 +388,7 @@ describe('InitOrchestrator', () => {
     const summary = await orchestrator.run(ENV_WITH_KEY);
     expect(summary.ready).toBe(true);
     expect(summary.nextStep).toBeNull();
-    expect(summary.openAiKeyMissing).toBe(false);
+    expect(summary.aiProviderKeyMissing).toBe(false);
     for (const step of summary.steps) {
       expect(step.status).toBe('complete');
     }
@@ -409,7 +411,7 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({ confirmSummary: true }),
-      openaiClient: null,
+      aiProviderClient: null,
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
@@ -418,7 +420,7 @@ describe('InitOrchestrator', () => {
 
     const summary = await orchestrator.run(ENV_WITHOUT_KEY);
     expect(summary.ready).toBe(false);
-    expect(summary.openAiKeyMissing).toBe(true);
+    expect(summary.aiProviderKeyMissing).toBe(true);
     const extractStep = summary.steps.find((s) => s.id === 'extract');
     expect(extractStep?.status).toBe('incomplete');
     expect(extractStep?.reason).toBe('openai_key_missing');
@@ -436,20 +438,20 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({ confirmSummary: true }),
-      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      aiProviderClient: new FakeAiProviderClient({ responses: [openAiResponse()] }),
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
       rejectionPrompts: { confirmRejection: async () => true },
-      secretsStore: fakeSecretsStore({ openaiApiKey: 'sk-stored-key' }),
+      secretsStore: fakeSecretsStore({ aiProviderApiKey: 'sk-stored-key' }),
     });
 
     const summary = await orchestrator.run(ENV_WITHOUT_KEY);
     expect(summary.ready).toBe(true);
-    expect(summary.openAiKeyMissing).toBe(false);
-    const openaiKeyStep = summary.steps.find((s) => s.id === 'openaiKey');
-    expect(openaiKeyStep?.status).toBe('complete');
-    expect(openaiKeyStep?.source).toBe('stored');
+    expect(summary.aiProviderKeyMissing).toBe(false);
+    const aiProviderKeyStep = summary.steps.find((s) => s.id === 'aiProviderKey');
+    expect(aiProviderKeyStep?.status).toBe('complete');
+    expect(aiProviderKeyStep?.source).toBe('stored');
   });
 
   it('unreadable store falls through to env: source=environment', async () => {
@@ -464,7 +466,7 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({ confirmSummary: true }),
-      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      aiProviderClient: new FakeAiProviderClient({ responses: [openAiResponse()] }),
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
@@ -473,8 +475,8 @@ describe('InitOrchestrator', () => {
     });
 
     const summary = await orchestrator.run(ENV_WITH_KEY);
-    expect(summary.openAiKeyMissing).toBe(false);
-    expect(summary.steps.find((s) => s.id === 'openaiKey')?.source).toBe('environment');
+    expect(summary.aiProviderKeyMissing).toBe(false);
+    expect(summary.steps.find((s) => s.id === 'aiProviderKey')?.source).toBe('environment');
   });
 
   it('stored key wins over env key: source=stored', async () => {
@@ -489,16 +491,16 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({ confirmSummary: true }),
-      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      aiProviderClient: new FakeAiProviderClient({ responses: [openAiResponse()] }),
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
       rejectionPrompts: { confirmRejection: async () => true },
-      secretsStore: fakeSecretsStore({ openaiApiKey: 'sk-stored-key' }),
+      secretsStore: fakeSecretsStore({ aiProviderApiKey: 'sk-stored-key' }),
     });
 
     const summary = await orchestrator.run(ENV_WITH_KEY);
-    expect(summary.steps.find((s) => s.id === 'openaiKey')?.source).toBe('stored');
+    expect(summary.steps.find((s) => s.id === 'aiProviderKey')?.source).toBe('stored');
   });
 
   // -------------------------------------------------------------------
@@ -521,7 +523,7 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({ editHandoff: 'edit_then_return' }),
-      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      aiProviderClient: new FakeAiProviderClient({ responses: [openAiResponse()] }),
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
@@ -560,7 +562,7 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({ editHandoff: 'approve_now' }),
-      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      aiProviderClient: new FakeAiProviderClient({ responses: [openAiResponse()] }),
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
@@ -594,7 +596,7 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({}),
-      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      aiProviderClient: new FakeAiProviderClient({ responses: [openAiResponse()] }),
       searchPrompts: scriptedCancellingSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
@@ -620,7 +622,7 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({}),
-      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      aiProviderClient: new FakeAiProviderClient({ responses: [openAiResponse()] }),
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
@@ -654,7 +656,7 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({ confirmSummary: false }),
-      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      aiProviderClient: new FakeAiProviderClient({ responses: [openAiResponse()] }),
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
@@ -686,7 +688,7 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: new ScriptedInitPrompts({ editHandoff: 'edit_then_return' }),
-      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      aiProviderClient: new FakeAiProviderClient({ responses: [openAiResponse()] }),
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },
@@ -718,7 +720,7 @@ describe('InitOrchestrator', () => {
       repositories,
       fileSystem,
       prompts: createFailingInitPrompts('boom'),
-      openaiClient: new FakeOpenAIClient({ responses: [openAiResponse()] }),
+      aiProviderClient: new FakeAiProviderClient({ responses: [openAiResponse()] }),
       searchPrompts: scriptedSearchPrompts(),
       filterPrompts: new ScriptedFilterPrompts({}),
       approvalPrompts: { confirmApprovalWithWarnings: async () => true },

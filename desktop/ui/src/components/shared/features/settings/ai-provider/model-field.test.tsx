@@ -6,7 +6,7 @@ import { useForm } from '@tanstack/react-form';
 
 import { ModelField } from '@/components/shared/features/settings/ai-provider/model-field';
 import { api, ApiError } from '@/lib/api';
-import type { OpenAiModelsResponse } from '@/lib/types';
+import type { AiProviderModelsResponse } from '@/lib/types';
 import type { AnyFieldApi } from '@/components/shared/features/settings/ai-provider/types';
 
 vi.mock('@/lib/api', async (importOriginal) => {
@@ -14,7 +14,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
   return {
     ApiError: actual.ApiError,
     api: {
-      listOpenAiModels: vi.fn(),
+      listAiProviderModels: vi.fn(),
     },
   };
 });
@@ -26,14 +26,14 @@ function ModelFieldHarness() {
   );
 }
 
-function renderModelField(seed?: OpenAiModelsResponse) {
+function renderModelField(seed?: AiProviderModelsResponse) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   if (seed !== undefined) {
     // Seed instead of awaiting the fetch so trigger-presence assertions
     // cannot race the query resolution.
-    queryClient.setQueryData(['openai', 'models'], seed);
+    queryClient.setQueryData(['ai-provider', 'models'], seed);
   }
   return render(
     <QueryClientProvider client={queryClient}>
@@ -49,7 +49,7 @@ const CONFIGURED_MODELS = {
 };
 
 beforeEach(() => {
-  vi.mocked(api.listOpenAiModels).mockResolvedValue(CONFIGURED_MODELS);
+  vi.mocked(api.listAiProviderModels).mockResolvedValue(CONFIGURED_MODELS);
 });
 
 afterEach(() => {
@@ -122,7 +122,7 @@ describe('ModelField', () => {
   });
 
   it('behaves as a plain text field when no key is configured', async () => {
-    vi.mocked(api.listOpenAiModels).mockResolvedValue({
+    vi.mocked(api.listAiProviderModels).mockResolvedValue({
       schemaVersion: 1,
       configured: false,
       models: [],
@@ -138,8 +138,8 @@ describe('ModelField', () => {
   });
 
   it('behaves as a plain text field when the models query fails', async () => {
-    vi.mocked(api.listOpenAiModels).mockRejectedValue(
-      new ApiError(503, 'openai_network', 'OpenAI is unreachable.'),
+    vi.mocked(api.listAiProviderModels).mockRejectedValue(
+      new ApiError(503, 'openai_network', 'AiProvider is unreachable.'),
     );
     renderModelField();
     const input = screen.getByLabelText('Model');

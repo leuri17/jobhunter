@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 /**
  * Domain-boundary guard for `src/inspection/`.
  *
- * AGENTS.md §5: domain code must not depend on Drizzle, OpenAI, or
+ * AGENTS.md §5: domain code must not depend on Drizzle, AiProvider, or
  * runtime Pino. The inspection layer is split into:
  *   - `src/inspection/`              — pure helpers (columns, format,
  *                                     truncate, state, json-schemas,

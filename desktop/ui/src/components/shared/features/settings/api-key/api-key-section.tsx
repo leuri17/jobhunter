@@ -24,9 +24,9 @@ import type { ApiKeyResponse } from '@/lib/types';
 import type { ActionGuidance } from '@/lib/error-surfaces';
 
 const REJECTED_WITH_KEY =
-  'OpenAI rejected this key. Nothing was saved — the previously configured key is still active.';
-const REJECTED_WITHOUT_KEY = 'OpenAI rejected this key. Nothing was saved.';
-const UNREACHABLE = "Couldn't reach OpenAI to validate the key. Nothing was saved — try again.";
+  'AiProvider rejected this key. Nothing was saved — the previously configured key is still active.';
+const REJECTED_WITHOUT_KEY = 'AiProvider rejected this key. Nothing was saved.';
+const UNREACHABLE = "Couldn't reach AiProvider to validate the key. Nothing was saved — try again.";
 const KEYCHAIN_GONE =
   'The OS keychain is not available right now, so nothing was saved. Try again in a moment.';
 const MIGRATE_FAILED = 'The old secrets file was left unchanged. You can try again.';
@@ -110,7 +110,7 @@ export function ApiKeySection() {
     onSuccess: (result) => {
       setSaveError(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
-      void queryClient.invalidateQueries({ queryKey: ['openai', 'models'] });
+      void queryClient.invalidateQueries({ queryKey: ['ai-provider', 'models'] });
       setDraft('');
       toast.add({
         title: 'API key saved',
@@ -128,7 +128,7 @@ export function ApiKeySection() {
     onSuccess: () => {
       setSaveError(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
-      void queryClient.invalidateQueries({ queryKey: ['openai', 'models'] });
+      void queryClient.invalidateQueries({ queryKey: ['ai-provider', 'models'] });
       setDraft('');
       toast.add({ title: 'API key removed', type: 'success' });
     },
@@ -197,7 +197,7 @@ export function ApiKeySection() {
   return (
     <>
       <CardHeader>
-        <CardTitle>OpenAI API key</CardTitle>
+        <CardTitle>AiProvider API key</CardTitle>
         <CardDescription>Required for profile extraction and job scoring.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">

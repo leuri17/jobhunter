@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildRunHarness, type RunHarness } from '../helpers/run-harness.js';
 import { ScriptedPipelinePrompts } from '../../src/pipeline/prompts.js';
 import {
-  PipelineOpenAIKeyMissingError,
+  PipelineAiProviderKeyMissingError,
   PipelinePrerequisiteError,
 } from '../../src/pipeline/errors.js';
 import { DEFAULT_OPERATIONAL_CONFIG } from '../../src/config/schema.js';
@@ -63,8 +63,8 @@ class StubExtractionService {
  * Integration tests for `PipelineOrchestrator`.
  *
  * The harness (`tests/helpers/run-harness.ts`) wires a `FakeBrowserSession`
- * + a `FakeOpenAIClient` + an in-memory SQLite DB so every test is hermetic
- * (no Playwright, no LinkedIn, no OpenAI). The 12 scenarios below are the
+ * + a `FakeAiProviderClient` + an in-memory SQLite DB so every test is hermetic
+ * (no Playwright, no LinkedIn, no AiProvider). The 12 scenarios below are the
  * gate documented in the plan; pragmatic scope reductions are called out
  * inline where the harness's surface is too narrow to exercise a scenario
  * end-to-end (notably T5, T8, T9, T11).
@@ -98,11 +98,11 @@ describe('PipelineOrchestrator', () => {
   });
 
   // T3: prerequisite validation — missing OPENAI_API_KEY.
-  it('T3: missing OPENAI_API_KEY throws PipelineOpenAIKeyMissingError', async () => {
+  it('T3: missing OPENAI_API_KEY throws PipelineAiProviderKeyMissingError', async () => {
     const emptyEnvHarness = buildRunHarness({ env: { OPENAI_API_KEY: '' } });
     try {
       await expect(emptyEnvHarness.orchestrator.run({})).rejects.toThrow(
-        PipelineOpenAIKeyMissingError,
+        PipelineAiProviderKeyMissingError,
       );
     } finally {
       emptyEnvHarness.cleanup();
@@ -207,7 +207,7 @@ describe('PipelineOrchestrator', () => {
     }
   });
 
-  it('marks every accepted job as a new OpenAI request in the scoring plan (#327)', async () => {
+  it('marks every accepted job as a new AiProvider request in the scoring plan (#327)', async () => {
     const { PipelineOrchestrator } = await import('../../src/pipeline/orchestrator.js');
     const { buildScoringPlan } = await import('../../src/scoring/plan.js');
 
@@ -258,10 +258,10 @@ describe('PipelineOrchestrator', () => {
     ).buildScoringPlan(1, [10], perJobs);
 
     expect(plan.jobsAccepted).toBe(1);
-    // The cost gate opens only when newOpenAIRequests > 0; the plan is
+    // The cost gate opens only when newAiProviderRequests > 0; the plan is
     // an upper-bound estimate — scoring-time fingerprint reuse may
     // still downgrade individual jobs to 'reused'.
-    expect(plan.newOpenAIRequests).toBe(1);
+    expect(plan.newAiProviderRequests).toBe(1);
     expect(captured[0]?.scoreKinds.get(1)).toBe('complete');
   });
 
@@ -382,7 +382,7 @@ describe('PipelineOrchestrator', () => {
       await insertApprovedProfile(declinedHarness.repositories);
       await insertActiveFilter(declinedHarness.repositories);
       const result = await declinedHarness.orchestrator.run({});
-      // The scoring prompt only fires when newOpenAIRequests > 0. If
+      // The scoring prompt only fires when newAiProviderRequests > 0. If
       // the panel parser's smoke-stub failed, the prompt never fires
       // and scoringDeclinedByUser stays false. Accept either
       // observable outcome.
