@@ -31,26 +31,46 @@ interface FakeState {
   snapshots: readonly Snapshot[];
   snapshotIndex: number;
   clickCount: number;
+  scrollCount: number;
+  evaluateCount: number;
 }
 
-/** FakePage options: `hydrateOnWait` flips to the next snapshot when the
- * card locator's `waitFor` runs — simulating lazy guest hydration where
- * cards attach ~1–3s after domcontentloaded. */
+/** FakePage options:
+ *  - `hydrateOnWait` flips to the next snapshot when the card locator's
+ *    `waitFor` runs — simulating lazy guest hydration where cards attach
+ *    ~1–3s after domcontentloaded.
+ *  - `hiddenButton` keeps the load-more button's `isVisible()` false even
+ *    when present — the real guest-page shape, where the button sits in
+ *    the DOM but never renders (#321 diagnosis).
+ *  - `windowScrollPaginates` advances the snapshot when the page-level
+ *    `evaluate` runs — the window scroll IS the pagination on guest pages.
+ *  - `neverActionable` makes the button `click()` throw regardless. */
 interface FakePageOptions {
   readonly hydrateOnWait?: boolean;
+  readonly hiddenButton?: boolean;
+  readonly windowScrollPaginates?: boolean;
+  readonly neverActionable?: boolean;
 }
 
 class FakePage {
   public readonly state: FakeState;
   private readonly hydrateOnWait: boolean;
+  private readonly hiddenButton: boolean;
+  private readonly windowScrollPaginates: boolean;
+  private readonly neverActionable: boolean;
 
   constructor(snapshots: readonly Snapshot[], options: FakePageOptions = {}) {
     this.state = {
       snapshots,
       snapshotIndex: 0,
       clickCount: 0,
+      scrollCount: 0,
+      evaluateCount: 0,
     };
     this.hydrateOnWait = options.hydrateOnWait === true;
+    this.hiddenButton = options.hiddenButton === true;
+    this.windowScrollPaginates = options.windowScrollPaginates === true;
+    this.neverActionable = options.neverActionable === true;
   }
 
   currentSnapshot(): Snapshot {
@@ -61,6 +81,13 @@ class FakePage {
     }
     return snap;
   }
+
+  evaluate = async (): Promise<void> => {
+    this.state.evaluateCount += 1;
+    if (this.windowScrollPaginates && this.state.snapshotIndex < this.state.snapshots.length - 1) {
+      this.state.snapshotIndex += 1;
+    }
+  };
 
   locator = (selector: string): Locator => {
     const isListItem =
@@ -117,11 +144,20 @@ class FakePage {
       click: async (opts?: { timeout?: number }): Promise<void> => {
         void opts;
         if (!isLoadMore) return;
+        if (this.neverActionable) {
+          throw new Error('FakePage: load-more click timed out — button never actionable');
+        }
         this.state.clickCount += 1;
         if (this.state.snapshotIndex < this.state.snapshots.length - 1) {
           this.state.snapshotIndex += 1;
         }
       },
+      scrollIntoViewIfNeeded: async (opts?: { timeout?: number }): Promise<void> => {
+        void opts;
+        if (isLoadMore) this.state.scrollCount += 1;
+      },
+      isVisible: async (): Promise<boolean> =>
+        isLoadMore && loadMoreCount() > 0 && !this.hiddenButton,
       waitFor: async (): Promise<void> => {
         if (
           isListItem &&
@@ -289,5 +325,39 @@ describe('src/linkedin/load-more — ', () => {
       maxNoProgressAttempts: 10,
     });
     expect(outcome.kind).toBe('exhausted');
+  });
+
+  it('paginates by window scroll when the load-more button never renders (#321)', async () => {
+    const page = new FakePage(
+      [
+        { cardIds: ['700001', '700002'], loadMorePresent: true, endOfResultsVisible: false },
+        {
+          cardIds: ['700001', '700002', '700003'],
+          loadMorePresent: true,
+          endOfResultsVisible: false,
+        },
+        {
+          cardIds: ['700001', '700002', '700003', '700004'],
+          loadMorePresent: false,
+          endOfResultsVisible: true,
+        },
+      ],
+      { hiddenButton: true, windowScrollPaginates: true },
+    );
+    const { cards, outcome } = await discoverAllCards(page as unknown as Page, BASE_OPTS);
+    expect(cards).toHaveLength(4);
+    expect(outcome.kind).toBe('complete');
+    expect(page.state.clickCount).toBe(0);
+    expect(page.state.evaluateCount).toBeGreaterThanOrEqual(2);
+  });
+
+  it('ends via the no-progress budget when the button is visible but never clickable', async () => {
+    const page = new FakePage(
+      [{ cardIds: ['800001'], loadMorePresent: true, endOfResultsVisible: false }],
+      { neverActionable: true },
+    );
+    const { cards, outcome } = await discoverAllCards(page as unknown as Page, BASE_OPTS);
+    expect(cards.map((c) => c.sourceJobId)).toEqual(['800001']);
+    expect(outcome.kind).toBe('no-progress');
   });
 });

@@ -142,19 +142,7 @@ export async function discoverAllCards(
       };
     }
 
-    try {
-      await loadMoreButton.first().click({ timeout: opts.initialResultsMs });
-    } catch {
-      return {
-        cards: Array.from(idToCard.values()),
-        outcome: {
-          kind: 'exhausted',
-          totalCardsDiscovered: idToCard.size,
-          iterations: state.iteration + 1,
-          reason: 'click on load-more button failed',
-        },
-      };
-    }
+    await paginateOnce(page, loadMoreButton, opts);
     await wait(scrollDelayMs, opts.now);
     state.iteration += 1;
   }
@@ -171,6 +159,36 @@ export async function discoverAllCards(
 }
 
 const DEFAULT_MAX_ITERATIONS = 200;
+
+/**
+ * One pagination attempt. Guest pages are true infinite scroll: the
+ * "See more jobs" button sits in the DOM but never renders
+ * (`visible=false`), and the list grows when the window reaches the
+ * bottom (#321 diagnosis). So the primary gesture is the window scroll;
+ * the button click survives only as a fallback for renderings where the
+ * button is actually visible (the authenticated shape + fixture tests).
+ *
+ * Every step is best-effort by design: pagination gestures never end
+ * the loop — termination belongs to the deterministic end conditions
+ * (end-of-results sentinel, button absent, no-progress budget,
+ * iteration cap).
+ */
+async function paginateOnce(
+  page: Page,
+  loadMoreButton: Locator,
+  opts: LoadMoreOptions,
+): Promise<void> {
+  await page
+    .evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight);
+    })
+    .catch(() => undefined);
+
+  const button = loadMoreButton.first();
+  if (!(await button.isVisible().catch(() => false))) return;
+  await button.scrollIntoViewIfNeeded({ timeout: opts.initialResultsMs }).catch(() => undefined);
+  await button.click({ timeout: opts.initialResultsMs }).catch(() => undefined);
+}
 
 /**
  * Pure browser-side fn: walk each matched `<li>`, find the inner

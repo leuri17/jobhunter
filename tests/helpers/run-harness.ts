@@ -146,7 +146,6 @@ export function buildRunHarness(options: RunHarnessOptions = {}): RunHarness {
       initialResultsMs: config.scraper.timeouts.initialResultsMs,
       overlayDismissalMs: config.scraper.timeouts.overlayDismissalMs,
       maxNoProgressAttempts: config.scraper.maxNoProgressAttempts,
-      maxIterations: 5,
     },
   });
 

@@ -30,6 +30,8 @@ export interface FakeLocator {
   elementHandle: () => Promise<MinimalPageNode>;
   evaluateAll: <R>(pageFunction: (nodes: Element[]) => R) => Promise<R>;
   click: (options?: { readonly timeout?: number }) => Promise<void>;
+  scrollIntoViewIfNeeded: (options?: { readonly timeout?: number }) => Promise<void>;
+  isVisible: () => Promise<boolean>;
   waitFor: (options: { readonly state: string; readonly timeout: number }) => Promise<void>;
 }
 
@@ -76,6 +78,8 @@ const EMPTY_LOCATOR: FakeLocator = {
   }),
   evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> => pageFunction([]),
   click: async () => undefined,
+  scrollIntoViewIfNeeded: async () => undefined,
+  isVisible: async () => false,
   waitFor: async () => undefined,
 };
 
@@ -146,6 +150,16 @@ export class FakePage {
    */
   locator(selector: string): FakeLocator {
     return this.onLocator(selector) ?? EMPTY_LOCATOR;
+  }
+
+  /**
+   * Playwright-compatible `evaluate` for the load-more loop's window
+   * scroll gesture. The fake executes nothing — tests that need
+   * scroll-driven pagination hook it at the locator/snapshot level
+   * instead.
+   */
+  async evaluate(): Promise<undefined> {
+    return undefined;
   }
 
   /** Playwright-compatible close. */
