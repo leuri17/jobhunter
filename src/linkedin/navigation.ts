@@ -5,6 +5,8 @@ import type { Page } from 'playwright';
  * without inspecting thrown errors. `kind: 'blocked'` carries the
  * LinkedIn auth-wall detection (exit 4 path); the orchestrator
  * converts that to a thrown `LinkedInAccessBlockedError`.
+ * `reason: 'rate-limited'` carries the document's HTTP status when
+ * the upstream served a 429 throttle page.
  */
 export type NavigationResult =
   | {
@@ -15,7 +17,9 @@ export type NavigationResult =
     }
   | {
       readonly ok: false;
-      readonly reason: 'timeout' | 'blocked' | 'unexpected';
+      readonly reason: 'timeout' | 'blocked' | 'rate-limited' | 'unexpected';
+      /** Document HTTP status, present on the `rate-limited` reason. */
+      readonly status?: number;
       readonly cause?: Error;
     };
 
@@ -52,8 +56,9 @@ function defaultBlockDetector(finalUrl: string): boolean {
  *   - `playwright.TimeoutError` → `{ ok: false, reason: 'timeout' }`.
  *   - Any other throw → `{ ok: false, reason: 'unexpected', cause }`.
  *   - On success: read `page.url()`; if `blockDetector(finalUrl)` is
- *     true → `{ ok: false, reason: 'blocked' }`. Else
- *     `{ ok: true, status, redirected, responseUrl }`.
+ *     true → `{ ok: false, reason: 'blocked' }`. Else if the document
+ *     responded 429 → `{ ok: false, reason: 'rate-limited', status }`.
+ *     Else `{ ok: true, status, redirected, responseUrl }`.
  *   - `status` defaults to `200` when Playwright's `goto` returns
  *     `null` (Playwright returns `Response | null` — handle null).
  */
@@ -80,6 +85,9 @@ export async function navigateWithTimeout(
     return { ok: false, reason: 'blocked' };
   }
   const status = response?.status() ?? 200;
+  if (status === 429) {
+    return { ok: false, reason: 'rate-limited', status };
+  }
   const redirected = response !== null && response.url() !== url;
   return {
     ok: true,

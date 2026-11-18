@@ -106,6 +106,9 @@ job-search pages. Concretely:
 - It uses bounded timeouts and a retry cap (3 attempts per page).
 - It stops on LinkedIn-side blocks (auth wall, captcha) with a typed
   `LinkedInBlocked` error. No bypass.
+- It stops on upstream throttling (HTTP 429 documents) with a typed
+  `LinkedInRateLimitedError` instead of silently recording an empty
+  or truncated search.
 
 For full policy and user-facing responsibilities, see
 [`docs/responsible-use.md`](./responsible-use.md).

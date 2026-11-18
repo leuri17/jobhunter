@@ -162,6 +162,24 @@ describe('navigateWithTimeout', () => {
     if (!result.ok) expect(result.reason).toBe('blocked');
   });
 
+  it('returns reason: "rate-limited" with the status when the document responds 429', async () => {
+    const searchUrl = 'https://www.linkedin.com/jobs/search/?q=engineer';
+    const { page } = makeNavPage({
+      finalUrl: searchUrl,
+      gotoResult: { status: () => 429, url: () => searchUrl },
+    });
+    const result = await navigateWithTimeout({
+      page: page as never,
+      url: searchUrl,
+      timeoutMs: 30_000,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('rate-limited');
+      expect(result.status).toBe(429);
+    }
+  });
+
   it('uses the custom blockDetector when provided', async () => {
     const customBlockedUrl = 'https://www.linkedin.com/uas/consumer-email-otp';
     const { page } = makeNavPage({

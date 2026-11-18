@@ -37,6 +37,24 @@ export class LinkedInAccessBlockedError extends LinkedInScraperError {
   }
 }
 
+/**
+ * Upstream throttled the request with an HTTP 429 document (#344).
+ * Exit `LinkedInBlocked = 4` — a transient upstream access block:
+ * retry after a cooldown or from a different network, not a
+ * page-shape failure.
+ */
+export class LinkedInRateLimitedError extends LinkedInScraperError {
+  constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
+    super(
+      'linkedin_rate_limited',
+      'Upstream service is rate-limiting requests from this network (status 429); wait before retrying or switch networks.',
+      ExitCode.LinkedInBlocked,
+      metadata,
+      cause,
+    );
+  }
+}
+
 /** Page navigated but the expected search-results DOM was absent. Exit 1. */
 export class LinkedInExpectedPageError extends LinkedInScraperError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {

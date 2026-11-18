@@ -33,6 +33,7 @@ import type { SearchDiscoveryOutcome } from './state.js';
 import {
   LinkedInAccessBlockedError,
   LinkedInExpectedPageError,
+  LinkedInRateLimitedError,
   LoadMoreLoopExhaustedError,
   LinkedInScraperError,
   NavigationTimeoutError,
@@ -137,6 +138,12 @@ export class LinkedInDiscoveryService {
         if (nav.reason === 'blocked') {
           throw new LinkedInAccessBlockedError(
             { url: searchExecution.generatedUrl, finalUrl: page.url() },
+            nav.cause,
+          );
+        }
+        if (nav.reason === 'rate-limited') {
+          throw new LinkedInRateLimitedError(
+            { url: searchExecution.generatedUrl, httpStatus: nav.status ?? 429 },
             nav.cause,
           );
         }
