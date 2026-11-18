@@ -454,7 +454,6 @@ async function runPipeline(
           initialResultsMs: loaded.config.scraper.timeouts.initialResultsMs,
           overlayDismissalMs: loaded.config.scraper.timeouts.overlayDismissalMs,
           maxNoProgressAttempts: loaded.config.scraper.maxNoProgressAttempts,
-          maxIterations: 5,
         },
       });
       const extractionService = new LinkedInExtractionService({

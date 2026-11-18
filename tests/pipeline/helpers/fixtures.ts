@@ -143,6 +143,7 @@ export function makeFakePageWithCard(sourceJobId: string): FakePage {
     }),
     evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> => pageFunction([]),
     click: async () => undefined,
+    scrollIntoViewIfNeeded: async () => undefined,
     waitFor: async () => undefined,
   };
   return new FakePage({

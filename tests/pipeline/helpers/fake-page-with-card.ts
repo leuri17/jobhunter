@@ -68,6 +68,7 @@ export function fakePageWithCard(sourceJobIds: readonly string[]): CreateFakePag
           return pageFunction(nodes);
         },
         click: async () => undefined,
+        scrollIntoViewIfNeeded: async () => undefined,
         waitFor: async () => undefined,
       };
     }
@@ -114,6 +115,7 @@ export function fakePageWithCard(sourceJobIds: readonly string[]): CreateFakePag
               return pageFunction(nodes);
             },
             click: async () => undefined,
+            scrollIntoViewIfNeeded: async () => undefined,
             waitFor: async () => undefined,
           };
         }
@@ -137,6 +139,7 @@ export function fakePageWithCard(sourceJobIds: readonly string[]): CreateFakePag
                 evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> =>
                   pageFunction([]),
                 click: async () => undefined,
+                scrollIntoViewIfNeeded: async () => undefined,
                 waitFor: async () => undefined,
               },
             ],
@@ -145,6 +148,7 @@ export function fakePageWithCard(sourceJobIds: readonly string[]): CreateFakePag
             evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> =>
               pageFunction([]),
             click: async () => undefined,
+            scrollIntoViewIfNeeded: async () => undefined,
             waitFor: async () => undefined,
           };
         }

@@ -61,6 +61,7 @@ describe('updateConfig', () => {
           scraper: {
             timeouts: { ...DEFAULT_OPERATIONAL_CONFIG.scraper.timeouts, navigationMs: 0 },
             maxNoProgressAttempts: 1,
+            headless: true,
           },
         },
         { confirm: async () => true },

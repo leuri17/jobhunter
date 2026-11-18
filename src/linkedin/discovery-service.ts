@@ -57,7 +57,13 @@ export interface LinkedInDiscoveryServiceOptions {
     readonly initialResultsMs: number;
     readonly overlayDismissalMs: number;
     readonly maxNoProgressAttempts: number;
-    readonly maxIterations: number;
+    /**
+     * Iteration ceiling for the load-more loop. Omit to run
+     * exhaustively — the loop then ends on LinkedIn's real end
+     * conditions (end-of-results sentinel, button gone, no-progress
+     * budget) with only the module-level safety net as a backstop.
+     */
+    readonly maxIterations?: number;
   };
   readonly now?: () => Date;
 }
@@ -157,7 +163,9 @@ export class LinkedInDiscoveryService {
       const { cards, outcome } = await loadMoreResults(page, {
         initialResultsMs: this.config.initialResultsMs,
         maxNoProgressAttempts: this.config.maxNoProgressAttempts,
-        maxIterations: this.config.maxIterations,
+        ...(this.config.maxIterations !== undefined
+          ? { maxIterations: this.config.maxIterations }
+          : {}),
         signal,
       });
 
