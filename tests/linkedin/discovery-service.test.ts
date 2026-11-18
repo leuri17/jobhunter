@@ -16,6 +16,7 @@ import { createRepositories } from '../../src/persistence/repositories/index.js'
 import {
   LinkedInAccessBlockedError,
   LinkedInExpectedPageError,
+  LinkedInRateLimitedError,
   NavigationTimeoutError,
   OverlayUndismissableError,
 } from '../../src/linkedin/errors.js';
@@ -680,6 +681,79 @@ describe('LinkedInDiscoveryService (integration)', () => {
     expect(dm.calls.length).toBe(1);
     expect(session.activePageCount).toBe(0);
     const row = await repositories.pipelineRuns.findSearchById(searchExecutionId2);
+    expect(row?.finalStatus).toBe('failed');
+
+    connection.close();
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('rate limited path: throws LinkedInRateLimitedError (exit 4) + records diagnostic + cleans up', async () => {
+    const throttledUrl = 'https://www.linkedin.com/jobs/search/?q=engineer';
+    const session = new FakeBrowserSession({
+      createPage: () =>
+        new FakePage({
+          url: throttledUrl,
+          onGoto: async () => {
+            return { status: () => 429, url: () => throttledUrl };
+          },
+        }),
+    });
+    void session.launch();
+    const dm = new FakeDiagnosticManager();
+    const tempDir = mkdtempSync(join(tmpdir(), 'jobhunter-discovery-test-'));
+    const connection = createDatabaseConnection(join(tempDir, 'jobhunter.sqlite'));
+    runMigrations(connection, { migrationsFolder: join(REPO_ROOT, 'drizzle') });
+    const repositories = createRepositories(connection);
+    const created = await repositories.pipelineRuns.createRunWithSearches(
+      {
+        startTimestamp: '2026-08-19T10:00:00.000Z',
+        configSnapshotJson: {},
+        configSchemaVersion: 1,
+        configHash: 'h',
+        applicationVersion: '0.1.0',
+      },
+      [
+        {
+          pipelineRunId: 0,
+          searchQuery: 'engineer',
+          locationName: 'Remote',
+          geoId: '1',
+          generatedUrl: throttledUrl,
+          startTimestamp: '2026-08-19T10:00:00.000Z',
+        },
+      ],
+    );
+    const runId3 = created.runId;
+    const searchExecutionId3 = created.searchIds[0]!;
+    await repositories.pipelineRuns.updateSearchStatus(searchExecutionId3, {
+      finalStatus: 'pending',
+    });
+
+    const service = new LinkedInDiscoveryService({
+      repositories,
+      browserSession: session as never,
+      diagnosticManager: dm as never,
+      logger: noopLinkedInScraperLogger,
+      config: {
+        navigationMs: 30_000,
+        initialResultsMs: 100,
+        overlayDismissalMs: 1_000,
+        maxNoProgressAttempts: 2,
+        maxIterations: 5,
+      },
+    });
+
+    await expect(
+      service.discover({
+        run: { id: runId3 },
+        searchExecution: makeSearchExecution(searchExecutionId3, throttledUrl),
+        signal: NO_SIGNAL,
+      }),
+    ).rejects.toBeInstanceOf(LinkedInRateLimitedError);
+
+    expect(dm.calls.length).toBe(1);
+    expect(session.activePageCount).toBe(0);
+    const row = await repositories.pipelineRuns.findSearchById(searchExecutionId3);
     expect(row?.finalStatus).toBe('failed');
 
     connection.close();

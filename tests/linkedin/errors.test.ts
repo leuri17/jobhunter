@@ -7,6 +7,7 @@ import {
   BrowserLaunchError,
   LinkedInAccessBlockedError,
   LinkedInExpectedPageError,
+  LinkedInRateLimitedError,
   LinkedInScraperError,
   LoadMoreLoopExhaustedError,
   NavigationTimeoutError,
@@ -30,6 +31,13 @@ describe('src/linkedin/errors — ', () => {
     expect(err.exitCode).toBe(ExitCode.LinkedInBlocked);
     // Regression guard: the constant is `LinkedInBlocked`, NOT `LinkedInBlock`.
     expect(ExitCode.LinkedInBlocked).toBe(4);
+  });
+
+  it('LinkedInRateLimitedError uses ExitCode.LinkedInBlocked (upstream access block)', () => {
+    const err = new LinkedInRateLimitedError({ httpStatus: 429 });
+    expect(err).toBeInstanceOf(LinkedInScraperError);
+    expect(err.code).toBe('linkedin_rate_limited');
+    expect(err.exitCode).toBe(ExitCode.LinkedInBlocked);
   });
 
   it('LinkedInExpectedPageError uses ExitCode.Fatal', () => {
@@ -108,6 +116,7 @@ describe('src/linkedin/errors — ', () => {
       new LoadMoreLoopExhaustedError(),
       new BrowserLaunchError(),
       new BrowserCapacityExceededError(),
+      new LinkedInRateLimitedError(),
     ];
     for (const err of errors) {
       // First char uppercase; the rest of the message is lowercase (no internal capitals).
