@@ -46,10 +46,7 @@ describe('FileSecretsStore', () => {
     // Fixture uses the same low-entropy sk-test-<digits> shape as the
     // rest of this file: gitleaks' generic-api-key entropy heuristic
     // flags richer fake values in CI.
-    writeFileSync(
-      path.join(root, 'secrets.json'),
-      JSON.stringify({ openaiApiKey: 'sk-test-123' }),
-    );
+    writeFileSync(path.join(root, 'secrets.json'), JSON.stringify({ openaiApiKey: 'sk-test-123' }));
     expect(await store.read()).toEqual({ aiProviderApiKey: 'sk-test-123' });
   });
 
