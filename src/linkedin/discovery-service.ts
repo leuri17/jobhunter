@@ -176,6 +176,20 @@ export class LinkedInDiscoveryService {
         signal,
       });
 
+      // Mid-pagination throttle (#346): fail the search loudly,
+      // mirroring the document-level 429 path — none of the
+      // already-collected cards are persisted; `handleFailure`
+      // applies the 'failed' status below.
+      if (outcome.kind === 'rate-limited') {
+        throw new LinkedInRateLimitedError({
+          phase: 'pagination',
+          url: outcome.url,
+          httpStatus: 429,
+          iterations: outcome.iterations,
+          totalCardsDiscovered: outcome.totalCardsDiscovered,
+        });
+      }
+
       // Step 6: per-card dedup + persistence.
       let newJobs = 0;
       let existingJobs = 0;

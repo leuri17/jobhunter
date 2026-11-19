@@ -760,6 +760,163 @@ describe('LinkedInDiscoveryService (integration)', () => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
+  it('mid-pagination rate limited path: throws LinkedInRateLimitedError after a seeMoreJobPostings 429, persists nothing (#346)', async () => {
+    // Live-evidence shape (#321 comment 2026-11-18): the document
+    // serves 200 with page-1 cards, then the pagination XHR answers
+    // 429. The service must fail loudly instead of silently
+    // completing short — and, mirroring the document-level 429 path,
+    // persist none of the already-collected cards.
+    const searchUrl = 'https://www.linkedin.com/jobs/search/?keywords=engineer';
+    const seeMoreUrl =
+      'https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=engineer&start=25';
+    const cardIds = ['940001', '940002', '940003'];
+
+    const makeCardNodes = () =>
+      cardIds.map((id) => ({
+        querySelector: (selector: string) => {
+          if (selector !== 'a') return null;
+          return {
+            getAttribute: (name: string) => {
+              if (name === 'data-occludable-job-id') return id;
+              if (name === 'href') return `/jobs/view/${id}/`;
+              return null;
+            },
+          };
+        },
+      }));
+
+    const cardListLocator = {
+      count: async () => cardIds.length,
+      all: async () => [cardListLocator],
+      first: () => cardListLocator,
+      elementHandle: async () => makeCardNodes()[0] as never,
+      click: async () => undefined,
+      scrollIntoViewIfNeeded: async () => undefined,
+      isVisible: async () => false,
+      waitFor: async () => undefined,
+      evaluateAll: async <R, _E>(pageFunction: (nodes: Element[]) => R): Promise<R> =>
+        pageFunction(makeCardNodes() as unknown as Element[]),
+    };
+    // Guest-page shape: the "See more jobs" button sits in the DOM
+    // but never renders — the window scroll is the pagination gesture.
+    const hiddenLoadMoreLocator = {
+      count: async () => 1,
+      all: async () => [hiddenLoadMoreLocator],
+      first: () => hiddenLoadMoreLocator,
+      elementHandle: async () => null as never,
+      click: async () => undefined,
+      scrollIntoViewIfNeeded: async () => undefined,
+      isVisible: async () => false,
+      waitFor: async () => undefined,
+      evaluateAll: async () => [],
+    };
+
+    let fakePage: FakePage | null = null;
+    let cardListQueryCount = 0;
+    const session = new FakeBrowserSession({
+      createPage: () => {
+        const page = new FakePage({
+          url: searchUrl,
+          onGoto: async () => ({ status: () => 200, url: () => searchUrl }),
+          onLocator: (selector) => {
+            if (
+              selector.includes('jobs-search-results__list-item') ||
+              selector.includes('job-search-card')
+            ) {
+              cardListQueryCount += 1;
+              // 1st card-list query: the loop's initial hydration
+              // wait. 2nd: iteration-0 collection — deliver the
+              // throttled pagination response once the loop's
+              // response listener is attached.
+              if (cardListQueryCount === 2 && fakePage !== null) {
+                fakePage.emitResponse(seeMoreUrl, 429);
+              }
+              return cardListLocator;
+            }
+            if (selector.includes('infinite-scroller__show-more-button')) {
+              return hiddenLoadMoreLocator;
+            }
+            return null;
+          },
+        });
+        fakePage = page;
+        return page;
+      },
+    });
+    void session.launch();
+    const dm = new FakeDiagnosticManager();
+    const tempDir = mkdtempSync(join(tmpdir(), 'jobhunter-discovery-test-'));
+    const connection = createDatabaseConnection(join(tempDir, 'jobhunter.sqlite'));
+    runMigrations(connection, { migrationsFolder: join(REPO_ROOT, 'drizzle') });
+    const repositories = createRepositories(connection);
+    const created = await repositories.pipelineRuns.createRunWithSearches(
+      {
+        startTimestamp: '2026-08-19T10:00:00.000Z',
+        configSnapshotJson: {},
+        configSchemaVersion: 1,
+        configHash: 'h',
+        applicationVersion: '0.1.0',
+      },
+      [
+        {
+          pipelineRunId: 0,
+          searchQuery: 'engineer',
+          locationName: 'Remote',
+          geoId: '1',
+          generatedUrl: searchUrl,
+          startTimestamp: '2026-08-19T10:00:00.000Z',
+        },
+      ],
+    );
+    const runId4 = created.runId;
+    const searchExecutionId4 = created.searchIds[0]!;
+    await repositories.pipelineRuns.updateSearchStatus(searchExecutionId4, {
+      finalStatus: 'pending',
+    });
+
+    const service = new LinkedInDiscoveryService({
+      repositories,
+      browserSession: session as never,
+      diagnosticManager: dm as never,
+      logger: noopLinkedInScraperLogger,
+      config: {
+        navigationMs: 30_000,
+        initialResultsMs: 100,
+        overlayDismissalMs: 1_000,
+        maxNoProgressAttempts: 2,
+        maxIterations: 5,
+      },
+    });
+
+    let caught: unknown;
+    try {
+      await service.discover({
+        run: { id: runId4 },
+        searchExecution: makeSearchExecution(searchExecutionId4, searchUrl),
+        signal: NO_SIGNAL,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(LinkedInRateLimitedError);
+    const typed = caught as LinkedInRateLimitedError;
+    expect(typed.metadata).toMatchObject({ phase: 'pagination', httpStatus: 429 });
+    expect(String(typed.metadata.url)).toContain('seeMoreJobPostings');
+
+    expect(dm.calls.length).toBe(1);
+    expect(session.activePageCount).toBe(0);
+    const row = await repositories.pipelineRuns.findSearchById(searchExecutionId4);
+    expect(row?.finalStatus).toBe('failed');
+    expect(row?.jobsDiscovered).toBe(0);
+    // Mirroring the document-level 429 path: no partial persistence.
+    const events = await repositories.jobs.findEventsByRun(runId4);
+    expect(events).toEqual([]);
+
+    connection.close();
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
   it('expected page missing path: throws LinkedInExpectedPageError when goto returns null + no cards', async () => {
     // The `navigateWithTimeout` strategy returns `reason:
     // 'unexpected'` when `page.goto()` resolves with null AND
