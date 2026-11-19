@@ -21,7 +21,7 @@
  *   6. Cancellation signal between iterations → kind: 'cancelled'
  *   7. Reuse path — active row matches FP    → kind: 'reused'
  *   8. Happy path                            → kind: 'complete'
- *   9. openai_authentication extraction      → outcome.errorCode === 'openai_authentication'
+ *   9. ai_provider_authentication extraction      → outcome.errorCode === 'ai_provider_authentication'
  *  10a. scoreBatch worker-pool concurrency  → tracker.maxConcurrent
  *  10b. consecutiveAuthFailures reset       → counter clears on success
  *
@@ -123,7 +123,7 @@ describe('ScoringService.scoreOne — documented failure paths', () => {
     await pipeline.cleanup();
   });
 
-  it('path 1: AiProvider timeout → kind: failed with errorCode: openai_timeout', async () => {
+  it('path 1: AiProvider timeout → kind: failed with errorCode: ai_provider_timeout', async () => {
     pipeline.replaceAiProviderScripts([
       { error: new AiProviderTimeoutError() },
       { error: new AiProviderTimeoutError() },
@@ -132,7 +132,7 @@ describe('ScoringService.scoreOne — documented failure paths', () => {
     pipeline.tracker.reset();
     const outcome = await pipeline.service.scoreOne(pipeline.makeScoreOneInput());
     expect(outcome.kind).toBe('failed');
-    expect(outcome.errorCode).toBe('openai_timeout');
+    expect(outcome.errorCode).toBe('ai_provider_timeout');
     expect(outcome.attempted).toBe(true);
     expect(outcome.overallScore).toBeNull();
     expect(pipeline.tracker.totalCalls).toBe(3);
@@ -223,12 +223,12 @@ describe('ScoringService.scoreOne — documented failure paths', () => {
     expect(active?.success).toBe(true);
   });
 
-  it('path 9: openai_authentication extraction from cause.code', async () => {
+  it('path 9: ai_provider_authentication extraction from cause.code', async () => {
     pipeline.replaceAiProviderScripts([{ error: new AiProviderAuthenticationError() }]);
     pipeline.tracker.reset();
     const outcome = await pipeline.service.scoreOne(pipeline.makeScoreOneInput());
     expect(outcome.kind).toBe('failed');
-    expect(outcome.errorCode).toBe('openai_authentication');
+    expect(outcome.errorCode).toBe('ai_provider_authentication');
     expect(outcome.attempted).toBe(true);
     expect(pipeline.tracker.totalCalls).toBe(1);
   });
@@ -252,7 +252,7 @@ describe('ScoringService.scoreBatch — auth hard-stop (concurrency: 1)', () => 
     await pipeline.cleanup();
   });
 
-  it('path 5: 3 consecutive openai_authentication → ScoringHardStopError; remaining jobs skipped', async () => {
+  it('path 5: 3 consecutive ai_provider_authentication → ScoringHardStopError; remaining jobs skipped', async () => {
     // 6 jobs queued, all fail with auth. The third pulls triggers
     // the hard stop; the remaining 3 are still in the queue, so
     // the catch block marks them kind: 'skipped', errorCode:
@@ -273,7 +273,7 @@ describe('ScoringService.scoreBatch — auth hard-stop (concurrency: 1)', () => 
     const batch = await pipeline.service.scoreBatch(pipeline.makeScoreBatchInput(jobs));
     expect(batch.perJob).toHaveLength(6);
     const authFailures = batch.perJob.filter(
-      (o) => o.kind === 'failed' && o.errorCode === 'openai_authentication',
+      (o) => o.kind === 'failed' && o.errorCode === 'ai_provider_authentication',
     );
     const hardStops = batch.perJob.filter(
       (o) => o.kind === 'skipped' && o.errorCode === 'hard_stop',
@@ -330,7 +330,7 @@ describe('ScoringService.scoreBatch — auth hard-stop (concurrency: 1)', () => 
     const batch = await pipeline.service.scoreBatch(pipeline.makeScoreBatchInput(jobs));
     expect(batch.perJob).toHaveLength(5);
     const authFailures = batch.perJob.filter(
-      (o) => o.kind === 'failed' && o.errorCode === 'openai_authentication',
+      (o) => o.kind === 'failed' && o.errorCode === 'ai_provider_authentication',
     );
     const completes = batch.perJob.filter((o) => o.kind === 'complete');
     expect(authFailures.length).toBe(4);

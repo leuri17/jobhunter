@@ -8,7 +8,7 @@ import {
   createDatabaseConnection,
   type DatabaseConnection,
 } from '../../../src/persistence/connection.js';
-import { AiProviderRequestMetadataRepository } from '../../../src/persistence/repositories/openai-metadata.js';
+import { AiProviderRequestMetadataRepository } from '../../../src/persistence/repositories/ai-provider-metadata.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..');
 
@@ -22,7 +22,7 @@ describe('AiProviderRequestMetadataRepository', () => {
   let repo: AiProviderRequestMetadataRepository;
 
   beforeEach(() => {
-    directory = mkdtempSync(join(tmpdir(), 'jobhunter-openai-metadata-'));
+    directory = mkdtempSync(join(tmpdir(), 'jobhunter-ai-provider-metadata-'));
     connection = createDatabaseConnection(join(directory, 'jobhunter.sqlite'));
     runMigrations(connection, { migrationsFolder: join(REPO_ROOT, 'drizzle') });
     repo = new AiProviderRequestMetadataRepository(ctxFrom(connection));

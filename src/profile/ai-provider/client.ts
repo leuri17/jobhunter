@@ -87,6 +87,8 @@ export interface DefaultAiProviderClientRefusalOptions {
  */
 export function createDefaultAiProviderClient(options: {
   readonly apiKey: string;
+  /** OpenAI-compatible endpoint; omitted → the SDK's default (api.openai.com/v1). */
+  readonly baseUrl?: string;
   readonly timeoutMs?: number;
   readonly maxRetries?: number;
   readonly refusal?: DefaultAiProviderClientRefusalOptions;
@@ -95,6 +97,7 @@ export function createDefaultAiProviderClient(options: {
   const sdk = new AiProvider({
     apiKey: options.apiKey,
     timeout: timeoutMs,
+    ...(options.baseUrl !== undefined ? { baseURL: options.baseUrl } : {}),
     ...(options.maxRetries !== undefined ? { maxRetries: options.maxRetries } : {}),
   });
   const detect = createRefusalDetector(toRefusalDetectorOptions(options.refusal));

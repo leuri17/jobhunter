@@ -41,6 +41,27 @@ describe('FileSecretsStore', () => {
     expect(await store.read()).toEqual({ aiProviderApiKey: 'sk-test-123' });
   });
 
+  it('reads a key stored under the pre-rename openaiApiKey slot (#340)', async () => {
+    const { writeFileSync } = await import('node:fs');
+    // Fixture uses the same low-entropy sk-test-<digits> shape as the
+    // rest of this file: gitleaks' generic-api-key entropy heuristic
+    // flags richer fake values in CI.
+    writeFileSync(
+      path.join(root, 'secrets.json'),
+      JSON.stringify({ openaiApiKey: 'sk-test-123' }),
+    );
+    expect(await store.read()).toEqual({ aiProviderApiKey: 'sk-test-123' });
+  });
+
+  it('prefers the current slot when both are present', async () => {
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(
+      path.join(root, 'secrets.json'),
+      JSON.stringify({ aiProviderApiKey: 'sk-test-456', openaiApiKey: 'sk-test-123' }),
+    );
+    expect(await store.read()).toEqual({ aiProviderApiKey: 'sk-test-456' });
+  });
+
   it('writes the file with owner-only permissions', async () => {
     await store.write({ aiProviderApiKey: 'sk-test-123' });
     const mode = statSync(resolveSecretsPath(pathsFor(root))).mode & 0o777;

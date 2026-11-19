@@ -47,7 +47,7 @@ export interface RetryableAiProviderError {
  * `attempts` is populated by the retry policy (`runWithRetry`) when the
  * final attempt fails. Callers (Task 7's `ProfileExtractionService`) use
  * `caught.attempts?.length` to record the attempt count on the persisted
- * `openai_request_metadata` row.
+ * `ai_provider_request_metadata` row.
  *
  * Implements `RetryableAiProviderError` via the inherited `code` field so
  * the retry policy can classify any subclass without an `instanceof`
@@ -88,25 +88,31 @@ export class AiProviderTransientError extends ProfileExtractionError {
 
 export class AiProviderRateLimitError extends AiProviderTransientError {
   constructor(retryAfterMs: number | null, metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_rate_limit', 'AiProvider rate limit reached.', retryAfterMs, metadata, cause);
+    super(
+      'ai_provider_rate_limit',
+      'AiProvider rate limit reached.',
+      retryAfterMs,
+      metadata,
+      cause,
+    );
   }
 }
 
 export class AiProviderServerError extends AiProviderTransientError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_server_error', 'AiProvider server error.', null, metadata, cause);
+    super('ai_provider_server_error', 'AiProvider server error.', null, metadata, cause);
   }
 }
 
 export class AiProviderTimeoutError extends AiProviderTransientError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_timeout', 'AiProvider request timed out.', null, metadata, cause);
+    super('ai_provider_timeout', 'AiProvider request timed out.', null, metadata, cause);
   }
 }
 
 export class AiProviderNetworkError extends AiProviderTransientError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_network_error', 'AiProvider network failure.', null, metadata, cause);
+    super('ai_provider_network_error', 'AiProvider network failure.', null, metadata, cause);
   }
 }
 
@@ -125,7 +131,7 @@ export class AiProviderInvalidOutputError extends AiProviderTransientError {
 
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
     super(
-      'openai_invalid_output',
+      'ai_provider_invalid_output',
       'AiProvider returned output that failed Zod validation.',
       null,
       metadata,
@@ -140,32 +146,42 @@ export class AiProviderInvalidOutputError extends AiProviderTransientError {
  */
 export class AiProviderAuthenticationError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_authentication', 'AiProvider authentication failed.', metadata, cause);
+    super('ai_provider_authentication', 'AiProvider authentication failed.', metadata, cause);
   }
 }
 
 export class AiProviderPermissionError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_permission', 'AiProvider permission denied.', metadata, cause);
+    super('ai_provider_permission', 'AiProvider permission denied.', metadata, cause);
   }
 }
 
 export class AiProviderBillingError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_billing', 'AiProvider billing or quota configuration error.', metadata, cause);
+    super(
+      'ai_provider_billing',
+      'AiProvider billing or quota configuration error.',
+      metadata,
+      cause,
+    );
   }
 }
 
 export class AiProviderInvalidRequestError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_invalid_request', 'AiProvider rejected the request as invalid.', metadata, cause);
+    super(
+      'ai_provider_invalid_request',
+      'AiProvider rejected the request as invalid.',
+      metadata,
+      cause,
+    );
   }
 }
 
 export class AiProviderUnsupportedModelError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
     super(
-      'openai_unsupported_model',
+      'ai_provider_unsupported_model',
       'AiProvider rejected the model or configuration.',
       metadata,
       cause,
@@ -200,7 +216,7 @@ export class AiProviderRefusalError extends ProfileExtractionError {
   readonly refusalText: string;
 
   constructor(refusalText: string, metadata: ApplicationErrorMetadata = {}, cause?: Error) {
-    super('openai_refusal', 'AiProvider declined the request.', metadata, cause);
+    super('ai_provider_refusal', 'AiProvider declined the request.', metadata, cause);
     this.refusalText = refusalText;
   }
 }
@@ -217,7 +233,7 @@ export class AiProviderRefusalError extends ProfileExtractionError {
 export class AiProviderEmptyResponseError extends ProfileExtractionError {
   constructor(metadata: ApplicationErrorMetadata = {}, cause?: Error) {
     super(
-      'openai_empty_response',
+      'ai_provider_empty_response',
       'AiProvider returned an empty structured-output body.',
       metadata,
       cause,
@@ -285,10 +301,10 @@ export class ProfileExtractionRefusalError
  * single-permitted retry budget for it.
  */
 export const OPENAI_RETRYABLE_ERROR_CODES: ReadonlySet<string> = new Set([
-  'openai_rate_limit',
-  'openai_server_error',
-  'openai_timeout',
-  'openai_network_error',
-  'openai_invalid_output',
+  'ai_provider_rate_limit',
+  'ai_provider_server_error',
+  'ai_provider_timeout',
+  'ai_provider_network_error',
+  'ai_provider_invalid_output',
   'scoring_invalid_structured_output',
 ]);

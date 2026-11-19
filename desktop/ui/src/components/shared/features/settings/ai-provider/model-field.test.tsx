@@ -139,7 +139,7 @@ describe('ModelField', () => {
 
   it('behaves as a plain text field when the models query fails', async () => {
     vi.mocked(api.listAiProviderModels).mockRejectedValue(
-      new ApiError(503, 'openai_network', 'AiProvider is unreachable.'),
+      new ApiError(503, 'ai_provider_network', 'AiProvider is unreachable.'),
     );
     renderModelField();
     const input = screen.getByLabelText('Model');

@@ -27,7 +27,7 @@ export { SCORING_CATEGORIES } from './types.js';
 export type ScoringKind = 'reused' | 'complete' | 'failed' | 'skipped' | 'cancelled';
 
 /** Tag for the only scoring method in MVP — AiProvider structured output. */
-export type ScoringMethod = 'openai_structured_output';
+export type ScoringMethod = 'ai_provider_structured_output';
 
 /**
  * The structured fields returned by AiProvider for one scoring request.

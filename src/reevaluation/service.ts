@@ -288,7 +288,7 @@ export class ReevaluationService {
           : (input.env['OPENAI_API_KEY'] ?? null);
       if (key === null || key.length === 0) {
         throw new PipelinePrerequisiteError(
-          'openai_api_key_missing',
+          'ai_provider_api_key_missing',
           'No AiProvider API key is available. Add one in Settings, or set OPENAI_API_KEY in your environment.',
           { scope: input.scope, dryRun: input.dryRun },
         );

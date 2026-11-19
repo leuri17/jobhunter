@@ -26,9 +26,9 @@ const BUILTIN_PATTERNS: ReadonlyArray<{ name: string; match: RegExp; replace: st
     replace: 'Set-Cookie: [REDACTED]',
   },
   {
-    name: 'openai-key',
+    name: 'ai-provider-key',
     match: /\bsk-[A-Za-z0-9]{20,}\b/g,
-    replace: '[REDACTED:openai-key]',
+    replace: '[REDACTED:ai-provider-key]',
   },
 ];
 

@@ -1,4 +1,4 @@
-//! OS-keychain access for the OpenAI API key, served to the Node sidecar
+//! OS-keychain access for the AiProvider API key, served to the Node sidecar
 //! over a token-authenticated loopback TCP bridge.
 //!
 //! The sidecar is a plain child process and cannot reach the OS keychain,
@@ -37,8 +37,9 @@ use serde::{Deserialize, Serialize};
 
 /// Keychain service name; matches the `identifier` in `tauri.conf.json`.
 pub const SERVICE: &str = "com.leuri17.jobhunter";
-/// Keychain account holding the OpenAI API key.
-pub const ACCOUNT: &str = "openai-api-key";
+/// Keychain account holding the AiProvider API key. Pre-rename installs
+/// stored it as `openai-api-key`; those users re-enter the key once.
+pub const ACCOUNT: &str = "ai-provider-api-key";
 /// Env var carrying the bridge port to the sidecar.
 pub const PORT_ENV_VAR: &str = "JOBHUNTER_SECRETS_BRIDGE_PORT";
 /// Env var carrying the per-launch auth token to the sidecar.

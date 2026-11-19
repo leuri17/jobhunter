@@ -99,7 +99,7 @@ describe('formatInitSummary', () => {
         extract: 'incomplete',
       },
       reasons: {
-        extract: 'openai_key_missing',
+        extract: 'ai_provider_key_missing',
       },
       ready: false,
       nextStep: 'extract',

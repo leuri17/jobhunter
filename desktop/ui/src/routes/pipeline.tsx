@@ -36,8 +36,8 @@ import { Route as rootRoute } from './__root';
 // CODE_GUIDANCE (`lib/error-surfaces.ts`), the destination here.
 const ACTION_ROUTES: Partial<Record<string, string>> = {
   no_active_profile: '/profile',
-  openai_unavailable: '/settings',
-  openai_api_key_missing: '/settings',
+  ai_provider_unavailable: '/settings',
+  ai_provider_api_key_missing: '/settings',
 };
 
 const GATE_STORAGE_KEY = 'pipeline:require-scoring-confirmation';

@@ -56,7 +56,7 @@ describe('runWithRetry', () => {
     expect(result.value).toBe('ok');
     expect(result.attempts).toHaveLength(2);
     expect(result.attempts[0]?.succeeded).toBe(false);
-    expect(result.attempts[0]?.errorCode).toBe('openai_server_error');
+    expect(result.attempts[0]?.errorCode).toBe('ai_provider_server_error');
     expect(result.attempts[1]?.succeeded).toBe(true);
   });
 
@@ -88,9 +88,9 @@ describe('runWithRetry', () => {
     await expect(
       runWithRetry(async () => {
         calls += 1;
-        throw new ProfileExtractionError('openai_authentication', 'bad api key', {});
+        throw new ProfileExtractionError('ai_provider_authentication', 'bad api key', {});
       }, baseOptions()),
-    ).rejects.toMatchObject({ code: 'openai_authentication' });
+    ).rejects.toMatchObject({ code: 'ai_provider_authentication' });
     expect(calls).toBe(1);
   });
 
@@ -290,7 +290,7 @@ describe('runWithRetry', () => {
     expect(recorded).toHaveLength(3);
     expect(recorded?.[0]?.attemptNumber).toBe(1);
     expect(recorded?.[0]?.succeeded).toBe(false);
-    expect(recorded?.[0]?.errorCode).toBe('openai_server_error');
+    expect(recorded?.[0]?.errorCode).toBe('ai_provider_server_error');
     expect(recorded?.[2]?.attemptNumber).toBe(3);
   });
 

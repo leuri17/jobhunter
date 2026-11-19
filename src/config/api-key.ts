@@ -3,18 +3,27 @@ import type { SecretsStore } from './secrets.js';
 /**
  * Resolve the effective AiProvider API key.
  *
- * Precedence: a stored secret wins over `OPENAI_API_KEY`, because the
+ * Precedence: a stored secret wins over the environment, because the
  * stored value is the deliberate per-user choice made in Settings. The
- * environment variable remains the fallback so CI, headless runs, and
- * existing developer setups keep working untouched.
+ * environment variables remain the fallback so CI, headless runs, and
+ * existing developer setups keep working untouched:
+ * `AI_PROVIDER_API_KEY` (preferred) or the legacy `OPENAI_API_KEY`.
  *
  * This is the single seam every consumer must use. Nothing else should
- * read `process.env.OPENAI_API_KEY` directly, because that would
- * reintroduce the silent divergence this replaces.
+ * read the environment directly, because that would reintroduce the
+ * silent divergence this replaces.
  */
 export interface ResolveApiKeyOptions {
   readonly store: SecretsStore;
   readonly env: Readonly<Record<string, string | undefined>>;
+}
+
+function keyFromEnv(env: Readonly<Record<string, string | undefined>>): string | undefined {
+  const preferred = env['AI_PROVIDER_API_KEY'];
+  if (typeof preferred === 'string' && preferred.length > 0) return preferred;
+  const legacy = env['OPENAI_API_KEY'];
+  if (typeof legacy === 'string' && legacy.length > 0) return legacy;
+  return undefined;
 }
 
 export async function resolveAiProviderApiKey(
@@ -30,9 +39,7 @@ export async function resolveAiProviderApiKey(
     // through to the environment so an existing setup keeps working.
   }
 
-  const fromEnv = options.env['OPENAI_API_KEY'];
-  if (typeof fromEnv === 'string' && fromEnv.length > 0) return fromEnv;
-  return null;
+  return keyFromEnv(options.env) ?? null;
 }
 
 /**
@@ -49,7 +56,5 @@ export async function resolveApiKeySource(options: ResolveApiKeyOptions): Promis
   } catch {
     // Treated as "not stored"; see resolveAiProviderApiKey.
   }
-  const fromEnv = options.env['OPENAI_API_KEY'];
-  if (typeof fromEnv === 'string' && fromEnv.length > 0) return 'environment';
-  return 'none';
+  return keyFromEnv(options.env) !== undefined ? 'environment' : 'none';
 }

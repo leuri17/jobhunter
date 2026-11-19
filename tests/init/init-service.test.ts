@@ -358,7 +358,7 @@ describe('InitOrchestrator', () => {
     expect(summary.nextStep).toBe('extract');
     const extractStep = summary.steps.find((s) => s.id === 'extract');
     expect(extractStep?.status).toBe('incomplete');
-    expect(extractStep?.reason).toBe('openai_key_missing');
+    expect(extractStep?.reason).toBe('ai_provider_key_missing');
   });
 
   // -------------------------------------------------------------------
@@ -398,9 +398,9 @@ describe('InitOrchestrator', () => {
   // Scenario 3: Missing API key, pre-seeded config + approved
   // profile + filter config + source (no draft). The orchestrator
   // walks; the extract step is incomplete with
-  // reason='openai_key_missing'.
+  // reason='ai_provider_key_missing'.
   // -------------------------------------------------------------------
-  it('missing API key with pre-seeded state: extract step reports openai_key_missing', async () => {
+  it('missing API key with pre-seeded state: extract step reports ai_provider_key_missing', async () => {
     await materializeConfig();
     await seedUsableSource('d'.repeat(64));
     await seedApprovedProfile();
@@ -423,7 +423,7 @@ describe('InitOrchestrator', () => {
     expect(summary.aiProviderKeyMissing).toBe(true);
     const extractStep = summary.steps.find((s) => s.id === 'extract');
     expect(extractStep?.status).toBe('incomplete');
-    expect(extractStep?.reason).toBe('openai_key_missing');
+    expect(extractStep?.reason).toBe('ai_provider_key_missing');
   });
 
   it('stored key with no env key: ready=true, source=stored (issue #212 regression)', async () => {

@@ -51,7 +51,7 @@ describe('runMigrations', () => {
         'search_executions',
         'filter_results',
         'score_results',
-        'openai_request_metadata',
+        'ai_provider_request_metadata',
         'diagnostic_artifacts',
       ]),
     );

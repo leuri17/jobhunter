@@ -29,6 +29,7 @@ import type { SecretsStore } from '../config/secrets.js';
 export async function resolveAiProviderClientOrNull(
   refusal?: DefaultAiProviderClientRefusalOptions,
   store?: SecretsStore,
+  baseUrl?: string,
 ): Promise<AiProviderClient | null> {
   const apiKey = await resolveAiProviderApiKey({
     store: store ?? emptySecretsStore(),
@@ -39,6 +40,7 @@ export async function resolveAiProviderClientOrNull(
   }
   return createDefaultAiProviderClient({
     apiKey,
+    ...(baseUrl !== undefined ? { baseUrl } : {}),
     ...(refusal !== undefined ? { refusal } : {}),
   });
 }

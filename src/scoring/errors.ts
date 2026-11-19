@@ -126,7 +126,7 @@ export interface ScoringHardStopMetadata {
 
 /**
  * Hard-stop — aborts the whole batch when 3 consecutive jobs fail with
- * `openai_authentication`. The orchestrator catches this and maps it
+ * `ai_provider_authentication`. The orchestrator catches this and maps it
  * to a clean exit; remaining jobs in the batch are marked `kind: 'skipped'`.
  */
 export class ScoringHardStopError extends ScoringError {

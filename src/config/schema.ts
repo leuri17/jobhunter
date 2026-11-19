@@ -55,6 +55,13 @@ const refusalDetectionSchema = z
 
 const aiProviderSchema = z
   .object({
+    /**
+     * OpenAI-compatible endpoint base URL. Defaults to OpenRouter
+     * (the MVP provider); OpenAI remains one setting away
+     * (`https://api.openai.com/v1`). Legacy config files backfill the
+     * OpenAI endpoint at load time — they were de-facto OpenAI.
+     */
+    baseUrl: z.url(),
     profileExtraction: profileExtractionSchema,
     jobScoring: jobScoringSchema,
     refusalDetection: refusalDetectionSchema,
@@ -146,6 +153,9 @@ export const OperationalConfigFileSchema: z.ZodType<OperationalConfig> = z.prepr
   },
   OperationalConfigSchema.extend({
     scraper: scraperSchema.extend({ headless: z.boolean().default(true) }),
+    aiProvider: aiProviderSchema.extend({
+      baseUrl: z.url().default('https://api.openai.com/v1'),
+    }),
   }),
 );
 
@@ -158,12 +168,13 @@ export const DEFAULT_OPERATIONAL_CONFIG: OperationalConfig = {
     workplaceTypes: ['1', '2', '3'],
   },
   aiProvider: {
+    baseUrl: 'https://openrouter.ai/api/v1',
     profileExtraction: {
-      model: 'gpt-5.6-sol',
+      model: 'openai/gpt-5.6-sol',
       reasoningEffort: 'medium',
     },
     jobScoring: {
-      model: 'gpt-5.6-sol',
+      model: 'openai/gpt-5.6-sol',
       reasoningEffort: 'medium',
       concurrency: 3,
     },

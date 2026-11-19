@@ -22,7 +22,7 @@ OpenAI client wrapper purpose-built for profile extraction: structured outputs, 
 3. **Transport.** `createDefaultAiProviderClient` returns an `AiProviderClient`; on `extract`, it calls `getResponseSchema(name, version)`, issues `sdk.chat.completions.create` with `response_format: { type: 'json_schema', json_schema: { name, schema, strict: true } }`, and returns `{ rawJsonText, tokenUsage }`. SDK errors flow through `translateSdkError` to typed `ProfileExtractionError` subclasses. The factory also takes `timeoutMs` (default 60 s) and `maxRetries` — pass `maxRetries: 0` when `runWithRetry` owns the retry policy, otherwise the SDK's built-in retries (default 2) silently stack three HTTP attempts inside every service-level attempt (issue #279).
 4. **Backoff.** On retryable codes (`OPENAI_RETRYABLE_ERROR_CODES`), `computeDelay` returns either the clamped `retryAfterMs` or `rng(0, min(maxDelay, base * 2^(attempt-1)))`.
 5. **Validate.** Caller parses `rawJsonText` with `createExtractedProfileSchema(knownSourceIds).safeParse(...)`; `superRefine` rejects unknown `sourceId` references. A validation failure throws `OpenAIInvalidOutputError`, which gets one corrective retry.
-6. **Fingerprint + persist.** Caller computes `calculateExtractionFingerprint({ sourceHashes, schemaVersion, promptVersion, model, reasoningEffort, structuredOutputSchemaVersion })` and writes an `openai_request_metadata` audit row.
+6. **Fingerprint + persist.** Caller computes `calculateExtractionFingerprint({ sourceHashes, schemaVersion, promptVersion, model, reasoningEffort, structuredOutputSchemaVersion })` and writes an `ai_provider_request_metadata` audit row.
 
 ## Integration
 

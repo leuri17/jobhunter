@@ -713,7 +713,7 @@ export class PipelineOrchestrator {
     const openAiKey = await this.resolveApiKeyForRun();
     if (openAiKey === null) {
       throw new PipelineAiProviderKeyMissingError(
-        'openai_api_key_missing',
+        'ai_provider_api_key_missing',
         'An AiProvider API key is required to run the pipeline. Add one in Settings, or set OPENAI_API_KEY in your environment.',
       );
     }

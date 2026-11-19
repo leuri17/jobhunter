@@ -75,7 +75,7 @@ describe('GET /api/ai-provider/models', () => {
     expect(await res.json()).toEqual({
       schemaVersion: 1,
       error: {
-        code: 'openai_authentication',
+        code: 'ai_provider_authentication',
         message: 'AiProvider authentication failed.',
         details: null,
       },
@@ -92,7 +92,7 @@ describe('GET /api/ai-provider/models', () => {
     expect(await res.json()).toEqual({
       schemaVersion: 1,
       error: {
-        code: 'openai_network_error',
+        code: 'ai_provider_network_error',
         message: 'AiProvider network failure.',
         details: null,
       },

@@ -7,7 +7,7 @@ export interface DiagnosticScope {
   readonly extractionAttemptId?: number | null;
   readonly discoveryErrorId?: number | null;
   /**
-   *  the auto-increment primary key of the `openai_request_metadata`
+   *  the auto-increment primary key of the `ai_provider_request_metadata`
    * row that captured the failing AiProvider request. Optional because
    * diagnostics written before the AiProvider metadata row is committed
    * (or for non-AiProvider failures) do not yet have this id.
@@ -68,7 +68,7 @@ export function resolveScopeDirectory(scope: DiagnosticScope): string {
   if (isPositiveId(scope.jobId)) segments.push(`job-${scope.jobId}`);
   if (isPositiveId(scope.extractionAttemptId)) segments.push(`extraction-${scope.extractionAttemptId}`);
   if (isPositiveId(scope.discoveryErrorId)) segments.push(`discovery-error-${scope.discoveryErrorId}`);
-  if (isPositiveId(scope.aiProviderRequestId)) segments.push(`openai-${scope.aiProviderRequestId}`);
+  if (isPositiveId(scope.aiProviderRequestId)) segments.push(`ai-provider-${scope.aiProviderRequestId}`);
   return segments.length === 0 ? 'unscoped' : segments.join('/');
 }
 
@@ -86,7 +86,7 @@ export function buildSafeFilename(opts: SafeFilenameOptions): SafeFilenameResult
   if (isPositiveId(opts.scope.jobId)) parts.push(`job-${opts.scope.jobId}`);
   if (isPositiveId(opts.scope.extractionAttemptId)) parts.push(`extraction-${opts.scope.extractionAttemptId}`);
   if (isPositiveId(opts.scope.discoveryErrorId)) parts.push(`discovery-error-${opts.scope.discoveryErrorId}`);
-  if (isPositiveId(opts.scope.aiProviderRequestId)) parts.push(`openai-${opts.scope.aiProviderRequestId}`);
+  if (isPositiveId(opts.scope.aiProviderRequestId)) parts.push(`ai-provider-${opts.scope.aiProviderRequestId}`);
   parts.push(timestamp);
   if (opts.suffix !== undefined && opts.suffix !== '') {
     const normalizedSuffix = opts.suffix.replace(/^-+/, '');

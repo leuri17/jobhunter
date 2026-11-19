@@ -424,7 +424,7 @@ describe('ProfileExtractionService', () => {
     expect(client.getRequestCount()).toBe(2);
   });
 
-  it('fails with openai_invalid_output after the corrective retry also fails', async () => {
+  it('fails with ai_provider_invalid_output after the corrective retry also fails', async () => {
     const storedPathA = join(directory, 'a.md');
     writeSourceFile(storedPathA, 'content');
     const sourceA = await seedSource(storedPathA, { sha256: 'a'.repeat(64) });
@@ -444,13 +444,13 @@ describe('ProfileExtractionService', () => {
 
     expect(status.kind).toBe('failed');
     if (status.kind !== 'failed') throw new Error('expected failed');
-    expect(status.errorCode).toBe('openai_invalid_output');
+    expect(status.errorCode).toBe('ai_provider_invalid_output');
     expect(status.attemptCount).toBe(2);
 
     const metadata = await repositories.aiProviderMetadata.listByOperation('profile_extraction');
     expect(metadata).toHaveLength(1);
     expect(metadata[0]?.success).toBe(false);
-    expect(metadata[0]?.errorCode).toBe('openai_invalid_output');
+    expect(metadata[0]?.errorCode).toBe('ai_provider_invalid_output');
     expect(metadata[0]?.attemptCount).toBe(2);
   });
 
@@ -501,13 +501,13 @@ describe('ProfileExtractionService', () => {
 
     expect(status.kind).toBe('failed');
     if (status.kind !== 'failed') throw new Error('expected failed');
-    expect(status.errorCode).toBe('openai_server_error');
+    expect(status.errorCode).toBe('ai_provider_server_error');
     expect(status.attemptCount).toBe(3);
 
     const metadata = await repositories.aiProviderMetadata.listByOperation('profile_extraction');
     expect(metadata).toHaveLength(1);
     expect(metadata[0]?.success).toBe(false);
-    expect(metadata[0]?.errorCode).toBe('openai_server_error');
+    expect(metadata[0]?.errorCode).toBe('ai_provider_server_error');
     expect(metadata[0]?.attemptCount).toBe(3);
   });
 
@@ -529,14 +529,14 @@ describe('ProfileExtractionService', () => {
 
     expect(status.kind).toBe('failed');
     if (status.kind !== 'failed') throw new Error('expected failed');
-    expect(status.errorCode).toBe('openai_authentication');
+    expect(status.errorCode).toBe('ai_provider_authentication');
     expect(status.attemptCount).toBe(1);
 
     expect(client.getRequestCount()).toBe(1);
     const metadata = await repositories.aiProviderMetadata.listByOperation('profile_extraction');
     expect(metadata).toHaveLength(1);
     expect(metadata[0]?.success).toBe(false);
-    expect(metadata[0]?.errorCode).toBe('openai_authentication');
+    expect(metadata[0]?.errorCode).toBe('ai_provider_authentication');
     expect(metadata[0]?.attemptCount).toBe(1);
   });
 
@@ -659,7 +659,7 @@ describe('ProfileExtractionService', () => {
     ]);
   });
 
-  it('records an openai_request_metadata row with success: true and relatedEntityType profile_version', async () => {
+  it('records an ai_provider_request_metadata row with success: true and relatedEntityType profile_version', async () => {
     const storedPathA = join(directory, 'a.md');
     writeSourceFile(storedPathA, 'content');
     const sourceA = await seedSource(storedPathA, { sha256: 'a'.repeat(64) });

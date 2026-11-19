@@ -62,6 +62,7 @@ export interface LoggerDestinations {
  * `src/logging/codemap.md` for the convention.
  */
 const SECRET_KEYS = [
+  'AI_PROVIDER_API_KEY',
   'OPENAI_API_KEY',
   'apiKey',
   'aiProviderApiKey',

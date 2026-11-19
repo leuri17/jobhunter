@@ -215,7 +215,7 @@ export function classifyMigrations(input: ClassifyMigrationsInput): InitStepRepo
 /**
  * `classifyAiProviderKey` always returns `complete` — absence is
  * a skip, not a failure; the orchestrator reads the missing-key signal
- * from `classifyExtract`'s `reason === 'openai_key_missing'` instead.
+ * from `classifyExtract`'s `reason === 'ai_provider_key_missing'` instead.
  * `source` records where the key came from
  * (`'stored' | 'environment' | 'none'`) via `resolveApiKeySource`.
  */
@@ -282,7 +282,7 @@ export function classifySources(input: ClassifySourcesInput): InitStepReport {
 /**
  * `classifyExtract` returns:
  *  - `complete` when a draft exists and at least one source is usable.
- *  - `incomplete` with `reason: 'openai_key_missing'` when the key is
+ *  - `incomplete` with `reason: 'ai_provider_key_missing'` when the key is
  *    absent (skip-not-fail per  + Finding 4a).
  *  - `incomplete` with `reason: null` when no draft exists but the key
  *    is present and at least one source is usable.
@@ -304,7 +304,7 @@ export function classifyExtract(input: ClassifyExtractInput): InitStepReport {
       id: 'extract',
       status: 'incomplete',
       errorCode: null,
-      reason: 'openai_key_missing',
+      reason: 'ai_provider_key_missing',
       artifactId: null,
     };
   }

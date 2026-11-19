@@ -20,7 +20,7 @@ const EXPECTED_TABLES = [
   'extraction_attempts',
   'filter_results',
   'score_results',
-  'openai_request_metadata',
+  'ai_provider_request_metadata',
   'diagnostic_artifacts',
 ] as const;
 

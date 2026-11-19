@@ -193,7 +193,10 @@ export function makeFakeReusedOutcome(jobId: number, overallScore = 80): Scoring
 }
 
 /** Minimal `ScoringOutcome` factory for the `failed` kind. */
-export function makeFakeFailedOutcome(jobId: number, errorCode = 'openai_timeout'): ScoringOutcome {
+export function makeFakeFailedOutcome(
+  jobId: number,
+  errorCode = 'ai_provider_timeout',
+): ScoringOutcome {
   return {
     schemaVersion: 1 as const,
     jobId,

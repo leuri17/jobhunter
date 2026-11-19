@@ -135,7 +135,7 @@ describe('ProfilePage extraction failure', () => {
 
   it('reports extraction failures as extraction failures, with an extraction retry', async () => {
     vi.mocked(api.extractProfile).mockRejectedValue(
-      new ApiError(503, 'openai_unavailable', 'No AiProvider API key is configured'),
+      new ApiError(503, 'ai_provider_unavailable', 'No AiProvider API key is configured'),
     );
     renderPage();
     await screen.findByRole('tab', { name: /overview/i });

@@ -443,7 +443,10 @@ export class InitOrchestrator {
       openAiKeyPresent,
     });
 
-    if (extractReport.status === 'incomplete' && extractReport.reason === 'openai_key_missing') {
+    if (
+      extractReport.status === 'incomplete' &&
+      extractReport.reason === 'ai_provider_key_missing'
+    ) {
       logger.stepStart({ stepId: 'extract' });
       stepReports['extract'] = extractReport;
       logger.stepComplete({ stepId: 'extract', artifactId: null });
@@ -465,7 +468,7 @@ export class InitOrchestrator {
         // dropped between the classify call and here (impossible in
         // single-threaded JS). Surface a typed error.
         throw new InitExtractRuntimeFailedError(
-          'openai_key_missing',
+          'ai_provider_key_missing',
           'OPENAI_API_KEY disappeared mid-walk.',
         );
       }
@@ -530,7 +533,7 @@ export class InitOrchestrator {
         if (error instanceof InitExtractRuntimeFailedError) throw error;
         const message = formatError(error).message;
         throw new InitExtractRuntimeFailedError(
-          'openai_runtime_failed',
+          'ai_provider_runtime_failed',
           message,
           {},
           error instanceof Error ? error : undefined,

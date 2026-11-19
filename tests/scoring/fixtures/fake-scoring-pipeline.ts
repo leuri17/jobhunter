@@ -46,7 +46,7 @@ export interface FakeScoringPipelineOptions {
   /**
    * Optional clock for deterministic `startedAt` / `completedAt`
    * timestamps. Defaults to a fixed ISO string so the persisted
-   * `openai_request_metadata.startTimestamp` is stable across runs.
+   * `ai_provider_request_metadata.startTimestamp` is stable across runs.
    */
   readonly now?: () => Date;
 }

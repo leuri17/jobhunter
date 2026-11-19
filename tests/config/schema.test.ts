@@ -131,4 +131,57 @@ describe('OperationalConfigSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('defaults aiProvider.baseUrl to the OpenAI endpoint for legacy configs missing the key', () => {
+    const { baseUrl: _omit, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
+    const result = OperationalConfigFileSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      aiProvider: legacyAiProvider,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.aiProvider.baseUrl).toBe('https://api.openai.com/v1');
+    }
+  });
+
+  it('keeps the canonical schema strict: missing aiProvider.baseUrl is a validation error', () => {
+    const { baseUrl: _omit, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
+    const result = OperationalConfigSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      aiProvider: legacyAiProvider,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('renames a legacy openai section to aiProvider at load time', () => {
+    const { baseUrl: _omit, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
+    const { aiProvider: _drop, ...rest } = DEFAULT_OPERATIONAL_CONFIG;
+    const result = OperationalConfigFileSchema.safeParse({
+      ...rest,
+      openai: legacyAiProvider,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.aiProvider.baseUrl).toBe('https://api.openai.com/v1');
+      expect(result.data.aiProvider.jobScoring.concurrency).toBe(
+        DEFAULT_OPERATIONAL_CONFIG.aiProvider.jobScoring.concurrency,
+      );
+    }
+  });
+
+  it('rejects a config with both openai and aiProvider sections (ambiguous)', () => {
+    const result = OperationalConfigFileSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      openai: DEFAULT_OPERATIONAL_CONFIG.aiProvider,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('defaults a fresh install to OpenRouter with qualified model ids', () => {
+    expect(DEFAULT_OPERATIONAL_CONFIG.aiProvider.baseUrl).toBe('https://openrouter.ai/api/v1');
+    expect(DEFAULT_OPERATIONAL_CONFIG.aiProvider.profileExtraction.model).toBe(
+      'openai/gpt-5.6-sol',
+    );
+    expect(DEFAULT_OPERATIONAL_CONFIG.aiProvider.jobScoring.model).toBe('openai/gpt-5.6-sol');
+  });
 });

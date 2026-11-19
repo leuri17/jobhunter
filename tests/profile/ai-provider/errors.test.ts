@@ -24,7 +24,7 @@ describe('AiProvider retryable errors', () => {
     const error = new AiProviderRateLimitError(2_500, { hint: 'slow down' }, cause);
 
     expect(error).toBeInstanceOf(ProfileExtractionError);
-    expect(error.code).toBe('openai_rate_limit');
+    expect(error.code).toBe('ai_provider_rate_limit');
     expect(error.exitCode).toBe(ExitCode.AiProviderFailure);
     expect(error.retryAfterMs).toBe(2_500);
     expect(error.metadata).toEqual({ hint: 'slow down' });
@@ -34,36 +34,36 @@ describe('AiProvider retryable errors', () => {
   it('AiProviderRateLimitError accepts null retryAfterMs when the server omits Retry-After', () => {
     const error = new AiProviderRateLimitError(null);
     expect(error.retryAfterMs).toBeNull();
-    expect(error.code).toBe('openai_rate_limit');
+    expect(error.code).toBe('ai_provider_rate_limit');
   });
 
   it('AiProviderServerError always reports null retryAfterMs', () => {
     const error = new AiProviderServerError({ status: 503 });
-    expect(error.code).toBe('openai_server_error');
+    expect(error.code).toBe('ai_provider_server_error');
     expect(error.exitCode).toBe(ExitCode.AiProviderFailure);
     expect(error.retryAfterMs).toBeNull();
     expect(error.metadata).toEqual({ status: 503 });
   });
 
-  it('AiProviderTimeoutError exposes openai_timeout with exit code 5', () => {
+  it('AiProviderTimeoutError exposes ai_provider_timeout with exit code 5', () => {
     const error = new AiProviderTimeoutError();
-    expect(error.code).toBe('openai_timeout');
+    expect(error.code).toBe('ai_provider_timeout');
     expect(error.exitCode).toBe(ExitCode.AiProviderFailure);
     expect(error.retryAfterMs).toBeNull();
   });
 
-  it('AiProviderNetworkError exposes openai_network_error with exit code 5', () => {
+  it('AiProviderNetworkError exposes ai_provider_network_error with exit code 5', () => {
     const error = new AiProviderNetworkError();
-    expect(error.code).toBe('openai_network_error');
+    expect(error.code).toBe('ai_provider_network_error');
     expect(error.exitCode).toBe(ExitCode.AiProviderFailure);
     expect(error.retryAfterMs).toBeNull();
   });
 });
 
 describe('AiProviderInvalidOutputError', () => {
-  it('exposes openai_invalid_output with exit code 5', () => {
+  it('exposes ai_provider_invalid_output with exit code 5', () => {
     const error = new AiProviderInvalidOutputError();
-    expect(error.code).toBe('openai_invalid_output');
+    expect(error.code).toBe('ai_provider_invalid_output');
     expect(error.exitCode).toBe(ExitCode.AiProviderFailure);
     expect(error.retryAfterMs).toBeNull();
     expect(error.metadata).toEqual({});
@@ -73,7 +73,7 @@ describe('AiProviderInvalidOutputError', () => {
     const cause = new Error('zod issues: skills.0.name: Required');
     const error = new AiProviderInvalidOutputError({ issues: ['skills.0.name: Required'] }, cause);
 
-    expect(error.code).toBe('openai_invalid_output');
+    expect(error.code).toBe('ai_provider_invalid_output');
     expect(error.exitCode).toBe(ExitCode.AiProviderFailure);
     expect(error.retryAfterMs).toBeNull();
     expect(error.metadata).toEqual({ issues: ['skills.0.name: Required'] });
@@ -83,17 +83,25 @@ describe('AiProviderInvalidOutputError', () => {
 
 describe('AiProvider non-retryable errors', () => {
   it.each([
-    [AiProviderAuthenticationError, 'openai_authentication', 'AiProvider authentication failed.'],
-    [AiProviderPermissionError, 'openai_permission', 'AiProvider permission denied.'],
-    [AiProviderBillingError, 'openai_billing', 'AiProvider billing or quota configuration error.'],
+    [
+      AiProviderAuthenticationError,
+      'ai_provider_authentication',
+      'AiProvider authentication failed.',
+    ],
+    [AiProviderPermissionError, 'ai_provider_permission', 'AiProvider permission denied.'],
+    [
+      AiProviderBillingError,
+      'ai_provider_billing',
+      'AiProvider billing or quota configuration error.',
+    ],
     [
       AiProviderInvalidRequestError,
-      'openai_invalid_request',
+      'ai_provider_invalid_request',
       'AiProvider rejected the request as invalid.',
     ],
     [
       AiProviderUnsupportedModelError,
-      'openai_unsupported_model',
+      'ai_provider_unsupported_model',
       'AiProvider rejected the model or configuration.',
     ],
     [
@@ -117,17 +125,17 @@ describe('AiProvider non-retryable errors', () => {
 
 describe('OPENAI_RETRYABLE_ERROR_CODES', () => {
   it('contains the five retryable error codes', () => {
-    expect(OPENAI_RETRYABLE_ERROR_CODES.has('openai_rate_limit')).toBe(true);
-    expect(OPENAI_RETRYABLE_ERROR_CODES.has('openai_server_error')).toBe(true);
-    expect(OPENAI_RETRYABLE_ERROR_CODES.has('openai_timeout')).toBe(true);
-    expect(OPENAI_RETRYABLE_ERROR_CODES.has('openai_network_error')).toBe(true);
-    expect(OPENAI_RETRYABLE_ERROR_CODES.has('openai_invalid_output')).toBe(true);
+    expect(OPENAI_RETRYABLE_ERROR_CODES.has('ai_provider_rate_limit')).toBe(true);
+    expect(OPENAI_RETRYABLE_ERROR_CODES.has('ai_provider_server_error')).toBe(true);
+    expect(OPENAI_RETRYABLE_ERROR_CODES.has('ai_provider_timeout')).toBe(true);
+    expect(OPENAI_RETRYABLE_ERROR_CODES.has('ai_provider_network_error')).toBe(true);
+    expect(OPENAI_RETRYABLE_ERROR_CODES.has('ai_provider_invalid_output')).toBe(true);
   });
 
   it('does not contain non-retryable AiProvider error codes', () => {
-    expect(OPENAI_RETRYABLE_ERROR_CODES.has('openai_authentication')).toBe(false);
-    expect(OPENAI_RETRYABLE_ERROR_CODES.has('openai_billing')).toBe(false);
-    expect(OPENAI_RETRYABLE_ERROR_CODES.has('openai_invalid_request')).toBe(false);
+    expect(OPENAI_RETRYABLE_ERROR_CODES.has('ai_provider_authentication')).toBe(false);
+    expect(OPENAI_RETRYABLE_ERROR_CODES.has('ai_provider_billing')).toBe(false);
+    expect(OPENAI_RETRYABLE_ERROR_CODES.has('ai_provider_invalid_request')).toBe(false);
     expect(OPENAI_RETRYABLE_ERROR_CODES.has('profile_extraction_input_too_large')).toBe(false);
   });
 });

@@ -207,13 +207,19 @@ export async function registerProfileRoutes(
         reply.status(503);
         return {
           schemaVersion: 1,
-          error: { code: 'openai_unavailable', message: 'No AiProvider API key is configured' },
+          error: {
+            code: 'ai_provider_unavailable',
+            message: 'No AiProvider API key is configured',
+          },
         };
       }
       const service = new ProfileExtractionService({
         repositories: repos,
         aiProviderClient: client,
-        config: { model: process.env['OPENAI_MODEL'] ?? 'gpt-5', reasoningEffort: 'medium' },
+        config: {
+          model: process.env['AI_PROVIDER_MODEL'] ?? process.env['OPENAI_MODEL'] ?? 'gpt-5',
+          reasoningEffort: 'medium',
+        },
         retry: { maxAttempts: PROFILE_EXTRACTION_MAX_ATTEMPTS },
         logger: req.log,
       });

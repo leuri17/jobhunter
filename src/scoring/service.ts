@@ -374,7 +374,8 @@ export class ScoringService {
       // library error with a `.code` field would otherwise flow
       // through as an application-defined error code and pollute the
       // history report + UI status badges.
-      const errorCode = cause instanceof ApplicationError ? cause.code : 'openai_unknown_failure';
+      const errorCode =
+        cause instanceof ApplicationError ? cause.code : 'ai_provider_unknown_failure';
       // Audit H2 / B1-H2: persist the top-level message on the
       // outcome (backwards-compatible string contract) but compute
       // the full SerialisedError so the cause chain + code + metadata
@@ -540,7 +541,7 @@ export class ScoringService {
         const job = queue.shift()!;
         const outcome = await this.scoreOne({ ...job, signal: input.signal });
         record(outcome);
-        if (outcome.kind === 'failed' && outcome.errorCode === 'openai_authentication') {
+        if (outcome.kind === 'failed' && outcome.errorCode === 'ai_provider_authentication') {
           consecutiveAuthFailures += 1;
           if (consecutiveAuthFailures >= CONSECUTIVE_AUTH_FAILURE_LIMIT) {
             throw new ScoringHardStopError({ consecutiveAuthFailures });

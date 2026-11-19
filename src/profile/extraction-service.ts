@@ -11,7 +11,7 @@
  *   - Zod validation against the known `sourceId` set
  *   - the pure `postProcessExtractionResponse` (Task 6)
  *   - transactional persistence of the draft profile version, conflicts, and warnings
- *   - persistence of an `openai_request_metadata` audit row
+ *   - persistence of an `ai_provider_request_metadata` audit row
  *
  * The active approved profile is NEVER mutated here — approval is the job of
  * Task 9.
@@ -370,7 +370,7 @@ export class ProfileExtractionService {
       }, this.retry);
     } catch (caught) {
       const errorCode =
-        caught instanceof ProfileExtractionError ? caught.code : 'openai_invalid_output';
+        caught instanceof ProfileExtractionError ? caught.code : 'ai_provider_invalid_output';
       const errorMessage = formatError(caught).message;
       // `ProfileExtractionInputTooLargeError` is raised before any AiProvider
       // attempt, so the audit row records `attemptCount: 0`. For every
@@ -386,7 +386,7 @@ export class ProfileExtractionService {
       const endTimestamp = this.now().toISOString();
       this.logger.error(
         {
-          event: 'profile_extraction_openai_failed',
+          event: 'profile_extraction_ai_provider_failed',
           errorCode,
           attemptCount,
         },

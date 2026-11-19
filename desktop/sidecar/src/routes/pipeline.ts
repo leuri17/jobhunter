@@ -256,7 +256,7 @@ export async function registerPipelineRoutes(
       reply.status(503);
       return {
         schemaVersion: 1,
-        error: { code: 'openai_unavailable', message: 'No AiProvider API key is configured' },
+        error: { code: 'ai_provider_unavailable', message: 'No AiProvider API key is configured' },
       };
     }
 

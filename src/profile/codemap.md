@@ -73,7 +73,7 @@ Pure helpers live in `review/` (`renderReviewSummary`,
    proceed) → `loadSourceText` per row → `buildProfileExtractionPrompt` →
    `openaiClient.extract` inside `runWithRetry` → `postProcessExtractionResponse`
    → transactional insert of `profile_versions` (`draft`),
-   `profile_conflicts`, `profile_warnings`, plus an `openai_metadata`
+   `profile_conflicts`, `profile_warnings`, plus an `ai_provider_metadata`
    audit row.
 3. **Review** — `ProfileReviewService.show(rawId)` → `resolveProfileVersionId`
    → `ProfessionalProfileSchema.safeParse` → parallel fetch of warnings,

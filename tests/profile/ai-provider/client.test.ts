@@ -134,6 +134,23 @@ describe('createDefaultAiProviderClient', () => {
     expect(fakeConstructor).toHaveBeenCalledWith({ apiKey: 'sk-test', timeout: 12_345 });
   });
 
+  it('passes baseUrl into the SDK as baseURL for OpenAI-compatible providers', () => {
+    createDefaultAiProviderClient({
+      apiKey: 'sk-or-test',
+      baseUrl: 'https://openrouter.ai/api/v1',
+    });
+    expect(fakeConstructor).toHaveBeenCalledWith(
+      expect.objectContaining({ baseURL: 'https://openrouter.ai/api/v1' }),
+    );
+  });
+
+  it('omits baseURL when no baseUrl is configured (SDK default endpoint)', () => {
+    createDefaultAiProviderClient({ apiKey: 'sk-test' });
+    const options = fakeConstructor.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(options).toBeDefined();
+    expect('baseURL' in options).toBe(false);
+  });
+
   it('passes request.messages through to the AiProvider SDK unchanged', async () => {
     fakeCreate.mockResolvedValueOnce({
       choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop', index: 0 }],
@@ -242,7 +259,7 @@ describe('createDefaultAiProviderClient', () => {
 
     const client = createDefaultAiProviderClient({ apiKey: 'sk-test' });
     await expect(client.extract(REQUEST)).rejects.toMatchObject({
-      code: 'openai_permission',
+      code: 'ai_provider_permission',
       name: 'AiProviderPermissionError',
     });
   });
@@ -395,7 +412,7 @@ describe('createDefaultAiProviderClient', () => {
     expect((rejected as AiProviderRefusalError).refusalText).toBe(
       'I cannot help with that request.',
     );
-    expect((rejected as ProfileExtractionError).code).toBe('openai_refusal');
+    expect((rejected as ProfileExtractionError).code).toBe('ai_provider_refusal');
   });
 
   it('raises AiProviderEmptyResponseError when the model returns an empty content', async () => {
@@ -415,7 +432,7 @@ describe('createDefaultAiProviderClient', () => {
     const rejected = await client.extract(REQUEST).catch((err: unknown) => err);
     expect(rejected).toBeInstanceOf(AiProviderEmptyResponseError);
     expect(rejected).toBeInstanceOf(ProfileExtractionError);
-    expect((rejected as AiProviderEmptyResponseError).code).toBe('openai_empty_response');
+    expect((rejected as AiProviderEmptyResponseError).code).toBe('ai_provider_empty_response');
   });
 
   it('raises AiProviderEmptyResponseError when the completion is missing choices', async () => {

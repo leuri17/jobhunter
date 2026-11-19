@@ -25,9 +25,9 @@ describe('formatError', () => {
 
     it('preserves `code` from the duck-typed `code` field', () => {
       const out = formatError(
-        Object.assign(new Error('unauth'), { code: 'openai_authentication' }),
+        Object.assign(new Error('unauth'), { code: 'ai_provider_authentication' }),
       );
-      expect(out.code).toBe('openai_authentication');
+      expect(out.code).toBe('ai_provider_authentication');
     });
 
     it('stringifies a numeric `code`', () => {

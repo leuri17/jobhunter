@@ -49,7 +49,7 @@ describe('pipeline endpoints', () => {
       error: { code: string; message: string };
     };
     expect(body.schemaVersion).toBe(1);
-    expect(body.error.code).toBe('openai_unavailable');
+    expect(body.error.code).toBe('ai_provider_unavailable');
   });
 });
 

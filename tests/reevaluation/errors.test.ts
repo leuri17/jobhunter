@@ -101,7 +101,7 @@ describe('PipelinePrerequisiteError re-export', () => {
   it('re-exported class is the same class from src/pipeline/errors.js', () => {
     // The re-export in src/reevaluation/errors.ts is a pure re-export
     // (no subclassing) so identity is preserved.
-    const error = new PipelinePrerequisiteError('openai_api_key_missing', 'missing key');
+    const error = new PipelinePrerequisiteError('ai_provider_api_key_missing', 'missing key');
     expect(error.name).toBe('PipelinePrerequisiteError');
   });
 });

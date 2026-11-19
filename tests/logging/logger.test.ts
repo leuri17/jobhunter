@@ -69,7 +69,7 @@ describe('createLogger', () => {
 
     logger.info(
       {
-        component: 'openai',
+        component: 'ai_provider',
         event: 'request',
         apiKey: 'sk-very-secret-value',
         aiProvider: { key: 'sk-other' },
@@ -178,7 +178,7 @@ describe('createLogger', () => {
 
       logger.info(
         {
-          component: 'openai',
+          component: 'ai_provider',
           event: 'request',
           request: { headers: { apiKey: 'sk-secret-test' } },
         },
@@ -196,7 +196,7 @@ describe('createLogger', () => {
       const logger = createLogger({ level: 'info', prettyTerminal: false }, { stdout: stream });
 
       logger.info(
-        { component: 'openai', event: 'request', apiKey: 'sk-top-secret' },
+        { component: 'ai_provider', event: 'request', apiKey: 'sk-top-secret' },
         'openai call',
       );
 
@@ -212,7 +212,7 @@ describe('createLogger', () => {
 
       logger.info(
         {
-          component: 'openai',
+          component: 'ai_provider',
           event: 'batch',
           messages: [
             { role: 'user', prompt: 'first secret prompt' },

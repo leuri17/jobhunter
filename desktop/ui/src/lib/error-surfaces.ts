@@ -8,7 +8,7 @@ import type { ApiError } from './api';
  * | Severity                          | Surface       | Example                          |
  * |-----------------------------------|---------------|----------------------------------|
  * | Recoverable, no action needed     | toast         | Save succeeded; stream hiccup    |
- * | User must do something            | dialog        | `openai_unavailable` → set key   |
+ * | User must do something            | dialog        | `ai_provider_unavailable` → set key   |
  * | Route-level crash                 | ErrorBoundary | Unhandled render throw           |
  * | Ambient, ongoing                  | banner        | Sidecar offline                  |
  *
@@ -66,11 +66,11 @@ export interface ActionGuidance {
  * Codes and their guidance live in one place so they cannot drift.
  */
 const CODE_GUIDANCE = {
-  openai_unavailable: {
+  ai_provider_unavailable: {
     message: 'Add your AiProvider API key in Settings, under AI Provider.',
     actionLabel: 'Open settings',
   },
-  openai_api_key_missing: {
+  ai_provider_api_key_missing: {
     message: 'Add your AiProvider API key in Settings, under AI Provider.',
     actionLabel: 'Open settings',
   },

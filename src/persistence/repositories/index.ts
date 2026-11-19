@@ -5,7 +5,7 @@ import { DiagnosticArtifactRepository } from './diagnostics.js';
 import { FilterConfigurationRepository } from './filter-configurations.js';
 import { FilterResultRepository } from './filter-results.js';
 import { JobRepository } from './jobs.js';
-import { AiProviderRequestMetadataRepository } from './openai-metadata.js';
+import { AiProviderRequestMetadataRepository } from './ai-provider-metadata.js';
 import { PipelineRunRepository } from './pipeline-runs.js';
 import { ProfileSourceRepository } from './profile-sources.js';
 import { ProfileVersionRepository } from './profile-versions.js';

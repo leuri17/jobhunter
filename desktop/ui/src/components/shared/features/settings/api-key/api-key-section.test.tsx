@@ -110,7 +110,7 @@ const LEGACY_SHADOWED_MESSAGE =
   'The keychain already holds an API key, so it stays the active source; the secrets file was not changed.';
 
 function rejectedByAiProvider(): ApiError {
-  return new ApiError(401, 'openai_authentication', 'AiProvider authentication failed.');
+  return new ApiError(401, 'ai_provider_authentication', 'AiProvider authentication failed.');
 }
 
 // The backend status line renders only once the status query has
@@ -222,7 +222,7 @@ describe('<ApiKeySection />', () => {
 
   it('shows the retry copy when AiProvider cannot be reached to validate', async () => {
     vi.mocked(api.setApiKey).mockRejectedValue(
-      new ApiError(503, 'openai_network_error', 'AiProvider network failure.'),
+      new ApiError(503, 'ai_provider_network_error', 'AiProvider network failure.'),
     );
 
     renderSection();
@@ -245,7 +245,7 @@ describe('<ApiKeySection />', () => {
     expect(screen.queryByTestId('api-error-dialog-trace')).toBeNull();
     fireEvent.click(screen.getByTestId('api-error-dialog-trace-toggle'));
     expect(screen.getByTestId('api-error-dialog-trace').textContent).toContain(
-      'openai_authentication',
+      'ai_provider_authentication',
     );
   });
 });

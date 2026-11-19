@@ -14,9 +14,9 @@ describe('Pipeline errors', () => {
   });
 
   it('PipelineAiProviderKeyMissingError has exitCode 3', () => {
-    const error = new PipelineAiProviderKeyMissingError('openai_api_key_missing', 'missing');
+    const error = new PipelineAiProviderKeyMissingError('ai_provider_api_key_missing', 'missing');
     expect(error.exitCode).toBe(ExitCode.MissingRequired);
-    expect(error.code).toBe('openai_api_key_missing');
+    expect(error.code).toBe('ai_provider_api_key_missing');
   });
 
   it('errors carry metadata', () => {

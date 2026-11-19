@@ -32,7 +32,7 @@ describe('noopScoringLogger', () => {
       log.scoringComplete({ jobId: 1, kind: 'complete', overallScore: 75, displayScore: '75.0' }),
     ).not.toThrow();
     expect(() => log.scoringSkip({ jobId: 1, reason: 'ineligible' })).not.toThrow();
-    expect(() => log.scoringFail({ jobId: 1, errorCode: 'openai_timeout' })).not.toThrow();
+    expect(() => log.scoringFail({ jobId: 1, errorCode: 'ai_provider_timeout' })).not.toThrow();
     expect(() =>
       log.scoringReuse({
         jobId: 1,
@@ -69,10 +69,10 @@ describe('pinoScoringLogger', () => {
   it('emits scoring.fail at warn level', () => {
     const { logger, events } = recordingLogger();
     const log = pinoScoringLogger(logger);
-    log.scoringFail({ jobId: 7, errorCode: 'openai_timeout' });
+    log.scoringFail({ jobId: 7, errorCode: 'ai_provider_timeout' });
     expect(events[0]?.level).toBe('warn');
     expect(events[0]?.context['event']).toBe('scoring.fail');
-    expect(events[0]?.context['errorCode']).toBe('openai_timeout');
+    expect(events[0]?.context['errorCode']).toBe('ai_provider_timeout');
   });
 
   it('emits scoring.skip at info level', () => {

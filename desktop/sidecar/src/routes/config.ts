@@ -9,7 +9,6 @@ import {
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { ApplicationError, ValidationError } from '@jobhunter/core/errors';
 import {
-  createDefaultAiProviderClient,
   AiProviderAuthenticationError,
   AiProviderBillingError,
   AiProviderPermissionError,
@@ -22,6 +21,7 @@ import {
 } from '@jobhunter/core/config';
 import { getSecretsBackend, type ResolvedSecretsBackend } from '../secrets-backend.js';
 import { sidecarFileSystem } from './fs-adapter.js';
+import { createApiKeyValidationClient } from './ai-provider-resolve.js';
 
 export interface ConfigRouteDeps {
   readonly validateApiKey?: (apiKey: string) => Promise<void>;
@@ -32,8 +32,11 @@ export interface ConfigRouteDeps {
   readonly secretsBackend?: () => Promise<ResolvedSecretsBackend>;
 }
 
-const defaultValidateApiKey = (apiKey: string): Promise<void> =>
-  createDefaultAiProviderClient({ apiKey, timeoutMs: 10_000 }).validate();
+const defaultValidateApiKey = async (apiKey: string): Promise<void> => {
+  // Probes the configured provider endpoint — an OpenRouter key must
+  // not be validated against the OpenAI endpoint (false 401s).
+  await (await createApiKeyValidationClient(apiKey)).validate();
+};
 
 const resolveBackend = (deps: ConfigRouteDeps): (() => Promise<ResolvedSecretsBackend>) =>
   deps.secretsBackend ?? getSecretsBackend;

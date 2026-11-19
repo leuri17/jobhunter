@@ -25,7 +25,7 @@ decoding, `AbortController` bookkeeping, and SSE framing.
   - `ai-provider-resolve.ts` — `resolveOpenAiClientOrNull()` lazily builds an
     `AiProviderClient` from the resolved secrets backend's store (falling back
     to `OPENAI_API_KEY`), with an optional `timeoutMs` override; returns
-    `null` when unset so handlers can reply `503 openai_unavailable`.
+    `null` when unset so handlers can reply `503 ai_provider_unavailable`.
   - `openai.ts` — `registerOpenAiRoutes()` exposes `GET /api/openai/models`
     (see the OpenAI bullet under Flow) with an injectable `listModels` seam.
 - **SSE channel** (`pipeline.ts`) reuses `initSseHeaders` / `writeSseEvent` /
@@ -38,7 +38,7 @@ ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
 ## Flow
 
 - **Pipeline**: `POST /api/pipeline/run` resolves the OpenAI client
-  (503 `openai_unavailable` without one), then preflights the persisted
+  (503 `ai_provider_unavailable` without one), then preflights the persisted
   prerequisites synchronously via `assertPipelinePrerequisites` — a miss
   returns a `409` envelope with `no_active_profile` /
   `no_active_filter` — before allocating `runId`, kicking off

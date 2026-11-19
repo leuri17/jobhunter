@@ -116,7 +116,7 @@ export async function registerJobsRoutes(
         aiProviderClient: client,
         logger: pinoScoringLogger(rootLogger),
         config: {
-          model: process.env['OPENAI_MODEL'] ?? 'gpt-5',
+          model: process.env['AI_PROVIDER_MODEL'] ?? process.env['OPENAI_MODEL'] ?? 'gpt-5',
           reasoningEffort: 'medium',
           concurrency: 1,
         },

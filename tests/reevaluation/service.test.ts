@@ -781,9 +781,9 @@ describe('ReevaluationService', () => {
   });
 
   // -----------------------------------------------------------------
-  // T21: Missing OPENAI_API_KEY (AiProvider-required scope) → openai_api_key_missing.
+  // T21: Missing OPENAI_API_KEY (AiProvider-required scope) → ai_provider_api_key_missing.
   // -----------------------------------------------------------------
-  it('T21: missing OPENAI_API_KEY + default scope → openai_api_key_missing', async () => {
+  it('T21: missing OPENAI_API_KEY + default scope → ai_provider_api_key_missing', async () => {
     await expect(
       makeService().execute({
         scope: 'default',
@@ -791,7 +791,7 @@ describe('ReevaluationService', () => {
         confirmScoring: false,
         env: { OPENAI_API_KEY: '' },
       }),
-    ).rejects.toMatchObject({ code: 'openai_api_key_missing' });
+    ).rejects.toMatchObject({ code: 'ai_provider_api_key_missing' });
   });
 
   // -----------------------------------------------------------------
@@ -909,7 +909,7 @@ describe('ReevaluationService', () => {
       filterConfigVersionId: filterConfigId,
       profileVersionId,
     });
-    fakeScoring.queueOutcomeForJob(jobId, makeFakeFailedOutcome(jobId, 'openai_timeout'));
+    fakeScoring.queueOutcomeForJob(jobId, makeFakeFailedOutcome(jobId, 'ai_provider_timeout'));
 
     const outcome = await makeService().execute({
       scope: 'scores-only',

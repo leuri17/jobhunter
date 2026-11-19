@@ -171,7 +171,7 @@ describe('PUT /api/secrets/api-key', () => {
     expect(await res.json()).toEqual({
       schemaVersion: 1,
       error: {
-        code: 'openai_authentication',
+        code: 'ai_provider_authentication',
         message: 'AiProvider authentication failed.',
         details: null,
       },
@@ -199,7 +199,7 @@ describe('PUT /api/secrets/api-key', () => {
     expect(await res.json()).toEqual({
       schemaVersion: 1,
       error: {
-        code: 'openai_network_error',
+        code: 'ai_provider_network_error',
         message: 'AiProvider network failure.',
         details: null,
       },
@@ -432,11 +432,9 @@ describe('secrets backend reporting and fallback gate', () => {
       backendReason: 'keychain_unavailable',
     });
     const onDisk = JSON.parse(readFileSync(secretsPath(), 'utf8')) as {
-      // Persisted slot keeps the pre-rename name until the secrets
-      // migration lands (see #340).
-      openaiApiKey?: string;
+      aiProviderApiKey?: string;
     };
-    expect(onDisk.openaiApiKey).toBe(KEY);
+    expect(onDisk.aiProviderApiKey).toBe(KEY);
   });
 });
 

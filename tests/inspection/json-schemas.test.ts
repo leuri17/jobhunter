@@ -135,7 +135,7 @@ const ROW_BY_STATE = {
     sourceJobId: 'src-9',
     title: 'Data Engineer',
     company: 'Eta',
-    errorCode: 'openai_request_failed',
+    errorCode: 'ai_provider_request_failed',
     attempts: 3,
     lastAttemptAt: TS,
   },

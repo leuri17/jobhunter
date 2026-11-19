@@ -7,7 +7,9 @@ import { SecretStoreError } from '../errors/application-error.js';
 
 export const SECRETS_FILENAME = 'secrets.json';
 
-const OPENAI_API_KEY = 'openaiApiKey';
+const AI_PROVIDER_API_KEY = 'aiProviderApiKey';
+/** Pre-rename slot name; read for one release so stored keys survive (#340). */
+const LEGACY_OPENAI_API_KEY = 'openaiApiKey';
 
 /**
  * Read/write access to secrets that must not live in the operational
@@ -73,13 +75,19 @@ export class FileSecretsStore implements SecretsStore {
     }
 
     if (typeof parsed !== 'object' || parsed === null) return {};
-    const value = (parsed as Record<string, unknown>)[OPENAI_API_KEY];
+    const record = parsed as Record<string, unknown>;
+    const value =
+      record[AI_PROVIDER_API_KEY] !== undefined
+        ? record[AI_PROVIDER_API_KEY]
+        : record[LEGACY_OPENAI_API_KEY];
     return typeof value === 'string' && value.length > 0 ? { aiProviderApiKey: value } : {};
   }
 
   async write(secrets: Secrets): Promise<void> {
     const payload =
-      secrets.aiProviderApiKey === undefined ? {} : { [OPENAI_API_KEY]: secrets.aiProviderApiKey };
+      secrets.aiProviderApiKey === undefined
+        ? {}
+        : { [AI_PROVIDER_API_KEY]: secrets.aiProviderApiKey };
     const text = `${JSON.stringify(payload, null, 2)}\n`;
     const tempPath = `${this.path}.${randomUUID()}.tmp`;
 

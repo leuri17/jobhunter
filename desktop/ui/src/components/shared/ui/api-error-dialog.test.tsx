@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 function aiProviderUnavailable(): ApiError {
-  return new ApiError(503, 'openai_unavailable', 'No AiProvider API key is configured');
+  return new ApiError(503, 'ai_provider_unavailable', 'No AiProvider API key is configured');
 }
 
 function mockClipboardWriteText(): ReturnType<typeof vi.fn> {
@@ -80,7 +80,7 @@ describe('<ApiErrorDialog />', () => {
 
     const trace = openTrace();
     expect(trace.textContent).toBe(
-      'status: 503\ncode: openai_unavailable\nmessage: No AiProvider API key is configured',
+      'status: 503\ncode: ai_provider_unavailable\nmessage: No AiProvider API key is configured',
     );
     expect(screen.getByTestId('api-error-dialog-trace-toggle').getAttribute('aria-expanded')).toBe(
       'true',
@@ -107,7 +107,7 @@ describe('<ApiErrorDialog />', () => {
     );
     expect(writeText).toHaveBeenCalledTimes(1);
     expect(writeText).toHaveBeenCalledWith(
-      'status: 503\ncode: openai_unavailable\nmessage: No AiProvider API key is configured',
+      'status: 503\ncode: ai_provider_unavailable\nmessage: No AiProvider API key is configured',
     );
   });
 

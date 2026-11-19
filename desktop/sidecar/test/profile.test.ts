@@ -259,7 +259,7 @@ describe('POST /api/profile/extract retry budget', () => {
         status: { kind: string; errorCode?: string; attemptCount?: number };
       };
       expect(body.status.kind).toBe('failed');
-      expect(body.status.errorCode).toBe('openai_timeout');
+      expect(body.status.errorCode).toBe('ai_provider_timeout');
       expect(body.status.attemptCount).toBe(2);
       expect(client.getRequestCount()).toBe(2);
     } finally {
