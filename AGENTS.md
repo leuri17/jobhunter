@@ -108,3 +108,4 @@ All three must pass. Format last so it never trips lint/typecheck on stale outpu
 - Do not write inline comments that restate what the code does.
 - Do not add fallbacks for impossible error cases.
 - Do not call `setState` (or equivalent) during render. Use effects for derived state.
+- Do not invent realistic-looking API keys or tokens in tests and fixtures. Use the low-entropy `sk-test-<digits>` convention (or plain non-`sk-` words) — richer fake values cross the gitleaks `generic-api-key` entropy threshold and fail the secrets CI.
