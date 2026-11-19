@@ -44,13 +44,27 @@ interface FakeState {
  *    the DOM but never renders (#321 diagnosis).
  *  - `windowScrollPaginates` advances the snapshot when the page-level
  *    `evaluate` runs — the window scroll IS the pagination on guest pages.
- *  - `neverActionable` makes the button `click()` throw regardless. */
+ *  - `neverActionable` makes the button `click()` throw regardless.
+ *  - `scrollResponses` emits each entry as a `response` event on every
+ *    window-scroll `evaluate` — simulating the `seeMoreJobPostings`
+ *    pagination XHRs the scroll gesture triggers (#346). */
 interface FakePageOptions {
   readonly hydrateOnWait?: boolean;
   readonly hiddenButton?: boolean;
   readonly windowScrollPaginates?: boolean;
   readonly neverActionable?: boolean;
+  readonly scrollResponses?: readonly {
+    readonly url: string;
+    readonly status: number;
+  }[];
 }
+
+interface FakeResponseLike {
+  url(): string;
+  status(): number;
+}
+
+type FakeResponseHandler = (response: FakeResponseLike) => void;
 
 class FakePage {
   public readonly state: FakeState;
@@ -58,6 +72,11 @@ class FakePage {
   private readonly hiddenButton: boolean;
   private readonly windowScrollPaginates: boolean;
   private readonly neverActionable: boolean;
+  private readonly scrollResponses: readonly {
+    readonly url: string;
+    readonly status: number;
+  }[];
+  private readonly responseHandlers = new Set<FakeResponseHandler>();
 
   constructor(snapshots: readonly Snapshot[], options: FakePageOptions = {}) {
     this.state = {
@@ -71,7 +90,33 @@ class FakePage {
     this.hiddenButton = options.hiddenButton === true;
     this.windowScrollPaginates = options.windowScrollPaginates === true;
     this.neverActionable = options.neverActionable === true;
+    this.scrollResponses = options.scrollResponses ?? [];
   }
+
+  /** Test hook: number of currently-attached `response` listeners. */
+  get responseListenerCount(): number {
+    return this.responseHandlers.size;
+  }
+
+  on = (event: 'response', handler: FakeResponseHandler): unknown => {
+    if (event === 'response') this.responseHandlers.add(handler);
+    return this;
+  };
+
+  off = (event: 'response', handler: FakeResponseHandler): unknown => {
+    if (event === 'response') this.responseHandlers.delete(handler);
+    return this;
+  };
+
+  emitResponse = (url: string, status: number): void => {
+    const response: FakeResponseLike = {
+      url: () => url,
+      status: () => status,
+    };
+    for (const handler of [...this.responseHandlers]) {
+      handler(response);
+    }
+  };
 
   currentSnapshot(): Snapshot {
     const idx = Math.min(this.state.snapshotIndex, this.state.snapshots.length - 1);
@@ -86,6 +131,9 @@ class FakePage {
     this.state.evaluateCount += 1;
     if (this.windowScrollPaginates && this.state.snapshotIndex < this.state.snapshots.length - 1) {
       this.state.snapshotIndex += 1;
+    }
+    for (const response of this.scrollResponses) {
+      this.emitResponse(response.url, response.status);
     }
   };
 
@@ -359,5 +407,74 @@ describe('src/linkedin/load-more — ', () => {
     const { cards, outcome } = await discoverAllCards(page as unknown as Page, BASE_OPTS);
     expect(cards.map((c) => c.sourceJobId)).toEqual(['800001']);
     expect(outcome.kind).toBe('no-progress');
+  });
+});
+
+describe('src/linkedin/load-more — mid-pagination rate limit (#346)', () => {
+  const SEE_MORE_URL =
+    'https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=engineer&start=25';
+
+  it('returns kind: rate-limited when a seeMoreJobPostings scroll gesture is throttled (429)', async () => {
+    // Live-evidence shape (#321 comment 2026-11-18): the document
+    // serves page 1 (60 cards), the scroll gesture fires
+    // seeMoreJobPostings, and the pagination API answers 429. The
+    // loop must abort before the no-progress budget can relabel the
+    // throttle as a short result set.
+    const page = new FakePage(
+      [
+        {
+          cardIds: ['900001', '900002', '900003'],
+          loadMorePresent: true,
+          endOfResultsVisible: false,
+        },
+      ],
+      { hiddenButton: true, scrollResponses: [{ url: SEE_MORE_URL, status: 429 }] },
+    );
+    const { cards, outcome } = await discoverAllCards(page as unknown as Page, BASE_OPTS);
+    expect(outcome.kind).toBe('rate-limited');
+    if (outcome.kind === 'rate-limited') {
+      expect(outcome.totalCardsDiscovered).toBe(3);
+      expect(outcome.iterations).toBe(1);
+      expect(outcome.url).toBe(SEE_MORE_URL);
+      expect(outcome.reason).toContain('429');
+    }
+    expect(cards.map((c) => c.sourceJobId)).toEqual(['900001', '900002', '900003']);
+    // The response listener is detached when the loop returns.
+    expect(page.responseListenerCount).toBe(0);
+  });
+
+  it('ignores 429 responses from unrelated endpoints', async () => {
+    const page = new FakePage(
+      [{ cardIds: ['910001'], loadMorePresent: true, endOfResultsVisible: false }],
+      {
+        hiddenButton: true,
+        scrollResponses: [
+          { url: 'https://www.linkedin.com/voyager/api/jobs/jobPostings?count=10', status: 429 },
+        ],
+      },
+    );
+    const { outcome } = await discoverAllCards(page as unknown as Page, BASE_OPTS);
+    expect(outcome.kind).toBe('no-progress');
+  });
+
+  it('ignores non-429 seeMoreJobPostings responses', async () => {
+    const page = new FakePage(
+      [
+        { cardIds: ['920001'], loadMorePresent: true, endOfResultsVisible: false },
+        { cardIds: ['920001', '920002'], loadMorePresent: false, endOfResultsVisible: true },
+      ],
+      { windowScrollPaginates: true, scrollResponses: [{ url: SEE_MORE_URL, status: 200 }] },
+    );
+    const { cards, outcome } = await discoverAllCards(page as unknown as Page, BASE_OPTS);
+    expect(outcome.kind).toBe('complete');
+    expect(cards).toHaveLength(2);
+  });
+
+  it('detaches the response listener on normal completion', async () => {
+    const page = new FakePage([
+      { cardIds: ['930001'], loadMorePresent: false, endOfResultsVisible: false },
+    ]);
+    await discoverAllCards(page as unknown as Page, BASE_OPTS);
+    expect(page.responseListenerCount).toBe(0);
   });
 });

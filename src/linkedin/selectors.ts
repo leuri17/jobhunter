@@ -135,6 +135,16 @@ export const OVERLAY_DISMISSAL_STRATEGY: Readonly<
 };
 
 /**
+ * Matches the guest pagination endpoint LinkedIn's search page calls when
+ * the window reaches the bottom of the results list (`seeMoreJobPostings`).
+ * Path-segment match, host-agnostic: LinkedIn serves it from `www.` and
+ * country subdomains alike. A 429 on this endpoint mid-discovery is the
+ * silent-short-results shape #346 makes loud — the load-more loop watches
+ * responses against this pattern and aborts with `kind: 'rate-limited'`.
+ */
+export const SEE_MORE_JOB_POSTINGS_URL_PATTERN = /\/seeMoreJobPostings\//;
+
+/**
  * Regex that captures the LinkedIn numeric job ID in a job-view href.
  *
  * Accepts both shapes LinkedIn renders:

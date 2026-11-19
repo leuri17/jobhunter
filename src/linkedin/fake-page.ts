@@ -35,6 +35,18 @@ export interface FakeLocator {
   waitFor: (options: { readonly state: string; readonly timeout: number }) => Promise<void>;
 }
 
+/**
+ * Structural stand-in for the slice of Playwright's `Response` the
+ * load-more loop's rate-limit listener reads (#346). Kept free of any
+ * Playwright import so `fake-page.ts` stays a pure stub.
+ */
+export interface FakeResponse {
+  url(): string;
+  status(): number;
+}
+
+export type FakeResponseHandler = (response: FakeResponse) => void;
+
 interface FakePageOptions {
   /** Initial URL (defaults to `'about:blank'`). */
   readonly url?: string;
@@ -87,6 +99,7 @@ export class FakePage {
   private currentUrl: string;
   private closed = false;
   private gotoCalls: Array<{ url: string; timeout: number; waitUntil: string }> = [];
+  private readonly responseHandlers = new Set<FakeResponseHandler>();
   private readonly onClose: () => void;
   private readonly onGetAttribute: (name: string) => string | null;
   private readonly onQuerySelector: (selector: string) => MinimalPageNode | null;
@@ -160,6 +173,34 @@ export class FakePage {
    */
   async evaluate(): Promise<undefined> {
     return undefined;
+  }
+
+  /** Playwright-compatible `on('response', ...)` registration (load-more #346). */
+  on(event: 'response', handler: FakeResponseHandler): FakePage {
+    if (event === 'response') this.responseHandlers.add(handler);
+    return this;
+  }
+
+  /** Playwright-compatible `off('response', ...)`. */
+  off(event: 'response', handler: FakeResponseHandler): FakePage {
+    if (event === 'response') this.responseHandlers.delete(handler);
+    return this;
+  }
+
+  /** Test hook: deliver a synthetic response to every `response` listener. */
+  emitResponse(url: string, status: number): void {
+    const response: FakeResponse = {
+      url: () => url,
+      status: () => status,
+    };
+    for (const handler of [...this.responseHandlers]) {
+      handler(response);
+    }
+  }
+
+  /** Test hook: count of currently-attached `response` listeners. */
+  get responseListenerCount(): number {
+    return this.responseHandlers.size;
   }
 
   /** Playwright-compatible close. */

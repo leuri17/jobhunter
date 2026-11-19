@@ -104,6 +104,20 @@ export type LoadMoreOutcome =
       readonly iterations: number;
     }
   | {
+      /**
+       * The pagination API (`seeMoreJobPostings`) answered 429 mid-loop
+       * (#346). The loop aborts before the no-progress budget can
+       * masquerade the throttle as a short result set; the discovery
+       * service maps this to `LinkedInRateLimitedError`.
+       */
+      readonly kind: 'rate-limited';
+      readonly totalCardsDiscovered: number;
+      readonly iterations: number;
+      readonly reason: string;
+      /** URL of the throttled pagination response. */
+      readonly url: string;
+    }
+  | {
       readonly kind: 'exhausted';
       readonly totalCardsDiscovered: number;
       readonly iterations: number;

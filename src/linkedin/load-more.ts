@@ -8,6 +8,8 @@
  *   - no new IDs are seen for `maxNoProgressAttempts` consecutive iterations
  *   - the loop hits its iteration cap (default 200)
  *   - the AbortSignal fires (returns `kind: 'cancelled'`)
+ *   - a `seeMoreJobPostings` pagination response answers 429 mid-loop
+ *     (returns `kind: 'rate-limited'`, #346)
  *
  * The function is PURE on its inputs (no I/O outside Playwright). It
  * returns a typed `LoadMoreOutcome` so the orchestrator can decide
@@ -26,9 +28,9 @@
  * values flow through `BrowserSession` in .  exercises
  * this module via inline fakes in `tests/linkedin/load-more.test.ts`.
  */
-import type { Page, Locator } from 'playwright';
+import type { Page, Locator, Response } from 'playwright';
 
-import { LINKEDIN_SELECTORS } from './selectors.js';
+import { LINKEDIN_SELECTORS, SEE_MORE_JOB_POSTINGS_URL_PATTERN } from './selectors.js';
 import type { DiscoveredCard, LoadMoreOutcome, LoadMoreState } from './state.js';
 import { createLoadMoreState } from './state.js';
 
@@ -69,93 +71,125 @@ export async function discoverAllCards(
   const scrollDelayMs = opts.scrollDelayMs ?? Math.max(1, Math.floor(opts.initialResultsMs / 4));
   const idToCard = new Map<string, DiscoveredCard>();
 
-  // Guest pages hydrate the results list lazily (~1–3s after
-  // domcontentloaded); collecting before the first card attaches zeroed
-  // out whole searches (#317). Bounded best-effort wait on either card
-  // selector — guest pages render the alt selector (see #312) — and a
-  // genuine no-results page simply waits out the bound.
-  await page
-    .locator(`${LINKEDIN_SELECTORS.cards.listItem}, ${LINKEDIN_SELECTORS.cards.listItemAlt}`)
-    .first()
-    .waitFor({ state: 'attached', timeout: opts.initialResultsMs })
-    .catch(() => undefined);
+  // Mid-pagination throttle detection (#346): the document can serve
+  // 200 while the pagination XHR (`seeMoreJobPostings`) answers 429.
+  // The listener records the first throttled pagination response; the
+  // loop-top check below turns it into a `kind: 'rate-limited'`
+  // outcome before the no-progress budget can relabel the throttle as
+  // a short result set.
+  let rateLimitUrl: string | null = null;
+  const onResponse = (response: Response): void => {
+    if (rateLimitUrl !== null) return;
+    if (response.status() !== 429) return;
+    const url = response.url();
+    if (!SEE_MORE_JOB_POSTINGS_URL_PATTERN.test(url)) return;
+    rateLimitUrl = url;
+  };
+  page.on('response', onResponse);
+  try {
+    // Guest pages hydrate the results list lazily (~1–3s after
+    // domcontentloaded); collecting before the first card attaches zeroed
+    // out whole searches (#317). Bounded best-effort wait on either card
+    // selector — guest pages render the alt selector (see #312) — and a
+    // genuine no-results page simply waits out the bound.
+    await page
+      .locator(`${LINKEDIN_SELECTORS.cards.listItem}, ${LINKEDIN_SELECTORS.cards.listItemAlt}`)
+      .first()
+      .waitFor({ state: 'attached', timeout: opts.initialResultsMs })
+      .catch(() => undefined);
 
-  while (state.iteration < maxIterations) {
-    if (opts.signal?.aborted === true) {
-      return {
-        cards: Array.from(idToCard.values()),
-        outcome: {
-          kind: 'cancelled',
-          totalCardsDiscovered: idToCard.size,
-          iterations: state.iteration,
-          reason: 'signal aborted',
-        },
-      };
-    }
-
-    const primaryLocator = page.locator(LINKEDIN_SELECTORS.cards.listItem);
-    const altLocator = page.locator(LINKEDIN_SELECTORS.cards.listItemAlt);
-    const discoveredThisIteration = await collectCards(primaryLocator, altLocator, idToCard);
-    void discoveredThisIteration;
-
-    if (await isEndOfResults(page)) {
-      return {
-        cards: Array.from(idToCard.values()),
-        outcome: {
-          kind: 'complete',
-          totalCardsDiscovered: idToCard.size,
-          iterations: state.iteration + 1,
-        },
-      };
-    }
-
-    const currentIds = new Set(idToCard.keys());
-    const progressed =
-      currentIds.size !== state.lastIdSet.size || !sameMembers(currentIds, state.lastIdSet);
-    state.lastIdSet = currentIds;
-    if (!progressed) {
-      state.noProgressCount += 1;
-      if (state.noProgressCount >= opts.maxNoProgressAttempts) {
+    while (state.iteration < maxIterations) {
+      if (opts.signal?.aborted === true) {
         return {
           cards: Array.from(idToCard.values()),
           outcome: {
-            kind: 'no-progress',
+            kind: 'cancelled',
             totalCardsDiscovered: idToCard.size,
-            iterations: state.iteration + 1,
-            reason: `no progress for ${opts.maxNoProgressAttempts} consecutive iterations`,
+            iterations: state.iteration,
+            reason: 'signal aborted',
           },
         };
       }
-    } else {
-      state.noProgressCount = 0;
+
+      if (rateLimitUrl !== null) {
+        return {
+          cards: Array.from(idToCard.values()),
+          outcome: {
+            kind: 'rate-limited',
+            totalCardsDiscovered: idToCard.size,
+            iterations: state.iteration,
+            reason: 'seeMoreJobPostings pagination request was throttled (HTTP 429)',
+            url: rateLimitUrl,
+          },
+        };
+      }
+
+      const primaryLocator = page.locator(LINKEDIN_SELECTORS.cards.listItem);
+      const altLocator = page.locator(LINKEDIN_SELECTORS.cards.listItemAlt);
+      const discoveredThisIteration = await collectCards(primaryLocator, altLocator, idToCard);
+      void discoveredThisIteration;
+
+      if (await isEndOfResults(page)) {
+        return {
+          cards: Array.from(idToCard.values()),
+          outcome: {
+            kind: 'complete',
+            totalCardsDiscovered: idToCard.size,
+            iterations: state.iteration + 1,
+          },
+        };
+      }
+
+      const currentIds = new Set(idToCard.keys());
+      const progressed =
+        currentIds.size !== state.lastIdSet.size || !sameMembers(currentIds, state.lastIdSet);
+      state.lastIdSet = currentIds;
+      if (!progressed) {
+        state.noProgressCount += 1;
+        if (state.noProgressCount >= opts.maxNoProgressAttempts) {
+          return {
+            cards: Array.from(idToCard.values()),
+            outcome: {
+              kind: 'no-progress',
+              totalCardsDiscovered: idToCard.size,
+              iterations: state.iteration + 1,
+              reason: `no progress for ${opts.maxNoProgressAttempts} consecutive iterations`,
+            },
+          };
+        }
+      } else {
+        state.noProgressCount = 0;
+      }
+
+      const loadMoreButton = page.locator(LINKEDIN_SELECTORS.loadMore.button);
+      if ((await loadMoreButton.count()) === 0) {
+        return {
+          cards: Array.from(idToCard.values()),
+          outcome: {
+            kind: 'complete',
+            totalCardsDiscovered: idToCard.size,
+            iterations: state.iteration + 1,
+          },
+        };
+      }
+
+      await paginateOnce(page, loadMoreButton, opts);
+      await wait(scrollDelayMs, opts.now);
+      state.iteration += 1;
     }
 
-    const loadMoreButton = page.locator(LINKEDIN_SELECTORS.loadMore.button);
-    if ((await loadMoreButton.count()) === 0) {
-      return {
-        cards: Array.from(idToCard.values()),
-        outcome: {
-          kind: 'complete',
-          totalCardsDiscovered: idToCard.size,
-          iterations: state.iteration + 1,
-        },
-      };
-    }
-
-    await paginateOnce(page, loadMoreButton, opts);
-    await wait(scrollDelayMs, opts.now);
-    state.iteration += 1;
+    return {
+      cards: Array.from(idToCard.values()),
+      outcome: {
+        kind: 'exhausted',
+        totalCardsDiscovered: idToCard.size,
+        iterations: maxIterations,
+        reason: `reached iteration cap (${maxIterations})`,
+      },
+    };
+  } finally {
+    page.off('response', onResponse);
   }
-
-  return {
-    cards: Array.from(idToCard.values()),
-    outcome: {
-      kind: 'exhausted',
-      totalCardsDiscovered: idToCard.size,
-      iterations: maxIterations,
-      reason: `reached iteration cap (${maxIterations})`,
-    },
-  };
 }
 
 const DEFAULT_MAX_ITERATIONS = 200;

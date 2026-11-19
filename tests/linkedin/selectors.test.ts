@@ -6,6 +6,7 @@ import {
   LINKEDIN_SELECTORS,
   LINKEDIN_SELECTORS_MAP_VERSION,
   OVERLAY_DISMISSAL_STRATEGY,
+  SEE_MORE_JOB_POSTINGS_URL_PATTERN,
 } from '../../src/linkedin/selectors.js';
 
 describe('src/linkedin/selectors — ', () => {
@@ -154,6 +155,29 @@ describe('src/linkedin/selectors — ', () => {
       if (match !== null) {
         expect(match[1]).toBe(expected);
       }
+    }
+  });
+});
+
+describe('src/linkedin/selectors — SEE_MORE_JOB_POSTINGS_URL_PATTERN (#346)', () => {
+  it('matches the guest pagination endpoint on www + country subdomains', () => {
+    const matches = [
+      'https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=engineer&start=25',
+      'https://nl.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=engineer&start=50',
+    ];
+    for (const url of matches) {
+      expect(SEE_MORE_JOB_POSTINGS_URL_PATTERN.test(url), url).toBe(true);
+    }
+  });
+
+  it('rejects the search document URL, unrelated APIs, and job-view pages', () => {
+    const rejects = [
+      'https://www.linkedin.com/jobs/search/?keywords=engineer&start=25',
+      'https://www.linkedin.com/voyager/api/jobs/jobPostings?count=10',
+      'https://nl.linkedin.com/jobs/view/some-role-at-acme-1234567/',
+    ];
+    for (const url of rejects) {
+      expect(SEE_MORE_JOB_POSTINGS_URL_PATTERN.test(url), url).toBe(false);
     }
   });
 });
