@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import AiProvider from 'openai';
 import {
   APIConnectionError,
   APIConnectionTimeoutError,
@@ -11,17 +11,17 @@ import {
 } from 'openai/error';
 
 import {
-  OpenAIAuthenticationError,
-  OpenAIBillingError,
-  OpenAIEmptyResponseError,
-  OpenAINetworkError,
-  OpenAIInvalidRequestError,
-  OpenAIRateLimitError,
-  OpenAIRefusalError,
-  OpenAIPermissionError,
-  OpenAIServerError,
-  OpenAITimeoutError,
-  OpenAIUnsupportedModelError,
+  AiProviderAuthenticationError,
+  AiProviderBillingError,
+  AiProviderEmptyResponseError,
+  AiProviderNetworkError,
+  AiProviderInvalidRequestError,
+  AiProviderRateLimitError,
+  AiProviderRefusalError,
+  AiProviderPermissionError,
+  AiProviderServerError,
+  AiProviderTimeoutError,
+  AiProviderUnsupportedModelError,
   ProfileExtractionError,
   ProfileExtractionRefusalError,
 } from './errors.js';
@@ -33,9 +33,9 @@ import {
 } from './refusal-detector.js';
 import { getResponseSchema } from './response-schemas.js';
 import type {
-  OpenAIExtractionRawResponse,
-  OpenAIClient,
-  OpenAIExtractionRequest,
+  AiProviderExtractionRawResponse,
+  AiProviderClient,
+  AiProviderExtractionRequest,
 } from './types.js';
 
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -43,7 +43,7 @@ const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_RETRY_AFTER_SECONDS = 1;
 
 /**
- * Error codes that the OpenAI API uses to signal quota / billing
+ * Error codes that the AiProvider API uses to signal quota / billing
  * exhaustion. We treat these as **non-retryable billing failures** even
  * when they arrive on a 429 (rate-limit) response, otherwise we would
  * burn the entire retry budget on a permanent billing problem.
@@ -57,21 +57,21 @@ const QUOTA_ERROR_CODES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Options accepted by {@link createDefaultOpenAIClient} in addition
+ * Options accepted by {@link createDefaultAiProviderClient} in addition
  * to the transport-level `apiKey` + `timeoutMs` + `maxRetries`. The
- * refusal-detection knobs flow from `config.openai.{refusalMarkers,flagEmptyBodies}`
+ * refusal-detection knobs flow from `config.aiProvider.{refusalMarkers,flagEmptyBodies}`
  * (see `src/config/schema.ts`) so a model-version bump can add new
  * markers without code-surgery in this module.
  */
-export interface DefaultOpenAIClientRefusalOptions {
+export interface DefaultAiProviderClientRefusalOptions {
   readonly refusalMarkers?: readonly string[];
   readonly flagEmptyBodies?: boolean;
 }
 
 /**
- * Build the production `OpenAIClient` backed by the official `openai`
+ * Build the production `AiProviderClient` backed by the official `openai`
  * SDK. The SDK is imported only inside this module — every other file
- * in `src/profile/` (and all tests) sees the `OpenAIClient` interface
+ * in `src/profile/` (and all tests) sees the `AiProviderClient` interface
  * only, so the dependency boundary stays clean.
  *
  * The client is a pure transport: it forwards the pre-built `messages`
@@ -85,22 +85,25 @@ export interface DefaultOpenAIClientRefusalOptions {
  * callers whose retry policy is owned by `runWithRetry` — leaving both
  * active stacks three SDK attempts inside every service-level attempt.
  */
-export function createDefaultOpenAIClient(options: {
+export function createDefaultAiProviderClient(options: {
   readonly apiKey: string;
+  /** OpenAI-compatible endpoint; omitted → the SDK's default (api.openai.com/v1). */
+  readonly baseUrl?: string;
   readonly timeoutMs?: number;
   readonly maxRetries?: number;
-  readonly refusal?: DefaultOpenAIClientRefusalOptions;
-}): OpenAIClient {
+  readonly refusal?: DefaultAiProviderClientRefusalOptions;
+}): AiProviderClient {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const sdk = new OpenAI({
+  const sdk = new AiProvider({
     apiKey: options.apiKey,
     timeout: timeoutMs,
+    ...(options.baseUrl !== undefined ? { baseURL: options.baseUrl } : {}),
     ...(options.maxRetries !== undefined ? { maxRetries: options.maxRetries } : {}),
   });
   const detect = createRefusalDetector(toRefusalDetectorOptions(options.refusal));
 
   return {
-    async extract(request: OpenAIExtractionRequest): Promise<OpenAIExtractionRawResponse> {
+    async extract(request: AiProviderExtractionRequest): Promise<AiProviderExtractionRawResponse> {
       const responseSchema = getResponseSchema(
         request.responseSchemaName,
         request.structuredOutputSchemaVersion,
@@ -132,19 +135,19 @@ export function createDefaultOpenAIClient(options: {
             ? null
             : { promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens };
 
-        // The OpenAI API returns HTTP 200 on refusal; the model signals
+        // The AiProvider API returns HTTP 200 on refusal; the model signals
         // the decline via `choices[0].message.refusal`. Surface it as a
         // typed error before the caller can mistake an empty
         // `rawJsonText` for a legitimate (but empty) extraction.
         if (refusalText.trim().length > 0) {
-          throw new OpenAIRefusalError(refusalText);
+          throw new AiProviderRefusalError(refusalText);
         }
         if (rawJsonText.trim().length === 0) {
           // Some models emit `content: ""` on refusal-like behaviour
           // without populating `refusal`, or when truncation /
           // content-filter removes the completion. The caller cannot
           // parse this as structured output, so fail loud.
-          throw new OpenAIEmptyResponseError();
+          throw new AiProviderEmptyResponseError();
         }
 
         // B2-M8: scan the raw content for refusal markers + empty
@@ -198,7 +201,7 @@ export function createDefaultOpenAIClient(options: {
  * + `flagEmpty: true`.
  */
 function toRefusalDetectorOptions(
-  options: DefaultOpenAIClientRefusalOptions | undefined,
+  options: DefaultAiProviderClientRefusalOptions | undefined,
 ): RefusalDetectorOptions | undefined {
   if (options === undefined) return undefined;
   const out: {
@@ -243,10 +246,10 @@ function translateSdkError(error: unknown): unknown {
   }
 
   if (error instanceof AuthenticationError) {
-    return new OpenAIAuthenticationError({ status: error.status }, error);
+    return new AiProviderAuthenticationError({ status: error.status }, error);
   }
   if (error instanceof PermissionDeniedError) {
-    return new OpenAIPermissionError({ status: error.status }, error);
+    return new AiProviderPermissionError({ status: error.status }, error);
   }
   if (error instanceof RateLimitError) {
     return translateRateLimitError(error);
@@ -258,13 +261,13 @@ function translateSdkError(error: unknown): unknown {
     return translateNotFoundError(error);
   }
   if (error instanceof APIConnectionTimeoutError) {
-    return new OpenAITimeoutError({ status: null }, error);
+    return new AiProviderTimeoutError({ status: null }, error);
   }
   if (error instanceof APIConnectionError) {
-    return new OpenAINetworkError({ status: null }, error);
+    return new AiProviderNetworkError({ status: null }, error);
   }
   if (error instanceof InternalServerError) {
-    return new OpenAIServerError({ status: error.status }, error);
+    return new AiProviderServerError({ status: error.status }, error);
   }
 
   const status = (error as { status?: number } | null)?.status;
@@ -274,7 +277,7 @@ function translateSdkError(error: unknown): unknown {
 
   // Treat anything else (TypeError from fetch, network reset, etc.) as a
   // transport failure.
-  return new OpenAINetworkError({ status: null }, asError(error));
+  return new AiProviderNetworkError({ status: null }, asError(error));
 }
 
 /**
@@ -285,10 +288,10 @@ function translateSdkError(error: unknown): unknown {
 function translateRateLimitError(error: RateLimitError): ProfileExtractionError {
   const code = readErrorCode((error as { error?: unknown }).error);
   if (code !== undefined && QUOTA_ERROR_CODES.has(code)) {
-    return new OpenAIBillingError({ status: error.status, code }, error);
+    return new AiProviderBillingError({ status: error.status, code }, error);
   }
   const retryAfterMs = parseRetryAfterMs(error.headers);
-  return new OpenAIRateLimitError(retryAfterMs, { status: error.status, code }, error);
+  return new AiProviderRateLimitError(retryAfterMs, { status: error.status, code }, error);
 }
 
 function translateBadRequestError(error: BadRequestError): ProfileExtractionError {
@@ -297,7 +300,7 @@ function translateBadRequestError(error: BadRequestError): ProfileExtractionErro
   const type = readErrorType(errorBody);
 
   if (code === 'insufficient_quota' || type === 'insufficient_quota') {
-    return new OpenAIBillingError({ status: error.status, code, type }, error);
+    return new AiProviderBillingError({ status: error.status, code, type }, error);
   }
   if (
     code === 'model_not_found' ||
@@ -305,13 +308,13 @@ function translateBadRequestError(error: BadRequestError): ProfileExtractionErro
     code === 'unsupported_model' ||
     type === 'unsupported_model'
   ) {
-    return new OpenAIUnsupportedModelError({ status: error.status, code, type }, error);
+    return new AiProviderUnsupportedModelError({ status: error.status, code, type }, error);
   }
-  return new OpenAIInvalidRequestError({ status: error.status, code, type }, error);
+  return new AiProviderInvalidRequestError({ status: error.status, code, type }, error);
 }
 
 /**
- * 404 is `OpenAIUnsupportedModelError` only when the upstream
+ * 404 is `AiProviderUnsupportedModelError` only when the upstream
  * explicitly tags the response as `model_not_found`. Any other 404
  * (e.g. an unknown endpoint) is a generic invalid request so the
  * caller can surface the precise code.
@@ -321,50 +324,50 @@ function translateNotFoundError(error: NotFoundError): ProfileExtractionError {
   const code = readErrorCode(errorBody);
   const type = readErrorType(errorBody);
   if (code === 'model_not_found' || type === 'model_not_found') {
-    return new OpenAIUnsupportedModelError({ status: error.status, code, type }, error);
+    return new AiProviderUnsupportedModelError({ status: error.status, code, type }, error);
   }
-  return new OpenAIInvalidRequestError({ status: error.status, code, type }, error);
+  return new AiProviderInvalidRequestError({ status: error.status, code, type }, error);
 }
 
 /**
  * Duck-typed fallback for synthetic errors that carry a `status` field
  * but no SDK class. Quota codes on a 429 take precedence over the
- * rate-limit mapping; unmatched 4xx codes map to `OpenAIInvalidRequestError`
- * (non-retryable), not to `OpenAINetworkError` (which would be retried).
+ * rate-limit mapping; unmatched 4xx codes map to `AiProviderInvalidRequestError`
+ * (non-retryable), not to `AiProviderNetworkError` (which would be retried).
  */
 function translateByStatus(status: number, error: unknown): ProfileExtractionError {
-  if (status === 401) return new OpenAIAuthenticationError({ status }, asError(error));
-  if (status === 403) return new OpenAIPermissionError({ status }, asError(error));
+  if (status === 401) return new AiProviderAuthenticationError({ status }, asError(error));
+  if (status === 403) return new AiProviderPermissionError({ status }, asError(error));
   if (status === 429) {
     const code = readErrorCode((error as { error?: unknown }).error);
     if (code !== undefined && QUOTA_ERROR_CODES.has(code)) {
-      return new OpenAIBillingError({ status, code }, asError(error));
+      return new AiProviderBillingError({ status, code }, asError(error));
     }
     const retryAfterMs = parseRetryAfterMsFromUnknown(error);
-    return new OpenAIRateLimitError(retryAfterMs, { status, code }, asError(error));
+    return new AiProviderRateLimitError(retryAfterMs, { status, code }, asError(error));
   }
-  if (status === 400) return new OpenAIInvalidRequestError({ status }, asError(error));
-  if (status === 402) return new OpenAIBillingError({ status }, asError(error));
-  if (status === 408) return new OpenAITimeoutError({ status }, asError(error));
+  if (status === 400) return new AiProviderInvalidRequestError({ status }, asError(error));
+  if (status === 402) return new AiProviderBillingError({ status }, asError(error));
+  if (status === 408) return new AiProviderTimeoutError({ status }, asError(error));
   if (status === 404) {
     const code = readErrorCode((error as { error?: unknown }).error);
     if (code === 'model_not_found') {
-      return new OpenAIUnsupportedModelError({ status, code }, asError(error));
+      return new AiProviderUnsupportedModelError({ status, code }, asError(error));
     }
-    return new OpenAIInvalidRequestError({ status, code }, asError(error));
+    return new AiProviderInvalidRequestError({ status, code }, asError(error));
   }
-  if (status >= 500) return new OpenAIServerError({ status }, asError(error));
+  if (status >= 500) return new AiProviderServerError({ status }, asError(error));
   // 4xx without a specific mapping (409, 422, 451, etc.) — non-retryable
   // client error, not a network failure.
   if (status >= 400 && status < 500) {
-    return new OpenAIInvalidRequestError({ status }, asError(error));
+    return new AiProviderInvalidRequestError({ status }, asError(error));
   }
-  return new OpenAINetworkError({ status }, asError(error));
+  return new AiProviderNetworkError({ status }, asError(error));
 }
 
 function asError(value: unknown): Error {
   if (value instanceof Error) return value;
-  return new Error(typeof value === 'string' ? value : 'OpenAI SDK error');
+  return new Error(typeof value === 'string' ? value : 'AiProvider SDK error');
 }
 
 function parseRetryAfterMs(headers: Headers | undefined): number | null {

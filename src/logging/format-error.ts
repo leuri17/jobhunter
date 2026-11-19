@@ -14,7 +14,7 @@
  *     expose one.
  *   - `code` is preserved when the input carries a string or number
  *     `code` field (matches `ApplicationError.code` +
- *     `OpenAI*.code` + Node `SystemError.code`).
+ *     `AiProvider*.code` + Node `SystemError.code`).
  *   - `metadata` is preserved when the input carries a plain object
  *     with that name (matches `ApplicationError.metadata`).
  *   - `cause` is recursed up to `options.maxDepth` (default 5). When

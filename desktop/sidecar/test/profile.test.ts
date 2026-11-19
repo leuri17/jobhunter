@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { buildServer } from '../src/server.js';
 import { registerProfileRoutes } from '../src/routes/profile.js';
-import { FakeOpenAIClient, OpenAITimeoutError } from '@jobhunter/core/profile';
+import { FakeAiProviderClient, AiProviderTimeoutError } from '@jobhunter/core/profile';
 import {
   initializeDatabase,
   createRepositories,
@@ -239,9 +239,11 @@ describe('POST /api/profile/extract retry budget', () => {
   });
 
   it('stops after two attempts when every attempt times out', async () => {
-    const client = new FakeOpenAIClient({ error: new OpenAITimeoutError({ status: null }) });
+    const client = new FakeAiProviderClient({
+      error: new AiProviderTimeoutError({ status: null }),
+    });
     app = Fastify();
-    await registerProfileRoutes(app, { openaiClient: client });
+    await registerProfileRoutes(app, { aiProviderClient: client });
     baseUrl = await app.listen({ port: 0, host: '127.0.0.1' });
     try {
       const tempFile = join(configHome, 'resume-budget.txt');
@@ -257,7 +259,7 @@ describe('POST /api/profile/extract retry budget', () => {
         status: { kind: string; errorCode?: string; attemptCount?: number };
       };
       expect(body.status.kind).toBe('failed');
-      expect(body.status.errorCode).toBe('openai_timeout');
+      expect(body.status.errorCode).toBe('ai_provider_timeout');
       expect(body.status.attemptCount).toBe(2);
       expect(client.getRequestCount()).toBe(2);
     } finally {

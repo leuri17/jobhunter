@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildServer } from '../src/server.js';
-import { OpenAIAuthenticationError, OpenAINetworkError } from '@jobhunter/core/profile';
+import { AiProviderAuthenticationError, AiProviderNetworkError } from '@jobhunter/core/profile';
 import {
   FileSecretsStore,
   maskSecret,
@@ -164,15 +164,15 @@ describe('PUT /api/secrets/api-key', () => {
     await storeKey(okUrl, OLD_KEY);
 
     const failUrl = await startServer(async () => {
-      throw new OpenAIAuthenticationError({ status: 401 });
+      throw new AiProviderAuthenticationError({ status: 401 });
     });
     const res = await putKey(failUrl, NEW_KEY);
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({
       schemaVersion: 1,
       error: {
-        code: 'openai_authentication',
-        message: 'OpenAI authentication failed.',
+        code: 'ai_provider_authentication',
+        message: 'AiProvider authentication failed.',
         details: null,
       },
     } satisfies ErrorEnvelope);
@@ -192,15 +192,15 @@ describe('PUT /api/secrets/api-key', () => {
     await storeKey(okUrl, OLD_KEY);
 
     const failUrl = await startServer(async () => {
-      throw new OpenAINetworkError({ status: null });
+      throw new AiProviderNetworkError({ status: null });
     });
     const res = await putKey(failUrl, NEW_KEY);
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({
       schemaVersion: 1,
       error: {
-        code: 'openai_network_error',
-        message: 'OpenAI network failure.',
+        code: 'ai_provider_network_error',
+        message: 'AiProvider network failure.',
         details: null,
       },
     } satisfies ErrorEnvelope);
@@ -284,13 +284,13 @@ class FakeKeychainStore implements SecretsStore {
   async read(): Promise<Secrets> {
     this.calls.push('read');
     const override = this.hooks?.onRead?.();
-    if (override !== undefined) return { openaiApiKey: override };
-    return this.value === undefined ? {} : { openaiApiKey: this.value };
+    if (override !== undefined) return { aiProviderApiKey: override };
+    return this.value === undefined ? {} : { aiProviderApiKey: this.value };
   }
 
   async write(secrets: Secrets): Promise<void> {
     this.calls.push('write');
-    this.value = this.hooks?.onWrite?.() ?? secrets.openaiApiKey;
+    this.value = this.hooks?.onWrite?.() ?? secrets.aiProviderApiKey;
   }
 
   async clear(): Promise<void> {
@@ -432,9 +432,9 @@ describe('secrets backend reporting and fallback gate', () => {
       backendReason: 'keychain_unavailable',
     });
     const onDisk = JSON.parse(readFileSync(secretsPath(), 'utf8')) as {
-      openaiApiKey?: string;
+      aiProviderApiKey?: string;
     };
-    expect(onDisk.openaiApiKey).toBe(KEY);
+    expect(onDisk.aiProviderApiKey).toBe(KEY);
   });
 });
 
@@ -480,7 +480,7 @@ describe('POST /api/secrets/api-key/migrate', () => {
   }
 
   it('moves the legacy file key into the keychain and deletes the file only after verification', async () => {
-    await legacyStore().write({ openaiApiKey: LEGACY_KEY });
+    await legacyStore().write({ aiProviderApiKey: LEGACY_KEY });
     const store = new FakeKeychainStore({
       onWrite: () => {
         store.fileExistsAt['write'] = existsSync(secretsPath());
@@ -513,7 +513,7 @@ describe('POST /api/secrets/api-key/migrate', () => {
   });
 
   it('returns 503 with the file untouched when the keychain is unavailable', async () => {
-    await legacyStore().write({ openaiApiKey: LEGACY_KEY });
+    await legacyStore().write({ aiProviderApiKey: LEGACY_KEY });
     const baseUrl = await startServer(() =>
       Promise.resolve({
         store: legacyStore(),
@@ -527,11 +527,11 @@ describe('POST /api/secrets/api-key/migrate', () => {
     expect(res.status).toBe(503);
     const body = (await res.json()) as ErrorEnvelope;
     expect(body.error.code).toBe('secrets_backend_unavailable');
-    expect((await legacyStore().read()).openaiApiKey).toBe(LEGACY_KEY);
+    expect((await legacyStore().read()).aiProviderApiKey).toBe(LEGACY_KEY);
   });
 
   it('returns 409 legacy_shadowed and leaves both stores unchanged when the keychain already has a key', async () => {
-    await legacyStore().write({ openaiApiKey: LEGACY_KEY });
+    await legacyStore().write({ aiProviderApiKey: LEGACY_KEY });
     const store = new FakeKeychainStore({ onRead: () => 'sk-existing-keychain' });
     const baseUrl = await startServer(() => Promise.resolve({ store, backend: 'keychain' }));
 
@@ -541,11 +541,11 @@ describe('POST /api/secrets/api-key/migrate', () => {
     const body = (await res.json()) as ErrorEnvelope;
     expect(body.error.code).toBe('legacy_shadowed');
     expect(store.calls).toEqual(['read']);
-    expect((await legacyStore().read()).openaiApiKey).toBe(LEGACY_KEY);
+    expect((await legacyStore().read()).aiProviderApiKey).toBe(LEGACY_KEY);
   });
 
   it('fails verification with 500 and keeps the file when the read-back does not match', async () => {
-    await legacyStore().write({ openaiApiKey: LEGACY_KEY });
+    await legacyStore().write({ aiProviderApiKey: LEGACY_KEY });
     let reads = 0;
     const store = new FakeKeychainStore({
       onRead: () => (reads++ === 0 ? undefined : 'sk-different-value'),
@@ -557,7 +557,7 @@ describe('POST /api/secrets/api-key/migrate', () => {
     expect(res.status).toBe(500);
     const body = (await res.json()) as ErrorEnvelope;
     expect(body.error.code).toBe('secrets_migration_verification_failed');
-    expect((await legacyStore().read()).openaiApiKey).toBe(LEGACY_KEY);
+    expect((await legacyStore().read()).aiProviderApiKey).toBe(LEGACY_KEY);
   });
 
   it('reports nothing_to_migrate when no legacy file exists', async () => {
@@ -576,7 +576,7 @@ describe('POST /api/secrets/api-key/migrate', () => {
   });
 
   it('reports no_keychain_backend on a standalone sidecar without the gate', async () => {
-    await legacyStore().write({ openaiApiKey: LEGACY_KEY });
+    await legacyStore().write({ aiProviderApiKey: LEGACY_KEY });
     const baseUrl = await startServer(() =>
       Promise.resolve({
         store: legacyStore(),
@@ -593,6 +593,6 @@ describe('POST /api/secrets/api-key/migrate', () => {
       migrated: false,
       reason: 'no_keychain_backend',
     });
-    expect((await legacyStore().read()).openaiApiKey).toBe(LEGACY_KEY);
+    expect((await legacyStore().read()).aiProviderApiKey).toBe(LEGACY_KEY);
   });
 });

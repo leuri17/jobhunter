@@ -25,7 +25,7 @@ see [`docs/responsible-use.md`](./responsible-use.md).
   caps. No parallelism by design.
 - **Strict typing.** TypeScript strict mode with `noUncheckedIndexedAccess`
   and `exactOptionalPropertyTypes`. Zod validates every external,
-  persisted, profile, filter, OpenAI, and JSON boundary.
+  persisted, profile, filter, AI-provider, and JSON boundary.
 
 ## User-facing error surfaces
 
@@ -84,7 +84,7 @@ order:
    case the sidecar skips the prompt via its HTTP `POST /api/pipeline/run`
    confirmation handshake.
 7. **LLM scoring.** For each accepted job, send the profile + extracted
-   job to OpenAI; parse the structured response with Zod; persist.
+   job to the AI provider; parse the structured response with Zod; persist.
 8. **Ranking.** Apply the deterministic weighted-score formula; rank
    by descending score.
 9. **UI output.** Stream the top N (default 20) to the frontend over
@@ -117,7 +117,7 @@ For full policy and user-facing responsibilities, see
 
 A profile moves through four statuses:
 
-1. **`draft`** — extracted from imported CV sources via OpenAI; not
+1. **`draft`** — extracted from imported CV sources via the AI provider; not
    yet usable for filtering or scoring.
 2. **`approved`** — explicitly approved by the user via the
    interactive editor; becomes the active profile.
@@ -131,7 +131,7 @@ resolved by explicit user action. Profiles with unresolved
 
 ## Filtering
 
-Filtering is fully deterministic — it never calls OpenAI. The filter
+Filtering is fully deterministic — it never calls the AI provider. The filter
 config is global (one set of rules applies to every job regardless of
 search query, location, or pipeline run).
 
@@ -150,7 +150,7 @@ need to be re-filtered when the profile or filter config is unchanged.
 
 ## Scoring
 
-Scoring uses OpenAI to evaluate each accepted job against your
+Scoring uses the AI provider to evaluate each accepted job against your
 approved profile. Inputs are limited to: the profile, the job's
 extracted title, company, location, and normalized description, and a
 versioned rubric. Outputs are validated with Zod and persisted with
@@ -179,7 +179,7 @@ Foreign keys are enforced. Every migration is committed.
 
 Configuration is persisted in OS-specific JSON (`config.json`). The
 schema is Zod-validated and `.strict()` — unknown properties are
-rejected. The OpenAI key is not part of it: it lives in the secrets
+rejected. The AI-provider key is not part of it: it lives in the secrets
 store (see below) when the user saves one, and otherwise comes from
 the `OPENAI_API_KEY` environment the sidecar inherits when the Tauri
 shell launches it.
@@ -190,7 +190,7 @@ The UI exposes a configuration view backed by the sidecar's
 
 ## Secrets and the API key
 
-The OpenAI key is the one credential the app persists, and it lives
+The AI-provider key is the one credential the app persists, and it lives
 in the OS keychain — the macOS Keychain, Windows Credential Manager,
 or the Linux Secret Service — behind the `SecretsStore` interface
 (`src/config/secrets.ts`). The Tauri shell owns all keychain access

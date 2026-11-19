@@ -13,7 +13,7 @@ import { api } from '@/lib/api';
 import type { AnyFieldApi } from './types';
 
 /**
- * OpenAI model id field: a free-text input that additionally suggests the
+ * AiProvider model id field: a free-text input that additionally suggests the
  * model ids the effective API key can access. Suggestions come from a
  * single per-session query shared by both model fields; with no key
  * configured, an empty list, or a failed fetch, it stays a plain text
@@ -22,8 +22,8 @@ import type { AnyFieldApi } from './types';
 export function ModelField({ field }: { field: AnyFieldApi }) {
   const [open, setOpen] = useState(false);
   const models = useQuery({
-    queryKey: ['openai', 'models'],
-    queryFn: api.listOpenAiModels,
+    queryKey: ['ai-provider', 'models'],
+    queryFn: api.listAiProviderModels,
     staleTime: Infinity,
   });
 

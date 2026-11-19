@@ -40,7 +40,7 @@ vi.mock('@jobhunter/core/pipeline', async (importOriginal) => {
         };
         prompts?: {
           askScoringConfirmation: (input: {
-            plan: { jobsDiscovered: number; newOpenAIRequests: number };
+            plan: { jobsDiscovered: number; newAiProviderRequests: number };
           }) => Promise<boolean>;
         };
       },
@@ -62,7 +62,7 @@ vi.mock('@jobhunter/core/pipeline', async (importOriginal) => {
       });
       this.options.logger?.searchComplete({ searchId: 1, jobsDiscovered: 3 });
       const confirmed = await this.options.prompts?.askScoringConfirmation({
-        plan: { jobsDiscovered: 3, newOpenAIRequests: 3 },
+        plan: { jobsDiscovered: 3, newAiProviderRequests: 3 },
       });
       if (confirmed !== true) {
         this.options.onEvent?.({ type: 'scoring_declined', runId: 1 });

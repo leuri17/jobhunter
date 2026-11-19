@@ -5,7 +5,7 @@ import { z } from 'zod';
  *
  * This module describes the persisted shape, including server-generated fields
  * (`id`, `createdAt`, `updatedAt`, `contentHash`, `derived`, `normalizedName`).
- * The OpenAI structured-output shape lives in `./openai/structured-output.ts`.
+ * The AiProvider structured-output shape lives in `./ai-provider/structured-output.ts`.
  */
 
 export const PROFILE_SCHEMA_VERSION = 1;

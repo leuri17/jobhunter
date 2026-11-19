@@ -134,7 +134,7 @@ export interface ReevaluationTotals {
  *
  * `jobId` is `null` for every scope except `job`, where it is the
  * caller-supplied identifier verbatim. `scoringPlan` is `null` when no
- * OpenAI-scored work was produced (e.g. `filters-only`, empty
+ * AiProvider-scored work was produced (e.g. `filters-only`, empty
  * `dry-run`, or `job` with a fully fresh score).
  */
 export interface ReevaluationPlan {
@@ -172,7 +172,7 @@ export interface ReevaluationOutcome {
  *                           route computes `!options.yes`; for
  *                           `filters-only` / `dry-run` scopes the
  *                           service overrides this to `false` because
- *                           no OpenAI requests are produced.
+ *                           no AiProvider requests are produced.
  * - `jobId`               — internal job id for `job` scope. The
  *                           sidecar route resolves the caller
  *                           identifier (`job_<int>` or numeric
@@ -199,7 +199,7 @@ export interface ReevaluationExecuteInput {
   readonly confirmScoring: boolean;
   readonly env: Readonly<Record<string, string | undefined>>;
   /**
-   * Resolves the effective OpenAI API key. When omitted, `env` is read
+   * Resolves the effective AiProvider API key. When omitted, `env` is read
    * directly, which keeps callers that only supply `OPENAI_API_KEY`
    * working unchanged.
    */

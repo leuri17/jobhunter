@@ -76,7 +76,7 @@ export function formatScoringPlan(plan: ScoringPlan): string {
   lines.push(`  jobs discovered: ${plan.jobsDiscovered}`);
   lines.push(`  jobs accepted: ${plan.jobsAccepted}`);
   lines.push(`  scores reused: ${plan.scoresReused}`);
-  lines.push(`  new OpenAI requests: ${plan.newOpenAIRequests}`);
+  lines.push(`  new AiProvider requests: ${plan.newAiProviderRequests}`);
   lines.push(`  scoring concurrency: ${plan.scoringConcurrency}`);
   if (plan.skippedScoringCategories.length > 0) {
     lines.push(`  skipped categories: ${plan.skippedScoringCategories.join(', ')}`);

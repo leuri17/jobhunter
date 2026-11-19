@@ -50,7 +50,7 @@ export type PipelineProgressEvent =
       readonly type: 'scoring_plan';
       readonly runId: number;
       readonly jobsDiscovered: number;
-      readonly newOpenAIRequests: number;
+      readonly newAiProviderRequests: number;
     }
   | { readonly type: 'scoring_confirmed'; readonly runId: number }
   | { readonly type: 'scoring_declined'; readonly runId: number }

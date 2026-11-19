@@ -68,13 +68,13 @@ describe('Pipeline format', () => {
       jobsDiscovered: 10,
       jobsAccepted: 8,
       scoresReused: 3,
-      newOpenAIRequests: 5,
+      newAiProviderRequests: 5,
       skippedScoringCategories: [],
       scoringConcurrency: 3,
       perJob: [],
     };
     const out = formatScoringPlan(plan);
     expect(out).toContain('jobs discovered: 10');
-    expect(out).toContain('new OpenAI requests: 5');
+    expect(out).toContain('new AiProvider requests: 5');
   });
 });

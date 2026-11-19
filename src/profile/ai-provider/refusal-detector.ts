@@ -1,8 +1,8 @@
 /**
- * Refusal-detection for raw OpenAI chat-completion content. Audit
+ * Refusal-detection for raw AiProvider chat-completion content. Audit
  * B2-M8 (second half of the paired #51 + #52 fix).
  *
- * Pre-fix the OpenAI client (`src/profile/openai/client.ts`) and the
+ * Pre-fix the AiProvider client (`src/profile/ai-provider/client.ts`) and the
  * scoring pipeline (`src/scoring/service.ts`) accepted whatever the
  * model returned as long as it parsed as JSON and passed Zod. A
  * model that refused — content-policy block, off-schema-but-valid-
@@ -69,7 +69,7 @@ export interface RefusalDetectorOptions {
  * every plausible refusal string just creates maintenance burden;
  * the longer the list, the higher the false-positive rate. If a
  * future model emits a refusal phrase not in this list, add it via
- * `RefusalDetectorOptions.markers` (or the `config.openai.refusalMarkers`
+ * `RefusalDetectorOptions.markers` (or the `config.aiProvider.refusalMarkers`
  * knob) without code-surgery elsewhere.
  */
 export const DEFAULT_REFUSAL_MARKERS: readonly string[] = [

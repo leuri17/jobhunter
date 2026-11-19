@@ -114,7 +114,7 @@ describe('RunsListService', () => {
       jobsDiscovered: 5,
       jobsScored: 0,
       searchesAttempted: 2,
-      searchErrors: [{ code: 'openai_request_failed', message: 'rate limited' }],
+      searchErrors: [{ code: 'ai_provider_request_failed', message: 'rate limited' }],
     });
   });
 
@@ -156,7 +156,7 @@ describe('RunsListService', () => {
     const withErrors = rows.find((r) => r.internalId === runId2);
     expect(withErrors?.errorSummary).toBe('linkedin_blocked: 2');
     const failed = rows.find((r) => r.internalId === runId3);
-    expect(failed?.errorSummary).toBe('openai_request_failed: 1');
+    expect(failed?.errorSummary).toBe('ai_provider_request_failed: 1');
   });
 
   it('exposes the documented row fields (id, status, counts, summary)', async () => {

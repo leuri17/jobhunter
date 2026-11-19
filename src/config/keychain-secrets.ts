@@ -215,7 +215,7 @@ export class KeychainSecretsStore implements SecretsStore {
   async read(): Promise<Secrets> {
     const response = await this.transport.request({ auth: '', op: 'get' });
     if (response.ok) {
-      if (typeof response.value === 'string') return { openaiApiKey: response.value };
+      if (typeof response.value === 'string') return { aiProviderApiKey: response.value };
       if (response.value === null || response.value === undefined) return {};
       throw toStoreError({ error: { kind: 'failed', message: 'unexpected bridge response' } });
     }
@@ -224,9 +224,9 @@ export class KeychainSecretsStore implements SecretsStore {
 
   async write(secrets: Secrets): Promise<void> {
     await this.send(
-      secrets.openaiApiKey === undefined
+      secrets.aiProviderApiKey === undefined
         ? { auth: '', op: 'delete' }
-        : { auth: '', op: 'set', value: secrets.openaiApiKey },
+        : { auth: '', op: 'set', value: secrets.aiProviderApiKey },
     );
   }
 

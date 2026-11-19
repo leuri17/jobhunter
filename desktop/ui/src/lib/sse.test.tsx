@@ -92,12 +92,16 @@ describe('usePipelineEvents', () => {
     es.emit('progress', JSON.stringify({ type: 'run_start', runId: 1, searchesPlanned: 2 }));
     es.emit(
       'progress',
-      JSON.stringify({ type: 'confirmation_required', jobsDiscovered: 3, newOpenAIRequests: 2 }),
+      JSON.stringify({
+        type: 'confirmation_required',
+        jobsDiscovered: 3,
+        newAiProviderRequests: 2,
+      }),
     );
     await waitFor(() => {
       expect(latest?.progress.map((e) => e.type)).toEqual(['run_start']);
     });
-    expect(latest?.pendingConfirmation).toEqual({ jobsDiscovered: 3, newOpenAIRequests: 2 });
+    expect(latest?.pendingConfirmation).toEqual({ jobsDiscovered: 3, newAiProviderRequests: 2 });
   });
 
   it('clears pendingConfirmation when the run ends', async () => {
@@ -108,10 +112,14 @@ describe('usePipelineEvents', () => {
     const es = FakeEventSource.instances[0]!;
     es.emit(
       'progress',
-      JSON.stringify({ type: 'confirmation_required', jobsDiscovered: 1, newOpenAIRequests: 1 }),
+      JSON.stringify({
+        type: 'confirmation_required',
+        jobsDiscovered: 1,
+        newAiProviderRequests: 1,
+      }),
     );
     await waitFor(() => {
-      expect(latest?.pendingConfirmation).toEqual({ jobsDiscovered: 1, newOpenAIRequests: 1 });
+      expect(latest?.pendingConfirmation).toEqual({ jobsDiscovered: 1, newAiProviderRequests: 1 });
     });
     es.emit('done', JSON.stringify({ status: 'cancelled', result: null }));
     await waitFor(() => {

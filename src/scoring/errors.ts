@@ -1,17 +1,17 @@
 import { ApplicationError, ExitCode } from '../errors/application-error.js';
-import { RetryableOpenAIError } from '../profile/openai/errors.js';
+import { RetryableAiProviderError } from '../profile/ai-provider/errors.js';
 
 /**
  * Typed error family for the scoring layer.
  *
  * Every subclass extends `ScoringError`, which extends
  * `ApplicationError`. The base class pins the exit code to
- * `ExitCode.OpenAIFailure = 5` so a scoring-layer failure surfaces
+ * `ExitCode.AiProviderFailure = 5` so a scoring-layer failure surfaces
  * a single, predictable HTTP response at the sidecar boundary.
  *
  * Per-job failures are NOT thrown across the `scoreOne` boundary
  * they are surfaced as `ScoringOutcome.kind: 'failed'` and persisted
- * to `openaiMetadata` with `success: false`. The errors defined here
+ * to `aiProviderMetadata` with `success: false`. The errors defined here
  * are reserved for:
  *   1. Hard-stop conditions that abort the whole batch
  *      (e.g. `ScoringHardStopError`).
@@ -27,7 +27,7 @@ export class ScoringError extends ApplicationError {
     metadata: Readonly<Record<string, unknown>> = {},
     cause?: Error,
   ) {
-    super(code, message, ExitCode.OpenAIFailure, metadata, cause);
+    super(code, message, ExitCode.AiProviderFailure, metadata, cause);
   }
 }
 
@@ -54,9 +54,9 @@ export interface ScoringInvalidStructuredOutputMetadata {
 }
 
 /**
- * Retryable once per  — OpenAI returned JSON that failed Zod validation.
+ * Retryable once per  — AiProvider returned JSON that failed Zod validation.
  *
- * Implements the `RetryableOpenAIError` marker so `runWithRetry`
+ * Implements the `RetryableAiProviderError` marker so `runWithRetry`
  * classifies this error outside the `ProfileExtractionError` hierarchy
  * (the scoring layer keeps its own error taxonomy). The
  * `correctiveRetry` flag opts the error into the "retryable once"
@@ -69,10 +69,10 @@ export interface ScoringInvalidStructuredOutputMetadata {
  */
 export class ScoringInvalidStructuredOutputError
   extends ScoringError
-  implements RetryableOpenAIError
+  implements RetryableAiProviderError
 {
-  // Opt into the "retryable once" budget. See `RetryableOpenAIError`
-  // and `OpenAIInvalidOutputError` for the same pattern on the
+  // Opt into the "retryable once" budget. See `RetryableAiProviderError`
+  // and `AiProviderInvalidOutputError` for the same pattern on the
   // profile-extraction side.
   readonly correctiveRetry = true;
 
@@ -126,7 +126,7 @@ export interface ScoringHardStopMetadata {
 
 /**
  * Hard-stop — aborts the whole batch when 3 consecutive jobs fail with
- * `openai_authentication`. The orchestrator catches this and maps it
+ * `ai_provider_authentication`. The orchestrator catches this and maps it
  * to a clean exit; remaining jobs in the batch are marked `kind: 'skipped'`.
  */
 export class ScoringHardStopError extends ScoringError {

@@ -61,7 +61,7 @@ export {
 } from './keychain-secrets.js';
 
 export {
-  resolveOpenAiApiKey,
+  resolveAiProviderApiKey,
   resolveApiKeySource,
   type ResolveApiKeyOptions,
   type ApiKeySource,

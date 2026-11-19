@@ -9,7 +9,7 @@ import { ConfigError, ValidationError } from '../errors/application-error.js';
 
 export interface ConfigPatch {
   readonly search?: OperationalConfig['search'];
-  readonly openai?: OperationalConfig['openai'];
+  readonly openai?: OperationalConfig['aiProvider'];
   readonly scraper?: OperationalConfig['scraper'];
   readonly output?: OperationalConfig['output'];
   readonly logging?: OperationalConfig['logging'];
@@ -50,7 +50,7 @@ export async function updateConfig(
   const merged: OperationalConfig = {
     ...before,
     ...(patch.search !== undefined ? { search: patch.search } : {}),
-    ...(patch.openai !== undefined ? { openai: patch.openai } : {}),
+    ...(patch.openai !== undefined ? { aiProvider: patch.openai } : {}),
     ...(patch.scraper !== undefined ? { scraper: patch.scraper } : {}),
     ...(patch.output !== undefined ? { output: patch.output } : {}),
     ...(patch.logging !== undefined ? { logging: patch.logging } : {}),

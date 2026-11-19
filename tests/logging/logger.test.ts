@@ -63,16 +63,16 @@ describe('createLogger', () => {
     expect(records[0]!.event).toBe('warning');
   });
 
-  it('redacts OpenAI API keys, raw prompts, and raw responses', () => {
+  it('redacts AiProvider API keys, raw prompts, and raw responses', () => {
     const { stream, records } = captureSink();
     const logger = createLogger({ level: 'info', prettyTerminal: false }, { stdout: stream });
 
     logger.info(
       {
-        component: 'openai',
+        component: 'ai_provider',
         event: 'request',
         apiKey: 'sk-very-secret-value',
-        openai: { key: 'sk-other' },
+        aiProvider: { key: 'sk-other' },
         prompt: 'tell me about yourself',
         rawResponse: 'top-secret response',
       },
@@ -178,7 +178,7 @@ describe('createLogger', () => {
 
       logger.info(
         {
-          component: 'openai',
+          component: 'ai_provider',
           event: 'request',
           request: { headers: { apiKey: 'sk-secret-test' } },
         },
@@ -196,7 +196,7 @@ describe('createLogger', () => {
       const logger = createLogger({ level: 'info', prettyTerminal: false }, { stdout: stream });
 
       logger.info(
-        { component: 'openai', event: 'request', apiKey: 'sk-top-secret' },
+        { component: 'ai_provider', event: 'request', apiKey: 'sk-top-secret' },
         'openai call',
       );
 
@@ -212,7 +212,7 @@ describe('createLogger', () => {
 
       logger.info(
         {
-          component: 'openai',
+          component: 'ai_provider',
           event: 'batch',
           messages: [
             { role: 'user', prompt: 'first secret prompt' },

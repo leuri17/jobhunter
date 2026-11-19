@@ -63,7 +63,7 @@ export interface ProfileRevisionEntry {
   readonly id: number;
   readonly profileVersionId: number;
   readonly revisionTimestamp: string;
-  readonly source: 'openai' | 'user' | 'conflict_resolution' | 'override';
+  readonly source: 'ai_provider' | 'user' | 'conflict_resolution' | 'override';
   readonly fieldPath: string;
   readonly previousValue: unknown | null;
   readonly newValue: unknown | null;

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ExitCode } from '../../src/errors/application-error.js';
 import {
   PipelinePrerequisiteError,
-  PipelineOpenAIKeyMissingError,
+  PipelineAiProviderKeyMissingError,
   PipelineLifecycleError,
 } from '../../src/pipeline/errors.js';
 
@@ -13,10 +13,10 @@ describe('Pipeline errors', () => {
     expect(error.code).toBe('no_active_profile');
   });
 
-  it('PipelineOpenAIKeyMissingError has exitCode 3', () => {
-    const error = new PipelineOpenAIKeyMissingError('openai_api_key_missing', 'missing');
+  it('PipelineAiProviderKeyMissingError has exitCode 3', () => {
+    const error = new PipelineAiProviderKeyMissingError('ai_provider_api_key_missing', 'missing');
     expect(error.exitCode).toBe(ExitCode.MissingRequired);
-    expect(error.code).toBe('openai_api_key_missing');
+    expect(error.code).toBe('ai_provider_api_key_missing');
   });
 
   it('errors carry metadata', () => {
@@ -35,9 +35,9 @@ describe('Pipeline errors', () => {
       'msg',
       {},
       undefined,
-      ExitCode.OpenAIFailure,
+      ExitCode.AiProviderFailure,
     );
-    expect(lifecycle.exitCode).toBe(ExitCode.OpenAIFailure);
+    expect(lifecycle.exitCode).toBe(ExitCode.AiProviderFailure);
 
     // Build a synthetic subclass that calls super with a custom
     // exit code and assert the value sticks — proves the constructor

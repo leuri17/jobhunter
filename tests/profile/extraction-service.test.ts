@@ -20,15 +20,15 @@ import {
   EXTRACTOR_IMPLEMENTATION_VERSION,
   PROFILE_EXTRACTION_PROMPT_VERSION,
   calculateExtractionFingerprint,
-} from '../../src/profile/openai/fingerprint.js';
-import { STRUCTURED_OUTPUT_SCHEMA_VERSION } from '../../src/profile/openai/structured-output.js';
+} from '../../src/profile/ai-provider/fingerprint.js';
+import { STRUCTURED_OUTPUT_SCHEMA_VERSION } from '../../src/profile/ai-provider/structured-output.js';
 import {
-  OpenAIAuthenticationError,
-  OpenAIRateLimitError,
-  OpenAIServerError,
-} from '../../src/profile/openai/errors.js';
-import { FakeOpenAIClient } from '../../src/profile/openai/fake-client.js';
-import type { OpenAIExtractionRawResponse } from '../../src/profile/openai/types.js';
+  AiProviderAuthenticationError,
+  AiProviderRateLimitError,
+  AiProviderServerError,
+} from '../../src/profile/ai-provider/errors.js';
+import { FakeAiProviderClient } from '../../src/profile/ai-provider/fake-client.js';
+import type { AiProviderExtractionRawResponse } from '../../src/profile/ai-provider/types.js';
 import { PROFILE_SCHEMA_VERSION, type ProfessionalProfile } from '../../src/profile/schema.js';
 import { hashString } from '../../src/profile/hashing.js';
 
@@ -77,7 +77,7 @@ function validExtractedJson(overrides: Record<string, unknown> = {}): string {
   });
 }
 
-function response(rawJsonText: string): OpenAIExtractionRawResponse {
+function response(rawJsonText: string): AiProviderExtractionRawResponse {
   return {
     rawJsonText,
     tokenUsage: { promptTokens: 100, completionTokens: 200 },
@@ -207,10 +207,10 @@ describe('ProfileExtractionService', () => {
     const sourceA = await seedSource(storedPathA, { sha256: 'a'.repeat(64) });
     const sourceB = await seedSource(storedPathB, { sha256: 'b'.repeat(64) });
 
-    const client = new FakeOpenAIClient({ responses: [response(validExtractedJson())] });
+    const client = new FakeAiProviderClient({ responses: [response(validExtractedJson())] });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -233,7 +233,7 @@ describe('ProfileExtractionService', () => {
     expect(client.getRequestCount()).toBe(1);
   });
 
-  it('returns profile_extraction_source_unusable without calling OpenAI when a source extraction failed', async () => {
+  it('returns profile_extraction_source_unusable without calling AiProvider when a source extraction failed', async () => {
     const storedPath = join(directory, 'a.md');
     writeSourceFile(storedPath, 'bad content');
     const sourceId = await seedSource(storedPath, {
@@ -241,10 +241,10 @@ describe('ProfileExtractionService', () => {
       textExtractionMessage: 'ocr_required',
     });
 
-    const client = new FakeOpenAIClient({ responses: [response(validExtractedJson())] });
+    const client = new FakeAiProviderClient({ responses: [response(validExtractedJson())] });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -259,10 +259,10 @@ describe('ProfileExtractionService', () => {
     expect(client.getRequestCount()).toBe(0);
   });
 
-  it('returns profile_extraction_input_too_large without calling OpenAI when source text exceeds the limit', async () => {
+  it('returns profile_extraction_input_too_large without calling AiProvider when source text exceeds the limit', async () => {
     // Two sources whose combined UTF-8 byte length is larger than a
     // deliberately tiny limit (~32 bytes); the orchestrator must fail
-    // before any OpenAI request is issued.
+    // before any AiProvider request is issued.
     const storedPathA = join(directory, 'a.md');
     const storedPathB = join(directory, 'b.md');
     writeSourceFile(storedPathA, 'X'.repeat(40));
@@ -270,10 +270,10 @@ describe('ProfileExtractionService', () => {
     const sourceA = await seedSource(storedPathA, { sha256: 'a'.repeat(64) });
     const sourceB = await seedSource(storedPathB, { sha256: 'b'.repeat(64) });
 
-    const client = new FakeOpenAIClient({ responses: [response(validExtractedJson())] });
+    const client = new FakeAiProviderClient({ responses: [response(validExtractedJson())] });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -288,14 +288,14 @@ describe('ProfileExtractionService', () => {
     expect(status.attemptCount).toBe(0);
     expect(client.getRequestCount()).toBe(0);
 
-    const metadata = await repositories.openaiMetadata.listByOperation('profile_extraction');
+    const metadata = await repositories.aiProviderMetadata.listByOperation('profile_extraction');
     expect(metadata).toHaveLength(1);
     expect(metadata[0]?.success).toBe(false);
     expect(metadata[0]?.errorCode).toBe('profile_extraction_input_too_large');
     expect(metadata[0]?.attemptCount).toBe(0);
   });
 
-  it('reuses an existing draft row that matches the fingerprint, without calling OpenAI', async () => {
+  it('reuses an existing draft row that matches the fingerprint, without calling AiProvider', async () => {
     const storedPathA = join(directory, 'a.md');
     const storedPathB = join(directory, 'b.md');
     writeSourceFile(storedPathA, 'Alice resume content');
@@ -334,10 +334,10 @@ describe('ProfileExtractionService', () => {
       .where(eq(profileVersionsTable.id, existingId))
       .run();
 
-    const client = new FakeOpenAIClient({ responses: [response(validExtractedJson())] });
+    const client = new FakeAiProviderClient({ responses: [response(validExtractedJson())] });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -351,7 +351,7 @@ describe('ProfileExtractionService', () => {
     expect(client.getRequestCount()).toBe(0);
   });
 
-  it('falls through to a new OpenAI call when the existing row is rejected (history preserved)', async () => {
+  it('falls through to a new AiProvider call when the existing row is rejected (history preserved)', async () => {
     const storedPathA = join(directory, 'a.md');
     writeSourceFile(storedPathA, 'content');
     const sourceA = await seedSource(storedPathA, { sha256: 'a'.repeat(64) });
@@ -377,10 +377,10 @@ describe('ProfileExtractionService', () => {
       updatedAt: FIXED_NOW_ISO,
     });
 
-    const client = new FakeOpenAIClient({ responses: [response(validExtractedJson())] });
+    const client = new FakeAiProviderClient({ responses: [response(validExtractedJson())] });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -404,7 +404,7 @@ describe('ProfileExtractionService', () => {
     writeSourceFile(storedPathA, 'content');
     const sourceA = await seedSource(storedPathA, { sha256: 'a'.repeat(64) });
 
-    const client = new FakeOpenAIClient({
+    const client = new FakeAiProviderClient({
       responses: [
         response('{"basics":'), // first response: malformed JSON
         response(validExtractedJson()), // second response: valid
@@ -412,7 +412,7 @@ describe('ProfileExtractionService', () => {
     });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -424,17 +424,17 @@ describe('ProfileExtractionService', () => {
     expect(client.getRequestCount()).toBe(2);
   });
 
-  it('fails with openai_invalid_output after the corrective retry also fails', async () => {
+  it('fails with ai_provider_invalid_output after the corrective retry also fails', async () => {
     const storedPathA = join(directory, 'a.md');
     writeSourceFile(storedPathA, 'content');
     const sourceA = await seedSource(storedPathA, { sha256: 'a'.repeat(64) });
 
-    const client = new FakeOpenAIClient({
+    const client = new FakeAiProviderClient({
       responses: [response('not json'), response('also not json')],
     });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -444,13 +444,13 @@ describe('ProfileExtractionService', () => {
 
     expect(status.kind).toBe('failed');
     if (status.kind !== 'failed') throw new Error('expected failed');
-    expect(status.errorCode).toBe('openai_invalid_output');
+    expect(status.errorCode).toBe('ai_provider_invalid_output');
     expect(status.attemptCount).toBe(2);
 
-    const metadata = await repositories.openaiMetadata.listByOperation('profile_extraction');
+    const metadata = await repositories.aiProviderMetadata.listByOperation('profile_extraction');
     expect(metadata).toHaveLength(1);
     expect(metadata[0]?.success).toBe(false);
-    expect(metadata[0]?.errorCode).toBe('openai_invalid_output');
+    expect(metadata[0]?.errorCode).toBe('ai_provider_invalid_output');
     expect(metadata[0]?.attemptCount).toBe(2);
   });
 
@@ -460,13 +460,13 @@ describe('ProfileExtractionService', () => {
     const sourceA = await seedSource(storedPathA, { sha256: 'a'.repeat(64) });
 
     // First script entry: throw rate limit once. Subsequent calls succeed.
-    const client = new FakeOpenAIClient([
-      { error: new OpenAIRateLimitError(null) },
+    const client = new FakeAiProviderClient([
+      { error: new AiProviderRateLimitError(null) },
       { responses: [response(validExtractedJson())] },
     ]);
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -477,21 +477,21 @@ describe('ProfileExtractionService', () => {
     expect(status.kind).toBe('created');
     expect(client.getRequestCount()).toBe(2);
 
-    const metadata = await repositories.openaiMetadata.listByOperation('profile_extraction');
+    const metadata = await repositories.aiProviderMetadata.listByOperation('profile_extraction');
     expect(metadata).toHaveLength(1);
     expect(metadata[0]?.success).toBe(true);
     expect(metadata[0]?.attemptCount).toBe(2);
   });
 
-  it('fails after three OpenAI 500s with attemptCount === 3', async () => {
+  it('fails after three AiProvider 500s with attemptCount === 3', async () => {
     const storedPathA = join(directory, 'a.md');
     writeSourceFile(storedPathA, 'content');
     const sourceA = await seedSource(storedPathA, { sha256: 'a'.repeat(64) });
 
-    const client = new FakeOpenAIClient({ error: new OpenAIServerError() });
+    const client = new FakeAiProviderClient({ error: new AiProviderServerError() });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -501,25 +501,25 @@ describe('ProfileExtractionService', () => {
 
     expect(status.kind).toBe('failed');
     if (status.kind !== 'failed') throw new Error('expected failed');
-    expect(status.errorCode).toBe('openai_server_error');
+    expect(status.errorCode).toBe('ai_provider_server_error');
     expect(status.attemptCount).toBe(3);
 
-    const metadata = await repositories.openaiMetadata.listByOperation('profile_extraction');
+    const metadata = await repositories.aiProviderMetadata.listByOperation('profile_extraction');
     expect(metadata).toHaveLength(1);
     expect(metadata[0]?.success).toBe(false);
-    expect(metadata[0]?.errorCode).toBe('openai_server_error');
+    expect(metadata[0]?.errorCode).toBe('ai_provider_server_error');
     expect(metadata[0]?.attemptCount).toBe(3);
   });
 
-  it('fails immediately on a non-retryable OpenAI 401 with attemptCount === 1', async () => {
+  it('fails immediately on a non-retryable AiProvider 401 with attemptCount === 1', async () => {
     const storedPathA = join(directory, 'a.md');
     writeSourceFile(storedPathA, 'content');
     const sourceA = await seedSource(storedPathA, { sha256: 'a'.repeat(64) });
 
-    const client = new FakeOpenAIClient({ error: new OpenAIAuthenticationError() });
+    const client = new FakeAiProviderClient({ error: new AiProviderAuthenticationError() });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -529,14 +529,14 @@ describe('ProfileExtractionService', () => {
 
     expect(status.kind).toBe('failed');
     if (status.kind !== 'failed') throw new Error('expected failed');
-    expect(status.errorCode).toBe('openai_authentication');
+    expect(status.errorCode).toBe('ai_provider_authentication');
     expect(status.attemptCount).toBe(1);
 
     expect(client.getRequestCount()).toBe(1);
-    const metadata = await repositories.openaiMetadata.listByOperation('profile_extraction');
+    const metadata = await repositories.aiProviderMetadata.listByOperation('profile_extraction');
     expect(metadata).toHaveLength(1);
     expect(metadata[0]?.success).toBe(false);
-    expect(metadata[0]?.errorCode).toBe('openai_authentication');
+    expect(metadata[0]?.errorCode).toBe('ai_provider_authentication');
     expect(metadata[0]?.attemptCount).toBe(1);
   });
 
@@ -625,10 +625,10 @@ describe('ProfileExtractionService', () => {
       warnings: [],
     };
 
-    const client = new FakeOpenAIClient({ responses: [response(JSON.stringify(extracted))] });
+    const client = new FakeAiProviderClient({ responses: [response(JSON.stringify(extracted))] });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -659,16 +659,16 @@ describe('ProfileExtractionService', () => {
     ]);
   });
 
-  it('records an openai_request_metadata row with success: true and relatedEntityType profile_version', async () => {
+  it('records an ai_provider_request_metadata row with success: true and relatedEntityType profile_version', async () => {
     const storedPathA = join(directory, 'a.md');
     writeSourceFile(storedPathA, 'content');
     const sourceA = await seedSource(storedPathA, { sha256: 'a'.repeat(64) });
 
     const extracted = validExtractedJson();
-    const client = new FakeOpenAIClient({ responses: [response(extracted)] });
+    const client = new FakeAiProviderClient({ responses: [response(extracted)] });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,
@@ -678,7 +678,7 @@ describe('ProfileExtractionService', () => {
     expect(status.kind).toBe('created');
     if (status.kind !== 'created') throw new Error('expected created');
 
-    const metadata = await repositories.openaiMetadata.listByOperation('profile_extraction');
+    const metadata = await repositories.aiProviderMetadata.listByOperation('profile_extraction');
     expect(metadata).toHaveLength(1);
     const row = metadata[0];
     expect(row?.success).toBe(true);
@@ -778,10 +778,10 @@ describe('ProfileExtractionService', () => {
     writeSourceFile(storedPathB, 'new source content');
     const sourceB = await seedSource(storedPathB, { sha256: 'b'.repeat(64) });
 
-    const client = new FakeOpenAIClient({ responses: [response(validExtractedJson())] });
+    const client = new FakeAiProviderClient({ responses: [response(validExtractedJson())] });
     const service = new ProfileExtractionService({
       repositories,
-      openaiClient: client,
+      aiProviderClient: client,
       config: BASE_CONFIG,
       retry: DEFAULT_RETRY,
       now: fixedNow,

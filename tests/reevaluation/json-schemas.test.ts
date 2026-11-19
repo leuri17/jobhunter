@@ -39,7 +39,7 @@ const SCORING_PLAN_FIXTURE = {
   jobsDiscovered: 1,
   jobsAccepted: 1,
   scoresReused: 0,
-  newOpenAIRequests: 1,
+  newAiProviderRequests: 1,
   skippedScoringCategories: [],
   scoringConcurrency: 3,
   perJob: [

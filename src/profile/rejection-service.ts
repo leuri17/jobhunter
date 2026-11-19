@@ -18,7 +18,7 @@
  *
  * The service depends on the repositories and the identifier-resolution
  * helper; it never touches Playwright, Drizzle
- * directly, or the OpenAI SDK.
+ * directly, or the AiProvider SDK.
  */
 
 import type { Repositories } from '../persistence/repositories/index.js';

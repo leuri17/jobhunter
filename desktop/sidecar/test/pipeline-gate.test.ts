@@ -46,7 +46,7 @@ vi.mock('@jobhunter/core/pipeline', async (importOriginal) => {
         confirmScoring: boolean;
         prompts: {
           askScoringConfirmation: (input: {
-            plan: { jobsDiscovered: number; newOpenAIRequests: number };
+            plan: { jobsDiscovered: number; newAiProviderRequests: number };
           }) => Promise<boolean>;
         };
       },
@@ -55,7 +55,7 @@ vi.mock('@jobhunter/core/pipeline', async (importOriginal) => {
     async run(): Promise<{ summary: RunSummary; scoringPlan: null; topN: [] }> {
       fakeGate.confirmScoringFlags.push(this.options.confirmScoring);
       const confirmed = await this.options.prompts.askScoringConfirmation({
-        plan: { jobsDiscovered: 2, newOpenAIRequests: 2 },
+        plan: { jobsDiscovered: 2, newAiProviderRequests: 2 },
       });
       fakeGate.confirmed.push(confirmed);
       return { summary: makeRunSummary(confirmed), scoringPlan: null, topN: [] };
@@ -198,12 +198,12 @@ describe('beginScoringConfirmation (unit)', () => {
   it('auto-declines after the timeout and clears the pending handle', async () => {
     vi.useFakeTimers();
     const run = makeRun();
-    const decision = beginScoringConfirmation(run, { jobsDiscovered: 3, newOpenAIRequests: 2 });
+    const decision = beginScoringConfirmation(run, { jobsDiscovered: 3, newAiProviderRequests: 2 });
     expect(run.events.at(-1)).toMatchObject({
       type: 'confirmation_required',
       runId: 'run-test',
       jobsDiscovered: 3,
-      newOpenAIRequests: 2,
+      newAiProviderRequests: 2,
     });
     expect(run.pendingConfirmation).not.toBeNull();
     await vi.advanceTimersByTimeAsync(CONFIRMATION_TIMEOUT_MS);
@@ -213,7 +213,7 @@ describe('beginScoringConfirmation (unit)', () => {
 
   it('resolves through the pending decision handle', async () => {
     const run = makeRun();
-    const decision = beginScoringConfirmation(run, { jobsDiscovered: 1, newOpenAIRequests: 1 });
+    const decision = beginScoringConfirmation(run, { jobsDiscovered: 1, newAiProviderRequests: 1 });
     run.pendingConfirmation?.resolve(true);
     await expect(decision).resolves.toBe(true);
     expect(run.pendingConfirmation).toBeNull();

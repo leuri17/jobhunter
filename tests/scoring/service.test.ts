@@ -4,7 +4,7 @@
  *
  * Each `it` block exercises one path end-to-end through the real
  * service, the real persistence layer (a temp SQLite DB), and a
- * deterministic `FakeOpenAIClient` wired up by the
+ * deterministic `FakeAiProviderClient` wired up by the
  * `FakeScoringPipeline` fixture. The fixture seeds every parent row
  * the service needs (`pipelineRuns`, `searchExecutions`,
  * `profileVersions`, `filterConfigurationVersions`,
@@ -13,7 +13,7 @@
  *
  * Path → block map (10 documented paths, one focused `it` per path):
  *
- *   1. OpenAI timeout                        → kind: 'failed'
+ *   1. AiProvider timeout                        → kind: 'failed'
  *   2. Malformed JSON                        → ScoringInvalidStructuredOutputError
  *   3. Zod validation failure                → ScoringInvalidStructuredOutputError
  *   4. scoring_input_too_large (payload cap) → kind: 'failed'
@@ -21,7 +21,7 @@
  *   6. Cancellation signal between iterations → kind: 'cancelled'
  *   7. Reuse path — active row matches FP    → kind: 'reused'
  *   8. Happy path                            → kind: 'complete'
- *   9. openai_authentication extraction      → outcome.errorCode === 'openai_authentication'
+ *   9. ai_provider_authentication extraction      → outcome.errorCode === 'ai_provider_authentication'
  *  10a. scoreBatch worker-pool concurrency  → tracker.maxConcurrent
  *  10b. consecutiveAuthFailures reset       → counter clears on success
  *
@@ -45,7 +45,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { hashString } from '../../src/profile/hashing.js';
-import { OpenAIAuthenticationError, OpenAITimeoutError } from '../../src/profile/openai/errors.js';
+import {
+  AiProviderAuthenticationError,
+  AiProviderTimeoutError,
+} from '../../src/profile/ai-provider/errors.js';
 import { computeScoreFingerprint } from '../../src/scoring/fingerprint.js';
 import { SCORING_PROMPT_VERSION } from '../../src/scoring/prompt.js';
 import { RUBRIC_VERSION } from '../../src/scoring/rubric.js';
@@ -120,23 +123,23 @@ describe('ScoringService.scoreOne — documented failure paths', () => {
     await pipeline.cleanup();
   });
 
-  it('path 1: OpenAI timeout → kind: failed with errorCode: openai_timeout', async () => {
-    pipeline.replaceOpenAIScripts([
-      { error: new OpenAITimeoutError() },
-      { error: new OpenAITimeoutError() },
-      { error: new OpenAITimeoutError() },
+  it('path 1: AiProvider timeout → kind: failed with errorCode: ai_provider_timeout', async () => {
+    pipeline.replaceAiProviderScripts([
+      { error: new AiProviderTimeoutError() },
+      { error: new AiProviderTimeoutError() },
+      { error: new AiProviderTimeoutError() },
     ]);
     pipeline.tracker.reset();
     const outcome = await pipeline.service.scoreOne(pipeline.makeScoreOneInput());
     expect(outcome.kind).toBe('failed');
-    expect(outcome.errorCode).toBe('openai_timeout');
+    expect(outcome.errorCode).toBe('ai_provider_timeout');
     expect(outcome.attempted).toBe(true);
     expect(outcome.overallScore).toBeNull();
     expect(pipeline.tracker.totalCalls).toBe(3);
   });
 
   it('path 2: malformed JSON → retry then ScoringInvalidStructuredOutputError', async () => {
-    pipeline.replaceOpenAIScripts([
+    pipeline.replaceAiProviderScripts([
       { responses: [makeValidResponse(MALFORMED_OUTPUT)] },
       { responses: [makeValidResponse(MALFORMED_OUTPUT)] },
     ]);
@@ -149,7 +152,7 @@ describe('ScoringService.scoreOne — documented failure paths', () => {
   });
 
   it('path 3: Zod validation failure (decimal score) → typed error', async () => {
-    pipeline.replaceOpenAIScripts([
+    pipeline.replaceAiProviderScripts([
       { responses: [makeValidResponse(DECIMAL_SCORE_OUTPUT)] },
       { responses: [makeValidResponse(DECIMAL_SCORE_OUTPUT)] },
     ]);
@@ -161,7 +164,7 @@ describe('ScoringService.scoreOne — documented failure paths', () => {
     expect(pipeline.tracker.totalCalls).toBe(2);
   });
 
-  it('path 4: scoring_input_too_large (payload cap) → typed error, no OpenAI call', async () => {
+  it('path 4: scoring_input_too_large (payload cap) → typed error, no AiProvider call', async () => {
     const oversized = await pipeline.insertCompleteJob({
       normalizedDescription: makeOversizedDescription(),
     });
@@ -176,7 +179,7 @@ describe('ScoringService.scoreOne — documented failure paths', () => {
     expect(pipeline.tracker.totalCalls).toBe(0);
   });
 
-  it('path 7: reuse path — active row matches fingerprint → kind: reused, no OpenAI call', async () => {
+  it('path 7: reuse path — active row matches fingerprint → kind: reused, no AiProvider call', async () => {
     const input = pipeline.makeScoreOneInput();
     const fingerprint = fingerprintFor({
       profileVersionId: pipeline.profileVersionId,
@@ -201,8 +204,8 @@ describe('ScoringService.scoreOne — documented failure paths', () => {
     expect(pipeline.tracker.totalCalls).toBe(0);
   });
 
-  it('path 8: happy path → kind: complete, OpenAI called once, row persisted', async () => {
-    pipeline.replaceOpenAIScripts([{ responses: [makeValidResponse(VALID_OUTPUT)] }]);
+  it('path 8: happy path → kind: complete, AiProvider called once, row persisted', async () => {
+    pipeline.replaceAiProviderScripts([{ responses: [makeValidResponse(VALID_OUTPUT)] }]);
     pipeline.tracker.reset();
     const outcome = await pipeline.service.scoreOne(pipeline.makeScoreOneInput());
     expect(outcome.kind).toBe('complete');
@@ -220,12 +223,12 @@ describe('ScoringService.scoreOne — documented failure paths', () => {
     expect(active?.success).toBe(true);
   });
 
-  it('path 9: openai_authentication extraction from cause.code', async () => {
-    pipeline.replaceOpenAIScripts([{ error: new OpenAIAuthenticationError() }]);
+  it('path 9: ai_provider_authentication extraction from cause.code', async () => {
+    pipeline.replaceAiProviderScripts([{ error: new AiProviderAuthenticationError() }]);
     pipeline.tracker.reset();
     const outcome = await pipeline.service.scoreOne(pipeline.makeScoreOneInput());
     expect(outcome.kind).toBe('failed');
-    expect(outcome.errorCode).toBe('openai_authentication');
+    expect(outcome.errorCode).toBe('ai_provider_authentication');
     expect(outcome.attempted).toBe(true);
     expect(pipeline.tracker.totalCalls).toBe(1);
   });
@@ -249,7 +252,7 @@ describe('ScoringService.scoreBatch — auth hard-stop (concurrency: 1)', () => 
     await pipeline.cleanup();
   });
 
-  it('path 5: 3 consecutive openai_authentication → ScoringHardStopError; remaining jobs skipped', async () => {
+  it('path 5: 3 consecutive ai_provider_authentication → ScoringHardStopError; remaining jobs skipped', async () => {
     // 6 jobs queued, all fail with auth. The third pulls triggers
     // the hard stop; the remaining 3 are still in the queue, so
     // the catch block marks them kind: 'skipped', errorCode:
@@ -261,16 +264,16 @@ describe('ScoringService.scoreBatch — auth hard-stop (concurrency: 1)', () => 
         return scoreOneInput;
       }),
     );
-    pipeline.replaceOpenAIScripts(
+    pipeline.replaceAiProviderScripts(
       Array.from({ length: jobs.length }, () => ({
-        error: new OpenAIAuthenticationError(),
+        error: new AiProviderAuthenticationError(),
       })),
     );
     pipeline.tracker.reset();
     const batch = await pipeline.service.scoreBatch(pipeline.makeScoreBatchInput(jobs));
     expect(batch.perJob).toHaveLength(6);
     const authFailures = batch.perJob.filter(
-      (o) => o.kind === 'failed' && o.errorCode === 'openai_authentication',
+      (o) => o.kind === 'failed' && o.errorCode === 'ai_provider_authentication',
     );
     const hardStops = batch.perJob.filter(
       (o) => o.kind === 'skipped' && o.errorCode === 'hard_stop',
@@ -282,7 +285,7 @@ describe('ScoringService.scoreBatch — auth hard-stop (concurrency: 1)', () => 
     expect(batch.totals.complete).toBe(0);
   });
 
-  it('path 6: cancellation signal between batch iterations → graceful stop (no OpenAI call)', async () => {
+  it('path 6: cancellation signal between batch iterations → graceful stop (no AiProvider call)', async () => {
     const jobs = await Promise.all(
       Array.from({ length: 4 }, async () => {
         const { scoreOneInput } = await pipeline.insertCompleteJob();
@@ -316,18 +319,18 @@ describe('ScoringService.scoreBatch — auth hard-stop (concurrency: 1)', () => 
         return scoreOneInput;
       }),
     );
-    pipeline.replaceOpenAIScripts([
-      { error: new OpenAIAuthenticationError() },
-      { error: new OpenAIAuthenticationError() },
+    pipeline.replaceAiProviderScripts([
+      { error: new AiProviderAuthenticationError() },
+      { error: new AiProviderAuthenticationError() },
       { responses: [makeValidResponse(VALID_OUTPUT)] },
-      { error: new OpenAIAuthenticationError() },
-      { error: new OpenAIAuthenticationError() },
+      { error: new AiProviderAuthenticationError() },
+      { error: new AiProviderAuthenticationError() },
     ]);
     pipeline.tracker.reset();
     const batch = await pipeline.service.scoreBatch(pipeline.makeScoreBatchInput(jobs));
     expect(batch.perJob).toHaveLength(5);
     const authFailures = batch.perJob.filter(
-      (o) => o.kind === 'failed' && o.errorCode === 'openai_authentication',
+      (o) => o.kind === 'failed' && o.errorCode === 'ai_provider_authentication',
     );
     const completes = batch.perJob.filter((o) => o.kind === 'complete');
     expect(authFailures.length).toBe(4);
@@ -343,7 +346,7 @@ describe('ScoringService.scoreBatch — auth hard-stop (concurrency: 1)', () => 
         return scoreOneInput;
       }),
     );
-    pipeline.replaceOpenAIScripts([
+    pipeline.replaceAiProviderScripts([
       { responses: [makeValidResponse(VALID_OUTPUT)] },
       { responses: [makeValidResponse(VALID_OUTPUT)] },
       { responses: [makeValidResponse(VALID_OUTPUT)] },
@@ -367,9 +370,9 @@ describe('ScoringService.scoreBatch — auth hard-stop (concurrency: 1)', () => 
         return scoreOneInput;
       }),
     );
-    pipeline.replaceOpenAIScripts([
-      { error: new OpenAIAuthenticationError() },
-      { error: new OpenAIAuthenticationError() },
+    pipeline.replaceAiProviderScripts([
+      { error: new AiProviderAuthenticationError() },
+      { error: new AiProviderAuthenticationError() },
     ]);
     pipeline.tracker.reset();
     const batch = await pipeline.service.scoreBatch(pipeline.makeScoreBatchInput(jobs));
@@ -404,7 +407,7 @@ describe('ScoringService.scoreBatch — worker-pool concurrency', () => {
         return scoreOneInput;
       }),
     );
-    pipeline.replaceOpenAIScripts(
+    pipeline.replaceAiProviderScripts(
       Array.from({ length: jobs.length }, () => ({
         responses: [makeValidResponse(VALID_OUTPUT)],
         delayMs: 50,
@@ -445,7 +448,7 @@ describe('ScoringService.scoreBatch — refusal detector (audit B2-M8)', () => {
     // `refusal:<reason>` discriminator so operators can audit which
     // phrase tripped the detector.
     const { scoreOneInput } = await pipeline.insertCompleteJob();
-    pipeline.replaceOpenAIScripts([
+    pipeline.replaceAiProviderScripts([
       { responses: [{ rawJsonText: 'I cannot help with that request.', tokenUsage: null }] },
       { responses: [{ rawJsonText: 'I cannot help with that request.', tokenUsage: null }] },
       // The third attempt is also a refusal — but the
@@ -467,7 +470,7 @@ describe('ScoringService.scoreBatch — refusal detector (audit B2-M8)', () => {
     // a generic "required field missing" message. The refusal
     // detector catches it earlier with a clearer reason.
     const { scoreOneInput } = await pipeline.insertCompleteJob();
-    pipeline.replaceOpenAIScripts([
+    pipeline.replaceAiProviderScripts([
       { responses: [{ rawJsonText: '{}', tokenUsage: null }] },
       { responses: [{ rawJsonText: '{}', tokenUsage: null }] },
     ]);
@@ -480,7 +483,7 @@ describe('ScoringService.scoreBatch — refusal detector (audit B2-M8)', () => {
 
   it('surfaces a whitespace-only body as ScoringInvalidStructuredOutputError', async () => {
     const { scoreOneInput } = await pipeline.insertCompleteJob();
-    pipeline.replaceOpenAIScripts([
+    pipeline.replaceAiProviderScripts([
       { responses: [{ rawJsonText: '   \n\t  ', tokenUsage: null }] },
       { responses: [{ rawJsonText: '   \n\t  ', tokenUsage: null }] },
     ]);
@@ -493,7 +496,7 @@ describe('ScoringService.scoreBatch — refusal detector (audit B2-M8)', () => {
 
   it('lets a valid non-empty response through unchanged', async () => {
     const { scoreOneInput } = await pipeline.insertCompleteJob();
-    pipeline.replaceOpenAIScripts([{ responses: [makeValidResponse(VALID_OUTPUT)] }]);
+    pipeline.replaceAiProviderScripts([{ responses: [makeValidResponse(VALID_OUTPUT)] }]);
     pipeline.tracker.reset();
     const outcome = await pipeline.service.scoreOne(scoreOneInput);
     expect(outcome.kind).toBe('complete');

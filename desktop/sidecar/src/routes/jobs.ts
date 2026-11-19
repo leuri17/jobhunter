@@ -9,20 +9,20 @@ import {
 import { FilterApplyService } from '@jobhunter/core/filter';
 import { ScoringService, pinoScoringLogger } from '@jobhunter/core/scoring';
 import {
-  createDefaultOpenAIClient,
-  type DefaultOpenAIClientRefusalOptions,
-  type OpenAIClient,
+  createDefaultAiProviderClient,
+  type DefaultAiProviderClientRefusalOptions,
+  type AiProviderClient,
 } from '@jobhunter/core/profile';
 import { pinoReevaluationLogger } from '@jobhunter/core/logging';
-import { resolveOpenAiApiKey } from '@jobhunter/core/config';
+import { resolveAiProviderApiKey } from '@jobhunter/core/config';
 import { getSecretsBackend } from '../secrets-backend.js';
 import { openDbHandle, createRepositories } from './db-helper.js';
-import { resolveOpenAiClientOrNull } from './openai-resolve.js';
+import { resolveAiProviderClientOrNull } from './ai-provider-resolve.js';
 
 export interface JobsRouteOptions {
-  readonly openaiClient?: OpenAIClient;
+  readonly aiProviderClient?: AiProviderClient;
   readonly rootLogger?: PinoLogger;
-  readonly refusal?: DefaultOpenAIClientRefusalOptions;
+  readonly refusal?: DefaultAiProviderClientRefusalOptions;
 }
 
 /**
@@ -30,7 +30,7 @@ export interface JobsRouteOptions {
  * smaller surface than `ReevaluationExecuteInput` — the handler
  * fills in `env` from `process.env` and `confirmScoring` defaults to
  * `false` so HTTP clients cannot force the service to make a single
- * OpenAI scoring batch without explicit opt-in.
+ * AiProvider scoring batch without explicit opt-in.
  *
  * The brief assumed `ReevaluationInput` was exported from
  * `@jobhunter/core/reevaluation`; the actual exported type is
@@ -108,15 +108,15 @@ export async function registerJobsRoutes(
       const repos = createRepositories(handle);
       const filterApplyService = new FilterApplyService({ repositories: repos });
       const client =
-        opts.openaiClient ??
-        (await resolveOpenAiClientOrNull(opts.refusal)) ??
-        createDefaultOpenAIClient({ apiKey: '' });
+        opts.aiProviderClient ??
+        (await resolveAiProviderClientOrNull(opts.refusal)) ??
+        createDefaultAiProviderClient({ apiKey: '' });
       const scoringService = new ScoringService({
         repositories: repos,
-        openaiClient: client,
+        aiProviderClient: client,
         logger: pinoScoringLogger(rootLogger),
         config: {
-          model: process.env['OPENAI_MODEL'] ?? 'gpt-5',
+          model: process.env['AI_PROVIDER_MODEL'] ?? process.env['OPENAI_MODEL'] ?? 'gpt-5',
           reasoningEffort: 'medium',
           concurrency: 1,
         },
@@ -135,7 +135,7 @@ export async function registerJobsRoutes(
         confirmScoring: req.body.confirmScoring ?? false,
         env: process.env,
         resolveApiKey: async () => {
-          return resolveOpenAiApiKey({
+          return resolveAiProviderApiKey({
             store: (await getSecretsBackend()).store,
             env: process.env,
           });

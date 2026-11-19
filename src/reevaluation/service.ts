@@ -58,7 +58,7 @@ import { formatError } from '../logging/format-error.js';
 /**
  * The model + reasoning-effort strings used by the scoring fingerprint
  * These match the MVP defaults from
- * `DEFAULT_OPERATIONAL_CONFIG.openai.jobScoring`. The service does
+ * `DEFAULT_OPERATIONAL_CONFIG.aiProvider.jobScoring`. The service does
  * NOT take a `ScoringService` dependency on the model/reasoning
  * settings — the reevaluation fingerprint must stay byte-for-byte
  * compatible with the score fingerprint the pipeline produces. A
@@ -109,7 +109,7 @@ export interface ReevaluationServiceOptions {
  *
  * `scoreKind` is the pre-execution classification used to build the
  * `ScoringPlan` accurately: `'complete'` jobs will trigger a new
- * OpenAI call (counted in `newOpenAIRequests`), `'reused'` jobs
+ * AiProvider call (counted in `newAiProviderRequests`), `'reused'` jobs
  * will hit the cache, and `'skipped'` jobs won't be scored at all.
  */
 interface MutablePlanEntry {
@@ -288,8 +288,8 @@ export class ReevaluationService {
           : (input.env['OPENAI_API_KEY'] ?? null);
       if (key === null || key.length === 0) {
         throw new PipelinePrerequisiteError(
-          'openai_api_key_missing',
-          'No OpenAI API key is available. Add one in Settings, or set OPENAI_API_KEY in your environment.',
+          'ai_provider_api_key_missing',
+          'No AiProvider API key is available. Add one in Settings, or set OPENAI_API_KEY in your environment.',
           { scope: input.scope, dryRun: input.dryRun },
         );
       }
@@ -474,7 +474,7 @@ export class ReevaluationService {
       !input.dryRun &&
       input.scope !== 'filters-only' &&
       scoringPlan !== null &&
-      scoringPlan.newOpenAIRequests > 0 &&
+      scoringPlan.newAiProviderRequests > 0 &&
       input.confirmScoring;
 
     if (shouldPrompt && scoringPlan !== null) {
@@ -560,7 +560,7 @@ export class ReevaluationService {
           //
           // Use instanceof ApplicationError rather than the duck-typed
           // `'code' in error` check: a non-ApplicationError with a
-          // `.code` field (e.g. a raw OpenAI SDK error object) would
+          // `.code` field (e.g. a raw AiProvider SDK error object) would
           // otherwise leak its library-specific code into the
           // reeval history record and the UI's status badges.
           const errorCode = error instanceof ApplicationError ? error.code : 'reeval_score_failure';

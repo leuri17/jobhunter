@@ -14,7 +14,7 @@ import type {
   ExtractedProject,
   ExtractedSkill,
   ExtractedWorkExperience,
-} from '../../src/profile/openai/structured-output.js';
+} from '../../src/profile/ai-provider/structured-output.js';
 import type { SourceReference } from '../../src/profile/schema.js';
 
 // Fixed "now" so generatedAt fields and any time-derived behavior are stable.

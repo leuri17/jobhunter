@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { PROFILE_EXTRACTION_PROMPT_VERSION } from '../../../src/profile/openai/fingerprint.js';
+import { PROFILE_EXTRACTION_PROMPT_VERSION } from '../../../src/profile/ai-provider/fingerprint.js';
 import {
   SOURCE_TEXT_DELIMITER,
   STRUCTURED_OUTPUT_SCHEMA,
   buildProfileExtractionPrompt,
   type ProfileExtractionPromptInput,
-} from '../../../src/profile/openai/prompt.js';
+} from '../../../src/profile/ai-provider/prompt.js';
 
 function request(
   overrides: Partial<ProfileExtractionPromptInput> = {},
@@ -163,7 +163,7 @@ describe('STRUCTURED_OUTPUT_SCHEMA', () => {
     // Zod 4.5+'s `toJSONSchema()` applies a `compactTypeUnion` post-pass in
     // `finalize()` that turns `z.string().nullable()` into
     // `{ type: ['string', 'null'] }` (JSON Schema 2020-12). Older zod emits
-    // `{ anyOf: [{type:'string'}, {type:'null'}] }`. OpenAI strict mode accepts
+    // `{ anyOf: [{type:'string'}, {type:'null'}] }`. AiProvider strict mode accepts
     // both forms; `expectNullableAcceptsNull` covers either.
     expectNullableAcceptsNull(headline);
   });
@@ -173,7 +173,7 @@ describe('STRUCTURED_OUTPUT_SCHEMA', () => {
     // marked as required there. The conversion happens only on the JSON
     // Schema projection, not on the Zod schema.
     const { ExtractedSkillSchema, ExtractedLanguageSchema } =
-      await import('../../../src/profile/openai/structured-output.js');
+      await import('../../../src/profile/ai-provider/structured-output.js');
     const skillShape = (ExtractedSkillSchema as unknown as { shape: Record<string, unknown> })
       .shape;
     const languageShape = (ExtractedLanguageSchema as unknown as { shape: Record<string, unknown> })

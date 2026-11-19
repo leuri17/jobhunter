@@ -30,7 +30,7 @@ export {
   FilterConfigurationRepository,
   FilterResultRepository,
   JobRepository,
-  OpenAIRequestMetadataRepository,
+  AiProviderRequestMetadataRepository,
   PipelineRunRepository,
   ProfileSourceRepository,
   ProfileVersionRepository,

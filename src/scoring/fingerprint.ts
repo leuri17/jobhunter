@@ -5,7 +5,7 @@ import { hashString } from '../profile/hashing.js';
  *
  * The fingerprint is the SHA-256 hash of the canonical JSON
  * serialization of these inputs. Any change to any field
- * invalidates the cached score and forces a fresh OpenAI call.
+ * invalidates the cached score and forces a fresh AiProvider call.
  */
 export interface ScoreFingerprintInput {
   readonly jobContentHash: string;

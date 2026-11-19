@@ -21,7 +21,7 @@ import type { DetectedSeniority, SeniorityDetectionResult } from './seniority-de
  * evaluator's responsibility (Task 6).
  *
  * The rank order is taken from `SENIORITY_LEVELS` in
- * `src/profile/schema.ts`. The helper never calls OpenAI.
+ * `src/profile/schema.ts`. The helper never calls AiProvider.
  */
 
 export type SeniorityRuleOutcome = 'accepted' | 'abstained' | 'rejected';

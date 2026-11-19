@@ -33,9 +33,9 @@ describe('updateConfig', () => {
 
     const seeded = {
       ...DEFAULT_OPERATIONAL_CONFIG,
-      openai: {
-        ...DEFAULT_OPERATIONAL_CONFIG.openai,
-        jobScoring: { ...DEFAULT_OPERATIONAL_CONFIG.openai.jobScoring, concurrency: 7 },
+      aiProvider: {
+        ...DEFAULT_OPERATIONAL_CONFIG.aiProvider,
+        jobScoring: { ...DEFAULT_OPERATIONAL_CONFIG.aiProvider.jobScoring, concurrency: 7 },
       },
     };
     const configPath = paths.config.file('config.json');
@@ -48,7 +48,9 @@ describe('updateConfig', () => {
       { confirm: async () => true },
     );
 
-    expect(result.config.openai.jobScoring.concurrency).toBe(seeded.openai.jobScoring.concurrency);
+    expect(result.config.aiProvider.jobScoring.concurrency).toBe(
+      seeded.aiProvider.jobScoring.concurrency,
+    );
     expect(result.config.logging).toEqual({ level: 'debug', prettyTerminal: false });
   });
 

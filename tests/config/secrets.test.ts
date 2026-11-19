@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { FileSecretsStore, maskSecret, resolveSecretsPath } from '../../src/config/secrets.js';
-import { resolveApiKeySource, resolveOpenAiApiKey } from '../../src/config/api-key.js';
+import { resolveApiKeySource, resolveAiProviderApiKey } from '../../src/config/api-key.js';
 import type { PlatformPaths } from '../../src/platform/paths.js';
 
 function pathsFor(root: string): PlatformPaths {
@@ -37,39 +37,60 @@ describe('FileSecretsStore', () => {
   });
 
   it('round-trips a stored key', async () => {
-    await store.write({ openaiApiKey: 'sk-test-123' });
-    expect(await store.read()).toEqual({ openaiApiKey: 'sk-test-123' });
+    await store.write({ aiProviderApiKey: 'sk-test-123' });
+    expect(await store.read()).toEqual({ aiProviderApiKey: 'sk-test-123' });
+  });
+
+  it('reads a key stored under the pre-rename openaiApiKey slot (#340)', async () => {
+    const { writeFileSync } = await import('node:fs');
+    // Fixture uses the same low-entropy sk-test-<digits> shape as the
+    // rest of this file: gitleaks' generic-api-key entropy heuristic
+    // flags richer fake values in CI.
+    writeFileSync(
+      path.join(root, 'secrets.json'),
+      JSON.stringify({ openaiApiKey: 'sk-test-123' }),
+    );
+    expect(await store.read()).toEqual({ aiProviderApiKey: 'sk-test-123' });
+  });
+
+  it('prefers the current slot when both are present', async () => {
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(
+      path.join(root, 'secrets.json'),
+      JSON.stringify({ aiProviderApiKey: 'sk-test-456', openaiApiKey: 'sk-test-123' }),
+    );
+    expect(await store.read()).toEqual({ aiProviderApiKey: 'sk-test-456' });
   });
 
   it('writes the file with owner-only permissions', async () => {
-    await store.write({ openaiApiKey: 'sk-test-123' });
+    await store.write({ aiProviderApiKey: 'sk-test-123' });
     const mode = statSync(resolveSecretsPath(pathsFor(root))).mode & 0o777;
     expect(mode).toBe(0o600);
   });
 
   it('overwrites rather than appends on a second write', async () => {
-    await store.write({ openaiApiKey: 'first' });
-    await store.write({ openaiApiKey: 'second' });
-    expect(await store.read()).toEqual({ openaiApiKey: 'second' });
+    await store.write({ aiProviderApiKey: 'first' });
+    await store.write({ aiProviderApiKey: 'second' });
+    expect(await store.read()).toEqual({ aiProviderApiKey: 'second' });
   });
 
   it('clear removes the stored key', async () => {
-    await store.write({ openaiApiKey: 'sk-test-123' });
+    await store.write({ aiProviderApiKey: 'sk-test-123' });
     await store.clear();
     expect(await store.read()).toEqual({});
   });
 
   it('throws a typed error when the file is not valid JSON', async () => {
-    await store.write({ openaiApiKey: 'sk-test-123' });
+    await store.write({ aiProviderApiKey: 'sk-test-123' });
     const { writeFileSync } = await import('node:fs');
     writeFileSync(resolveSecretsPath(pathsFor(root)), 'not json');
     await expect(store.read()).rejects.toMatchObject({ code: 'secrets_parse_failed' });
   });
 
   it('ignores an empty string value as unset', async () => {
-    await store.write({ openaiApiKey: 'sk-test-123' });
+    await store.write({ aiProviderApiKey: 'sk-test-123' });
     const { writeFileSync } = await import('node:fs');
-    writeFileSync(resolveSecretsPath(pathsFor(root)), JSON.stringify({ openaiApiKey: '' }));
+    writeFileSync(resolveSecretsPath(pathsFor(root)), JSON.stringify({ aiProviderApiKey: '' }));
     expect(await store.read()).toEqual({});
   });
 });
@@ -92,7 +113,7 @@ describe('maskSecret', () => {
   });
 });
 
-describe('resolveOpenAiApiKey precedence', () => {
+describe('resolveAiProviderApiKey precedence', () => {
   let root: string;
   let store: FileSecretsStore;
 
@@ -106,28 +127,28 @@ describe('resolveOpenAiApiKey precedence', () => {
   });
 
   it('prefers the stored key over the environment', async () => {
-    await store.write({ openaiApiKey: 'sk-stored' });
-    const resolved = await resolveOpenAiApiKey({ store, env: { OPENAI_API_KEY: 'sk-env' } });
+    await store.write({ aiProviderApiKey: 'sk-stored' });
+    const resolved = await resolveAiProviderApiKey({ store, env: { OPENAI_API_KEY: 'sk-env' } });
     expect(resolved).toBe('sk-stored');
   });
 
   it('falls back to the environment when nothing is stored', async () => {
-    const resolved = await resolveOpenAiApiKey({ store, env: { OPENAI_API_KEY: 'sk-env' } });
+    const resolved = await resolveAiProviderApiKey({ store, env: { OPENAI_API_KEY: 'sk-env' } });
     expect(resolved).toBe('sk-env');
   });
 
   it('returns null when neither source has a key', async () => {
-    expect(await resolveOpenAiApiKey({ store, env: {} })).toBeNull();
+    expect(await resolveAiProviderApiKey({ store, env: {} })).toBeNull();
   });
 
   it('ignores an empty environment variable', async () => {
-    expect(await resolveOpenAiApiKey({ store, env: { OPENAI_API_KEY: '' } })).toBeNull();
+    expect(await resolveAiProviderApiKey({ store, env: { OPENAI_API_KEY: '' } })).toBeNull();
   });
 
   it('falls back to the environment when the store read fails', async () => {
     const { writeFileSync } = await import('node:fs');
     writeFileSync(resolveSecretsPath(pathsFor(root)), 'corrupt');
-    const resolved = await resolveOpenAiApiKey({ store, env: { OPENAI_API_KEY: 'sk-env' } });
+    const resolved = await resolveAiProviderApiKey({ store, env: { OPENAI_API_KEY: 'sk-env' } });
     expect(resolved).toBe('sk-env');
   });
 
@@ -136,7 +157,7 @@ describe('resolveOpenAiApiKey precedence', () => {
       'environment',
     );
     expect(await resolveApiKeySource({ store, env: {} })).toBe('none');
-    await store.write({ openaiApiKey: 'sk-stored' });
+    await store.write({ aiProviderApiKey: 'sk-stored' });
     expect(await resolveApiKeySource({ store, env: { OPENAI_API_KEY: 'sk-env' } })).toBe('stored');
     expect(await resolveApiKeySource({ store, env: {} })).toBe('stored');
   });

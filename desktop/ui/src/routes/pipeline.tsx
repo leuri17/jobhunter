@@ -36,8 +36,8 @@ import { Route as rootRoute } from './__root';
 // CODE_GUIDANCE (`lib/error-surfaces.ts`), the destination here.
 const ACTION_ROUTES: Partial<Record<string, string>> = {
   no_active_profile: '/profile',
-  openai_unavailable: '/settings',
-  openai_api_key_missing: '/settings',
+  ai_provider_unavailable: '/settings',
+  ai_provider_api_key_missing: '/settings',
 };
 
 const GATE_STORAGE_KEY = 'pipeline:require-scoring-confirmation';
@@ -167,12 +167,12 @@ export function PipelinePage() {
 
   const view = deriveRunView(events.progress, events.status, events.pendingConfirmation !== null);
   const search = config.data?.config.search;
-  const jobScoring = config.data?.config.openai.jobScoring;
+  const jobScoring = config.data?.config.aiProvider.jobScoring;
   const matrixEmpty =
     search !== undefined && (search.searchQueries.length === 0 || search.locations.length === 0);
   const gatesMissing =
     prerequisites.data !== undefined &&
-    (!prerequisites.data.openaiKeyConfigured ||
+    (!prerequisites.data.aiProviderKeyConfigured ||
       prerequisites.data.activeProfile === null ||
       prerequisites.data.activeFilter === null);
   const runInProgress = start.isPending || events.status === 'running';
@@ -189,8 +189,8 @@ export function PipelinePage() {
   );
   let runDisabledReason: ReactNode = null;
   if (!runInProgress) {
-    if (prerequisites.data !== undefined && !prerequisites.data.openaiKeyConfigured) {
-      runDisabledReason = <>Add an OpenAI API key in {settingsLink} before running.</>;
+    if (prerequisites.data !== undefined && !prerequisites.data.aiProviderKeyConfigured) {
+      runDisabledReason = <>Add an AiProvider API key in {settingsLink} before running.</>;
     } else if (prerequisites.data !== undefined && prerequisites.data.activeProfile === null) {
       runDisabledReason = (
         <>
@@ -215,7 +215,7 @@ export function PipelinePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader>
-        <PageHeaderTitle subtitle="One pass: LinkedIn discovery, extraction, filter gating, and OpenAI scoring.">
+        <PageHeaderTitle subtitle="One pass: LinkedIn discovery, extraction, filter gating, and AiProvider scoring.">
           Pipeline
         </PageHeaderTitle>
         <div className="flex flex-wrap items-center gap-2">
@@ -334,7 +334,7 @@ export function PipelinePage() {
         <ScoringConfirmationDialog
           open={!gateDismissed}
           jobsDiscovered={confirmation.jobsDiscovered}
-          newOpenAIRequests={confirmation.newOpenAIRequests}
+          newAiProviderRequests={confirmation.newAiProviderRequests}
           model={jobScoring?.model}
           deciding={decide.isPending}
           onScore={() => {

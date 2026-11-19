@@ -114,10 +114,10 @@ export {
   type ProfileExtractionServiceOptions,
 } from './extraction-service.js';
 
-// Re-export the entire OpenAI surface so consumers can pull the full
+// Re-export the entire AiProvider surface so consumers can pull the full
 // extraction API from `src/profile/index.js` without reaching into the
 // `openai/` submodule.
-export * from './openai/index.js';
+export * from './ai-provider/index.js';
 
 export {
   ProfileLifecycleError,

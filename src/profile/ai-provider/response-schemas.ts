@@ -11,12 +11,12 @@ import { STRUCTURED_OUTPUT_SCHEMA } from './prompt.js';
 import { STRUCTURED_OUTPUT_SCHEMA_VERSION } from './structured-output.js';
 
 /**
- * Response-schema registry for the OpenAI client.
+ * Response-schema registry for the AiProvider client.
  *
- * Every operation that calls `OpenAIClient.extract` identifies its
+ * Every operation that calls `AiProviderClient.extract` identifies its
  * expected response shape with a `responseSchemaName`. The client looks
  * the name up in this registry to find the matching JSON Schema +
- * version, then sends both to the OpenAI SDK.
+ * version, then sends both to the AiProvider SDK.
  *
  * Adding a new operation is a three-step process:
  *   1. Define the Zod source of truth in a domain module.
@@ -28,9 +28,9 @@ import { STRUCTURED_OUTPUT_SCHEMA_VERSION } from './structured-output.js';
  * can mutate the catalog at runtime.
  *
  * Cross-module dependency: `src/scoring/schema.ts` is imported here so
- * the OpenAI client surface can serve scoring requests. The dependency
+ * the AiProvider client surface can serve scoring requests. The dependency
  * flows one way — `src/scoring/` does NOT import from
- * `src/profile/openai/`. The scoring module is otherwise self-contained
+ * `src/profile/ai-provider/`. The scoring module is otherwise self-contained
  * and is consumed by `src/scoring/service.ts` in .
  */
 export interface ResponseSchemaEntry {
@@ -54,7 +54,7 @@ export const RESPONSE_SCHEMA_NAMES: readonly string[] = Object.keys(RESPONSE_SCH
 /**
  * Raised when a request's `responseSchemaName` is not registered. This
  * is a configuration error (a developer passed a wrong name) — it is
- * NOT a runtime OpenAI failure, so the retry policy does not apply.
+ * NOT a runtime AiProvider failure, so the retry policy does not apply.
  */
 export class UnknownResponseSchemaError extends ApplicationError {
   constructor(responseSchemaName: string, metadata: ApplicationErrorMetadata = {}, cause?: Error) {

@@ -8,7 +8,7 @@ import { INIT_STEPS, type InitStepReport, type SetupSummary } from '../../src/in
  * human-readable renderer covers every documented `SetupSummary` shape:
  *
  *   1. `ready: true`
- *   2. `ready: false` + `openAiKeyMissing: true`
+ *   2. `ready: false` + `aiProviderKeyMissing: true`
  *   3. `ready: false` + edit handoff (`nextStep: 'approvedProfile'`,
  *      reason `edit_handoff`)
  *   4. `ready: false` + blocking conflict (`nextStep: 'approvedProfile'`,
@@ -34,7 +34,7 @@ function buildSummary(args: {
   readonly stepArtifactIds?: Readonly<Partial<Record<string, string | null>>>;
   readonly ready?: boolean;
   readonly nextStep?: SetupSummary['nextStep'];
-  readonly openAiKeyMissing?: boolean;
+  readonly aiProviderKeyMissing?: boolean;
 }): SetupSummary {
   const steps: InitStepReport[] = INIT_STEPS.map((id) => ({
     id,
@@ -48,7 +48,7 @@ function buildSummary(args: {
     ready: args.ready ?? false,
     steps,
     nextStep: args.nextStep ?? null,
-    openAiKeyMissing: args.openAiKeyMissing ?? false,
+    aiProviderKeyMissing: args.aiProviderKeyMissing ?? false,
   };
 }
 
@@ -60,7 +60,7 @@ describe('formatInitSummary', () => {
         directories: 'complete',
         migrations: 'complete',
         config: 'complete',
-        openaiKey: 'complete',
+        aiProviderKey: 'complete',
         search: 'complete',
         sources: 'complete',
         extract: 'complete',
@@ -73,14 +73,14 @@ describe('formatInitSummary', () => {
       },
       ready: true,
       nextStep: null,
-      openAiKeyMissing: false,
+      aiProviderKeyMissing: false,
     });
     const expected = [
       'paths: complete',
       'directories: complete',
       'migrations: complete',
       'config: complete',
-      'openaiKey: complete',
+      'aiProviderKey: complete',
       'search: complete',
       'sources: complete',
       'extract: complete',
@@ -93,17 +93,17 @@ describe('formatInitSummary', () => {
     expect(formatInitSummary(summary)).toBe(expected);
   });
 
-  it('renders an openAiKeyMissing partial summary', () => {
+  it('renders an aiProviderKeyMissing partial summary', () => {
     const summary = buildSummary({
       statuses: {
         extract: 'incomplete',
       },
       reasons: {
-        extract: 'openai_key_missing',
+        extract: 'ai_provider_key_missing',
       },
       ready: false,
       nextStep: 'extract',
-      openAiKeyMissing: true,
+      aiProviderKeyMissing: true,
     });
     const output = formatInitSummary(summary);
     expect(output).toContain('extract: incomplete');
@@ -190,7 +190,7 @@ describe('formatInitSummary', () => {
       'directories',
       'migrations',
       'config',
-      'openaiKey',
+      'aiProviderKey',
       'search',
       'sources',
       'extract',

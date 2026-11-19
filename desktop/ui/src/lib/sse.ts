@@ -40,7 +40,7 @@ export interface PipelineEvents {
    */
   pendingConfirmation: {
     readonly jobsDiscovered: number;
-    readonly newOpenAIRequests: number;
+    readonly newAiProviderRequests: number;
   } | null;
 }
 
@@ -49,7 +49,7 @@ type RunProgressPayload =
   | {
       readonly type: 'confirmation_required';
       readonly jobsDiscovered: number;
-      readonly newOpenAIRequests: number;
+      readonly newAiProviderRequests: number;
     };
 
 const initialEvents: PipelineEvents = {
@@ -104,7 +104,7 @@ export function usePipelineEvents(runId: string | null): PipelineEvents {
               ...s,
               pendingConfirmation: {
                 jobsDiscovered: event.jobsDiscovered,
-                newOpenAIRequests: event.newOpenAIRequests,
+                newAiProviderRequests: event.newAiProviderRequests,
               },
             };
           }

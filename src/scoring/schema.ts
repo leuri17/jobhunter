@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { SCORING_CATEGORIES, type ScoringCategory } from './types.js';
 
 /**
- * Zod source of truth for the OpenAI structured-output response of one
+ * Zod source of truth for the AiProvider structured-output response of one
  * scoring request.
  *
  * Shape:
@@ -15,9 +15,9 @@ import { SCORING_CATEGORIES, type ScoringCategory } from './types.js';
  *     explicit abstention.
  *   - `recommendationSummary`: a one- or two-sentence verdict.
  *
- * Every nested object is `.strict()` so OpenAI's strict-mode JSON-Schema
+ * Every nested object is `.strict()` so AiProvider's strict-mode JSON-Schema
  * projection rejects unknown keys at the wire boundary (mirrors
- * `src/profile/openai/structured-output.ts`). Bump
+ * `src/profile/ai-provider/structured-output.ts`). Bump
  * `SCORING_STRUCTURED_OUTPUT_SCHEMA_VERSION` on any shape change so the
  * score fingerprint invalidates correctly.
  */
@@ -50,16 +50,16 @@ export const SCORING_STRUCTURED_OUTPUT_SCHEMA_VERSION = 1 as const;
 export type ScoringStructuredOutputSchemaVersion = typeof SCORING_STRUCTURED_OUTPUT_SCHEMA_VERSION;
 
 /**
- * The response-schema name sent to OpenAI. The OpenAI client looks up
+ * The response-schema name sent to AiProvider. The AiProvider client looks up
  * the matching JSON Schema in `RESPONSE_SCHEMA_REGISTRY` (see
- * `src/profile/openai/response-schemas.ts`) using this name.
+ * `src/profile/ai-provider/response-schemas.ts`) using this name.
  */
 export const SCORING_RESPONSE_SCHEMA_NAME = 'ScoringStructuredOutput';
 
 /**
- * JSON Schema projection of `ScoringStructuredOutputSchema` for OpenAI
+ * JSON Schema projection of `ScoringStructuredOutputSchema` for AiProvider
  * strict-mode structured output. The projection is built once at module
- * load (mirrors `src/profile/openai/prompt.ts:STRUCTURED_OUTPUT_SCHEMA`)
+ * load (mirrors `src/profile/ai-provider/prompt.ts:STRUCTURED_OUTPUT_SCHEMA`)
  * so per-call overhead is zero.
  *
  * No strict-mode adjustments are required for the scoring shape — the

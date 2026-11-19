@@ -1,9 +1,9 @@
 import {
   OPENAI_RETRYABLE_ERROR_CODES,
-  OpenAITransientError,
+  AiProviderTransientError,
   ProfileExtractionError,
   type RetryAttemptSummary,
-  type RetryableOpenAIError,
+  type RetryableAiProviderError,
 } from './errors.js';
 import { formatError } from '../../logging/format-error.js';
 
@@ -68,14 +68,14 @@ export type AttemptRecord = RetryAttemptSummary;
  * - At most `maxAttempts` total attempts.
  * - Retryable failures (errors whose `code` is in `OPENAI_RETRYABLE_ERROR_CODES`)
  *   trigger a retry until the budget runs out. Classification uses the
- *   `RetryableOpenAIError` marker, so any error class that exposes a
+ *   `RetryableAiProviderError` marker, so any error class that exposes a
  *   `code: string` field is recognized — including `ProfileExtractionError`
  *   subclasses and out-of-hierarchy errors like
  *   `ScoringInvalidStructuredOutputError`.
  * - Errors that declare `correctiveRetry: true` via the marker get the
  *   "retryable once" budget: a second occurrence aborts the call
  *   instead of burning the full attempt budget. Both
- *   `OpenAIInvalidOutputError` (profile extraction) and
+ *   `AiProviderInvalidOutputError` (profile extraction) and
  *   `ScoringInvalidStructuredOutputError` (scoring) opt into this
  *   semantics.
  * - Non-retryable failures abort immediately.
@@ -118,11 +118,11 @@ export async function runWithRetry<T>(
     } catch (error) {
       lastError = error;
 
-      const errorCode = isRetryableOpenAIError(error) ? error.code : null;
+      const errorCode = isRetryableAiProviderError(error) ? error.code : null;
       const errorMessage = formatError(error).message;
-      const retryAfterMs = error instanceof OpenAITransientError ? error.retryAfterMs : null;
+      const retryAfterMs = error instanceof AiProviderTransientError ? error.retryAfterMs : null;
       const isRetryable = errorCode !== null && OPENAI_RETRYABLE_ERROR_CODES.has(errorCode);
-      const isInvalidOutput = isRetryableOpenAIError(error) && error.correctiveRetry === true;
+      const isInvalidOutput = isRetryableAiProviderError(error) && error.correctiveRetry === true;
 
       const willRetry =
         isRetryable &&
@@ -166,17 +166,17 @@ function shouldAbortInvalidOutput(isInvalidOutput: boolean, invalidOutputRetries
 }
 
 /**
- * Duck-typed structural check for the `RetryableOpenAIError` marker.
+ * Duck-typed structural check for the `RetryableAiProviderError` marker.
  *
  * The marker is a TypeScript interface (not a class) so `instanceof`
  * can't narrow it. We require `error` to be an `Error` subclass with a
- * `code: string` field — every concrete OpenAI-driven error in the
+ * `code: string` field — every concrete AiProvider-driven error in the
  * codebase inherits `code` from `ApplicationError`, so this matches
  * `ProfileExtractionError` and its subclasses plus external classes
  * like `ScoringInvalidStructuredOutputError` that implement the
  * marker via `implements`.
  */
-function isRetryableOpenAIError(error: unknown): error is RetryableOpenAIError {
+function isRetryableAiProviderError(error: unknown): error is RetryableAiProviderError {
   return (
     error instanceof Error &&
     'code' in error &&

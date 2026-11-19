@@ -7,9 +7,9 @@ import {
   ResponseSchemaVersionMismatchError,
   UnknownResponseSchemaError,
   getResponseSchema,
-} from '../../../src/profile/openai/response-schemas.js';
+} from '../../../src/profile/ai-provider/response-schemas.js';
 import { SCORING_STRUCTURED_OUTPUT_SCHEMA_VERSION } from '../../../src/scoring/schema.js';
-import { STRUCTURED_OUTPUT_SCHEMA_VERSION } from '../../../src/profile/openai/structured-output.js';
+import { STRUCTURED_OUTPUT_SCHEMA_VERSION } from '../../../src/profile/ai-provider/structured-output.js';
 
 describe('RESPONSE_SCHEMA_REGISTRY', () => {
   it('registers the profile extraction schema under "ExtractedProfile"', () => {
@@ -25,7 +25,7 @@ describe('RESPONSE_SCHEMA_REGISTRY', () => {
     expect(entry.version).toBe(SCORING_STRUCTURED_OUTPUT_SCHEMA_VERSION);
     expect(entry.schema['type']).toBe('object');
     // The 7 categories from  must all be present on the
-    // projected JSON Schema so OpenAI strict mode can validate them.
+    // projected JSON Schema so AiProvider strict mode can validate them.
     const properties = entry.schema['properties'] as Record<string, unknown>;
     const categoryScores = properties['categoryScores'] as Record<string, unknown>;
     const categoryProperties = categoryScores['properties'] as Record<string, unknown>;

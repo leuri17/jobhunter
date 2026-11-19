@@ -47,25 +47,25 @@ describe('resolveScopeDirectory', () => {
     expect(resolveScopeDirectory({ pipelineRunId: 0, jobId: -1 })).toBe('unscoped');
   });
 
-  it('emits openai-<id> segment when openaiRequestId is set', () => {
-    expect(resolveScopeDirectory({ openaiRequestId: 42 })).toBe('openai-42');
+  it('emits ai-provider-<id> segment when aiProviderRequestId is set', () => {
+    expect(resolveScopeDirectory({ aiProviderRequestId: 42 })).toBe('ai-provider-42');
   });
 
-  it('nests openai-<id> after the other segments', () => {
+  it('nests ai-provider-<id> after the other segments', () => {
     expect(
       resolveScopeDirectory({
         pipelineRunId: 7,
         searchExecutionId: 42,
         jobId: 99,
-        openaiRequestId: 123,
+        aiProviderRequestId: 123,
       }),
-    ).toBe('run-7/search-42/job-99/openai-123');
+    ).toBe('run-7/search-42/job-99/ai-provider-123');
   });
 
-  it('skips openaiRequestId when zero, negative, or null', () => {
-    expect(resolveScopeDirectory({ openaiRequestId: 0 })).toBe('unscoped');
-    expect(resolveScopeDirectory({ openaiRequestId: -1 })).toBe('unscoped');
-    expect(resolveScopeDirectory({ openaiRequestId: null })).toBe('unscoped');
+  it('skips aiProviderRequestId when zero, negative, or null', () => {
+    expect(resolveScopeDirectory({ aiProviderRequestId: 0 })).toBe('unscoped');
+    expect(resolveScopeDirectory({ aiProviderRequestId: -1 })).toBe('unscoped');
+    expect(resolveScopeDirectory({ aiProviderRequestId: null })).toBe('unscoped');
   });
 });
 
@@ -92,28 +92,28 @@ describe('buildSafeFilename', () => {
     expect(basename).toBe('stack-trace-run-7-job-99-2026-08-13T10-00-00-000Z-attempt-2.txt');
   });
 
-  it('includes openai-<id> in the basename and the relative path', () => {
+  it('includes ai-provider-<id> in the basename and the relative path', () => {
     const { basename, relativePath } = buildSafeFilename({
-      artifactType: 'openai_error',
-      scope: { pipelineRunId: 7, jobId: 99, openaiRequestId: 123 },
+      artifactType: 'ai_provider_error',
+      scope: { pipelineRunId: 7, jobId: 99, aiProviderRequestId: 123 },
       extension: 'json',
       timestamp: '2026-08-13T10:00:00.000Z',
     });
     expect(basename).toBe(
-      'openai-error-run-7-job-99-openai-123-2026-08-13T10-00-00-000Z.json',
+      'ai-provider-error-run-7-job-99-ai-provider-123-2026-08-13T10-00-00-000Z.json',
     );
     expect(relativePath).toBe(
-      'run-7/job-99/openai-123/openai-error-run-7-job-99-openai-123-2026-08-13T10-00-00-000Z.json',
+      'run-7/job-99/ai-provider-123/ai-provider-error-run-7-job-99-ai-provider-123-2026-08-13T10-00-00-000Z.json',
     );
   });
 
-  it('omits the openai segment when openaiRequestId is absent', () => {
+  it('omits the ai-provider segment when aiProviderRequestId is absent', () => {
     const { basename } = buildSafeFilename({
       artifactType: 'screenshot',
       scope: { pipelineRunId: 7 },
       extension: 'png',
       timestamp: '2026-08-13T10:00:00.000Z',
     });
-    expect(basename).not.toContain('openai-');
+    expect(basename).not.toContain('ai-provider-');
   });
 });

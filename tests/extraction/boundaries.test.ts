@@ -8,14 +8,14 @@ import { describe, expect, it } from 'vitest';
  *
  * Granular mirror of `tests/linkedin/boundaries.test.ts`. AGENTS.md
  * §5 / §9: domain code must not depend on Playwright (runtime),
- * Drizzle, OpenAI, or runtime Pino. The
+ * Drizzle, AiProvider, or runtime Pino. The
  * Playwright allow-list covers the 3 extraction files that need a
  * Playwright seam — `panel-parser.ts`, `dedicated-parser.ts`, and
  * the orchestrator `service.ts` (type-only). The Drizzle
  * `service.ts` carve-out is mirrored here.
  *
  * Per AGENTS.md §5: extraction domain code does not import
- * OpenAI or runtime Pino. Runtime Playwright
+ * AiProvider or runtime Pino. Runtime Playwright
  * is reserved for `src/linkedin/playwright-session.ts`. `drizzle-orm`
  * is allowed only inside `service.ts` (carve-out — the
  * orchestrator wraps 3 per-job writes in a single sync

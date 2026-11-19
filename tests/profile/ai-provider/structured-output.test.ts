@@ -6,7 +6,7 @@ import {
   STRUCTURED_OUTPUT_SCHEMA_VERSION,
   createExtractedProfileSchema,
   type ExtractedProfile,
-} from '../../../src/profile/openai/structured-output.js';
+} from '../../../src/profile/ai-provider/structured-output.js';
 
 function extractedProfile(): ExtractedProfile {
   return {

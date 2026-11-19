@@ -9,10 +9,9 @@ import {
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { ApplicationError, ValidationError } from '@jobhunter/core/errors';
 import {
-  createDefaultOpenAIClient,
-  OpenAIAuthenticationError,
-  OpenAIBillingError,
-  OpenAIPermissionError,
+  AiProviderAuthenticationError,
+  AiProviderBillingError,
+  AiProviderPermissionError,
 } from '@jobhunter/core/profile';
 import {
   FileSecretsStore,
@@ -22,6 +21,7 @@ import {
 } from '@jobhunter/core/config';
 import { getSecretsBackend, type ResolvedSecretsBackend } from '../secrets-backend.js';
 import { sidecarFileSystem } from './fs-adapter.js';
+import { createApiKeyValidationClient } from './ai-provider-resolve.js';
 
 export interface ConfigRouteDeps {
   readonly validateApiKey?: (apiKey: string) => Promise<void>;
@@ -32,8 +32,11 @@ export interface ConfigRouteDeps {
   readonly secretsBackend?: () => Promise<ResolvedSecretsBackend>;
 }
 
-const defaultValidateApiKey = (apiKey: string): Promise<void> =>
-  createDefaultOpenAIClient({ apiKey, timeoutMs: 10_000 }).validate();
+const defaultValidateApiKey = async (apiKey: string): Promise<void> => {
+  // Probes the configured provider endpoint — an OpenRouter key must
+  // not be validated against the OpenAI endpoint (false 401s).
+  await (await createApiKeyValidationClient(apiKey)).validate();
+};
 
 const resolveBackend = (deps: ConfigRouteDeps): (() => Promise<ResolvedSecretsBackend>) =>
   deps.secretsBackend ?? getSecretsBackend;
@@ -75,13 +78,13 @@ export function classifyKeyValidationFailure(error: unknown): {
   readonly message: string;
 } {
   const rejected =
-    error instanceof OpenAIAuthenticationError ||
-    error instanceof OpenAIPermissionError ||
-    error instanceof OpenAIBillingError;
+    error instanceof AiProviderAuthenticationError ||
+    error instanceof AiProviderPermissionError ||
+    error instanceof AiProviderBillingError;
   return {
     httpStatus: rejected ? 401 : 503,
     code: error instanceof ApplicationError ? error.code : 'unknown',
-    message: error instanceof Error ? error.message : 'OpenAI key validation failed.',
+    message: error instanceof Error ? error.message : 'AiProvider key validation failed.',
   };
 }
 
@@ -129,7 +132,7 @@ export async function registerConfigRoutes(
       configured: source !== 'none',
       source,
       // Masked only — the plaintext key is never returned over the wire.
-      masked: maskSecret(source === 'stored' ? secrets.openaiApiKey : undefined),
+      masked: maskSecret(source === 'stored' ? secrets.aiProviderApiKey : undefined),
       ...backendFields(resolved),
       legacyFilePresent: await sidecarFileSystem.pathExists(resolveSecretsPath(paths)),
     };
@@ -170,7 +173,7 @@ export async function registerConfigRoutes(
 
       if (resolved.backend === 'keychain') {
         try {
-          await resolved.store.write({ openaiApiKey: apiKey });
+          await resolved.store.write({ aiProviderApiKey: apiKey });
         } catch (error) {
           return backendUnavailable(reply, error);
         }
@@ -192,7 +195,7 @@ export async function registerConfigRoutes(
             },
           });
         }
-        await resolved.store.write({ openaiApiKey: apiKey });
+        await resolved.store.write({ aiProviderApiKey: apiKey });
       }
       return {
         schemaVersion: 1,
@@ -231,7 +234,7 @@ export async function registerConfigRoutes(
       paths: resolvePlatformPaths(createDefaultPlatformAdapter()),
     });
     const legacySecrets = await legacy.read();
-    if (legacySecrets.openaiApiKey === undefined) {
+    if (legacySecrets.aiProviderApiKey === undefined) {
       return { schemaVersion: 1, migrated: false, reason: 'nothing_to_migrate' };
     }
 
@@ -252,7 +255,7 @@ export async function registerConfigRoutes(
 
     try {
       const existing = await resolved.store.read();
-      if (existing.openaiApiKey !== undefined) {
+      if (existing.aiProviderApiKey !== undefined) {
         return reply.code(409).send({
           schemaVersion: 1,
           error: {
@@ -263,9 +266,9 @@ export async function registerConfigRoutes(
           },
         });
       }
-      await resolved.store.write({ openaiApiKey: legacySecrets.openaiApiKey });
+      await resolved.store.write({ aiProviderApiKey: legacySecrets.aiProviderApiKey });
       const verified = await resolved.store.read();
-      if (verified.openaiApiKey !== legacySecrets.openaiApiKey) {
+      if (verified.aiProviderApiKey !== legacySecrets.aiProviderApiKey) {
         return reply.code(500).send({
           schemaVersion: 1,
           error: {
@@ -286,7 +289,7 @@ export async function registerConfigRoutes(
       migrated: true,
       source: 'stored',
       backend: 'keychain',
-      masked: maskSecret(legacySecrets.openaiApiKey),
+      masked: maskSecret(legacySecrets.aiProviderApiKey),
     };
   });
 }

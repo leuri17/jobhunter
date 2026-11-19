@@ -29,7 +29,7 @@ failed | not_started`. The orchestrator classifies first, then runs only
   (`askResume`, `askSourcePaths`, `askEditHandoff`, `confirmSummary`); the
   sidecar wires production adapters, tests inject `ScriptedInitPrompts` or
   `createFailingInitPrompts`.
-- **OpenAI resolution** — `openai-resolve.ts` exports `resolveOpenAiClientOrNull`
+- **OpenAI resolution** — `ai-provider-resolve.ts` exports `resolveOpenAiClientOrNull`
   and `emptySecretsStore`; the boundary helper resolves the key via
   `resolveOpenAiApiKey`/`resolveApiKeySource` with store precedence (a stored
   secret wins over `OPENAI_API_KEY` from `process.env`); absence is

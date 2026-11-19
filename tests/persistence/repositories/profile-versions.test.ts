@@ -200,7 +200,7 @@ describe('ProfileVersionRepository', () => {
     await versionRepo.insertRevision({
       profileVersionId: versionId,
       revisionTimestamp: '2026-08-05T10:00:00.000Z',
-      source: 'openai',
+      source: 'ai_provider',
       fieldPath: 'headline',
       previousValue: null,
       newValue: 'Engineer',

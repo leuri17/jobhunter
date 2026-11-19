@@ -24,17 +24,17 @@ import type { ApiKeyResponse } from '@/lib/types';
 import type { ActionGuidance } from '@/lib/error-surfaces';
 
 const REJECTED_WITH_KEY =
-  'OpenAI rejected this key. Nothing was saved — the previously configured key is still active.';
-const REJECTED_WITHOUT_KEY = 'OpenAI rejected this key. Nothing was saved.';
-const UNREACHABLE = "Couldn't reach OpenAI to validate the key. Nothing was saved — try again.";
+  'AiProvider rejected this key. Nothing was saved — the previously configured key is still active.';
+const REJECTED_WITHOUT_KEY = 'AiProvider rejected this key. Nothing was saved.';
+const UNREACHABLE = "Couldn't reach AiProvider to validate the key. Nothing was saved — try again.";
 const KEYCHAIN_GONE =
   'The OS keychain is not available right now, so nothing was saved. Try again in a moment.';
 const MIGRATE_FAILED = 'The old secrets file was left unchanged. You can try again.';
 
 const REJECTED_CODES: ReadonlySet<string> = new Set([
-  'openai_authentication',
-  'openai_permission',
-  'openai_billing',
+  'ai_provider_authentication',
+  'ai_provider_permission',
+  'ai_provider_billing',
 ]);
 
 function saveGuidanceFor(error: ApiError, configured: boolean): ActionGuidance {
@@ -110,7 +110,7 @@ export function ApiKeySection() {
     onSuccess: (result) => {
       setSaveError(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
-      void queryClient.invalidateQueries({ queryKey: ['openai', 'models'] });
+      void queryClient.invalidateQueries({ queryKey: ['ai-provider', 'models'] });
       setDraft('');
       toast.add({
         title: 'API key saved',
@@ -128,7 +128,7 @@ export function ApiKeySection() {
     onSuccess: () => {
       setSaveError(null);
       void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
-      void queryClient.invalidateQueries({ queryKey: ['openai', 'models'] });
+      void queryClient.invalidateQueries({ queryKey: ['ai-provider', 'models'] });
       setDraft('');
       toast.add({ title: 'API key removed', type: 'success' });
     },
@@ -197,7 +197,7 @@ export function ApiKeySection() {
   return (
     <>
       <CardHeader>
-        <CardTitle>OpenAI API key</CardTitle>
+        <CardTitle>AiProvider API key</CardTitle>
         <CardDescription>Required for profile extraction and job scoring.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
@@ -222,15 +222,15 @@ export function ApiKeySection() {
 
         {fromEnvironment && (
           <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-            Using <code className="font-mono">OPENAI_API_KEY</code> from your environment. Saving a
-            key here overrides it.
+            Using <code className="font-mono">AI_PROVIDER_API_KEY</code> from your environment.
+            Saving a key here overrides it.
           </p>
         )}
 
         <Field>
-          <FieldLabel htmlFor="openai-api-key">Key</FieldLabel>
+          <FieldLabel htmlFor="ai-provider-api-key">Key</FieldLabel>
           <Input
-            id="openai-api-key"
+            id="ai-provider-api-key"
             type="password"
             autoComplete="off"
             placeholder={state?.configured ? `Stored: ${state.masked}` : 'sk-...'}
@@ -241,7 +241,7 @@ export function ApiKeySection() {
           <p className="text-xs text-muted-foreground">
             {state?.configured
               ? 'Stored on this machine. Type a new key to replace it.'
-              : 'Paste a key from platform.openai.com. It is never sent back to this app.'}
+              : 'Paste a key that belongs to the endpoint above. It is never sent back to this app.'}
           </p>
           {state !== undefined && <BackendStatusLine state={state} />}
         </Field>

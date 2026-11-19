@@ -33,7 +33,7 @@ const UPSTREAM_TIMEOUT_MS = 8000;
 
 class UpstreamError extends ApplicationError {
   constructor(code: string, message: string, metadata: Record<string, unknown> = {}) {
-    super(code, message, ExitCode.OpenAIFailure, metadata);
+    super(code, message, ExitCode.AiProviderFailure, metadata);
   }
 }
 

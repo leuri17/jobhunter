@@ -46,10 +46,10 @@ import { ConflictsSection } from '@/components/shared/features/profile/conflicts
 import { VersionHistorySection } from '@/components/shared/features/profile/version-history-section';
 
 const EXTRACT_FAILURE_ALERT_CODES = new Set([
-  'openai_unavailable',
-  'openai_authentication',
-  'openai_permission',
-  'openai_billing',
+  'ai_provider_unavailable',
+  'ai_provider_authentication',
+  'ai_provider_permission',
+  'ai_provider_billing',
 ]);
 
 const INVALIDATE_ON_APPROVE = [['profiles'], ['profile'], ['jobs'], ['runs']] as const;

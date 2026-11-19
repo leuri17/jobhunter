@@ -3,13 +3,13 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import type {
-  OpenAIClient,
-  OpenAIExtractionRawResponse,
-} from '../../../src/profile/openai/types.js';
+  AiProviderClient,
+  AiProviderExtractionRawResponse,
+} from '../../../src/profile/ai-provider/types.js';
 import {
-  FakeOpenAIClient,
-  type FakeOpenAIClientScript,
-} from '../../../src/profile/openai/fake-client.js';
+  FakeAiProviderClient,
+  type FakeAiProviderClientScript,
+} from '../../../src/profile/ai-provider/fake-client.js';
 import {
   createDatabaseConnection,
   type DatabaseConnection,
@@ -34,26 +34,26 @@ const REPO_ROOT = resolve(join(import.meta.dirname, '..', '..', '..'));
 export interface FakeScoringPipelineOptions {
   /**
    * Initial set of scripts to install on the underlying
-   * `FakeOpenAIClient`. The constructor also accepts a single
-   * `FakeOpenAIClientScript` (reused for every call) — see the
-   * `FakeOpenAIClient` overload. To queue per-call responses, pass
+   * `FakeAiProviderClient`. The constructor also accepts a single
+   * `FakeAiProviderClientScript` (reused for every call) — see the
+   * `FakeAiProviderClient` overload. To queue per-call responses, pass
    * an array of scripts; each element is consumed by one `extract`
    * call (the last script sticks for any call beyond the array
-   * length, mirroring `FakeOpenAIClient`'s retry-loop fallback).
+   * length, mirroring `FakeAiProviderClient`'s retry-loop fallback).
    */
-  readonly fakeScripts: readonly FakeOpenAIClientScript[] | FakeOpenAIClientScript;
+  readonly fakeScripts: readonly FakeAiProviderClientScript[] | FakeAiProviderClientScript;
   readonly config: ScoringServiceConfig;
   /**
    * Optional clock for deterministic `startedAt` / `completedAt`
    * timestamps. Defaults to a fixed ISO string so the persisted
-   * `openai_request_metadata.startTimestamp` is stable across runs.
+   * `ai_provider_request_metadata.startTimestamp` is stable across runs.
    */
   readonly now?: () => Date;
 }
 
 /**
  * Tracks the peak number of concurrent in-flight `extract` calls the
- * `FakeOpenAIClient` sees. The scoring service fans out
+ * `FakeAiProviderClient` sees. The scoring service fans out
  * `scoreBatch` over a worker pool sized at
  * `min(config.concurrency, jobs.length)`; the tracker exposes both
  * the peak and the running counter so a test can assert the pool is
@@ -101,24 +101,24 @@ export class ConcurrentCallTracker {
 }
 
 /**
- * Deterministic `OpenAIClient` wrapper that records every
+ * Deterministic `AiProviderClient` wrapper that records every
  * `extract` request and tracks the peak concurrent in-flight calls.
- * Delegates to the `FakeOpenAIClient` for scripted responses / errors.
+ * Delegates to the `FakeAiProviderClient` for scripted responses / errors.
  */
-class ConcurrencyTrackingOpenAIClient implements OpenAIClient {
-  readonly requests: Parameters<OpenAIClient['extract']>[0][] = [];
-  private inner: FakeOpenAIClient;
+class ConcurrencyTrackingAiProviderClient implements AiProviderClient {
+  readonly requests: Parameters<AiProviderClient['extract']>[0][] = [];
+  private inner: FakeAiProviderClient;
 
   constructor(
-    inner: FakeOpenAIClient,
+    inner: FakeAiProviderClient,
     private readonly tracker: ConcurrentCallTracker,
   ) {
     this.inner = inner;
   }
 
   async extract(
-    request: Parameters<OpenAIClient['extract']>[0],
-  ): ReturnType<OpenAIClient['extract']> {
+    request: Parameters<AiProviderClient['extract']>[0],
+  ): ReturnType<AiProviderClient['extract']> {
     this.requests.push(request);
     const guard = this.tracker.enter();
     try {
@@ -141,11 +141,11 @@ class ConcurrencyTrackingOpenAIClient implements OpenAIClient {
   }
 
   /**
-   * Swap the wrapped `FakeOpenAIClient`. Used by
-   * `FakeScoringPipeline.replaceOpenAIScripts(...)` to re-queue
+   * Swap the wrapped `FakeAiProviderClient`. Used by
+   * `FakeScoringPipeline.replaceAiProviderScripts(...)` to re-queue
    * scripts mid-test without rebuilding the pipeline.
    */
-  replaceInner(next: FakeOpenAIClient): void {
+  replaceInner(next: FakeAiProviderClient): void {
     this.inner = next;
   }
 }
@@ -164,11 +164,11 @@ const DEFAULT_PROFILE_CONTENT_HASH = 'fake-profile-content-hash';
  * Owns:
  *   - a temp SQLite database with the full schema migrated in;
  *   - the real `ScoringService` wired against that database and a
- *     `FakeOpenAIClient` wrapped in a concurrency tracker;
+ *     `FakeAiProviderClient` wrapped in a concurrency tracker;
  *   - the parent rows (`pipelineRuns`, `searchExecutions`,
  *     `profileVersions`, `filterConfigurationVersions`,
  *     `filterResults`, `jobs`) the service needs to insert the
- *     `scoreResults` + `openaiRequestMetadata` rows;
+ *     `scoreResults` + `aiProviderRequestMetadata` rows;
  *   - a controllable `AbortController` whose signal the test passes
  *     into `scoreOne` / `scoreBatch`.
  *
@@ -195,9 +195,9 @@ export class FakeScoringPipeline {
   readonly connection: DatabaseConnection;
   readonly controller: AbortController;
   readonly tracker: ConcurrentCallTracker;
-  fakeOpenAIClient: FakeOpenAIClient;
-  /** Wrapper around `fakeOpenAIClient` with concurrent-call tracking. */
-  readonly openaiClient: ConcurrencyTrackingOpenAIClient;
+  fakeAiProviderClient: FakeAiProviderClient;
+  /** Wrapper around `fakeAiProviderClient` with concurrent-call tracking. */
+  readonly aiProviderClient: ConcurrencyTrackingAiProviderClient;
   /** Snapshot of the service config, captured at construction time. */
   readonly serviceConfig: ScoringServiceConfig;
 
@@ -243,12 +243,15 @@ export class FakeScoringPipeline {
     this.jobId = init.seed.jobId;
 
     this.tracker = new ConcurrentCallTracker();
-    this.fakeOpenAIClient = new FakeOpenAIClient(init.options.fakeScripts);
-    this.openaiClient = new ConcurrencyTrackingOpenAIClient(this.fakeOpenAIClient, this.tracker);
+    this.fakeAiProviderClient = new FakeAiProviderClient(init.options.fakeScripts);
+    this.aiProviderClient = new ConcurrencyTrackingAiProviderClient(
+      this.fakeAiProviderClient,
+      this.tracker,
+    );
 
     this.service = new ScoringService({
       repositories: this.repositories,
-      openaiClient: this.openaiClient,
+      aiProviderClient: this.aiProviderClient,
       config: init.options.config,
       now: this.now,
     });
@@ -478,7 +481,7 @@ export class FakeScoringPipeline {
   /**
    * Pre-insert an active `scoreResults` row with the given fingerprint
    * so the next `scoreOne` call sees a hit on `findActiveByJob` and
-   * short-circuits to `kind: 'reused'` without calling OpenAI.
+   * short-circuits to `kind: 'reused'` without calling AiProvider.
    * Returns the inserted row's id.
    */
   async preInsertActiveScoreResult(options: {
@@ -505,20 +508,20 @@ export class FakeScoringPipeline {
   }
 
   /**
-   * Replace the OpenAI scripts at runtime. Replaces the wrapped
-   * `FakeOpenAIClient` with a fresh instance whose `requests` queue
+   * Replace the AiProvider scripts at runtime. Replaces the wrapped
+   * `FakeAiProviderClient` with a fresh instance whose `requests` queue
    * starts empty. The wrapper's own `requests` log and concurrent-
    * call tracker are preserved across the swap (so a test can
    * assert the cumulative `extract` count without losing history).
    */
-  replaceOpenAIScripts(scripts: readonly FakeOpenAIClientScript[]): void {
-    this.fakeOpenAIClient = new FakeOpenAIClient(scripts);
-    this.openaiClient.replaceInner(this.fakeOpenAIClient);
+  replaceAiProviderScripts(scripts: readonly FakeAiProviderClientScript[]): void {
+    this.fakeAiProviderClient = new FakeAiProviderClient(scripts);
+    this.aiProviderClient.replaceInner(this.fakeAiProviderClient);
   }
 
   /** Get the recorded `extract` requests (one per call). */
-  getRecordedRequests(): readonly Parameters<OpenAIClient['extract']>[0][] {
-    return this.openaiClient.requests;
+  getRecordedRequests(): readonly Parameters<AiProviderClient['extract']>[0][] {
+    return this.aiProviderClient.requests;
   }
 
   /** Release the temp directory + close the DB connection. */
@@ -600,14 +603,14 @@ function makeBaseScoreOneInput(input: {
 }
 
 /**
- * Helper to build a scripted `OpenAIExtractionRawResponse` from a
+ * Helper to build a scripted `AiProviderExtractionRawResponse` from a
  * raw JSON string. Mirrors the per-test pattern in
  * `service.test.ts:makeValidResponse`.
  */
 export function makeValidResponse(
   rawJsonText: string,
-  extra: Partial<OpenAIExtractionRawResponse> = {},
-): OpenAIExtractionRawResponse {
+  extra: Partial<AiProviderExtractionRawResponse> = {},
+): AiProviderExtractionRawResponse {
   return {
     rawJsonText,
     tokenUsage: { promptTokens: 100, completionTokens: 50 },

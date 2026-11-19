@@ -1,5 +1,5 @@
 /**
- * Public barrel for the OpenAI profile-extraction module.
+ * Public barrel for the AiProvider profile-extraction module.
  *
  * Every consumer that wants to operate against the extraction pipeline
  * (callers, tests, downstream apps) should import from here so the import
@@ -16,17 +16,17 @@
 // Error family.
 export {
   ProfileExtractionError,
-  OpenAITransientError,
-  OpenAIRateLimitError,
-  OpenAIServerError,
-  OpenAITimeoutError,
-  OpenAINetworkError,
-  OpenAIInvalidOutputError,
-  OpenAIAuthenticationError,
-  OpenAIPermissionError,
-  OpenAIBillingError,
-  OpenAIInvalidRequestError,
-  OpenAIUnsupportedModelError,
+  AiProviderTransientError,
+  AiProviderRateLimitError,
+  AiProviderServerError,
+  AiProviderTimeoutError,
+  AiProviderNetworkError,
+  AiProviderInvalidOutputError,
+  AiProviderAuthenticationError,
+  AiProviderPermissionError,
+  AiProviderBillingError,
+  AiProviderInvalidRequestError,
+  AiProviderUnsupportedModelError,
   ProfileExtractionInputTooLargeError,
   ProfileExtractionSourceUnusableError,
   OPENAI_RETRYABLE_ERROR_CODES,
@@ -35,14 +35,14 @@ export {
 
 // Operation types.
 export type {
-  OpenAIChatMessage,
-  OpenAIExtractionSource,
-  OpenAIExtractionRequest,
-  OpenAIExtractionRawResponse,
-  OpenAIClient,
+  AiProviderChatMessage,
+  AiProviderExtractionSource,
+  AiProviderExtractionRequest,
+  AiProviderExtractionRawResponse,
+  AiProviderClient,
 } from './types.js';
 
-// Response schema registry — looks up the JSON Schema the OpenAI SDK
+// Response schema registry — looks up the JSON Schema the AiProvider SDK
 // sends in `response_format.json_schema.schema`. The scoring schema
 // (`ScoringStructuredOutput`) is registered here so the same client
 // surface serves both profile extraction and job scoring.
@@ -56,10 +56,13 @@ export {
 } from './response-schemas.js';
 
 // Production client (the only module that imports the `openai` SDK).
-export { createDefaultOpenAIClient, type DefaultOpenAIClientRefusalOptions } from './client.js';
+export {
+  createDefaultAiProviderClient,
+  type DefaultAiProviderClientRefusalOptions,
+} from './client.js';
 
 // Test double.
-export { FakeOpenAIClient, type FakeOpenAIClientScript } from './fake-client.js';
+export { FakeAiProviderClient, type FakeAiProviderClientScript } from './fake-client.js';
 
 // Retry policy.
 export { runWithRetry, type RetryOptions, type AttemptRecord } from './retry.js';

@@ -10,7 +10,7 @@ import {
 } from '../schema.js';
 
 /**
- * Versioned OpenAI structured-output schema for profile extraction (SPEC.md §14.2).
+ * Versioned AiProvider structured-output schema for profile extraction (SPEC.md §14.2).
  *
  * This shape omits every server-generated field of the canonical profile
  * (`id`, `createdAt`, `updatedAt`, `contentHash`, `derived`, `normalizedName`).
@@ -60,7 +60,7 @@ export const ExtractedSkillSchema = z
      * do so rather than fabricate a value. Allowed values: any of the
      * `SKILL_CATEGORIES`, `null`, or absent.
      *
-     * Schema asymmetry note: OpenAI's strict-mode `json_schema` requires
+     * Schema asymmetry note: AiProvider's strict-mode `json_schema` requires
      * every property to appear in `required`, so the projected JSON
      * Schema in `./prompt.ts` makes `category` **required** and widens
      * its `type` to `['string', 'null']`. Zod keeps `.nullable().optional()`

@@ -22,10 +22,10 @@ decoding, `AbortController` bookkeeping, and SSE framing.
     `FileSystem` interface over `node:fs/promises` (`readFile`, `writeFile`,
     `rename`, `mkdir`, `access`, `rm`), injected into `loadConfig` /
     `updateConfig`.
-  - `openai-resolve.ts` — `resolveOpenAiClientOrNull()` lazily builds an
-    `OpenAIClient` from the resolved secrets backend's store (falling back
+  - `ai-provider-resolve.ts` — `resolveOpenAiClientOrNull()` lazily builds an
+    `AiProviderClient` from the resolved secrets backend's store (falling back
     to `OPENAI_API_KEY`), with an optional `timeoutMs` override; returns
-    `null` when unset so handlers can reply `503 openai_unavailable`.
+    `null` when unset so handlers can reply `503 ai_provider_unavailable`.
   - `openai.ts` — `registerOpenAiRoutes()` exposes `GET /api/openai/models`
     (see the OpenAI bullet under Flow) with an injectable `listModels` seam.
 - **SSE channel** (`pipeline.ts`) reuses `initSseHeaders` / `writeSseEvent` /
@@ -38,7 +38,7 @@ ActiveRun>` tracks `AbortController` + ring-buffered logs (capped at
 ## Flow
 
 - **Pipeline**: `POST /api/pipeline/run` resolves the OpenAI client
-  (503 `openai_unavailable` without one), then preflights the persisted
+  (503 `ai_provider_unavailable` without one), then preflights the persisted
   prerequisites synchronously via `assertPipelinePrerequisites` — a miss
   returns a `409` envelope with `no_active_profile` /
   `no_active_filter` — before allocating `runId`, kicking off
@@ -110,7 +110,7 @@ secrets_backend_unavailable`); DELETE clears through the backend;
   `secrets_migration_verification_failed` 500 on mismatch). `jobs.ts` /
   `pipeline.ts` resolve their API key through the same backend store.
 - **OpenAI**: `openai.ts` registers `GET /api/openai/models` — the sorted
-  model ids the effective key can access, via `OpenAIClient.listModels()`
+  model ids the effective key can access, via `AiProviderClient.listModels()`
   (`models.list()` auto-pagination, no token cost) on a 10 s client
   timeout. No key configured → `200 { configured: false, models: [] }`
   (a distinguishable outcome, not an error); probe failures reuse
@@ -129,7 +129,7 @@ createDefaultPlatformAdapter())` directories.
   `pipeline/` (`PipelineOrchestrator`, `pinoPipelineLogger`),
   `profile/` (`ProfileImportService`, `ProfileExtractionService`,
   `ProfileReviewService`, `ProfileApprovalService`,
-  `ProfileRejectionService`, `createDefaultOpenAIClient`, `OpenAIClient`),
+  `ProfileRejectionService`, `createDefaultAiProviderClient`, `AiProviderClient`),
   `inspection/` (`JobsListService`, `JobsShowService`, `RunsListService`,
   `RunsShowService`), `reevaluation/` (`ReevaluationService`,
   `pinoReevaluationLogger`), `linkedin/`, `scoring/`, `filter/`,

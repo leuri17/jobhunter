@@ -3,12 +3,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildServer } from '../src/server.js';
-import { OpenAIAuthenticationError, OpenAINetworkError } from '@jobhunter/core/profile';
+import { AiProviderAuthenticationError, AiProviderNetworkError } from '@jobhunter/core/profile';
 import { FileSecretsStore } from '@jobhunter/core/config';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import type { ResolvedSecretsBackend } from '../src/secrets-backend.js';
 
-describe('GET /api/openai/models', () => {
+describe('GET /api/ai-provider/models', () => {
   let configHome: string;
   const servers: Awaited<ReturnType<typeof buildServer>>[] = [];
 
@@ -48,7 +48,7 @@ describe('GET /api/openai/models', () => {
   it('returns configured false with an empty model list when no key is configured', async () => {
     const baseUrl = await startServer(async () => null);
 
-    const res = await fetch(`${baseUrl}/api/openai/models`);
+    const res = await fetch(`${baseUrl}/api/ai-provider/models`);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ schemaVersion: 1, configured: false, models: [] });
   });
@@ -56,7 +56,7 @@ describe('GET /api/openai/models', () => {
   it('passes the resolved model list through unsorted', async () => {
     const baseUrl = await startServer(async () => ['b-model', 'a-model']);
 
-    const res = await fetch(`${baseUrl}/api/openai/models`);
+    const res = await fetch(`${baseUrl}/api/ai-provider/models`);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       schemaVersion: 1,
@@ -67,16 +67,16 @@ describe('GET /api/openai/models', () => {
 
   it('maps an authentication failure to 401 with the typed error envelope', async () => {
     const baseUrl = await startServer(async () => {
-      throw new OpenAIAuthenticationError({ status: 401 });
+      throw new AiProviderAuthenticationError({ status: 401 });
     });
 
-    const res = await fetch(`${baseUrl}/api/openai/models`);
+    const res = await fetch(`${baseUrl}/api/ai-provider/models`);
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({
       schemaVersion: 1,
       error: {
-        code: 'openai_authentication',
-        message: 'OpenAI authentication failed.',
+        code: 'ai_provider_authentication',
+        message: 'AiProvider authentication failed.',
         details: null,
       },
     });
@@ -84,16 +84,16 @@ describe('GET /api/openai/models', () => {
 
   it('maps a network failure to 503 with the typed error envelope', async () => {
     const baseUrl = await startServer(async () => {
-      throw new OpenAINetworkError({ status: null });
+      throw new AiProviderNetworkError({ status: null });
     });
 
-    const res = await fetch(`${baseUrl}/api/openai/models`);
+    const res = await fetch(`${baseUrl}/api/ai-provider/models`);
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({
       schemaVersion: 1,
       error: {
-        code: 'openai_network_error',
-        message: 'OpenAI network failure.',
+        code: 'ai_provider_network_error',
+        message: 'AiProvider network failure.',
         details: null,
       },
     });

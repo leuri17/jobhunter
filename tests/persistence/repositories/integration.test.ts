@@ -146,7 +146,7 @@ describe('repository integration + identifier round-trip', () => {
       overallScore: 0.8,
       success: true,
     });
-    await repos.openaiMetadata.insert({
+    await repos.aiProviderMetadata.insert({
       operationType: 'job_scoring',
       relatedEntityType: 'score_result',
       relatedEntityId: scoreResultId,

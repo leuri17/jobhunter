@@ -1,5 +1,5 @@
 /**
- * Application-level orchestrator for the OpenAI profile-extraction pipeline
+ * Application-level orchestrator for the AiProvider profile-extraction pipeline
  * (SPEC.md §14.5, §15.1, §25.3, §25.4, §40).
  *
  * The service glues together:
@@ -7,44 +7,44 @@
  *   - stored-text recovery (file system + extractor + normalizer)
  *   - extraction fingerprint calculation
  *   - draft reuse detection (`repositories.profileVersions.findByExtractionFingerprint`)
- *   - OpenAI structured-output extraction via `runWithRetry`
+ *   - AiProvider structured-output extraction via `runWithRetry`
  *   - Zod validation against the known `sourceId` set
  *   - the pure `postProcessExtractionResponse` (Task 6)
  *   - transactional persistence of the draft profile version, conflicts, and warnings
- *   - persistence of an `openai_request_metadata` audit row
+ *   - persistence of an `ai_provider_request_metadata` audit row
  *
  * The active approved profile is NEVER mutated here — approval is the job of
  * Task 9.
  *
  * This module is application code: it imports the repository facade, the
- * OpenAI client interface (never the SDK), the Zod schemas, and the
+ * AiProvider client interface (never the SDK), the Zod schemas, and the
  * post-processor. It does NOT import Playwright, the
  * `openai` SDK, or Pino.
  */
 
 import {
-  OpenAIInvalidOutputError,
+  AiProviderInvalidOutputError,
   ProfileExtractionError,
   ProfileExtractionInputTooLargeError,
   ProfileExtractionSourceUnusableError,
-} from './openai/errors.js';
+} from './ai-provider/errors.js';
 import {
   EXTRACTOR_IMPLEMENTATION_VERSION,
   PROFILE_EXTRACTION_PROMPT_VERSION,
   calculateExtractionFingerprint,
-} from './openai/fingerprint.js';
-import { runWithRetry, type RetryOptions } from './openai/retry.js';
-import { buildProfileExtractionPrompt } from './openai/prompt.js';
+} from './ai-provider/fingerprint.js';
+import { runWithRetry, type RetryOptions } from './ai-provider/retry.js';
+import { buildProfileExtractionPrompt } from './ai-provider/prompt.js';
 import {
   STRUCTURED_OUTPUT_SCHEMA_VERSION,
   createExtractedProfileSchema,
   type ExtractedProfile,
-} from './openai/structured-output.js';
+} from './ai-provider/structured-output.js';
 import type {
-  OpenAIClient,
-  OpenAIExtractionRequest,
-  OpenAIExtractionSource,
-} from './openai/types.js';
+  AiProviderClient,
+  AiProviderExtractionRequest,
+  AiProviderExtractionSource,
+} from './ai-provider/types.js';
 import { resolveExtractor } from './extractors/index.js';
 import { createDefaultBinaryFileSystem, type BinaryFileSystem } from './file-system.js';
 import { postProcessExtractionResponse } from './post-process.js';
@@ -106,7 +106,7 @@ export type ProfileExtractionStatus =
       readonly errorCode: string;
       readonly message: string;
       /**
-       * Number of OpenAI attempts the orchestrator made before giving up.
+       * Number of AiProvider attempts the orchestrator made before giving up.
        * For pre-call failures (no usable sources, missing source row,
        * `ProfileExtractionInputTooLargeError`) the value is `0`.
        */
@@ -115,7 +115,7 @@ export type ProfileExtractionStatus =
 
 export interface ProfileExtractionServiceOptions {
   readonly repositories: Repositories;
-  readonly openaiClient: OpenAIClient;
+  readonly aiProviderClient: AiProviderClient;
   readonly config: ProfileExtractionConfig;
   readonly retry?: Partial<RetryOptions>;
   readonly now?: () => Date;
@@ -124,7 +124,7 @@ export interface ProfileExtractionServiceOptions {
    * Maximum total UTF-8 byte length of all source `extractedText` values
    * the orchestrator is allowed to assemble into one request. When the
    * computed total exceeds this bound the orchestrator raises
-   * `ProfileExtractionInputTooLargeError` and never contacts OpenAI.
+   * `ProfileExtractionInputTooLargeError` and never contacts AiProvider.
    * Default: {@link DEFAULT_INPUT_BYTE_LIMIT} (~1 MB / ~250k tokens).
    */
   readonly inputByteLimit?: number;
@@ -132,8 +132,8 @@ export interface ProfileExtractionServiceOptions {
 
 // ---------- Internals ----------
 
-/** OpenAI structured-output schema name. Must match an entry in
- *  `RESPONSE_SCHEMA_REGISTRY` (see `src/profile/openai/response-schemas.ts`).
+/** AiProvider structured-output schema name. Must match an entry in
+ *  `RESPONSE_SCHEMA_REGISTRY` (see `src/profile/ai-provider/response-schemas.ts`).
  *  The client looks the name up at request time to find the matching
  *  JSON Schema + version. */
 const RESPONSE_SCHEMA_NAME = 'ExtractedProfile';
@@ -156,7 +156,7 @@ function utf8ByteLength(value: string): number {
   return utf8Encoder.encode(value).length;
 }
 
-function totalRequestBytes(sources: readonly OpenAIExtractionSource[]): number {
+function totalRequestBytes(sources: readonly AiProviderExtractionSource[]): number {
   let total = 0;
   for (const source of sources) {
     total += utf8ByteLength(source.extractedText);
@@ -168,7 +168,7 @@ function totalRequestBytes(sources: readonly OpenAIExtractionSource[]): number {
 
 export class ProfileExtractionService {
   private readonly repositories: Repositories;
-  private readonly openaiClient: OpenAIClient;
+  private readonly aiProviderClient: AiProviderClient;
   private readonly config: ProfileExtractionConfig;
   private readonly retry: Partial<RetryOptions>;
   private readonly now: () => Date;
@@ -178,7 +178,7 @@ export class ProfileExtractionService {
 
   constructor(options: ProfileExtractionServiceOptions) {
     this.repositories = options.repositories;
-    this.openaiClient = options.openaiClient;
+    this.aiProviderClient = options.aiProviderClient;
     this.config = options.config;
     this.retry = options.retry ?? {};
     this.now = options.now ?? ((): Date => new Date());
@@ -262,7 +262,7 @@ export class ProfileExtractionService {
     }
 
     // 4. Recover the normalized text from each source's stored file. If any
-    //    file is unreadable, fail before contacting OpenAI.
+    //    file is unreadable, fail before contacting AiProvider.
     const sources: ProfileExtractionSourceInput[] = [];
     for (const row of rows) {
       let extractedText: string;
@@ -294,11 +294,11 @@ export class ProfileExtractionService {
       });
     }
 
-    // 5. Build the OpenAI extraction request. The `OpenAIClient` is a pure
+    // 5. Build the AiProvider extraction request. The `AiProviderClient` is a pure
     //    transport — it does not build messages internally. We call
     //    `buildProfileExtractionPrompt` here to produce the system + user
     //    chat payload, then attach the messages to the request.
-    const sourcesForPrompt: OpenAIExtractionSource[] = sources.map((source) => ({
+    const sourcesForPrompt: AiProviderExtractionSource[] = sources.map((source) => ({
       sourceId: source.sourceId,
       originalFilename: source.originalFilename,
       extractedText: source.extractedText,
@@ -307,7 +307,7 @@ export class ProfileExtractionService {
       promptVersion: PROFILE_EXTRACTION_PROMPT_VERSION,
       sources: sourcesForPrompt,
     });
-    const request: OpenAIExtractionRequest = {
+    const request: AiProviderExtractionRequest = {
       promptVersion: PROFILE_EXTRACTION_PROMPT_VERSION,
       model: this.config.model,
       reasoningEffort: this.config.reasoningEffort,
@@ -320,9 +320,9 @@ export class ProfileExtractionService {
       ],
     };
 
-    // 6-7. Call OpenAI with the  retry policy. Parse and Zod-validate
+    // 6-7. Call AiProvider with the  retry policy. Parse and Zod-validate
     //      the response INSIDE the operation closure so a corrective retry
-    //      (single permitted retry on `OpenAIInvalidOutputError`) can rerun
+    //      (single permitted retry on `AiProviderInvalidOutputError`) can rerun
     //      the parse with a fresh response.
     const knownSourceIds = sources.map((s) => s.sourceId);
     type RetryResult = {
@@ -340,7 +340,7 @@ export class ProfileExtractionService {
       attempts: readonly { readonly attemptNumber: number; readonly succeeded: boolean }[];
     };
     try {
-      // 6. Reject oversized inputs BEFORE any OpenAI call.
+      // 6. Reject oversized inputs BEFORE any AiProvider call.
       //    We fail loud rather than silently truncate.
       const totalRequestByteSize = totalRequestBytes(request.sources);
       if (totalRequestByteSize > this.inputByteLimit) {
@@ -350,29 +350,29 @@ export class ProfileExtractionService {
         });
       }
 
-      // 7. Call OpenAI with the  retry policy. Parse and Zod-validate
+      // 7. Call AiProvider with the  retry policy. Parse and Zod-validate
       //    the response INSIDE the operation closure so a corrective retry
-      //    (single permitted retry on `OpenAIInvalidOutputError`) can rerun
+      //    (single permitted retry on `AiProviderInvalidOutputError`) can rerun
       //    the parse with a fresh response.
       retryResult = await runWithRetry<RetryResult>(async () => {
-        const rawResponse = await this.openaiClient.extract(request);
+        const rawResponse = await this.aiProviderClient.extract(request);
         let parsed: unknown;
         try {
           parsed = JSON.parse(rawResponse.rawJsonText);
         } catch (cause) {
-          throw new OpenAIInvalidOutputError({}, cause instanceof Error ? cause : undefined);
+          throw new AiProviderInvalidOutputError({}, cause instanceof Error ? cause : undefined);
         }
         const parsedResult = createExtractedProfileSchema(knownSourceIds).safeParse(parsed);
         if (!parsedResult.success) {
-          throw new OpenAIInvalidOutputError({}, parsedResult.error);
+          throw new AiProviderInvalidOutputError({}, parsedResult.error);
         }
         return { rawResponse, extracted: parsedResult.data };
       }, this.retry);
     } catch (caught) {
       const errorCode =
-        caught instanceof ProfileExtractionError ? caught.code : 'openai_invalid_output';
+        caught instanceof ProfileExtractionError ? caught.code : 'ai_provider_invalid_output';
       const errorMessage = formatError(caught).message;
-      // `ProfileExtractionInputTooLargeError` is raised before any OpenAI
+      // `ProfileExtractionInputTooLargeError` is raised before any AiProvider
       // attempt, so the audit row records `attemptCount: 0`. For every
       // other failure the retry policy attaches `attempts` to the error;
       // we read its length, defaulting to 1 for unexpected non-`ApplicationError`
@@ -386,13 +386,13 @@ export class ProfileExtractionService {
       const endTimestamp = this.now().toISOString();
       this.logger.error(
         {
-          event: 'profile_extraction_openai_failed',
+          event: 'profile_extraction_ai_provider_failed',
           errorCode,
           attemptCount,
         },
-        `OpenAI extraction failed after ${attemptCount} attempt(s): ${errorMessage}`,
+        `AiProvider extraction failed after ${attemptCount} attempt(s): ${errorMessage}`,
       );
-      await this.repositories.openaiMetadata.insert({
+      await this.repositories.aiProviderMetadata.insert({
         operationType: 'profile_extraction',
         relatedEntityType: null,
         relatedEntityId: null,
@@ -443,7 +443,7 @@ export class ProfileExtractionService {
 
     // 10. Persist the audit metadata row (success).
     const endTimestamp = this.now().toISOString();
-    await this.repositories.openaiMetadata.insert({
+    await this.repositories.aiProviderMetadata.insert({
       operationType: 'profile_extraction',
       relatedEntityType: 'profile_version',
       relatedEntityId: profileVersionId,

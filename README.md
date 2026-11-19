@@ -7,14 +7,14 @@
 
 > Local-first desktop app that scrapes public LinkedIn job search
 > results, persists them locally, and ranks them with deterministic
-> filters plus OpenAI scoring.
+> filters plus AI scoring.
 
 JobHunter helps one job seeker discover job listings on LinkedIn,
 apply their own deterministic filters, and rank the survivors against
-their profile using OpenAI. Everything runs on your machine; nothing
+their profile using an OpenAI-compatible provider. Everything runs on your machine; nothing
 is sent anywhere except your local SQLite database and the two
 outbound HTTP calls you explicitly authorize (one to LinkedIn's
-public search pages, one to OpenAI for scoring).
+public search pages, one to the AI provider for scoring).
 
 ## Quick start
 

@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
  * SDK, or runtime `pino`. The reevaluation
  * layer is split into:
  *   - Pure layer: `src/reevaluation/{state,errors,plan,format,json-schemas,index}.ts`.
- *     No repository I/O, no service composition, no OpenAI calls.
+ *     No repository I/O, no service composition, no AiProvider calls.
  *     MAY import from `src/pipeline/format.js` ONLY inside
  *     `src/reevaluation/format.ts` (the documented seam for the
  *     `formatScoringPlanForReevaluation` re-export — ).

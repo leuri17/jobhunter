@@ -10,12 +10,12 @@ import {
   ProfileApprovalService,
   ProfileRejectionService,
   InvalidProfileStateError,
-  type DefaultOpenAIClientRefusalOptions,
-  type OpenAIClient,
+  type DefaultAiProviderClientRefusalOptions,
+  type AiProviderClient,
 } from '@jobhunter/core/profile';
 import { envelopeFor } from '../errors.js';
 import { openDbHandle, createRepositories } from './db-helper.js';
-import { resolveOpenAiClientOrNull } from './openai-resolve.js';
+import { resolveAiProviderClientOrNull } from './ai-provider-resolve.js';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 
 // MIME types accepted by the profile-source extractor. The schema's
@@ -58,8 +58,8 @@ const PROFILE_EXTRACTION_TIMEOUT_MS = 300_000;
 const PROFILE_EXTRACTION_MAX_ATTEMPTS = 2;
 
 export interface ProfileRouteOptions {
-  readonly openaiClient?: OpenAIClient;
-  readonly refusal?: DefaultOpenAIClientRefusalOptions;
+  readonly aiProviderClient?: AiProviderClient;
+  readonly refusal?: DefaultAiProviderClientRefusalOptions;
 }
 
 export async function registerProfileRoutes(
@@ -196,8 +196,8 @@ export async function registerProfileRoutes(
       const sources = await repos.profileSources.list();
       const usable = sources.filter((s) => s.textExtractionStatus === 'success').map((s) => s.id);
       const client =
-        opts.openaiClient ??
-        (await resolveOpenAiClientOrNull(
+        opts.aiProviderClient ??
+        (await resolveAiProviderClientOrNull(
           opts.refusal,
           undefined,
           PROFILE_EXTRACTION_TIMEOUT_MS,
@@ -207,13 +207,19 @@ export async function registerProfileRoutes(
         reply.status(503);
         return {
           schemaVersion: 1,
-          error: { code: 'openai_unavailable', message: 'No OpenAI API key is configured' },
+          error: {
+            code: 'ai_provider_unavailable',
+            message: 'No AiProvider API key is configured',
+          },
         };
       }
       const service = new ProfileExtractionService({
         repositories: repos,
-        openaiClient: client,
-        config: { model: process.env['OPENAI_MODEL'] ?? 'gpt-5', reasoningEffort: 'medium' },
+        aiProviderClient: client,
+        config: {
+          model: process.env['AI_PROVIDER_MODEL'] ?? process.env['OPENAI_MODEL'] ?? 'gpt-5',
+          reasoningEffort: 'medium',
+        },
         retry: { maxAttempts: PROFILE_EXTRACTION_MAX_ATTEMPTS },
         logger: req.log,
       });

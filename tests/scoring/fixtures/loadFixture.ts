@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
  * The JSON fixtures seeded for the scoring layer (TASK-014).
  *
  * Eight fixtures cover the scoring input (a complete normalized job)
- * + the assembled OpenAI request payload + six positive / negative
+ * + the assembled AiProvider request payload + six positive / negative
  * structured-output cases (the F9 §25.7 prohibited-fields oracle +
  * the Zod-validation cases for category bounds, missing fields, extra
  * fields, decimal scores, and unknown seniority).

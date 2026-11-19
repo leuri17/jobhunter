@@ -42,14 +42,14 @@ import { type ProfessionalProfile } from '../profile/schema.js';
  *
  * When `input.profile === null` (no active approved profile) the profile
  * slice is the literal `null`, and the fingerprint is still deterministic.
- * The composer NEVER throws and NEVER calls into IO, network, OpenAI, or
+ * The composer NEVER throws and NEVER calls into IO, network, AiProvider, or
  * the persistence layer.
  *
  * Domain-boundary note (AGENTS.md §5, §9): this module imports only
  * `node:crypto`, `src/filter/version.js`, `src/filter/content-hash.js`,
  * `src/filter/schema.js`, and `src/profile/schema.js` (for the
  * `ProfessionalProfile` type). It is a pure helper that does not
- * depend on Playwright, Drizzle, OpenAI, or Pino. The
+ * depend on Playwright, Drizzle, AiProvider, or Pino. The
  * `tests/filter/boundaries.test.ts` guard enforces this.
  */
 

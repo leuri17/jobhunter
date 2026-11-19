@@ -5,7 +5,7 @@ import { DiagnosticArtifactRepository } from './diagnostics.js';
 import { FilterConfigurationRepository } from './filter-configurations.js';
 import { FilterResultRepository } from './filter-results.js';
 import { JobRepository } from './jobs.js';
-import { OpenAIRequestMetadataRepository } from './openai-metadata.js';
+import { AiProviderRequestMetadataRepository } from './ai-provider-metadata.js';
 import { PipelineRunRepository } from './pipeline-runs.js';
 import { ProfileSourceRepository } from './profile-sources.js';
 import { ProfileVersionRepository } from './profile-versions.js';
@@ -20,7 +20,7 @@ export class Repositories {
   readonly jobs: JobRepository;
   readonly filterResults: FilterResultRepository;
   readonly scoreResults: ScoreResultRepository;
-  readonly openaiMetadata: OpenAIRequestMetadataRepository;
+  readonly aiProviderMetadata: AiProviderRequestMetadataRepository;
   readonly diagnostics: DiagnosticArtifactRepository;
   readonly applicationMetadata: ApplicationMetadataRepository;
   /**
@@ -41,7 +41,7 @@ export class Repositories {
     this.jobs = new JobRepository(ctx);
     this.filterResults = new FilterResultRepository(ctx);
     this.scoreResults = new ScoreResultRepository(ctx);
-    this.openaiMetadata = new OpenAIRequestMetadataRepository(ctx);
+    this.aiProviderMetadata = new AiProviderRequestMetadataRepository(ctx);
     this.diagnostics = new DiagnosticArtifactRepository(ctx);
     this.applicationMetadata = new ApplicationMetadataRepository(ctx);
   }
@@ -74,7 +74,7 @@ export {
   FilterConfigurationRepository,
   FilterResultRepository,
   JobRepository,
-  OpenAIRequestMetadataRepository,
+  AiProviderRequestMetadataRepository,
   PipelineRunRepository,
   ProfileSourceRepository,
   ProfileVersionRepository,

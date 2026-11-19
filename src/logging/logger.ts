@@ -62,9 +62,10 @@ export interface LoggerDestinations {
  * `src/logging/codemap.md` for the convention.
  */
 const SECRET_KEYS = [
+  'AI_PROVIDER_API_KEY',
   'OPENAI_API_KEY',
   'apiKey',
-  'openaiApiKey',
+  'aiProviderApiKey',
   'authorization',
   'password',
   'secret',
@@ -72,7 +73,7 @@ const SECRET_KEYS = [
   'prompt',
   'rawPrompt',
   'rawResponse',
-  'openai.key',
+  'aiProvider.key',
 ] as const;
 
 export const DEFAULT_REDACT_PATHS: readonly string[] = [

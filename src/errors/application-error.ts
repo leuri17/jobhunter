@@ -6,7 +6,7 @@ export const ExitCode = {
   InvalidUsage: 2,
   MissingRequired: 3,
   LinkedInBlocked: 4,
-  OpenAIFailure: 5,
+  AiProviderFailure: 5,
   UserCancellation: 130,
 } as const;
 

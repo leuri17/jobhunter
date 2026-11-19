@@ -2,7 +2,7 @@
  * CI guard: production code must read the `errorCode` of a caught
  * error via `instanceof ApplicationError`, not the duck-typed
  * `'code' in error` check. The duck-typed check would let any plain
- * object or third-party library error (e.g. raw OpenAI SDK errors)
+ * object or third-party library error (e.g. raw AiProvider SDK errors)
  * flow through as an application-defined error code and pollute
  * history reports and UI status badges. See issue #38.
  */

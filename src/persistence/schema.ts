@@ -91,7 +91,7 @@ export const profileRevisions = sqliteTable(
       .references(() => profileVersions.id),
     revisionTimestamp: text('revision_timestamp').notNull(),
     source: text('source', {
-      enum: ['openai', 'user', 'conflict_resolution', 'override'],
+      enum: ['ai_provider', 'user', 'conflict_resolution', 'override'],
     }).notNull(),
     fieldPath: text('field_path').notNull(),
     previousValueJson: text('previous_value_json'),
@@ -476,10 +476,10 @@ export const scoreResults = sqliteTable(
   }),
 );
 
-// 17. openai_request_metadata ---------------------------------------------
+// 17. ai_provider_request_metadata ------------------------------------------
 // Per-request audit trail. Does not store raw prompts/responses.
-export const openaiRequestMetadata = sqliteTable(
-  'openai_request_metadata',
+export const aiProviderRequestMetadata = sqliteTable(
+  'ai_provider_request_metadata',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     operationType: text('operation_type', {
@@ -505,7 +505,7 @@ export const openaiRequestMetadata = sqliteTable(
     errorMessage: text('error_message'),
   },
   (t) => ({
-    operationIdx: index('openai_request_metadata_operation_idx').on(
+    operationIdx: index('ai_provider_request_metadata_operation_idx').on(
       t.operationType,
       t.startTimestamp,
     ),
@@ -565,7 +565,7 @@ export const schema = {
   extractionAttempts,
   filterResults,
   scoreResults,
-  openaiRequestMetadata,
+  aiProviderRequestMetadata,
   diagnosticArtifacts,
 };
 

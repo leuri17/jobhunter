@@ -4,7 +4,7 @@ import {
   DEFAULT_REFUSAL_MARKERS,
   createRefusalDetector,
   detectRefusal,
-} from '../../../src/profile/openai/refusal-detector.js';
+} from '../../../src/profile/ai-provider/refusal-detector.js';
 
 describe('DEFAULT_REFUSAL_MARKERS', () => {
   it('is a non-empty readonly array of distinct refusal phrases', () => {

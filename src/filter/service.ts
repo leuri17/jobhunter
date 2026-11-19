@@ -41,7 +41,7 @@ import { NoActiveFilterConfigError } from './errors.js';
  *   6. Return `{ outcome, filterResultId, fingerprint, ruleEvaluations,
  *      rejectionReasons, reused: false }`.
  *
- * The service NEVER calls OpenAI (AGENTS.md §9). It does NOT invalidate
+ * The service NEVER calls AiProvider (AGENTS.md §9). It does NOT invalidate
  * other config versions or run-level caches — that is the orchestrator's
  * responsibility after a configuration swap. It does NOT touch the
  * pipeline run / score-result tables; the pipelineRunId is passed
@@ -50,7 +50,7 @@ import { NoActiveFilterConfigError } from './errors.js';
  * Domain-boundary note (AGENTS.md §5, §9): this module imports only the
  * sibling `src/filter/*` modules and the `Repositories` facade from
  * `src/persistence/repositories/index.js`. It is a pure helper that
- * does not depend on Playwright, Drizzle directly, OpenAI, or Pino.
+ * does not depend on Playwright, Drizzle directly, AiProvider, or Pino.
  * The `tests/filter/boundaries.test.ts` guard enforces this.
  */
 

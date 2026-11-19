@@ -75,7 +75,7 @@ function buildCells(props: StageStripProps): CellModel[] {
         : view.scoringPlan !== null && counters !== null
           ? `${nf(counters.jobsScored)} scored · ${nf(tokens)} tokens`
           : view.scoringPlan !== null
-            ? `${nf(view.scoringPlan.newOpenAIRequests)} requests ready`
+            ? `${nf(view.scoringPlan.newAiProviderRequests)} requests ready`
             : '—';
 
   return [
@@ -121,7 +121,7 @@ function buildCells(props: StageStripProps): CellModel[] {
     },
     {
       key: 'scoring',
-      name: 'OpenAI scoring',
+      name: 'AiProvider scoring',
       blurb:
         model !== undefined
           ? `${model}${concurrency !== undefined ? ` · ${concurrency} parallel` : ''}`
