@@ -22,12 +22,12 @@
     "db:generate": "drizzle-kit generate --config drizzle.config.ts"
   },
   "dependencies": {
-    "better-sqlite3": "13.1.1",
+    "better-sqlite3": "13.2.0",
     "drizzle-orm": "0.45.4",
-    "openai": "7.55.0",
+    "openai": "7.57.0",
     "pdf-parse": "2.4.5",
     "pino": "10.4.0",
-    "playwright": "1.65.0",
+    "playwright": "1.65.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
@@ -36,7 +36,7 @@
     "@types/node": "26.6.6",
     "@vitest/coverage-v8": "4.1.11",
     "drizzle-kit": "0.31.11",
-    "eslint": "10.14.0",
+    "eslint": "10.15.0",
     "eslint-config-prettier": "10.1.8",
     "globals": "17.14.0",
     "linkedom": "0.18.15",
