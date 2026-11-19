@@ -144,13 +144,21 @@ describe('src/linkedin/state — ', () => {
         iterations: 1,
         reason: 'signal aborted',
       },
+      {
+        kind: 'rate-limited',
+        totalCardsDiscovered: 60,
+        iterations: 1,
+        reason: 'seeMoreJobPostings responded 429',
+        url: 'https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=engineer&start=25',
+      },
     ];
-    expect(outcomes).toHaveLength(4);
+    expect(outcomes).toHaveLength(5);
     expect(outcomes.map((o) => o.kind)).toEqual([
       'complete',
       'exhausted',
       'no-progress',
       'cancelled',
+      'rate-limited',
     ]);
   });
 });

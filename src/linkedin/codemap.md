@@ -18,11 +18,15 @@ subfolder.
   Playwright import), and the real-Playwright route-interceptor in
   `tests/linkedin/helpers/playwright-route-session.ts`.
 - **State machine** for the load-more loop (`load-more.ts`) returns a discriminated
-  `LoadMoreOutcome`: `'complete' | 'exhausted' | 'no-progress' | 'cancelled'`. Card dedup uses
+  `LoadMoreOutcome`: `'complete' | 'rate-limited' | 'exhausted' | 'no-progress' | 'cancelled'`.
+  `'rate-limited'` fires when a `seeMoreJobPostings` pagination response answers 429 mid-loop
+  (#346) — detected via a page `response` listener attached for the loop's lifetime; the
+  discovery service maps it to `LinkedInRateLimitedError`. Card dedup uses
   first-seen-wins via `Map<id, DiscoveredCard>`; null-ID cards are preserved with a synthetic
   key so the orchestrator can write `discoveryErrors` rows.
 - **Selectors** module (`selectors.ts`) is pure data — `LINKEDIN_SELECTORS` + versioned
-  `LINKEDIN_SELECTORS_MAP_VERSION` + `JOB_ID_HREF_PATTERN` + `OVERLAY_DISMISSAL_STRATEGY`.
+  `LINKEDIN_SELECTORS_MAP_VERSION` + `JOB_ID_HREF_PATTERN` +
+  `SEE_MORE_JOB_POSTINGS_URL_PATTERN` + `OVERLAY_DISMISSAL_STRATEGY`.
 - **Pure card-ID parser** (`card-id.ts`) tries `data-occludable-job-id` then a href regex;
   never throws, returns `null` on miss. Adapter surface `MinimalElement` /
   `CardIdDocument` decouples from linkedom vs Playwright element handles.
@@ -45,11 +49,14 @@ subfolder.
 2. `browserSession.openPage(generatedUrl)` (mapped to `LinkedInExpectedPageError` on failure).
 3. `navigateWithTimeout({ page, url, timeoutMs })` → discriminated `NavigationResult`; auth-wall
    / login / checkpoint URLs convert to `LinkedInAccessBlockedError`, `TimeoutError` to
-   `NavigationTimeoutError`, others to `LinkedInExpectedPageError`.
+   `NavigationTimeoutError`, a 429 document to `LinkedInRateLimitedError`, others to
+   `LinkedInExpectedPageError`.
 4. `dismissRecoverableOverlays(page, { overlayDismissalMs })` → undismissed set → throws
    `OverlayUndismissableError` on first undismissable overlay.
 5. `loadMoreResults(page, opts)` (alias for `discoverAllCards`) — bounded iterations,
-   `maxNoProgressAttempts`, `AbortSignal` check, returns `{ cards, outcome }`.
+   `maxNoProgressAttempts`, `AbortSignal` check, returns `{ cards, outcome }`. A
+   `kind: 'rate-limited'` outcome (mid-pagination `seeMoreJobPostings` 429, #346) throws
+   `LinkedInRateLimitedError` before any card persistence, mirroring the document-level path.
 6. Per-card dedup: `jobs.findBySourceJobIds` (one batched `inArray(sourceJobId, ids)` SELECT for all parsed sourceJobIds) → existing → `recordDiscoveryEvent`; new →
    `recordNewJob` (atomic jobs + event insert, `extractionStatus: 'failed'` placeholder later
    promoted by `Repositories.jobs.updateExtraction`); null-ID → `recordDiscoveryError` with
