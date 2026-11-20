@@ -66,20 +66,30 @@ describe('ExperienceSection', () => {
     render(<Harness profile={makeProfile()} section="experience" onChange={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add experience' }));
     await waitFor(() => {
-      expect(document.activeElement).toBe(screen.getByLabelText('Company'));
+      expect(document.activeElement).toBe(screen.getByLabelText('Job title'));
     });
   });
 
   it('checking current role disables end date', async () => {
     const profile = { ...makeProfile(), experience: [acmeExperience()] };
     render(<Harness profile={profile} section="experience" onChange={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: /^Acme$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Engineer$/i }));
     const endDate = screen.getByLabelText('End date') as HTMLInputElement;
     expect(endDate.disabled).toBe(false);
     fireEvent.click(screen.getByRole('checkbox'));
     await waitFor(() => {
       expect((screen.getByLabelText('End date') as HTMLInputElement).disabled).toBe(true);
     });
+  });
+
+  it('uses the job title as the card headline with the company secondary (#296)', () => {
+    const profile = { ...makeProfile(), experience: [acmeExperience()] };
+    render(<Harness profile={profile} section="experience" onChange={() => {}} />);
+    const trigger = screen.getByRole('button', { name: /^Engineer$/ });
+    expect(trigger.textContent).toContain('Engineer');
+    // The company recedes to the meta line, not the headline.
+    expect(trigger.textContent).not.toContain('Acme');
+    expect(screen.getByText(/Acme · 2021-03 — 2023-01/)).toBeDefined();
   });
 });
 
@@ -101,7 +111,7 @@ describe('ExperienceSection date fields', () => {
     profile.experience = [acmeExperience()];
     let latest: ProfessionalProfile | null = null;
     render(<Harness profile={profile} section="experience" onChange={(p) => (latest = p)} />);
-    fireEvent.click(screen.getByRole('button', { name: /^Acme$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Engineer$/i }));
     const start = await screen.findByPlaceholderText('2021-03');
     fireEvent.change(start, { target: { value: '' } });
     await waitFor(() => {

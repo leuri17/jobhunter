@@ -92,24 +92,28 @@ function ExperienceEntry({
     <form.Field name={`experience[${index}]`}>
       {(entry) => {
         const value = entry.state.value;
+        const headline = value.title || value.company || 'New experience';
+        const companyPrefix =
+          value.title !== '' && value.company !== '' ? `${value.company} · ` : '';
         const meta =
+          companyPrefix +
           `${value.startDate ?? '—'} — ${value.isCurrent ? 'Present' : (value.endDate ?? '—')}` +
           (value.location ? ` · ${value.location}` : '') +
           (value.technologies.length > 0 ? ` · ${value.technologies.slice(0, 3).join(', ')}` : '');
         return (
           <ArrayEntryRow
-            title={value.company || 'New experience'}
+            title={headline}
             meta={meta}
             hasError={entry.state.meta.isTouched && !entry.state.meta.isValid}
-            defaultOpen={value.company === ''}
+            defaultOpen={headline === 'New experience'}
             onRemove={onRemove}
-            removeLabel={`Remove ${value.company || 'experience'}`}
+            removeLabel={`Remove ${headline}`}
           >
-            <form.Field name={`experience[${index}].company`}>
+            <form.Field name={`experience[${index}].title`}>
               {(leaf) => (
                 <div className="sm:col-span-3">
                   <Field>
-                    <Label htmlFor={leaf.name}>Company</Label>
+                    <Label htmlFor={leaf.name}>Job title</Label>
                     <Input
                       id={leaf.name}
                       value={leaf.state.value}
@@ -122,11 +126,11 @@ function ExperienceEntry({
                 </div>
               )}
             </form.Field>
-            <form.Field name={`experience[${index}].title`}>
+            <form.Field name={`experience[${index}].company`}>
               {(leaf) => (
                 <div className="sm:col-span-3">
                   <Field>
-                    <Label htmlFor={leaf.name}>Job title</Label>
+                    <Label htmlFor={leaf.name}>Company</Label>
                     <Input
                       id={leaf.name}
                       value={leaf.state.value}
