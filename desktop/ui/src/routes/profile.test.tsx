@@ -170,6 +170,40 @@ describe('ProfilePage extraction failure', () => {
   });
 });
 
+describe('ProfilePage editor overview ordering', () => {
+  beforeEach(() => {
+    vi.mocked(api.listProfiles).mockResolvedValue({
+      schemaVersion: 1,
+      profiles: [draftEntry],
+    } as ListProfilesResponse);
+    vi.mocked(api.getProfile).mockResolvedValue(detailResponse());
+    vi.mocked(api.listSources).mockResolvedValue({ schemaVersion: 1, sources: [] });
+    vi.mocked(api.getApiKeyStatus).mockResolvedValue({
+      schemaVersion: 1,
+      configured: true,
+      source: 'stored',
+      masked: 'sk-…test',
+      legacyFilePresent: false,
+      backend: 'file',
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('places sources after the profile content once a version exists (#295)', async () => {
+    renderPage();
+    const sources = await screen.findByText('Source documents & extractors');
+    const basics = screen.getByText('Candidate & summary');
+    const skills = screen.getByText('Extracted skills & taxonomy');
+    const follows = Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(basics.compareDocumentPosition(sources) & follows).toBe(follows);
+    expect(skills.compareDocumentPosition(sources) & follows).toBe(follows);
+  });
+});
+
 const firstRunSourceRow: ProfileSourceRow = {
   id: 1,
   sourceType: 'pdf',

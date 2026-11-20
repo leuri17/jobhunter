@@ -232,12 +232,12 @@ function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
                     <SectionDivider />
                     <TargetRolesSection form={form} />
                     <SectionDivider />
-                    <SourcesSection disabled={extract.isPending} />
-                    <SectionDivider />
                     <SkillsSnapshot
                       skills={(profile as ProfessionalProfile).skills}
                       onManage={() => setActiveTab('skills')}
                     />
+                    <SectionDivider />
+                    <SourcesSection disabled={extract.isPending} />
                   </>
                 )}
               </form.Subscribe>
