@@ -61,10 +61,10 @@ describe('OperationalConfigSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects non-positive runTopN and jobsListDefaultLimit', () => {
+  it('rejects non-positive runTopN', () => {
     const result = OperationalConfigSchema.safeParse({
       ...DEFAULT_OPERATIONAL_CONFIG,
-      output: { runTopN: 0, jobsListDefaultLimit: 0 },
+      output: { runTopN: 0 },
     });
     expect(result.success).toBe(false);
   });
@@ -128,6 +128,26 @@ describe('OperationalConfigSchema', () => {
     const result = OperationalConfigFileSchema.safeParse({
       ...DEFAULT_OPERATIONAL_CONFIG,
       scraper: { ...DEFAULT_OPERATIONAL_CONFIG.scraper, headless: 'no' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('strips the removed output.jobsListDefaultLimit from legacy config files', () => {
+    const result = OperationalConfigFileSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      output: { runTopN: 20, jobsListDefaultLimit: 50 },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect('jobsListDefaultLimit' in result.data.output).toBe(false);
+      expect(result.data.output.runTopN).toBe(20);
+    }
+  });
+
+  it('keeps the canonical schema strict: output.jobsListDefaultLimit is a validation error', () => {
+    const result = OperationalConfigSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      output: { runTopN: 20, jobsListDefaultLimit: 50 },
     });
     expect(result.success).toBe(false);
   });

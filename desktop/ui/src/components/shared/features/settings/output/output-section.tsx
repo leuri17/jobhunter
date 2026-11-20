@@ -1,7 +1,6 @@
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { SectionDivider } from '@/components/shared/features/settings/search-config/section';
 import type {
   AnyFieldApi,
   SectionForm,
@@ -16,9 +15,7 @@ export function OutputSection({ form }: OutputSectionProps) {
     <>
       <CardHeader>
         <CardTitle>Output</CardTitle>
-        <CardDescription>
-          Limits that shape what the pipeline keeps and what the UI shows by default.
-        </CardDescription>
+        <CardDescription>Limits that shape what the pipeline keeps.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <form.Field name="output.runTopN">
@@ -27,18 +24,6 @@ export function OutputSection({ form }: OutputSectionProps) {
               field={field}
               label="Run top N"
               description="How many top-scored jobs a run keeps."
-            />
-          )}
-        </form.Field>
-      </CardContent>
-      <SectionDivider />
-      <CardContent className="flex flex-col gap-5">
-        <form.Field name="output.jobsListDefaultLimit">
-          {(field: AnyFieldApi) => (
-            <PositiveIntRow
-              field={field}
-              label="Jobs list default limit"
-              description="Default page size for the jobs list view."
             />
           )}
         </form.Field>
