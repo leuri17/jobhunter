@@ -58,10 +58,10 @@ export function ConflictsSection({ conflicts, warnings }: ConflictsSectionProps)
                     {conflicts.map((c) => (
                       <TableRow key={c.id}>
                         <TableCell className="font-mono text-xs">{c.conflictType}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
+                        <TableCell className="font-mono text-xs text-muted-foreground whitespace-normal break-words">
                           {c.affectedField}
                         </TableCell>
-                        <TableCell className="text-xs">
+                        <TableCell className="text-xs whitespace-normal break-words">
                           <span className="font-mono">{formatValue(c.valueSourceA)}</span>
                           {' vs '}
                           <span className="font-mono">{formatValue(c.valueSourceB)}</span>
@@ -80,7 +80,7 @@ export function ConflictsSection({ conflicts, warnings }: ConflictsSectionProps)
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="text-xs text-muted-foreground whitespace-normal break-words">
                           {c.explanation ?? '—'}
                         </TableCell>
                       </TableRow>
@@ -120,10 +120,12 @@ export function ConflictsSection({ conflicts, warnings }: ConflictsSectionProps)
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
+                        <TableCell className="font-mono text-xs text-muted-foreground whitespace-normal break-words">
                           {w.fieldPath ?? '—'}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{w.message}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-normal break-words">
+                          {w.message}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
