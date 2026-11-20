@@ -49,4 +49,28 @@ describe('ConflictsSection', () => {
     render(<ConflictsSection conflicts={[]} warnings={[]} />);
     expect(screen.getByText(/no conflicts or warnings/i)).toBeDefined();
   });
+
+  it('wraps long unbroken text in table cells instead of overflowing (#297)', () => {
+    const longValueA = 'a'.repeat(200);
+    const longExplanation = 'e'.repeat(200);
+    const longFieldPath = 'f'.repeat(200);
+    const longMessage = 'm'.repeat(200);
+    const longConflict = conflict({
+      valueSourceA: longValueA,
+      affectedField: longFieldPath,
+      explanation: longExplanation,
+    });
+    const longWarning = warning({ fieldPath: longFieldPath, message: longMessage });
+    render(<ConflictsSection conflicts={[longConflict]} warnings={[longWarning]} />);
+
+    expect(screen.getByText(longValueA).closest('td')?.className).toContain('whitespace-normal');
+    expect(screen.getByText(longValueA).closest('td')?.className).toContain('break-words');
+    expect(screen.getByText(longExplanation).closest('td')?.className).toContain('break-words');
+    expect(screen.getByText(longMessage).closest('td')?.className).toContain('break-words');
+    // Both mono field-path cells (conflicts + warnings tables) wrap too.
+    const fieldPathNodes = screen.getAllByText(longFieldPath);
+    expect(fieldPathNodes).toHaveLength(2);
+    expect(fieldPathNodes[0]?.closest('td')?.className).toContain('break-words');
+    expect(fieldPathNodes[1]?.closest('td')?.className).toContain('break-words');
+  });
 });
