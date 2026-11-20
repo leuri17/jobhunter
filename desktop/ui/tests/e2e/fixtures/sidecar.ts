@@ -129,7 +129,7 @@ const BASE_CONFIG = {
     },
     maxNoProgressAttempts: 3,
   },
-  output: { runTopN: 20, jobsListDefaultLimit: 50 },
+  output: { runTopN: 20 },
   logging: { level: 'info', prettyTerminal: true },
   diagnostics: {
     onScraperError: {

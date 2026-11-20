@@ -77,11 +77,7 @@ describe('updateConfig', () => {
     const initialJson = JSON.stringify(initial.config);
 
     await expect(
-      updateConfig(
-        paths,
-        { output: { runTopN: 0, jobsListDefaultLimit: 50 } },
-        { confirm: async () => true },
-      ),
+      updateConfig(paths, { output: { runTopN: 0 } }, { confirm: async () => true }),
     ).rejects.toBeInstanceOf(ValidationError);
 
     const after = await loadConfig(paths);

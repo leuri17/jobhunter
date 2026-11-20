@@ -89,7 +89,6 @@ const scraperSchema = z
 const outputSchema = z
   .object({
     runTopN: positiveInt,
-    jobsListDefaultLimit: positiveInt,
   })
   .strict();
 
@@ -135,19 +134,36 @@ export type OperationalConfig = z.infer<typeof OperationalConfigSchema>;
  * - fills `scraper.headless` for config files written before the key
  *   existed (#338 pattern);
  * - renames the legacy `openai` section to `aiProvider` for config
- *   files written before the provider-generic rename.
+ *   files written before the provider-generic rename;
+ * - strips the removed `output.jobsListDefaultLimit` for config files
+ *   written before the setting was removed (#341) — the next config
+ *   write drops the key from disk.
  * The output shape is identical to the canonical schema; only the
  * input side tolerates older files. Everything downstream of loading
  * (patches, Settings validation) uses the strict canonical schema.
  */
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 export const OperationalConfigFileSchema: z.ZodType<OperationalConfig> = z.preprocess(
   (raw) => {
-    if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
-      const record = raw as Record<string, unknown>;
-      if (record['aiProvider'] === undefined && record['openai'] !== undefined) {
-        const { openai: legacyOpenAi, ...rest } = record;
-        return { ...rest, aiProvider: legacyOpenAi };
+    if (isPlainRecord(raw)) {
+      const record: Record<string, unknown> = raw;
+
+      let next = record;
+      if (next['aiProvider'] === undefined && next['openai'] !== undefined) {
+        const { openai: legacyOpenAi, ...rest } = next;
+        next = { ...rest, aiProvider: legacyOpenAi };
       }
+
+      const output = next['output'];
+      if (isPlainRecord(output) && 'jobsListDefaultLimit' in output) {
+        const { jobsListDefaultLimit: _removed, ...legacyOutput } = output;
+        next = { ...next, output: legacyOutput };
+      }
+
+      return next;
     }
     return raw;
   },
@@ -204,7 +220,6 @@ export const DEFAULT_OPERATIONAL_CONFIG: OperationalConfig = {
   },
   output: {
     runTopN: 20,
-    jobsListDefaultLimit: 50,
   },
   logging: {
     level: 'info',
