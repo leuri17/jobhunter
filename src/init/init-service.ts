@@ -356,7 +356,7 @@ export class InitOrchestrator {
     if (sourcesReport.status !== 'complete') {
       logger.stepStart({ stepId: 'sources' });
       const resume = await opts.prompts.askResume({
-        nextStepLabel: 'Import one or two CV sources',
+        nextStepLabel: 'Import a CV source',
       });
       if (!resume) {
         logger.stepSkip({ stepId: 'sources', reason: 'user_declined' });

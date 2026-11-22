@@ -81,16 +81,17 @@ describe('ProfileImportService', () => {
     expect(second.sources[0]?.reused).toBe(true);
   });
 
-  it('imports two valid files and returns both', async () => {
+  it('rejects two files in a single import call (single-source policy, #282)', async () => {
     const pathA = join(tempHome, 'a.md');
     const pathB = join(tempHome, 'b.txt');
     writeFileSync(pathA, 'first', 'utf8');
     writeFileSync(pathB, 'second', 'utf8');
 
-    const result = await service.importSources([pathA, pathB]);
-    expect(result.status).toBe('success');
-    expect(result.sources).toHaveLength(2);
-    expect(result.sources.map((s) => s.sourceType).sort()).toEqual(['markdown', 'plain_text']);
+    await expect(service.importSources([pathA, pathB])).rejects.toBeInstanceOf(
+      InvalidArgumentCountError,
+    );
+    const all = await repositories.profileSources.list();
+    expect(all).toHaveLength(0);
   });
 
   it('throws SourceUnreadableError when a path is missing (no state change)', async () => {
@@ -130,56 +131,30 @@ describe('ProfileImportService', () => {
     expect(stored?.sha256).toBe(imported.sha256);
   });
 
-  it('returns partial when one source is valid and another is unusable', async () => {
-    const valid = join(tempHome, 'cv.md');
-    writeFileSync(valid, 'ok', 'utf8');
-    const pdfBytes = loadFixture('image-only.pdf');
-    const imageOnly = join(tempHome, 'image-only.pdf');
-    writeFileSync(imageOnly, pdfBytes);
-
-    const result = await service.importSources([valid, imageOnly]);
-    expect(result.status).toBe('partial');
-    expect(result.sources).toHaveLength(2);
-    expect(result.sources.map((s) => s.textExtractionStatus).sort()).toEqual(['failed', 'success']);
-    expect(result.failedSourcePaths).toEqual([imageOnly]);
-  });
-
-  it('throws InvalidArgumentCountError for zero or more than two paths', async () => {
+  it('throws InvalidArgumentCountError for zero or more than one path', async () => {
     await expect(service.importSources([])).rejects.toBeInstanceOf(InvalidArgumentCountError);
     await expect(service.importSources(['a.md', 'b.md', 'c.md'])).rejects.toBeInstanceOf(
       InvalidArgumentCountError,
     );
   });
 
-  it('rejects an import that would exceed the total source cap', async () => {
-    writeFileSync(join(tempHome, 'one.md'), '# One', 'utf8');
-    writeFileSync(join(tempHome, 'two.md'), '# Two', 'utf8');
-    await service.importSources([join(tempHome, 'one.md'), join(tempHome, 'two.md')]);
-
-    writeFileSync(join(tempHome, 'three.md'), '# Three', 'utf8');
-    await expect(service.importSources([join(tempHome, 'three.md')])).rejects.toMatchObject({
-      code: 'profile_source_limit_reached',
-    });
-  });
-
-  it('allows imports up to the cap boundary', async () => {
+  it('rejects a second import when one source already exists (#282)', async () => {
     writeFileSync(join(tempHome, 'one.md'), '# One', 'utf8');
     await service.importSources([join(tempHome, 'one.md')]);
 
     writeFileSync(join(tempHome, 'two.md'), '# Two', 'utf8');
-    const result = await service.importSources([join(tempHome, 'two.md')]);
-    expect(result.status).toBe('success');
-    expect(result.sources).toHaveLength(1);
+    await expect(service.importSources([join(tempHome, 'two.md')])).rejects.toMatchObject({
+      code: 'profile_source_limit_reached',
+      message: expect.stringContaining('single source document'),
+    });
   });
 
-  it('rejects a duplicate re-import when the library is at the cap', async () => {
+  it('allows importing exactly one file', async () => {
     writeFileSync(join(tempHome, 'one.md'), '# One', 'utf8');
-    writeFileSync(join(tempHome, 'two.md'), '# Two', 'utf8');
-    await service.importSources([join(tempHome, 'one.md'), join(tempHome, 'two.md')]);
-
-    await expect(service.importSources([join(tempHome, 'one.md')])).rejects.toMatchObject({
-      code: 'profile_source_limit_reached',
-    });
+    const result = await service.importSources([join(tempHome, 'one.md')]);
+    expect(result.status).toBe('success');
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0]?.sourceType).toBe('markdown');
   });
 
   it('records the source row before the copy runs (resilience to copy failure)', async () => {

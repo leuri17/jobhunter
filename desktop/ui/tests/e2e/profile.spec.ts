@@ -8,7 +8,7 @@ test('renders the Profile page with its six tabs', async ({ page }) => {
     'Experience',
     'Skills',
     'Education',
-    'Conflicts',
+    'Warnings',
     'Version history',
   ]) {
     await expect(page.getByRole('tab', { name: new RegExp(tab, 'i') })).toBeVisible();

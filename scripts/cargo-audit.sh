@@ -30,7 +30,15 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../desktop/tauri"
 
-if ! JSON=$(cargo audit --json \
+# cargo-audit exits non-zero both when it finds a gated advisory and
+# when it cannot run at all (bad flag, unreadable lockfile, network
+# failure). Gating on the exit code conflates the two: a NEW advisory
+# produced valid JSON but surfaced as a cryptic "failed to run" error
+# (seen on #356 CI, RUSTSEC-2026-0592). So: capture stdout in both
+# cases and let the gate below decide — it fails loudly on
+# empty/unparseable JSON (a run that never produced findings) and
+# reports actual advisories by id otherwise.
+JSON=$(cargo audit --json \
   --ignore RUSTSEC-2024-0413 \
   --ignore RUSTSEC-2024-0416 \
   --ignore RUSTSEC-2024-0412 \
@@ -51,15 +59,7 @@ if ! JSON=$(cargo audit --json \
   --ignore RUSTSEC-2026-0370 \
   --ignore RUSTSEC-2026-0371 \
   --ignore RUSTSEC-2026-0372 \
-  2>/dev/null); then
-  # cargo-audit exits non-zero both when it finds a gated advisory and when
-  # it cannot run at all (bad flag, unreadable lockfile, network failure).
-  # The previous `|| true` discarded that status, so an audit that never ran
-  # produced empty JSON and surfaced as a confusing JSONDecodeError. Fail loudly
-  # instead; the gate below still decides on findings from a successful run.
-  echo "::error::cargo-audit: cargo audit failed to run (exit non-zero, no parseable JSON)" >&2
-  exit 1
-fi
+  2>/dev/null || true)
 
 echo "$JSON" | python3 -c "
 import json, sys

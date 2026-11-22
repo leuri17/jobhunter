@@ -245,7 +245,9 @@ describe('ProfilePage first run', () => {
     await screen.findByText('Get started');
     expect(screen.queryByRole('tab', { name: /overview/i })).toBeNull();
     expect(screen.getByRole('button', { name: /add a source file/i })).toBeDefined();
-    expect(screen.getByText(/Add up to two CV or resume files/i)).toBeDefined();
+    expect(
+      screen.getByText(/Add a CV or resume file\. JobHunter builds your profile from it/i),
+    ).toBeDefined();
   });
 
   it('shows the full first-run shell once a source exists', async () => {

@@ -172,7 +172,7 @@ export function SourcesSection({ disabled, addTriggerRef }: SourcesSectionProps)
 
   const onAdd = async () => {
     const picked = await open({
-      multiple: true,
+      multiple: false,
       filters: [{ name: 'Documents', extensions: [...SOURCE_EXTENSIONS] }],
     });
     const paths = Array.isArray(picked) ? picked : picked === null ? [] : [picked];

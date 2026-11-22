@@ -30,7 +30,7 @@ public search pages, one to the AI provider for scoring).
 
 #### Managing your profile
 
-1. Open **Profile** and add your CV(s) — PDF, Markdown, or plain text, up to two files per import (duplicates are detected automatically).
+1. Open **Profile** and add your CV — PDF, Markdown, or plain text. One source document (duplicates are detected automatically).
 2. Click **Run extraction**. Your documents are sent to your AI provider to build a structured profile; this consumes API tokens.
 3. Edit anything — contact details, experience, skills, target roles — then **Save draft**.
 4. **Approve & publish** the draft to make it the active profile the scoring engine uses. Previous versions stay in Version history.
