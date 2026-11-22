@@ -205,8 +205,8 @@ function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
             <TabsTrigger value="experience">Experience</TabsTrigger>
             <TabsTrigger value="skills">Skills</TabsTrigger>
             <TabsTrigger value="education">Education</TabsTrigger>
-            <TabsTrigger value="conflicts" aria-label={`Conflicts, ${issueCount} open`}>
-              Conflicts
+            <TabsTrigger value="conflicts" aria-label={`Warnings, ${issueCount} open`}>
+              Warnings
               <Badge
                 variant={blockingCount > 0 ? 'destructive' : 'secondary'}
                 className="text-[11px]"
@@ -403,8 +403,8 @@ function ProfileFirstRun({ profiles }: { profiles: readonly ProfileListEntry[] }
           <CardHeader>
             <CardTitle>Get started</CardTitle>
             <CardDescription>
-              Add up to two CV or resume files. JobHunter builds your profile from them — you review
-              and approve every version.
+              Add a CV or resume file. JobHunter builds your profile from it — you review and
+              approve every version.
             </CardDescription>
           </CardHeader>
           <SectionDivider />
@@ -428,8 +428,8 @@ function ProfileFirstRun({ profiles }: { profiles: readonly ProfileListEntry[] }
           <TabsTrigger value="experience">Experience</TabsTrigger>
           <TabsTrigger value="skills">Skills</TabsTrigger>
           <TabsTrigger value="education">Education</TabsTrigger>
-          <TabsTrigger value="conflicts" aria-label="Conflicts, 0 open">
-            Conflicts
+          <TabsTrigger value="conflicts" aria-label="Warnings, 0 open">
+            Warnings
             <Badge variant="secondary" className="text-[11px]">
               0
             </Badge>

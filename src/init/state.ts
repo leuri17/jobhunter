@@ -63,7 +63,7 @@ export const INIT_STEP_LABELS: Readonly<Record<InitStepId, string>> = {
   config: 'Materialize default config.json when missing',
   aiProviderKey: 'Check that an AiProvider API key is configured',
   search: 'Configure LinkedIn search settings',
-  sources: 'Import one or two CV sources',
+  sources: 'Import a CV source',
   extract: 'Generate AI profile draft',
   approvedProfile: 'Approve a profile version',
   filters: 'Configure global deterministic filters',

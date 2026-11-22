@@ -27,10 +27,10 @@ export function ConflictsSection({ conflicts, warnings }: ConflictsSectionProps)
   return (
     <>
       <CardHeader>
-        <CardTitle>Conflicts &amp; warnings</CardTitle>
+        <CardTitle>Warnings</CardTitle>
         <CardDescription>
-          Disagreements between sources on the draft version. Resolution tools arrive in a later
-          release.
+          Signals from your source document that deserve a look before approval — gaps and blocking
+          issues included.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">

@@ -193,21 +193,20 @@ describe('profile source routes', () => {
     expect(body.error?.code).toBe('profile_source_not_found');
   });
 
-  it('rejects imports beyond the 2-source library cap with 400', async () => {
-    const files = ['cap-one.md', 'cap-two.md', 'cap-three.md'].map((name) => {
+  it('rejects imports beyond the single-source library cap with 400 (#282)', async () => {
+    const files = ['cap-one.md', 'cap-two.md'].map((name) => {
       const p = join(configHome, name);
       writeFileSync(p, `# ${name}`, 'utf-8');
       return p;
     });
-    const form12 = new FormData();
-    form12.append('path', files[0]!);
-    form12.append('path', files[1]!);
-    const ok = await fetch(`${baseUrl}/api/profile/import`, { method: 'POST', body: form12 });
+    const form1 = new FormData();
+    form1.append('path', files[0]!);
+    const ok = await fetch(`${baseUrl}/api/profile/import`, { method: 'POST', body: form1 });
     expect(ok.status).toBe(200);
 
-    const form3 = new FormData();
-    form3.append('path', files[2]!);
-    const res = await fetch(`${baseUrl}/api/profile/import`, { method: 'POST', body: form3 });
+    const form2 = new FormData();
+    form2.append('path', files[1]!);
+    const res = await fetch(`${baseUrl}/api/profile/import`, { method: 'POST', body: form2 });
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error?: { code?: string } };
     expect(body.error?.code).toBe('profile_source_limit_reached');

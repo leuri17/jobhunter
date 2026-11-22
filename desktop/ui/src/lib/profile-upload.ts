@@ -1,6 +1,6 @@
 export const SOURCE_EXTENSIONS = ['pdf', 'md', 'markdown', 'txt'] as const;
 
-export const MAX_PROFILE_SOURCES = 2;
+export const MAX_PROFILE_SOURCES = 1;
 
 export interface PickedPathsValidation {
   readonly accepted: string[];

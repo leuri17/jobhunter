@@ -36,9 +36,9 @@ const ALLOWED_PROFILE_MIME_TYPES: ReadonlySet<string> = new Set([
 // area now so a future PR that does consume the body inherits a
 // sane default.
 const PROFILE_MULTIPART_LIMITS = {
-  // The importer's `importSources` cap is 2 (see
-  // src/profile/import-service.ts); mirror that here.
-  files: 2,
+  // The importer's `importSources` cap is 1 — the single-source
+  // policy (#282); mirror that here.
+  files: 1,
   // 10 MiB per file. Down from the previous 50 MiB blanket cap.
   fileSize: 10 * 1024 * 1024,
   // Cap the field-name and field-value sizes so a malicious

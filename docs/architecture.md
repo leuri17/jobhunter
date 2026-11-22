@@ -125,9 +125,12 @@ A profile moves through four statuses:
 4. **`superseded`** — replaced by a newer approved profile; preserved
    for traceability.
 
-Conflicts between sources (when two CV sources disagree) must be
-resolved by explicit user action. Profiles with unresolved
-`blocking_conflict` warnings cannot be approved.
+The profile library holds a single source document (the
+single-source policy, #282). The multi-source conflict machinery —
+cross-source disagreement detection, the `profile_conflicts` table,
+and the approval gate — remains in place but dormant: one-source
+extractions can never produce conflicts. Profiles with unresolved
+`blocking_conflict` warnings still cannot be approved.
 
 ## Filtering
 

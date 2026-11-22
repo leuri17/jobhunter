@@ -94,7 +94,7 @@ export const noopLogger: ProfileImportLogger = {
   error: () => undefined,
 };
 
-export const MAX_PROFILE_SOURCES = 2;
+export const MAX_PROFILE_SOURCES = 1;
 
 export class ProfileImportService {
   private readonly paths: PlatformPaths;
@@ -113,22 +113,9 @@ export class ProfileImportService {
 
   async importSources(rawPaths: readonly string[]): Promise<ProfileImportResult> {
     if (rawPaths.length === 0 || rawPaths.length > MAX_PROFILE_SOURCES) {
-      throw new InvalidArgumentCountError(
-        'profile import requires exactly one or two file paths.',
-        { receivedCount: rawPaths.length },
-      );
-    }
-
-    const existing = await this.repositories.profileSources.list();
-    if (existing.length + rawPaths.length > MAX_PROFILE_SOURCES) {
-      throw new ProfileSourceLimitError(
-        `The profile library holds at most ${MAX_PROFILE_SOURCES} source documents. Remove one before adding more.`,
-        {
-          existingCount: existing.length,
-          requestedCount: rawPaths.length,
-          limit: MAX_PROFILE_SOURCES,
-        },
-      );
+      throw new InvalidArgumentCountError('profile import requires exactly one file path.', {
+        receivedCount: rawPaths.length,
+      });
     }
 
     const sources: ImportedSource[] = [];
@@ -199,6 +186,23 @@ export class ProfileImportService {
         reused: true,
         warnings: existing.warnings,
       };
+    }
+
+    // Single-source policy (#282): the library holds at most
+    // MAX_PROFILE_SOURCES source documents. The check sits after the
+    // sha256 lookup so re-importing an already-stored file reuses it
+    // instead of tripping the cap — duplicates are detected
+    // automatically, only genuinely new documents count.
+    const existingRows = await this.repositories.profileSources.list();
+    if (existingRows.length >= MAX_PROFILE_SOURCES) {
+      throw new ProfileSourceLimitError(
+        'The profile library holds a single source document. Remove it before adding another.',
+        {
+          existingCount: existingRows.length,
+          requestedCount: 1,
+          limit: MAX_PROFILE_SOURCES,
+        },
+      );
     }
 
     const importTimestamp = this.now().toISOString();
