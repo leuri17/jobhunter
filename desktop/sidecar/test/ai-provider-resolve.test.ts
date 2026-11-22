@@ -31,13 +31,28 @@ describe('resolveAiProviderBaseUrl', () => {
     writeFileSync(join(configDir, 'config.json'), raw);
   }
 
-  it('returns the configured baseUrl for a current config file', async () => {
-    const { baseUrl: _drop, ...defaultAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
+  it('resolves the catalog endpoint for a known provider', async () => {
     const { aiProvider: _drop2, ...rest } = DEFAULT_OPERATIONAL_CONFIG;
     writeConfig(
       JSON.stringify({
         ...rest,
-        aiProvider: { ...defaultAiProvider, baseUrl: 'https://compat-proxy.example/v1' },
+        aiProvider: { ...DEFAULT_OPERATIONAL_CONFIG.aiProvider, provider: 'openai' },
+      }),
+    );
+    const url = await resolveAiProviderBaseUrl(resolvePlatformPaths(adapter(tempHome)));
+    expect(url).toBe('https://api.openai.com/v1');
+  });
+
+  it('returns the configured baseUrl for a custom provider', async () => {
+    const { aiProvider: _drop2, ...rest } = DEFAULT_OPERATIONAL_CONFIG;
+    writeConfig(
+      JSON.stringify({
+        ...rest,
+        aiProvider: {
+          ...DEFAULT_OPERATIONAL_CONFIG.aiProvider,
+          provider: 'custom',
+          baseUrl: 'https://compat-proxy.example/v1',
+        },
       }),
     );
     const url = await resolveAiProviderBaseUrl(resolvePlatformPaths(adapter(tempHome)));
@@ -45,7 +60,7 @@ describe('resolveAiProviderBaseUrl', () => {
   });
 
   it('backfills the OpenAI endpoint for a legacy openai-section config file', async () => {
-    const { baseUrl: _drop, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
+    const { provider: _drop, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
     const { aiProvider: _drop2, ...rest } = DEFAULT_OPERATIONAL_CONFIG;
     writeConfig(JSON.stringify({ ...rest, openai: legacyAiProvider }));
     const url = await resolveAiProviderBaseUrl(resolvePlatformPaths(adapter(tempHome)));

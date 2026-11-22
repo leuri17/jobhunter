@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { LabeledChoice } from './labels.js';
+
 const positiveInt = z.number().int().positive();
 
 const datePostedSchema = z.union([z.literal(86400), z.literal(604800), z.literal(2592000)]);
@@ -53,20 +55,104 @@ const refusalDetectionSchema = z
   })
   .strict();
 
-const aiProviderSchema = z
+/**
+ * Well-known OpenAI-compatible providers (#357). Hand-curated on
+ * purpose: community catalogs exist but none is canonical or
+ * trustworthily maintained, so the shortlist stays small, reviewable,
+ * and cheap to extend. `custom` carries no endpoint — the user
+ * supplies `aiProvider.baseUrl` for it.
+ */
+export const AI_PROVIDER_IDS = [
+  'openrouter',
+  'openai',
+  'groq',
+  'deepseek',
+  'mistral',
+  'together',
+  'fireworks',
+  'xai',
+  'custom',
+] as const;
+
+export type AiProviderId = (typeof AI_PROVIDER_IDS)[number];
+
+export type KnownAiProviderId = Exclude<AiProviderId, 'custom'>;
+
+export const AI_PROVIDER_ENDPOINTS: Readonly<Record<KnownAiProviderId, string>> = {
+  openrouter: 'https://openrouter.ai/api/v1',
+  openai: 'https://api.openai.com/v1',
+  groq: 'https://api.groq.com/openai/v1',
+  deepseek: 'https://api.deepseek.com/v1',
+  mistral: 'https://api.mistral.ai/v1',
+  together: 'https://api.together.xyz/v1',
+  fireworks: 'https://api.fireworks.ai/inference/v1',
+  xai: 'https://api.x.ai/v1',
+};
+
+export const AiProviderIdSchema = z.enum(AI_PROVIDER_IDS);
+
+export const AI_PROVIDER_CHOICES: readonly LabeledChoice<AiProviderId>[] = [
+  { label: 'OpenRouter', value: 'openrouter' },
+  { label: 'OpenAI', value: 'openai' },
+  { label: 'Groq', value: 'groq' },
+  { label: 'DeepSeek', value: 'deepseek' },
+  { label: 'Mistral AI', value: 'mistral' },
+  { label: 'Together AI', value: 'together' },
+  { label: 'Fireworks AI', value: 'fireworks' },
+  { label: 'xAI', value: 'xai' },
+  { label: 'Custom…', value: 'custom' },
+];
+
+/** Resolve the endpoint a config's `aiProvider` section points at. */
+export function resolveAiProviderBaseUrl(aiProvider: OperationalConfig['aiProvider']): string {
+  if (aiProvider.provider !== 'custom') {
+    return AI_PROVIDER_ENDPOINTS[aiProvider.provider];
+  }
+  if (aiProvider.baseUrl === undefined) {
+    throw new Error('aiProvider.provider "custom" requires aiProvider.baseUrl');
+  }
+  return aiProvider.baseUrl;
+}
+
+function inferProviderFromBaseUrl(baseUrl: string): AiProviderId {
+  for (const [id, endpoint] of Object.entries(AI_PROVIDER_ENDPOINTS)) {
+    if (baseUrl === endpoint) return id as KnownAiProviderId;
+  }
+  return 'custom';
+}
+
+const aiProviderObjectSchema = z
   .object({
     /**
-     * OpenAI-compatible endpoint base URL. Defaults to OpenRouter
-     * (the MVP provider); OpenAI remains one setting away
-     * (`https://api.openai.com/v1`). Legacy config files backfill the
-     * OpenAI endpoint at load time — they were de-facto OpenAI.
+     * Which OpenAI-compatible service the SDK talks to. Known ids
+     * derive their base URL from `AI_PROVIDER_ENDPOINTS`; `custom`
+     * is the escape hatch carrying an explicit `baseUrl`.
      */
-    baseUrl: z.url(),
+    provider: AiProviderIdSchema,
+    /** Required iff `provider` is 'custom'. */
+    baseUrl: z.url().optional(),
     profileExtraction: profileExtractionSchema,
     jobScoring: jobScoringSchema,
     refusalDetection: refusalDetectionSchema,
   })
   .strict();
+
+const aiProviderSchema = aiProviderObjectSchema.superRefine((ai, ctx) => {
+  if (ai.provider === 'custom' && ai.baseUrl === undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['baseUrl'],
+      message: 'baseUrl is required when provider is "custom"',
+    });
+  }
+  if (ai.provider !== 'custom' && ai.baseUrl !== undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['baseUrl'],
+      message: 'baseUrl is only allowed when provider is "custom"',
+    });
+  }
+});
 
 const timeoutsSchema = z
   .object({
@@ -135,6 +221,10 @@ export type OperationalConfig = z.infer<typeof OperationalConfigSchema>;
  *   existed (#338 pattern);
  * - renames the legacy `openai` section to `aiProvider` for config
  *   files written before the provider-generic rename;
+ * - derives `aiProvider.provider` for files written before the
+ *   provider select (#357): a known `baseUrl` maps to its provider
+ *   and is dropped, an unknown one keeps the URL as `custom`, and
+ *   files with neither were de-facto OpenAI;
  * - strips the removed `output.jobsListDefaultLimit` for config files
  *   written before the setting was removed (#341) — the next config
  *   write drops the key from disk.
@@ -146,6 +236,23 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function normalizeLegacyAiProvider(raw: Record<string, unknown>): Record<string, unknown> {
+  const { provider, baseUrl, ...rest } = raw;
+  if (provider === undefined) {
+    if (typeof baseUrl === 'string') {
+      const inferred = inferProviderFromBaseUrl(baseUrl);
+      return inferred === 'custom'
+        ? { ...rest, provider: inferred, baseUrl }
+        : { ...rest, provider: inferred };
+    }
+    return { ...rest, provider: 'openai' };
+  }
+  if (provider !== 'custom' && baseUrl !== undefined) {
+    return { ...rest, provider };
+  }
+  return raw;
+}
+
 export const OperationalConfigFileSchema: z.ZodType<OperationalConfig> = z.preprocess(
   (raw) => {
     if (isPlainRecord(raw)) {
@@ -155,6 +262,10 @@ export const OperationalConfigFileSchema: z.ZodType<OperationalConfig> = z.prepr
       if (next['aiProvider'] === undefined && next['openai'] !== undefined) {
         const { openai: legacyOpenAi, ...rest } = next;
         next = { ...rest, aiProvider: legacyOpenAi };
+      }
+
+      if (isPlainRecord(next['aiProvider'])) {
+        next = { ...next, aiProvider: normalizeLegacyAiProvider(next['aiProvider']) };
       }
 
       const output = next['output'];
@@ -169,9 +280,6 @@ export const OperationalConfigFileSchema: z.ZodType<OperationalConfig> = z.prepr
   },
   OperationalConfigSchema.extend({
     scraper: scraperSchema.extend({ headless: z.boolean().default(true) }),
-    aiProvider: aiProviderSchema.extend({
-      baseUrl: z.url().default('https://api.openai.com/v1'),
-    }),
   }),
 );
 
@@ -184,7 +292,7 @@ export const DEFAULT_OPERATIONAL_CONFIG: OperationalConfig = {
     workplaceTypes: ['1', '2', '3'],
   },
   aiProvider: {
-    baseUrl: 'https://openrouter.ai/api/v1',
+    provider: 'openrouter',
     profileExtraction: {
       model: 'openai/gpt-5.6-sol',
       reasoningEffort: 'medium',
