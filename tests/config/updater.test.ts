@@ -151,4 +151,34 @@ describe('updateConfig', () => {
     const onDisk = JSON.parse(readFileSync(configPath, 'utf8'));
     expect(onDisk.scraper.headless).toBe(false);
   });
+
+  it('applies an aiProvider patch sent under its config section key', async () => {
+    const paths = resolvePlatformPaths(adapter(tempHome));
+    const configPath = paths.config.file('config.json');
+    mkdirSync(dirname(configPath), { recursive: true });
+    writeFileSync(
+      configPath,
+      JSON.stringify({ ...DEFAULT_OPERATIONAL_CONFIG, output: { runTopN: 5 } }, null, 2),
+    );
+
+    const result = await updateConfig(
+      paths,
+      {
+        aiProvider: {
+          ...DEFAULT_OPERATIONAL_CONFIG.aiProvider,
+          provider: 'groq',
+          jobScoring: { ...DEFAULT_OPERATIONAL_CONFIG.aiProvider.jobScoring, concurrency: 7 },
+        },
+      },
+      { confirm: async () => true },
+    );
+
+    expect(result.config.aiProvider.provider).toBe('groq');
+    expect(result.config.aiProvider.jobScoring.concurrency).toBe(7);
+    expect(result.preview.changedKeys).toEqual(['aiProvider']);
+    const onDisk = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(onDisk.aiProvider.provider).toBe('groq');
+    expect(onDisk.aiProvider.jobScoring.concurrency).toBe(7);
+    expect(onDisk.output.runTopN).toBe(5);
+  });
 });

@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { buildServer } from '../src/server.js';
 import { AiProviderAuthenticationError, AiProviderNetworkError } from '@jobhunter/core/profile';
 import {
+  DEFAULT_OPERATIONAL_CONFIG,
   FileSecretsStore,
   maskSecret,
   resolveSecretsPath,
+  type OperationalConfig,
   type Secrets,
   type SecretsStore,
 } from '@jobhunter/core/config';
@@ -37,6 +39,69 @@ describe('config endpoints', () => {
   it('POST /api/config/validate responds', async () => {
     const res = await fetch(`${baseUrl}/api/config/validate`, { method: 'POST' });
     expect([200, 400]).toContain(res.status);
+  });
+});
+
+describe('PATCH /api/config', () => {
+  let configHome: string;
+  let server: Awaited<ReturnType<typeof buildServer>>;
+  let baseUrl: string;
+
+  function configPath(): string {
+    return resolvePlatformPaths(createDefaultPlatformAdapter()).config.file('config.json');
+  }
+
+  beforeEach(async () => {
+    configHome = mkdtempSync(join(tmpdir(), 'jobhunter-config-patch-'));
+    vi.stubEnv('XDG_CONFIG_HOME', configHome);
+    vi.stubEnv('HOME', configHome);
+    // The PATCH below writes config.json; refuse to aim it outside the throwaway HOME.
+    expect(configPath().startsWith(configHome)).toBe(true);
+    server = await buildServer({ env: { port: 0, host: '127.0.0.1' } });
+    baseUrl = await server.listen();
+  });
+
+  afterEach(async () => {
+    await server.close();
+    vi.unstubAllEnvs();
+    rmSync(configHome, { recursive: true, force: true });
+  });
+
+  it('persists an aiProvider patch the way the Settings form sends it', async () => {
+    mkdirSync(dirname(configPath()), { recursive: true });
+    writeFileSync(
+      configPath(),
+      JSON.stringify({ ...DEFAULT_OPERATIONAL_CONFIG, output: { runTopN: 5 } }, null, 2),
+    );
+
+    const res = await fetch(`${baseUrl}/api/config`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        patch: {
+          aiProvider: {
+            ...DEFAULT_OPERATIONAL_CONFIG.aiProvider,
+            provider: 'groq',
+            jobScoring: { ...DEFAULT_OPERATIONAL_CONFIG.aiProvider.jobScoring, concurrency: 7 },
+          },
+        },
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { config: OperationalConfig };
+    expect(body.config.aiProvider.provider).toBe('groq');
+    expect(body.config.aiProvider.jobScoring.concurrency).toBe(7);
+
+    const onDisk = JSON.parse(readFileSync(configPath(), 'utf8'));
+    expect(onDisk.aiProvider.provider).toBe('groq');
+    expect(onDisk.aiProvider.jobScoring.concurrency).toBe(7);
+    expect(onDisk.output.runTopN).toBe(5);
+
+    const refetched = (await (await fetch(`${baseUrl}/api/config`)).json()) as {
+      config: OperationalConfig;
+    };
+    expect(refetched.config.aiProvider.provider).toBe('groq');
   });
 });
 

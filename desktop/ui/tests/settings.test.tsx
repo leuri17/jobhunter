@@ -42,6 +42,20 @@ function makeConfig(runTopN: number): OperationalConfig {
 
 let serverConfig: OperationalConfig;
 
+async function saveAiProviderConcurrency(value: string) {
+  renderSettings();
+  expect(await screen.findByText('No changes')).toBeTruthy();
+
+  fireEvent.click(screen.getByRole('tab', { name: 'AI Provider' }));
+  fireEvent.change(await screen.findByLabelText('Concurrency'), { target: { value } });
+
+  await waitFor(() => {
+    expect(screen.queryByText('No changes')).toBeNull();
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+}
+
 function renderSettings() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -160,6 +174,37 @@ describe('settings route form re-baseline', () => {
       expect.objectContaining({
         scraper: expect.objectContaining({ headless: false }),
       }),
+    );
+  });
+});
+
+describe('settings route AI Provider save (#361)', () => {
+  it('submits AI Provider changes under the aiProvider key', async () => {
+    await saveAiProviderConcurrency('7');
+
+    await waitFor(() => {
+      expect(api.patchConfig).toHaveBeenCalledTimes(1);
+    });
+    expect(api.patchConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        aiProvider: expect.objectContaining({
+          jobScoring: expect.objectContaining({ concurrency: 7 }),
+        }),
+      }),
+    );
+  });
+
+  it('keeps the AI Provider tab selected after a successful save', async () => {
+    await saveAiProviderConcurrency('7');
+
+    await waitFor(() => {
+      expect(screen.getByText('No changes')).toBeTruthy();
+    });
+    expect(screen.getByRole('tab', { name: 'AI Provider' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect((screen.getByLabelText('Concurrency') as HTMLInputElement).value).toBe(
+      String(DEFAULT_OPERATIONAL_CONFIG.aiProvider.jobScoring.concurrency),
     );
   });
 });
