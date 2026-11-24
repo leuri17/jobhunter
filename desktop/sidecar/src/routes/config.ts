@@ -151,14 +151,14 @@ export async function registerConfigRoutes(
     }
     const provider = parsedProvider ?? (await resolveConfiguredProvider());
     const resolved = await resolveBackend(deps)();
-    const [secrets, source] = await Promise.all([
-      resolved.store.read(),
-      resolveApiKeySource({
-        store: resolved.store,
-        env: process.env,
-        provider,
-      }),
-    ]);
+    // Resolve the source first: on a legacy install that is what moves the
+    // single-slot key into this provider's slot, so the read below sees it.
+    const source = await resolveApiKeySource({
+      store: resolved.store,
+      env: process.env,
+      provider,
+    });
+    const secrets = await resolved.store.read();
     return {
       schemaVersion: 1,
       configured: source !== 'none',

@@ -387,6 +387,64 @@ describe('PUT /api/secrets/api-key', () => {
   });
 });
 
+describe('GET /api/secrets/api-key with a legacy single-slot key (#359)', () => {
+  const LEGACY_KEY = 'sk-legacy-single-1';
+
+  let configHome: string;
+  const servers: Awaited<ReturnType<typeof buildServer>>[] = [];
+
+  beforeEach(() => {
+    configHome = mkdtempSync(join(tmpdir(), 'jobhunter-legacy-status-'));
+    vi.stubEnv('XDG_CONFIG_HOME', configHome);
+    vi.stubEnv('HOME', configHome);
+    vi.stubEnv('OPENAI_API_KEY', '');
+  });
+
+  afterEach(async () => {
+    for (const server of servers.splice(0)) {
+      await server.close();
+    }
+    vi.unstubAllEnvs();
+    rmSync(configHome, { recursive: true, force: true });
+  });
+
+  it('reports the key as stored and masked on the very first status read', async () => {
+    const store = new FileSecretsStore({
+      paths: resolvePlatformPaths(createDefaultPlatformAdapter()),
+    });
+    await store.write({ aiProviderApiKey: LEGACY_KEY });
+    const server = await buildServer({
+      env: { port: 0, host: '127.0.0.1' },
+      validateApiKey: async () => undefined,
+      // Resolved per request so this test's stubbed config dir is used,
+      // not the process-wide memoized backend of an earlier test.
+      secretsBackend: () =>
+        Promise.resolve({
+          store: new FileSecretsStore({
+            paths: resolvePlatformPaths(createDefaultPlatformAdapter()),
+          }),
+          backend: 'file',
+          reason: 'bridge_not_configured',
+        }),
+    });
+    servers.push(server);
+    const baseUrl = await server.listen();
+
+    const res = await fetch(`${baseUrl}/api/secrets/api-key`);
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      configured: true,
+      source: 'stored',
+      provider: 'openrouter',
+      masked: maskSecret(LEGACY_KEY),
+    });
+    expect(await store.read()).toEqual({
+      aiProviderApiKeys: { openrouter: LEGACY_KEY },
+    });
+  });
+});
+
 /** In-memory keychain stand-in recording the call sequence per op. */
 class FakeKeychainStore implements SecretsStore {
   readonly calls: string[] = [];
