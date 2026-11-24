@@ -1,10 +1,11 @@
 /**
  * Helper to resolve the AiProvider client from the environment.
  *
- * Reads `OPENAI_API_KEY` from `process.env`. Returns `null` when the
- * key is absent ( — init treats absence as a skip-not-fail
- * for the `extract` step). When present, returns a freshly
- * constructed `AiProviderClient` via `createDefaultAiProviderClient`.
+ * Reads the provider-scoped key (#359) for `provider` from the
+ * secrets store / `process.env`. Returns `null` when the key is
+ * absent ( — init treats absence as a skip-not-fail for the
+ * `extract` step). When present, returns a freshly constructed
+ * `AiProviderClient` via `createDefaultAiProviderClient`.
  *
  * The optional `refusal` argument threads operator-configured
  * `config.aiProvider.refusalDetection` (the
@@ -25,15 +26,18 @@ import {
 import type { AiProviderClient } from '../profile/ai-provider/types.js';
 import { resolveAiProviderApiKey } from '../config/api-key.js';
 import type { SecretsStore } from '../config/secrets.js';
+import type { AiProviderId } from '../config/schema.js';
 
 export async function resolveAiProviderClientOrNull(
   refusal?: DefaultAiProviderClientRefusalOptions,
   store?: SecretsStore,
   baseUrl?: string,
+  provider?: AiProviderId,
 ): Promise<AiProviderClient | null> {
   const apiKey = await resolveAiProviderApiKey({
     store: store ?? emptySecretsStore(),
     env: process.env,
+    provider: provider ?? 'openrouter',
   });
   if (apiKey === null) {
     return null;

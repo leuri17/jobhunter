@@ -14,10 +14,11 @@ import {
   type AiProviderClient,
 } from '@jobhunter/core/profile';
 import { pinoReevaluationLogger } from '@jobhunter/core/logging';
-import { resolveAiProviderApiKey } from '@jobhunter/core/config';
-import { getSecretsBackend } from '../secrets-backend.js';
 import { openDbHandle, createRepositories } from './db-helper.js';
-import { resolveAiProviderClientOrNull } from './ai-provider-resolve.js';
+import {
+  resolveAiProviderClientOrNull,
+  resolveAiProviderApiKeyForConfig,
+} from './ai-provider-resolve.js';
 
 export interface JobsRouteOptions {
   readonly aiProviderClient?: AiProviderClient;
@@ -134,12 +135,7 @@ export async function registerJobsRoutes(
         dryRun: req.body.dryRun ?? false,
         confirmScoring: req.body.confirmScoring ?? false,
         env: process.env,
-        resolveApiKey: async () => {
-          return resolveAiProviderApiKey({
-            store: (await getSecretsBackend()).store,
-            env: process.env,
-          });
-        },
+        resolveApiKey: () => resolveAiProviderApiKeyForConfig(),
         ...(req.body.jobId !== undefined && req.body.jobId !== null
           ? { jobId: req.body.jobId }
           : {}),

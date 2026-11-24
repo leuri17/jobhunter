@@ -35,7 +35,9 @@ describe('GET /api/ai-provider/models', () => {
     });
   }
 
-  async function startServer(listModels: () => Promise<readonly string[] | null>): Promise<string> {
+  async function startServer(
+    listModels: (provider?: string, baseUrl?: string) => Promise<readonly string[] | null>,
+  ): Promise<string> {
     const server = await buildServer({
       env: { port: 0, host: '127.0.0.1' },
       listModels,
@@ -97,5 +99,33 @@ describe('GET /api/ai-provider/models', () => {
         details: null,
       },
     });
+  });
+
+  it('passes the selected provider and custom base URL through to the lister (#359)', async () => {
+    const seen: Array<{ readonly provider?: string; readonly baseUrl?: string }> = [];
+    const baseUrl = await startServer(async (provider, customBaseUrl) => {
+      seen.push({ provider, baseUrl: customBaseUrl });
+      return ['m'];
+    });
+
+    const res = await fetch(
+      `${baseUrl}/api/ai-provider/models?provider=custom&baseUrl=${encodeURIComponent('https://compat-proxy.example/v1')}`,
+    );
+    expect(res.status).toBe(200);
+    expect(seen).toEqual([{ provider: 'custom', baseUrl: 'https://compat-proxy.example/v1' }]);
+  });
+
+  it('rejects a custom provider without a base URL with 400', async () => {
+    const baseUrl = await startServer(async () => ['m']);
+
+    const res = await fetch(`${baseUrl}/api/ai-provider/models?provider=custom`);
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects an unknown provider id with 400', async () => {
+    const baseUrl = await startServer(async () => ['m']);
+
+    const res = await fetch(`${baseUrl}/api/ai-provider/models?provider=anthropic`);
+    expect(res.status).toBe(400);
   });
 });

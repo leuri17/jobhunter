@@ -46,13 +46,27 @@ describe('KeychainSecretsStore', () => {
     expect(await store.read()).toEqual({});
   });
 
-  it('write with a key issues a set op carrying the key', async () => {
+  it('write with a key issues a set op carrying the serialized payload (#359)', async () => {
     const transport = new FakeTransport(() => okAck);
     const store = new KeychainSecretsStore({ transport });
 
-    await store.write({ aiProviderApiKey: 'sk-set-me' });
+    await store.write({ aiProviderApiKeys: { openai: 'sk-set-me' } });
 
-    expect(transport.requests).toEqual([{ auth: '', op: 'set', value: 'sk-set-me' }]);
+    expect(transport.requests).toEqual([
+      { auth: '', op: 'set', value: '{"aiProviderApiKeys":{"openai":"sk-set-me"}}' },
+    ]);
+  });
+
+  it('round-trips the serialized payload through the bridge', async () => {
+    let stored: string | null = null;
+    const transport = new FakeTransport((req) => {
+      if (req.op === 'set' && 'value' in req) stored = req.value;
+      return req.op === 'get' ? { ok: true, value: stored } : okAck;
+    });
+    const store = new KeychainSecretsStore({ transport });
+
+    await store.write({ aiProviderApiKeys: { openai: 'sk-a', groq: 'sk-b' } });
+    expect(await store.read()).toEqual({ aiProviderApiKeys: { openai: 'sk-a', groq: 'sk-b' } });
   });
 
   it('write without a key and clear both issue an idempotent delete op', async () => {

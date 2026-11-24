@@ -32,7 +32,10 @@ graceful shutdown).
   surface (`get`/`set`/`delete` on the `keyring` entry
   `(com.leuri17.jobhunter, openai-api-key)`) as a lockstep,
   line-delimited JSON protocol on std-only threads (blocking keyring calls
-  must not run on async runtime threads). `KeyringOps` maps keyring errors
+  must not run on async runtime threads). The stored value is opaque to
+  the shell: since #359 it is the sidecar's JSON `Secrets` payload (a
+  per-provider key map) where it used to be a bare key. `KeyringOps` maps
+  keyring errors
   onto the serde-tagged wire error: `unavailable` for backend access
   failures (e.g. headless Linux without a Secret Service), `failed`
   otherwise, with `NoEntry` as a get miss and an idempotent delete.

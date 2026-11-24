@@ -41,6 +41,22 @@ describe('FileSecretsStore', () => {
     expect(await store.read()).toEqual({ aiProviderApiKey: 'sk-test-123' });
   });
 
+  it('round-trips the per-provider key map (#359)', async () => {
+    await store.write({ aiProviderApiKeys: { openai: 'sk-test-123', groq: 'sk-test-456' } });
+    expect(await store.read()).toEqual({
+      aiProviderApiKeys: { openai: 'sk-test-123', groq: 'sk-test-456' },
+    });
+  });
+
+  it('drops empty-string entries from a stored key map on read', async () => {
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(
+      resolveSecretsPath(pathsFor(root)),
+      JSON.stringify({ aiProviderApiKeys: { openai: 'sk-test-123', groq: '' } }),
+    );
+    expect(await store.read()).toEqual({ aiProviderApiKeys: { openai: 'sk-test-123' } });
+  });
+
   it('reads a key stored under the pre-rename openaiApiKey slot (#340)', async () => {
     const { writeFileSync } = await import('node:fs');
     // Fixture uses the same low-entropy sk-test-<digits> shape as the
@@ -124,38 +140,112 @@ describe('resolveAiProviderApiKey precedence', () => {
   });
 
   it('prefers the stored key over the environment', async () => {
-    await store.write({ aiProviderApiKey: 'sk-stored' });
-    const resolved = await resolveAiProviderApiKey({ store, env: { OPENAI_API_KEY: 'sk-env' } });
+    await store.write({ aiProviderApiKeys: { openai: 'sk-stored' } });
+    const resolved = await resolveAiProviderApiKey({
+      store,
+      env: { OPENAI_API_KEY: 'sk-env' },
+      provider: 'openai',
+    });
     expect(resolved).toBe('sk-stored');
   });
 
   it('falls back to the environment when nothing is stored', async () => {
-    const resolved = await resolveAiProviderApiKey({ store, env: { OPENAI_API_KEY: 'sk-env' } });
+    const resolved = await resolveAiProviderApiKey({
+      store,
+      env: { OPENAI_API_KEY: 'sk-env' },
+      provider: 'openai',
+    });
     expect(resolved).toBe('sk-env');
   });
 
   it('returns null when neither source has a key', async () => {
-    expect(await resolveAiProviderApiKey({ store, env: {} })).toBeNull();
+    expect(await resolveAiProviderApiKey({ store, env: {}, provider: 'openai' })).toBeNull();
   });
 
   it('ignores an empty environment variable', async () => {
-    expect(await resolveAiProviderApiKey({ store, env: { OPENAI_API_KEY: '' } })).toBeNull();
+    expect(
+      await resolveAiProviderApiKey({ store, env: { OPENAI_API_KEY: '' }, provider: 'openai' }),
+    ).toBeNull();
   });
 
   it('falls back to the environment when the store read fails', async () => {
     const { writeFileSync } = await import('node:fs');
     writeFileSync(resolveSecretsPath(pathsFor(root)), 'corrupt');
-    const resolved = await resolveAiProviderApiKey({ store, env: { OPENAI_API_KEY: 'sk-env' } });
+    const resolved = await resolveAiProviderApiKey({
+      store,
+      env: { OPENAI_API_KEY: 'sk-env' },
+      provider: 'openai',
+    });
     expect(resolved).toBe('sk-env');
   });
 
   it('reports the winning source', async () => {
-    expect(await resolveApiKeySource({ store, env: { OPENAI_API_KEY: 'sk-env' } })).toBe(
-      'environment',
+    expect(
+      await resolveApiKeySource({ store, env: { OPENAI_API_KEY: 'sk-env' }, provider: 'openai' }),
+    ).toBe('environment');
+    expect(await resolveApiKeySource({ store, env: {}, provider: 'openai' })).toBe('none');
+    await store.write({ aiProviderApiKeys: { openai: 'sk-stored' } });
+    expect(
+      await resolveApiKeySource({ store, env: { OPENAI_API_KEY: 'sk-env' }, provider: 'openai' }),
+    ).toBe('stored');
+    expect(await resolveApiKeySource({ store, env: {}, provider: 'openai' })).toBe('stored');
+  });
+});
+
+describe('per-provider key resolution (#359)', () => {
+  let root: string;
+  let store: FileSecretsStore;
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), 'jobhunter-provider-key-'));
+    store = new FileSecretsStore({ paths: pathsFor(root) });
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('returns the key stored for the requested provider', async () => {
+    await store.write({ aiProviderApiKeys: { openai: 'sk-openai', groq: 'sk-groq' } });
+    expect(await resolveAiProviderApiKey({ store, env: {}, provider: 'groq' })).toBe('sk-groq');
+  });
+
+  it('does not use a key stored for a different provider', async () => {
+    await store.write({ aiProviderApiKeys: { openai: 'sk-openai' } });
+    expect(
+      await resolveAiProviderApiKey({ store, env: { OPENAI_API_KEY: 'sk-env' }, provider: 'groq' }),
+    ).toBe('sk-env');
+  });
+
+  it('migrates a legacy single-slot key into the provider slot on first resolution', async () => {
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(
+      resolveSecretsPath(pathsFor(root)),
+      JSON.stringify({ aiProviderApiKey: 'sk-legacy' }),
     );
-    expect(await resolveApiKeySource({ store, env: {} })).toBe('none');
-    await store.write({ aiProviderApiKey: 'sk-stored' });
-    expect(await resolveApiKeySource({ store, env: { OPENAI_API_KEY: 'sk-env' } })).toBe('stored');
-    expect(await resolveApiKeySource({ store, env: {} })).toBe('stored');
+    const resolved = await resolveAiProviderApiKey({ store, env: {}, provider: 'openai' });
+    expect(resolved).toBe('sk-legacy');
+    const after = await store.read();
+    expect(after.aiProviderApiKeys?.['openai']).toBe('sk-legacy');
+    expect(after.aiProviderApiKey).toBeUndefined();
+  });
+
+  it('keeps an existing provider key when a legacy single-slot key also exists', async () => {
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(
+      resolveSecretsPath(pathsFor(root)),
+      JSON.stringify({ aiProviderApiKey: 'sk-legacy', aiProviderApiKeys: { openai: 'sk-map' } }),
+    );
+    const resolved = await resolveAiProviderApiKey({ store, env: {}, provider: 'openai' });
+    expect(resolved).toBe('sk-map');
+    expect((await store.read()).aiProviderApiKey).toBe('sk-legacy');
+  });
+
+  it('reports stored per provider and environment for providers without one', async () => {
+    await store.write({ aiProviderApiKeys: { openai: 'sk-openai' } });
+    expect(await resolveApiKeySource({ store, env: {}, provider: 'openai' })).toBe('stored');
+    expect(
+      await resolveApiKeySource({ store, env: { OPENAI_API_KEY: 'sk-env' }, provider: 'groq' }),
+    ).toBe('environment');
   });
 });

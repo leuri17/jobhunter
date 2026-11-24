@@ -97,22 +97,34 @@ edit_via_http_not_supported` (interactive TUI prompts are out-of-band
 sidecarFileSystem)`; `configPatchHandler` applies `ConfigPatch` through
   `updateConfig` with an auto-confirming `options.confirm`; `configValidateHandler`
   re-parses with `OperationalConfigSchema.safeParse`, throwing
-  `ValidationError` on failure. The secrets api-key surface reads/writes the
-  resolved secrets backend (`../secrets-backend.ts`): GET reports
-  `configured`/`source`/`masked` plus `backend`/`backendReason`/
-  `legacyFilePresent`; PUT validates first, then writes the backend (a
+  `ValidationError` on failure. The secrets api-key surface is scoped to
+  one provider (#359): GET/PUT/DELETE take `provider` (query; PUT also
+  accepts it in the body), default to the saved config's provider, reject
+  an unknown id with `400 invalid_provider`, and echo `provider`. It
+  reads/writes the resolved secrets backend (`../secrets-backend.ts`):
+  GET reports `configured`/`source`/`masked` plus `backend`/
+  `backendReason`/`legacyFilePresent` for that provider; PUT validates the
+  key against the selected provider's endpoint first (the optional
+  `baseUrl` names a custom one, so a key can be checked before Settings
+  are saved), then writes the backend's per-provider map (a
   keychain-unavailable fallback only writes the file with
   `allowPlaintextFallback: true` — otherwise `503
-secrets_backend_unavailable`); DELETE clears through the backend;
-  `POST /api/secrets/api-key/migrate` moves a legacy `secrets.json` key into
-  the keychain, deleting the file only after a verified read-back
-  (`legacy_shadowed` 409 when the keychain already holds a key,
-  `secrets_migration_verification_failed` 500 on mismatch). `jobs.ts` /
-  `pipeline.ts` resolve their API key through the same backend store.
-- **OpenAI**: `openai.ts` registers `GET /api/openai/models` — the sorted
-  model ids the effective key can access, via `AiProviderClient.listModels()`
+secrets_backend_unavailable`); DELETE removes only that provider's slot;
+  `POST /api/secrets/api-key/migrate` moves a legacy `secrets.json` key
+  into the keychain under the saved config's provider, deleting the file
+  only after a verified read-back (`legacy_shadowed` 409 when the keychain
+  already holds a key, `secrets_migration_verification_failed` 500 on
+  mismatch). `jobs.ts` / `pipeline.ts` resolve their API key for the
+  saved config's provider through the same backend store.
+- **Models**: `ai-provider.ts` registers `GET /api/ai-provider/models` —
+  the sorted model ids the selected provider's key can access, via
+  `AiProviderClient.listModels()`
   (`models.list()` auto-pagination, no token cost) on a 10 s client
-  timeout. No key configured → `200 { configured: false, models: [] }`
+  timeout. `?provider=` (default the saved config's) picks the endpoint
+  and the key slot; `custom` also requires `?baseUrl=` (`400
+custom_base_url_required`), an unknown id is `400 invalid_provider`.
+  OpenRouter lists without a key (public catalog); for every other
+  provider no key → `200 { configured: false, models: [] }`
   (a distinguishable outcome, not an error); probe failures reuse
   `classifyKeyValidationFailure` from `config.ts` (rejected key trio →
   401, otherwise 503). The lister is injectable through

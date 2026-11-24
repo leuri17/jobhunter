@@ -100,7 +100,7 @@ describe('PUT /api/secrets/api-key', () => {
   }
 
   async function startServer(
-    validateApiKey: (apiKey: string) => Promise<void>,
+    validateApiKey: (apiKey: string, provider?: string, baseUrl?: string) => Promise<void>,
     secretsBackend: () => Promise<ResolvedSecretsBackend> = standaloneFileBackend,
   ): Promise<string> {
     const server = await buildServer({
@@ -120,14 +120,27 @@ describe('PUT /api/secrets/api-key', () => {
     });
   }
 
-  async function getKey(baseUrl: string): Promise<ApiKeyState> {
-    const res = await fetch(`${baseUrl}/api/secrets/api-key`);
+  async function getKey(baseUrl: string, provider?: string): Promise<ApiKeyState> {
+    const res = await fetch(
+      provider === undefined
+        ? `${baseUrl}/api/secrets/api-key`
+        : `${baseUrl}/api/secrets/api-key?provider=${provider}`,
+    );
     expect(res.status).toBe(200);
     return (await res.json()) as ApiKeyState;
   }
 
   async function storeKey(baseUrl: string, apiKey: string): Promise<void> {
     const res = await putKey(baseUrl, apiKey);
+    expect(res.status).toBe(200);
+  }
+
+  async function storeKeyFor(baseUrl: string, provider: string, apiKey: string): Promise<void> {
+    const res = await fetch(`${baseUrl}/api/secrets/api-key`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ apiKey, provider }),
+    });
     expect(res.status).toBe(200);
   }
 
@@ -144,6 +157,7 @@ describe('PUT /api/secrets/api-key', () => {
       status: 'validated',
       configured: true,
       source: 'stored',
+      provider: 'openrouter',
       masked: maskSecret('sk-test-valid-123'),
       ...FILE_BACKEND_FIELDS,
     });
@@ -153,6 +167,7 @@ describe('PUT /api/secrets/api-key', () => {
       schemaVersion: 1,
       configured: true,
       source: 'stored',
+      provider: 'openrouter',
       masked: maskSecret('sk-test-valid-123'),
       ...FILE_BACKEND_FIELDS,
       legacyFilePresent: true,
@@ -181,6 +196,7 @@ describe('PUT /api/secrets/api-key', () => {
       schemaVersion: 1,
       configured: true,
       source: 'stored',
+      provider: 'openrouter',
       masked: maskSecret(OLD_KEY),
       ...FILE_BACKEND_FIELDS,
       legacyFilePresent: true,
@@ -209,6 +225,7 @@ describe('PUT /api/secrets/api-key', () => {
       schemaVersion: 1,
       configured: true,
       source: 'stored',
+      provider: 'openrouter',
       masked: maskSecret(OLD_KEY),
       ...FILE_BACKEND_FIELDS,
       legacyFilePresent: true,
@@ -231,6 +248,7 @@ describe('PUT /api/secrets/api-key', () => {
       schemaVersion: 1,
       configured: false,
       source: 'none',
+      provider: 'openrouter',
       masked: '',
       ...FILE_BACKEND_FIELDS,
       legacyFilePresent: false,
@@ -252,6 +270,7 @@ describe('PUT /api/secrets/api-key', () => {
       status: 'validated',
       configured: false,
       source: 'none',
+      provider: 'openrouter',
       masked: '',
       ...FILE_BACKEND_FIELDS,
     });
@@ -261,9 +280,109 @@ describe('PUT /api/secrets/api-key', () => {
       schemaVersion: 1,
       configured: false,
       source: 'none',
+      provider: 'openrouter',
       masked: '',
       ...FILE_BACKEND_FIELDS,
       legacyFilePresent: false,
+    });
+  });
+
+  it('stores and reports keys per provider (#359)', async () => {
+    const seen: Array<{ readonly apiKey: string; readonly provider?: string }> = [];
+    const baseUrl = await startServer(async (apiKey, provider) => {
+      seen.push({ apiKey, provider });
+    });
+
+    const openaiRes = await fetch(`${baseUrl}/api/secrets/api-key`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ apiKey: 'sk-openai-key-11', provider: 'openai' }),
+    });
+    expect(openaiRes.status).toBe(200);
+    const groqRes = await fetch(`${baseUrl}/api/secrets/api-key`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ apiKey: 'sk-groq-key-22', provider: 'groq' }),
+    });
+    expect(groqRes.status).toBe(200);
+    expect(seen).toEqual([
+      { apiKey: 'sk-openai-key-11', provider: 'openai' },
+      { apiKey: 'sk-groq-key-22', provider: 'groq' },
+    ]);
+
+    expect(await getKey(baseUrl, 'openai')).toMatchObject({
+      configured: true,
+      source: 'stored',
+      provider: 'openai',
+      masked: maskSecret('sk-openai-key-11'),
+    });
+    expect(await getKey(baseUrl, 'groq')).toMatchObject({
+      configured: true,
+      source: 'stored',
+      provider: 'groq',
+      masked: maskSecret('sk-groq-key-22'),
+    });
+    expect(await getKey(baseUrl, 'xai')).toMatchObject({
+      configured: false,
+      source: 'none',
+      provider: 'xai',
+      masked: '',
+    });
+  });
+
+  it('removes only the requested provider slot on DELETE (#359)', async () => {
+    const baseUrl = await startServer(async () => undefined);
+    await storeKeyFor(baseUrl, 'openai', 'sk-openai-key-11');
+    await storeKeyFor(baseUrl, 'groq', 'sk-groq-key-22');
+
+    const res = await fetch(`${baseUrl}/api/secrets/api-key?provider=openai`, { method: 'DELETE' });
+    expect(res.status).toBe(200);
+
+    expect(await getKey(baseUrl, 'openai')).toMatchObject({ configured: false });
+    expect(await getKey(baseUrl, 'groq')).toMatchObject({
+      configured: true,
+      masked: maskSecret('sk-groq-key-22'),
+    });
+  });
+
+  it('rejects an unknown provider id with 400', async () => {
+    const baseUrl = await startServer(async () => undefined);
+    const res = await fetch(`${baseUrl}/api/secrets/api-key?provider=anthropic`, {
+      method: 'GET',
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('validates a custom provider key against the supplied base URL', async () => {
+    const seen: Array<{
+      readonly apiKey: string;
+      readonly provider?: string;
+      readonly baseUrl?: string;
+    }> = [];
+    const baseUrl = await startServer(async (apiKey, provider, customBaseUrl) => {
+      seen.push({ apiKey, provider, baseUrl: customBaseUrl });
+    });
+
+    const res = await fetch(`${baseUrl}/api/secrets/api-key`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: 'sk-proxy-key-33',
+        provider: 'custom',
+        baseUrl: 'https://compat-proxy.example/v1',
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(seen).toEqual([
+      {
+        apiKey: 'sk-proxy-key-33',
+        provider: 'custom',
+        baseUrl: 'https://compat-proxy.example/v1',
+      },
+    ]);
+    expect(await getKey(baseUrl, 'custom')).toMatchObject({
+      configured: true,
+      masked: maskSecret('sk-proxy-key-33'),
     });
   });
 });
@@ -272,7 +391,7 @@ describe('PUT /api/secrets/api-key', () => {
 class FakeKeychainStore implements SecretsStore {
   readonly calls: string[] = [];
   readonly fileExistsAt: Record<string, boolean> = {};
-  private value: string | undefined;
+  private secrets: Secrets = {};
 
   constructor(
     private readonly hooks?: {
@@ -285,21 +404,36 @@ class FakeKeychainStore implements SecretsStore {
     this.calls.push('read');
     const override = this.hooks?.onRead?.();
     if (override !== undefined) return { aiProviderApiKey: override };
-    return this.value === undefined ? {} : { aiProviderApiKey: this.value };
+    return this.secrets;
   }
 
   async write(secrets: Secrets): Promise<void> {
     this.calls.push('write');
-    this.value = this.hooks?.onWrite?.() ?? secrets.aiProviderApiKey;
+    const override = this.hooks?.onWrite?.();
+    this.secrets =
+      override !== undefined
+        ? { aiProviderApiKey: override }
+        : {
+            ...(secrets.aiProviderApiKey !== undefined
+              ? { aiProviderApiKey: secrets.aiProviderApiKey }
+              : {}),
+            ...(secrets.aiProviderApiKeys !== undefined
+              ? { aiProviderApiKeys: secrets.aiProviderApiKeys }
+              : {}),
+          };
   }
 
   async clear(): Promise<void> {
     this.calls.push('delete');
-    this.value = undefined;
+    this.secrets = {};
   }
 
   get storedValue(): string | undefined {
-    return this.value;
+    return this.secrets.aiProviderApiKey;
+  }
+
+  get storedProviderKey(): string | undefined {
+    return this.secrets.aiProviderApiKeys?.['openrouter'];
   }
 }
 
@@ -372,16 +506,18 @@ describe('secrets backend reporting and fallback gate', () => {
       status: 'validated',
       configured: true,
       source: 'stored',
+      provider: 'openrouter',
       masked: maskSecret(KEY),
       backend: 'keychain',
     });
-    expect(store.storedValue).toBe(KEY);
+    expect(store.storedProviderKey).toBe(KEY);
 
     const getRes = await fetch(`${baseUrl}/api/secrets/api-key`);
     expect(await getRes.json()).toEqual({
       schemaVersion: 1,
       configured: true,
       source: 'stored',
+      provider: 'openrouter',
       masked: maskSecret(KEY),
       backend: 'keychain',
       legacyFilePresent: false,
@@ -393,10 +529,13 @@ describe('secrets backend reporting and fallback gate', () => {
       schemaVersion: 1,
       configured: false,
       source: 'none',
+      provider: 'openrouter',
       masked: '',
       backend: 'keychain',
     });
-    expect(store.calls).toEqual(['write', 'read', 'read', 'delete']);
+    // PUT reads the current map before writing (per-provider merge);
+    // GET resolves source + masked value; DELETE clears once the map is empty.
+    expect(store.calls).toEqual(['read', 'write', 'read', 'read', 'read', 'delete']);
   });
 
   it('PUT without the consent flag is a 503 and writes nothing when the keychain is unavailable', async () => {
@@ -427,14 +566,15 @@ describe('secrets backend reporting and fallback gate', () => {
       status: 'validated',
       configured: true,
       source: 'stored',
+      provider: 'openrouter',
       masked: maskSecret(KEY),
       backend: 'file',
       backendReason: 'keychain_unavailable',
     });
     const onDisk = JSON.parse(readFileSync(secretsPath(), 'utf8')) as {
-      aiProviderApiKey?: string;
+      aiProviderApiKeys?: Record<string, string>;
     };
-    expect(onDisk.aiProviderApiKey).toBe(KEY);
+    expect(onDisk.aiProviderApiKeys?.['openrouter']).toBe(KEY);
   });
 });
 
@@ -503,7 +643,7 @@ describe('POST /api/secrets/api-key/migrate', () => {
       backend: 'keychain',
       masked: maskSecret(LEGACY_KEY),
     });
-    expect(store.storedValue).toBe(LEGACY_KEY);
+    expect(store.storedProviderKey).toBe(LEGACY_KEY);
     expect(store.calls).toEqual(['read', 'write', 'read']);
     // The legacy file still existed while the keychain was written and
     // verified; it is gone only after the verified migration completed.

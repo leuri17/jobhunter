@@ -215,7 +215,7 @@ export class KeychainSecretsStore implements SecretsStore {
   async read(): Promise<Secrets> {
     const response = await this.transport.request({ auth: '', op: 'get' });
     if (response.ok) {
-      if (typeof response.value === 'string') return { aiProviderApiKey: response.value };
+      if (typeof response.value === 'string') return parseStoredValue(response.value);
       if (response.value === null || response.value === undefined) return {};
       throw toStoreError({ error: { kind: 'failed', message: 'unexpected bridge response' } });
     }
@@ -223,10 +223,18 @@ export class KeychainSecretsStore implements SecretsStore {
   }
 
   async write(secrets: Secrets): Promise<void> {
+    const payload: Record<string, unknown> = {
+      ...(secrets.aiProviderApiKey !== undefined
+        ? { aiProviderApiKey: secrets.aiProviderApiKey }
+        : {}),
+      ...(secrets.aiProviderApiKeys !== undefined
+        ? { aiProviderApiKeys: secrets.aiProviderApiKeys }
+        : {}),
+    };
     await this.send(
-      secrets.aiProviderApiKey === undefined
+      Object.keys(payload).length === 0
         ? { auth: '', op: 'delete' }
-        : { auth: '', op: 'set', value: secrets.aiProviderApiKey },
+        : { auth: '', op: 'set', value: JSON.stringify(payload) },
     );
   }
 
@@ -238,6 +246,31 @@ export class KeychainSecretsStore implements SecretsStore {
     const response = await this.transport.request(request);
     if (!response.ok) throw toStoreError(response);
   }
+}
+
+/**
+ * The bridge stores one opaque string. New writes serialize the
+ * `Secrets` payload as JSON (#359); a bare non-JSON string is a
+ * pre-#359 single-slot key.
+ */
+function parseStoredValue(value: string): Secrets {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      const record = parsed as Record<string, unknown>;
+      const single = record['aiProviderApiKey'];
+      const map = record['aiProviderApiKeys'];
+      return {
+        ...(typeof single === 'string' && single.length > 0 ? { aiProviderApiKey: single } : {}),
+        ...(typeof map === 'object' && map !== null && !Array.isArray(map)
+          ? { aiProviderApiKeys: map as Record<string, string> }
+          : {}),
+      };
+    }
+  } catch {
+    // Not JSON — treat as a legacy bare key below.
+  }
+  return { aiProviderApiKey: value };
 }
 
 function toStoreError(response: { readonly error: BridgeError }): SecretStoreError {
