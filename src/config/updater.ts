@@ -7,9 +7,14 @@ import { hashOperationalConfig } from './hash.js';
 import { OperationalConfigSchema, type OperationalConfig } from './schema.js';
 import { ConfigError, ValidationError } from '../errors/application-error.js';
 
+/**
+ * Section replacements, keyed by their `OperationalConfig` section name. The
+ * Settings form submits its whole value as the patch, so a key that does not
+ * match a config section is dropped without an error.
+ */
 export interface ConfigPatch {
   readonly search?: OperationalConfig['search'];
-  readonly openai?: OperationalConfig['aiProvider'];
+  readonly aiProvider?: OperationalConfig['aiProvider'];
   readonly scraper?: OperationalConfig['scraper'];
   readonly output?: OperationalConfig['output'];
   readonly logging?: OperationalConfig['logging'];
@@ -50,7 +55,7 @@ export async function updateConfig(
   const merged: OperationalConfig = {
     ...before,
     ...(patch.search !== undefined ? { search: patch.search } : {}),
-    ...(patch.openai !== undefined ? { aiProvider: patch.openai } : {}),
+    ...(patch.aiProvider !== undefined ? { aiProvider: patch.aiProvider } : {}),
     ...(patch.scraper !== undefined ? { scraper: patch.scraper } : {}),
     ...(patch.output !== undefined ? { output: patch.output } : {}),
     ...(patch.logging !== undefined ? { logging: patch.logging } : {}),
