@@ -4,7 +4,7 @@
 // from `@jobhunter/core/*` so Phase E pages can consume typed response
 // payloads without depending on each core barrel directly.
 
-import type { OperationalConfig } from '@jobhunter/core/config';
+import type { AiProviderId, OperationalConfig } from '@jobhunter/core/config';
 import type {
   ProfileApprovalSummary,
   ProfileExtractionStatus,
@@ -97,6 +97,8 @@ interface SecretsBackendFields {
 /**
  * The API key itself is never returned. `masked` is enough for the UI
  * to show that a key exists without ever holding the real value.
+ * Every response names the `provider` it answered for (#359) — the
+ * requested one, or the saved config's when none was requested.
  * GET additionally reports whether a pre-keychain secrets file still
  * exists on disk so the UI can offer migration.
  */
@@ -104,6 +106,7 @@ export interface ApiKeyResponse extends SecretsBackendFields {
   readonly schemaVersion: 1;
   readonly configured: boolean;
   readonly source: 'stored' | 'environment' | 'none';
+  readonly provider: AiProviderId;
   readonly masked: string;
   readonly legacyFilePresent: boolean;
 }
@@ -118,14 +121,15 @@ export interface PutApiKeyResponse extends SecretsBackendFields {
   readonly status: 'validated';
   readonly configured: boolean;
   readonly source: 'stored' | 'none';
+  readonly provider: AiProviderId;
   readonly masked: string;
 }
 
 /**
  * GET /api/ai-provider/models response. `configured: false` with an empty
- * list is the no-key outcome, not a failure — the UI keeps free-text
- * entry. Real failures (401 rejected / 503 unverifiable) reject as
- * `ApiError`.
+ * list is the no-list outcome (no key for a provider whose catalog is
+ * not public), not a failure — the UI keeps free-text entry. Real
+ * failures (401 rejected / 503 unverifiable) reject as `ApiError`.
  */
 export interface AiProviderModelsResponse {
   readonly schemaVersion: 1;
@@ -138,6 +142,7 @@ export interface ClearApiKeyResponse extends SecretsBackendFields {
   readonly schemaVersion: 1;
   readonly configured: false;
   readonly source: 'none';
+  readonly provider: AiProviderId;
   readonly masked: '';
 }
 

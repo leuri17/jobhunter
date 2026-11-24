@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { AnyFieldApi, SectionForm } from './types';
+import { ProviderApiKeyBlock } from './api-key-block';
+import { useSelectedAiProvider } from './use-selected-provider';
 
 interface ProviderSectionProps {
   form: SectionForm;
@@ -38,6 +40,9 @@ export function ProviderSection({ form }: ProviderSectionProps) {
 
 function ProviderBody({ field, form }: { field: AnyFieldApi; form: SectionForm }) {
   const provider = field.state.value as AiProviderId;
+  // The key block needs the custom URL as it is typed, which lives in a
+  // sibling field — follow the whole section, not just this field.
+  const baseUrl = useSelectedAiProvider(field).baseUrl;
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
   const name = field.name;
   return (
@@ -81,6 +86,7 @@ function ProviderBody({ field, form }: { field: AnyFieldApi; form: SectionForm }
           {(urlField: AnyFieldApi) => <CustomBaseUrlField field={urlField} />}
         </form.Field>
       )}
+      <ProviderApiKeyBlock provider={provider} baseUrl={baseUrl} />
     </Field>
   );
 }

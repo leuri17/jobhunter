@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import type { AiProviderId } from '@jobhunter/core/config/schemas';
 import { resolveSidecar } from './sidecar-url';
 import type {
   ApiKeyResponse,
@@ -110,15 +111,40 @@ export const api = {
   getConfig: () => request<ConfigResponse>('GET', '/api/config'),
   patchConfig: (patch: ConfigPatch) => request<ConfigResponse>('PATCH', '/api/config', { patch }),
   validateConfig: () => request<ValidateConfigResponse>('POST', '/api/config/validate'),
-  getApiKeyStatus: () => request<ApiKeyResponse>('GET', '/api/secrets/api-key'),
-  setApiKey: (apiKey: string, allowPlaintextFallback = false) =>
+  /**
+   * Key status for one provider, or — with no argument — for the
+   * provider the saved config selects (the sidecar picks it).
+   */
+  getApiKeyStatus: (provider?: AiProviderId) =>
+    request<ApiKeyResponse>(
+      'GET',
+      provider === undefined ? '/api/secrets/api-key' : `/api/secrets/api-key?provider=${provider}`,
+    ),
+  setApiKey: (
+    apiKey: string,
+    options: {
+      readonly provider: AiProviderId;
+      readonly baseUrl?: string;
+      readonly allowPlaintextFallback?: boolean;
+    },
+  ) =>
     request<PutApiKeyResponse>('PUT', '/api/secrets/api-key', {
       apiKey,
-      ...(allowPlaintextFallback ? { allowPlaintextFallback: true } : {}),
+      provider: options.provider,
+      ...(options.baseUrl !== undefined ? { baseUrl: options.baseUrl } : {}),
+      ...(options.allowPlaintextFallback === true ? { allowPlaintextFallback: true } : {}),
     }),
-  clearApiKey: () => request<ClearApiKeyResponse>('DELETE', '/api/secrets/api-key'),
+  clearApiKey: (provider: AiProviderId) =>
+    request<ClearApiKeyResponse>('DELETE', `/api/secrets/api-key?provider=${provider}`),
   migrateApiKey: () => request<MigrateApiKeyResponse>('POST', '/api/secrets/api-key/migrate'),
-  listAiProviderModels: () => request<AiProviderModelsResponse>('GET', '/api/ai-provider/models'),
+  listAiProviderModels: (target: {
+    readonly provider: AiProviderId;
+    readonly baseUrl?: string;
+  }) => {
+    const params = new URLSearchParams({ provider: target.provider });
+    if (target.baseUrl !== undefined) params.set('baseUrl', target.baseUrl);
+    return request<AiProviderModelsResponse>('GET', `/api/ai-provider/models?${params}`);
+  },
   listProfiles: (status?: string) =>
     request<ListProfilesResponse>('GET', `/api/profile${status ? `?status=${status}` : ''}`),
   getProfile: (id: string) => request<GetProfileResponse>('GET', `/api/profile/${id}`),

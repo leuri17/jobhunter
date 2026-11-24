@@ -2,9 +2,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ApiKeySection } from '@/components/shared/features/settings/api-key/api-key-section';
+import { ProviderApiKeyBlock } from '@/components/shared/features/settings/ai-provider/api-key-block';
 import { toast } from '@/components/ui/toast';
 import { api, ApiError } from '@/lib/api';
+import type { AiProviderId } from '@jobhunter/core/config';
 import type { ApiKeyResponse, PutApiKeyResponse } from '@/lib/types';
 
 vi.mock('@/components/ui/toast', () => ({
@@ -32,13 +33,13 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   return { promise, resolve };
 }
 
-function renderSection() {
+function renderSection(provider: AiProviderId = 'openrouter', baseUrl?: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <ApiKeySection />
+      <ProviderApiKeyBlock provider={provider} baseUrl={baseUrl} />
     </QueryClientProvider>,
   );
 }
@@ -49,6 +50,7 @@ const UNCONFIGURED: ApiKeyResponse = {
   schemaVersion: 1,
   configured: false,
   source: 'none',
+  provider: 'openrouter',
   masked: '',
   backend: 'file',
   backendReason: 'bridge_not_configured',
@@ -59,6 +61,7 @@ const CONFIGURED: ApiKeyResponse = {
   schemaVersion: 1,
   configured: true,
   source: 'stored',
+  provider: 'openrouter',
   masked: 'sk-…old1',
   backend: 'keychain',
   legacyFilePresent: false,
@@ -68,6 +71,7 @@ const NO_KEYCHAIN: ApiKeyResponse = {
   schemaVersion: 1,
   configured: false,
   source: 'none',
+  provider: 'openrouter',
   masked: '',
   backend: 'file',
   backendReason: 'keychain_unavailable',
@@ -78,6 +82,7 @@ const LEGACY_ON_KEYCHAIN: ApiKeyResponse = {
   schemaVersion: 1,
   configured: false,
   source: 'none',
+  provider: 'openrouter',
   masked: '',
   backend: 'keychain',
   legacyFilePresent: true,
@@ -88,16 +93,17 @@ const SAVED_TO_FILE: PutApiKeyResponse = {
   status: 'validated',
   configured: true,
   source: 'stored',
+  provider: 'openrouter',
   masked: 'sk-…abcd',
   backend: 'file',
   backendReason: 'keychain_unavailable',
 };
 
 const REJECTED_WITH_KEY_COPY =
-  'AiProvider rejected this key. Nothing was saved — the previously configured key is still active.';
-const REJECTED_WITHOUT_KEY_COPY = 'AiProvider rejected this key. Nothing was saved.';
+  'OpenRouter rejected this key. Nothing was saved — the previously configured key is still active.';
+const REJECTED_WITHOUT_KEY_COPY = 'OpenRouter rejected this key. Nothing was saved.';
 const UNREACHABLE_COPY =
-  "Couldn't reach AiProvider to validate the key. Nothing was saved — try again.";
+  "Couldn't reach OpenRouter to validate the key. Nothing was saved — try again.";
 const KEYCHAIN_LINE_COPY = 'Stored in your OS keychain.';
 const NO_KEYCHAIN_NOTICE_COPY =
   'No OS keychain is available on this machine, so a saved key is written to a local secrets file. The file is protected by its permissions, not by OS encryption.';
@@ -134,7 +140,7 @@ afterEach(() => {
   cleanup();
 });
 
-describe('<ApiKeySection />', () => {
+describe('<ProviderApiKeyBlock />', () => {
   it('relabels the save button to "Validating key…" and disables the field while the probe runs', async () => {
     const validation = deferred<PutApiKeyResponse>();
     vi.mocked(api.setApiKey).mockReturnValue(validation.promise);
@@ -153,6 +159,7 @@ describe('<ApiKeySection />', () => {
       status: 'validated',
       configured: true,
       source: 'stored',
+      provider: 'openrouter',
       masked: 'sk-…abcd',
       backend: 'keychain',
     });
@@ -220,7 +227,7 @@ describe('<ApiKeySection />', () => {
     expect(toast.add).not.toHaveBeenCalled();
   });
 
-  it('shows the retry copy when AiProvider cannot be reached to validate', async () => {
+  it('shows the retry copy when the provider cannot be reached to validate', async () => {
     vi.mocked(api.setApiKey).mockRejectedValue(
       new ApiError(503, 'ai_provider_network_error', 'AiProvider network failure.'),
     );
@@ -250,7 +257,7 @@ describe('<ApiKeySection />', () => {
   });
 });
 
-describe('<ApiKeySection /> backend status line', () => {
+describe('<ProviderApiKeyBlock /> backend status line', () => {
   it('states the OS keychain as the storage location on the keychain backend', async () => {
     vi.mocked(api.getApiKeyStatus).mockResolvedValue(CONFIGURED);
 
@@ -278,7 +285,7 @@ describe('<ApiKeySection /> backend status line', () => {
   });
 });
 
-describe('<ApiKeySection /> plaintext-file consent', () => {
+describe('<ProviderApiKeyBlock /> plaintext-file consent', () => {
   it('asks before saving to a plaintext file and sends the fallback flag only on confirm', async () => {
     vi.mocked(api.getApiKeyStatus).mockResolvedValue(NO_KEYCHAIN);
     vi.mocked(api.setApiKey).mockResolvedValue(SAVED_TO_FILE);
@@ -291,7 +298,12 @@ describe('<ApiKeySection /> plaintext-file consent', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save to file' }));
 
-    await waitFor(() => expect(api.setApiKey).toHaveBeenCalledWith('sk-typed', true));
+    await waitFor(() =>
+      expect(api.setApiKey).toHaveBeenCalledWith('sk-typed', {
+        provider: 'openrouter',
+        allowPlaintextFallback: true,
+      }),
+    );
     await waitFor(() =>
       expect(toast.add).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'API key saved', type: 'success' }),
@@ -330,7 +342,7 @@ describe('<ApiKeySection /> plaintext-file consent', () => {
   });
 });
 
-describe('<ApiKeySection /> legacy file migration', () => {
+describe('<ProviderApiKeyBlock /> legacy file migration', () => {
   it('offers migration only when a legacy file exists on the keychain backend', async () => {
     vi.mocked(api.getApiKeyStatus).mockResolvedValue(LEGACY_ON_KEYCHAIN);
 
@@ -422,5 +434,71 @@ describe('<ApiKeySection /> legacy file migration', () => {
     expect(await screen.findByRole('alertdialog')).toBeTruthy();
     expect(screen.getByText("Couldn't move the key to the OS keychain")).toBeTruthy();
     expect(screen.getByText(MIGRATE_FAILED_COPY)).toBeTruthy();
+  });
+});
+
+describe('<ProviderApiKeyBlock /> provider scoping (#359)', () => {
+  const GROQ_UNCONFIGURED: ApiKeyResponse = { ...UNCONFIGURED, provider: 'groq' };
+  const GROQ_CONFIGURED: ApiKeyResponse = { ...CONFIGURED, provider: 'groq' };
+
+  it("asks for the selected provider's key status", async () => {
+    vi.mocked(api.getApiKeyStatus).mockResolvedValue(GROQ_UNCONFIGURED);
+
+    renderSection('groq');
+
+    await waitFor(() => expect(api.getApiKeyStatus).toHaveBeenCalledWith('groq'));
+  });
+
+  it('saves the key under the selected provider', async () => {
+    vi.mocked(api.getApiKeyStatus).mockResolvedValue(GROQ_UNCONFIGURED);
+    vi.mocked(api.setApiKey).mockResolvedValue({ ...SAVED_TO_FILE, provider: 'groq' });
+
+    renderSection('groq');
+    await typeAndSave('sk-typed');
+
+    await waitFor(() =>
+      expect(api.setApiKey).toHaveBeenCalledWith('sk-typed', { provider: 'groq' }),
+    );
+  });
+
+  it('sends the custom base URL so the key is checked against that endpoint', async () => {
+    vi.mocked(api.setApiKey).mockResolvedValue({ ...SAVED_TO_FILE, provider: 'custom' });
+
+    renderSection('custom', 'https://compat-proxy.example/v1');
+    await typeAndSave('sk-typed');
+
+    await waitFor(() =>
+      expect(api.setApiKey).toHaveBeenCalledWith('sk-typed', {
+        provider: 'custom',
+        baseUrl: 'https://compat-proxy.example/v1',
+      }),
+    );
+  });
+
+  it("removes only the selected provider's key", async () => {
+    vi.mocked(api.getApiKeyStatus).mockResolvedValue(GROQ_CONFIGURED);
+    vi.mocked(api.clearApiKey).mockResolvedValue({
+      schemaVersion: 1,
+      configured: false,
+      source: 'none',
+      provider: 'groq',
+      masked: '',
+      backend: 'keychain',
+    });
+
+    renderSection('groq');
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove key' }));
+
+    await waitFor(() => expect(api.clearApiKey).toHaveBeenCalledWith('groq'));
+  });
+
+  it('names the rejecting provider in the dialog', async () => {
+    vi.mocked(api.getApiKeyStatus).mockResolvedValue(GROQ_UNCONFIGURED);
+    vi.mocked(api.setApiKey).mockRejectedValue(rejectedByAiProvider());
+
+    renderSection('groq');
+    await typeAndSave('sk-typed');
+
+    expect(await screen.findByText('Groq rejected this key. Nothing was saved.')).toBeTruthy();
   });
 });
