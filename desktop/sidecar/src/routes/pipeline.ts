@@ -21,16 +21,18 @@ import {
   type DefaultAiProviderClientRefusalOptions,
   type AiProviderClient,
 } from '@jobhunter/core/profile';
-import { loadConfig, resolveAiProviderApiKey } from '@jobhunter/core/config';
+import { loadConfig } from '@jobhunter/core/config';
 import { ApplicationError } from '@jobhunter/core/errors';
 import { type DatabaseConnection } from '@jobhunter/core/persistence';
-import { getSecretsBackend } from '../secrets-backend.js';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { pinoPipelineLogger } from '@jobhunter/core/pipeline';
 import { openDbHandle, createRepositories } from './db-helper.js';
 import { sidecarFileSystem } from './fs-adapter.js';
 import { initSseHeaders, writeSseEvent, closeSse } from '../sse.js';
-import { resolveAiProviderClientOrNull } from './ai-provider-resolve.js';
+import {
+  resolveAiProviderClientOrNull,
+  resolveAiProviderApiKeyForConfig,
+} from './ai-provider-resolve.js';
 
 export interface ActiveRun {
   readonly runId: string;
@@ -498,12 +500,7 @@ async function runPipeline(
         },
         confirmScoring: !requireConfirmation,
         env: process.env,
-        resolveApiKey: async () => {
-          return resolveAiProviderApiKey({
-            store: (await getSecretsBackend()).store,
-            env: process.env,
-          });
-        },
+        resolveApiKey: () => resolveAiProviderApiKeyForConfig(),
         applicationVersion: '0.1.0-desktop',
         logger: pinoPipelineLogger(makeTeeLogger(rootLogger, run)),
         cancelSignal: controller.signal,

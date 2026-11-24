@@ -103,15 +103,34 @@ export const AI_PROVIDER_CHOICES: readonly LabeledChoice<AiProviderId>[] = [
   { label: 'Custom…', value: 'custom' },
 ];
 
+/**
+ * Providers whose chat-completions endpoints accept the
+ * `reasoning_effort` parameter. `reasoning_effort` is an OpenAI
+ * parameter; OpenRouter passes it through, and `custom` endpoints
+ * are unknown so the control stays available. UI hides the control
+ * for every other provider (#359); the stored config value is
+ * unaffected.
+ */
+export const AI_PROVIDER_REASONING_EFFORT_IDS: readonly AiProviderId[] = [
+  'openai',
+  'openrouter',
+  'custom',
+];
+
 /** Resolve the endpoint a config's `aiProvider` section points at. */
 export function resolveAiProviderBaseUrl(aiProvider: OperationalConfig['aiProvider']): string {
-  if (aiProvider.provider !== 'custom') {
-    return AI_PROVIDER_ENDPOINTS[aiProvider.provider];
+  return resolveProviderEndpoint(aiProvider.provider, aiProvider.baseUrl);
+}
+
+/** Resolve the endpoint for one provider id; `custom` requires its URL. */
+export function resolveProviderEndpoint(provider: AiProviderId, baseUrl?: string): string {
+  if (provider !== 'custom') {
+    return AI_PROVIDER_ENDPOINTS[provider];
   }
-  if (aiProvider.baseUrl === undefined) {
-    throw new Error('aiProvider.provider "custom" requires aiProvider.baseUrl');
+  if (baseUrl === undefined) {
+    throw new Error('provider "custom" requires a baseUrl');
   }
-  return aiProvider.baseUrl;
+  return baseUrl;
 }
 
 function inferProviderFromBaseUrl(baseUrl: string): AiProviderId {

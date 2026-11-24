@@ -4,6 +4,7 @@ import {
   AI_PROVIDER_CHOICES,
   AI_PROVIDER_ENDPOINTS,
   AI_PROVIDER_IDS,
+  AI_PROVIDER_REASONING_EFFORT_IDS,
   DEFAULT_OPERATIONAL_CONFIG,
   OperationalConfigFileSchema,
   OperationalConfigSchema,
@@ -322,5 +323,11 @@ describe('resolveAiProviderBaseUrl', () => {
 describe('AI_PROVIDER_CHOICES', () => {
   it('covers every provider id exactly once', () => {
     expect(AI_PROVIDER_CHOICES.map((choice) => choice.value)).toEqual([...AI_PROVIDER_IDS]);
+  });
+});
+
+describe('AI_PROVIDER_REASONING_EFFORT_IDS', () => {
+  it('lists exactly the providers that support the reasoning_effort parameter', () => {
+    expect(AI_PROVIDER_REASONING_EFFORT_IDS).toEqual(['openai', 'openrouter', 'custom']);
   });
 });

@@ -28,6 +28,7 @@ import {
 import {
   loadConfig,
   resolveRefusalDetection,
+  type AiProviderId,
   type FileSystem,
   type LoadedConfig,
 } from '@jobhunter/core/config';
@@ -211,23 +212,32 @@ export interface BuildServerOptions {
   readonly processEnv?: NodeJS.ProcessEnv;
   readonly fileSystem?: FileSystem;
   /**
-   * Optional test/alternative seam: probes a candidate AiProvider key.
-   * Defaults to a throwaway `createDefaultAiProviderClient` with a short
-   * 10 s timeout. Resolves = key accepted; rejects = rejected or
-   * unverifiable (the route maps typed errors to outcomes).
+   * Optional test/alternative seam: probes a candidate AiProvider key
+   * for one provider (+ its custom base URL). Defaults to a throwaway
+   * `createDefaultAiProviderClient` with a short 10 s timeout.
+   * Resolves = key accepted; rejects = rejected or unverifiable (the
+   * route maps typed errors to outcomes).
    */
-  readonly validateApiKey?: (apiKey: string) => Promise<void>;
+  readonly validateApiKey?: (
+    apiKey: string,
+    provider?: AiProviderId,
+    baseUrl?: string,
+  ) => Promise<void>;
   /**
    * Optional test/alternative seam: supplies the resolved secrets backend
    * to the config routes. Defaults to the process-wide memoized resolver.
    */
   readonly secretsBackend?: () => Promise<ResolvedSecretsBackend>;
   /**
-   * Optional test/alternative seam: lists the models the effective key
-   * can access. `null` means "no key configured". Defaults to listing
-   * through `resolveAiProviderClientOrNull` with a short 10 s timeout.
+   * Optional test/alternative seam: lists the models a provider's key
+   * can access. `null` means "no key configured and not publicly
+   * listable". Defaults to the provider-scoped resolution with a short
+   * 10 s timeout.
    */
-  readonly listModels?: () => Promise<readonly string[] | null>;
+  readonly listModels?: (
+    provider?: AiProviderId,
+    baseUrl?: string,
+  ) => Promise<readonly string[] | null>;
   /**
    * Optional test/alternative seam: opens the SQLite handle the
    * pipeline routes use for run preflight and execution. Defaults to

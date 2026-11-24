@@ -164,17 +164,14 @@ export class InitOrchestrator {
       InitStepId,
       InitStepReport
     >;
+    // The key gate is provider-scoped (#359): it is resolved after the
+    // config loads so it can ask for the configured provider's slot.
     // `aiProviderClient` is the constructed client (may be null even when
     // the key is set, e.g. when the test injects env without a real
     // client). The orchestrator treats key absence as skip-not-fail
     // for the extract step regardless of whether `aiProviderClient` is
     // null — tests inject `aiProviderClient: null` to simulate the
     // absence side of the gate.
-    const openAiKeySource = await resolveApiKeySource({
-      store: opts.secretsStore ?? emptySecretsStore(),
-      env,
-    });
-    const openAiKeyPresent = openAiKeySource !== 'none';
 
     // === step 1: paths ===
     stepReports['paths'] = await classifyPaths({
@@ -233,6 +230,13 @@ export class InitOrchestrator {
       }
       throw error;
     }
+
+    const openAiKeySource = await resolveApiKeySource({
+      store: opts.secretsStore ?? emptySecretsStore(),
+      env,
+      provider: loadedConfig.config.aiProvider.provider,
+    });
+    const openAiKeyPresent = openAiKeySource !== 'none';
 
     const configReport = await classifyConfig({
       configFilePath: opts.paths.config.file('config.json'),

@@ -9,8 +9,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { REASONING_EFFORT_CHOICES, type ReasoningEffort } from '@jobhunter/core/config/labels';
+import { AI_PROVIDER_REASONING_EFFORT_IDS } from '@jobhunter/core/config/schemas';
 import { ModelField } from './model-field';
 import type { AnyFieldApi, SectionForm } from './types';
+import { useSelectedAiProvider } from './use-selected-provider';
 
 interface ProfileExtractionSectionProps {
   form: SectionForm;
@@ -25,7 +27,7 @@ export function ProfileExtractionSection({ form }: ProfileExtractionSectionProps
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <form.Field name="aiProvider.profileExtraction.model">
-          {(field: AnyFieldApi) => <ModelField field={field} />}
+          {(field: AnyFieldApi) => <ProviderModelField field={field} />}
         </form.Field>
 
         <form.Field name="aiProvider.profileExtraction.reasoningEffort">
@@ -36,9 +38,19 @@ export function ProfileExtractionSection({ form }: ProfileExtractionSectionProps
   );
 }
 
+function ProviderModelField({ field }: { field: AnyFieldApi }) {
+  const aiProvider = useSelectedAiProvider(field);
+  return <ModelField field={field} provider={aiProvider.provider} baseUrl={aiProvider.baseUrl} />;
+}
+
 function ReasoningEffortField({ field }: { field: AnyFieldApi }) {
+  const aiProvider = useSelectedAiProvider(field);
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
   const name = field.name;
+  if (!AI_PROVIDER_REASONING_EFFORT_IDS.includes(aiProvider.provider)) {
+    // The provider ignores the parameter; the stored value is kept.
+    return null;
+  }
   return (
     <Field data-invalid={isInvalid}>
       <FieldLabel htmlFor={name}>Reasoning effort</FieldLabel>

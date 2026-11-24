@@ -15,18 +15,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import { api, ApiError } from '@/lib/api';
 import type { ApiKeyResponse } from '@/lib/types';
 import type { ActionGuidance } from '@/lib/error-surfaces';
+import { AI_PROVIDER_CHOICES, type AiProviderId } from '@jobhunter/core/config/schemas';
+import { apiKeyQueryOptions } from './api-key-query';
 
-const REJECTED_WITH_KEY =
-  'AiProvider rejected this key. Nothing was saved — the previously configured key is still active.';
-const REJECTED_WITHOUT_KEY = 'AiProvider rejected this key. Nothing was saved.';
-const UNREACHABLE = "Couldn't reach AiProvider to validate the key. Nothing was saved — try again.";
 const KEYCHAIN_GONE =
   'The OS keychain is not available right now, so nothing was saved. Try again in a moment.';
 const MIGRATE_FAILED = 'The old secrets file was left unchanged. You can try again.';
@@ -37,18 +34,40 @@ const REJECTED_CODES: ReadonlySet<string> = new Set([
   'ai_provider_billing',
 ]);
 
-function saveGuidanceFor(error: ApiError, configured: boolean): ActionGuidance {
+/** The provider's display name; `custom` endpoints have none. */
+function labelOf(provider: AiProviderId): string {
+  return AI_PROVIDER_CHOICES.find((item) => item.value === provider)?.label ?? 'The provider';
+}
+
+function rejectionCopy(provider: AiProviderId, configured: boolean): string {
+  const who = provider === 'custom' ? 'This endpoint' : labelOf(provider);
+  return configured
+    ? `${who} rejected this key. Nothing was saved — the previously configured key is still active.`
+    : `${who} rejected this key. Nothing was saved.`;
+}
+
+function unreachableCopy(provider: AiProviderId): string {
+  return provider === 'custom'
+    ? "Couldn't reach the endpoint to validate the key. Nothing was saved — try again."
+    : `Couldn't reach ${labelOf(provider)} to validate the key. Nothing was saved — try again.`;
+}
+
+function saveGuidanceFor(
+  error: ApiError,
+  configured: boolean,
+  provider: AiProviderId,
+): ActionGuidance {
   if (error.code === 'secrets_backend_unavailable') {
     return {
       message: KEYCHAIN_GONE,
-      // Inert: the section passes no onAction, so the dialog renders Close only.
+      // Inert: the block passes no onAction, so the dialog renders Close only.
       actionLabel: 'Close',
     };
   }
   const rejected = REJECTED_CODES.has(error.code);
   return {
-    message: rejected ? (configured ? REJECTED_WITH_KEY : REJECTED_WITHOUT_KEY) : UNREACHABLE,
-    // Inert: the section passes no onAction, so the dialog renders Close only.
+    message: rejected ? rejectionCopy(provider, configured) : unreachableCopy(provider),
+    // Inert: the block passes no onAction, so the dialog renders Close only.
     actionLabel: 'Close',
   };
 }
@@ -92,25 +111,44 @@ function BackendStatusLine({ state }: { readonly state: ApiKeyResponse }) {
   );
 }
 
-export function ApiKeySection() {
+interface ProviderApiKeyBlockProps {
+  /** The provider selected in the form — saved or not — that the key must belong to. */
+  readonly provider: AiProviderId;
+  /** Needed to check a key against a `custom` endpoint. */
+  readonly baseUrl: string | undefined;
+}
+
+/**
+ * The API key for one provider, rendered under the provider select.
+ * Keys are stored per provider (#359): switching providers shows that
+ * provider's key and never touches another provider's.
+ */
+export function ProviderApiKeyBlock({ provider, baseUrl }: ProviderApiKeyBlockProps) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState('');
   const [saveError, setSaveError] = useState<ApiError | null>(null);
   const [migrateError, setMigrateError] = useState<ApiError | null>(null);
   const [pendingPlaintextKey, setPendingPlaintextKey] = useState<string | null>(null);
 
-  const status = useQuery({
-    queryKey: ['secrets', 'api-key'],
-    queryFn: api.getApiKeyStatus,
-  });
+  const status = useQuery(apiKeyQueryOptions(provider));
+
+  function invalidateKey(): void {
+    void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
+    void queryClient.invalidateQueries({ queryKey: ['ai-provider', 'models'] });
+  }
 
   const save = useMutation({
     mutationFn: (vars: { readonly apiKey: string; readonly allowPlaintextFallback: boolean }) =>
-      api.setApiKey(vars.apiKey, vars.allowPlaintextFallback),
+      api.setApiKey(vars.apiKey, {
+        provider,
+        ...(provider === 'custom' && baseUrl !== undefined && baseUrl.length > 0
+          ? { baseUrl }
+          : {}),
+        ...(vars.allowPlaintextFallback ? { allowPlaintextFallback: true } : {}),
+      }),
     onSuccess: (result) => {
       setSaveError(null);
-      void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
-      void queryClient.invalidateQueries({ queryKey: ['ai-provider', 'models'] });
+      invalidateKey();
       setDraft('');
       toast.add({
         title: 'API key saved',
@@ -124,11 +162,10 @@ export function ApiKeySection() {
   });
 
   const clear = useMutation({
-    mutationFn: () => api.clearApiKey(),
+    mutationFn: () => api.clearApiKey(provider),
     onSuccess: () => {
       setSaveError(null);
-      void queryClient.invalidateQueries({ queryKey: ['secrets', 'api-key'] });
-      void queryClient.invalidateQueries({ queryKey: ['ai-provider', 'models'] });
+      invalidateKey();
       setDraft('');
       toast.add({ title: 'API key removed', type: 'success' });
     },
@@ -177,6 +214,8 @@ export function ApiKeySection() {
   // loaded backend, so the submit stays disabled until it is known.
   const backendKnown = state !== undefined;
   const busy = save.isPending || clear.isPending;
+  // A custom endpoint cannot be checked until its URL is typed.
+  const endpointReady = provider !== 'custom' || (baseUrl !== undefined && baseUrl.length > 0);
 
   function submitDraft(): void {
     const key = draft.trim();
@@ -196,11 +235,7 @@ export function ApiKeySection() {
 
   return (
     <>
-      <CardHeader>
-        <CardTitle>AiProvider API key</CardTitle>
-        <CardDescription>Required for profile extraction and job scoring.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5">
         {legacyFileToMigrate && (
           <div className="flex flex-col gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <p>
@@ -241,7 +276,9 @@ export function ApiKeySection() {
           <p className="text-xs text-muted-foreground">
             {state?.configured
               ? 'Stored on this machine. Type a new key to replace it.'
-              : 'Paste a key that belongs to the endpoint above. It is never sent back to this app.'}
+              : provider === 'custom'
+                ? 'Paste a key for this endpoint. It is never sent back to this app.'
+                : `Paste a key for ${labelOf(provider)}. It is never sent back to this app.`}
           </p>
           {state !== undefined && <BackendStatusLine state={state} />}
         </Field>
@@ -249,7 +286,7 @@ export function ApiKeySection() {
         <div className="flex gap-2">
           <Button
             type="button"
-            disabled={busy || !backendKnown || draft.trim().length === 0}
+            disabled={busy || !backendKnown || !endpointReady || draft.trim().length === 0}
             onClick={() => submitDraft()}
           >
             {save.isPending ? 'Validating key…' : 'Save key'}
@@ -260,12 +297,14 @@ export function ApiKeySection() {
             </Button>
           )}
         </div>
-      </CardContent>
+      </div>
       <ApiErrorDialog
         error={saveError}
         title="Couldn't save the API key"
         guidance={
-          saveError !== null ? saveGuidanceFor(saveError, state?.configured ?? false) : undefined
+          saveError !== null
+            ? saveGuidanceFor(saveError, state?.configured ?? false, provider)
+            : undefined
         }
         onDismiss={() => setSaveError(null)}
       />

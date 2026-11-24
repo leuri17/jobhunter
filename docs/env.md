@@ -1,10 +1,11 @@
 # Environment variables
 
-The codebase reads ten environment variables. Eight are real (build-time or runtime); two are test-only. This file is the canonical map.
+The codebase reads eleven environment variables. Nine are real (build-time or runtime); two are test-only. This file is the canonical map.
 
 | Variable | When read | Default | Required? | Description |
 | --- | --- | --- | --- | --- |
-| `OPENAI_API_KEY` | sidecar boot | — | no | Fallback OpenAI key used for profile extraction and job scoring. **Prefer entering the key in Settings → AI Provider**, which stores it in your OS keychain and takes precedence over this variable. See [OpenAI API key precedence](#openai-api-key-precedence). |
+| `AI_PROVIDER_API_KEY` | sidecar request | — | no | Fallback key for the selected AI provider, used for profile extraction and job scoring when that provider has no saved key. **Prefer entering the key in Settings → AI Provider**, which stores it in your OS keychain and takes precedence over this variable. See [OpenAI API key precedence](#openai-api-key-precedence). |
+| `OPENAI_API_KEY` | sidecar request | — | no | Legacy name for `AI_PROVIDER_API_KEY`, read only when it is unset. Same precedence and caveats. |
 | `OPENAI_MODEL` | sidecar boot | `gpt-5` | no | The model used for both profile extraction and job scoring. |
 | `LOG_LEVEL` | sidecar boot | `info` | no | `trace` \| `debug` \| `info` \| `warn` \| `error` \| `fatal` \| `silent`. **Only used when no `config.json` exists.** `config.logging.level` always wins once the operational config is present — see [Log level precedence](#log-level-precedence). |
 | `JOBHUNTER_SIDECAR_PORT` | sidecar boot | `0` (OS-assigned) | no | The port the sidecar binds to. Only set explicitly for non-Tauri / non-supervised runs. |
@@ -17,24 +18,26 @@ The codebase reads ten environment variables. Eight are real (build-time or runt
 
 ## OpenAI API key precedence
 
-There are two ways to supply the OpenAI key, and the one you set in the app wins.
+There are two ways to supply a provider's key, and the one you set in the app wins.
 
-1. **Settings → AI Provider** — entered in the app and stored in your OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service). **This is the recommended route.**
-2. **`OPENAI_API_KEY`** — the environment variable. Used only when nothing is stored.
+1. **Settings → AI Provider** — entered under the provider it belongs to and stored in your OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service). **This is the recommended route.**
+2. **The environment** — `AI_PROVIDER_API_KEY`, or the legacy `OPENAI_API_KEY`. Used only when the selected provider has no saved key.
 
-A normal user never needs to touch this variable. Settings is the supported path; the env var exists so CI, headless runs, and existing developer setups keep working.
+A normal user never needs to touch these variables. Settings is the supported path; the env vars exist so CI, headless runs, and existing developer setups keep working.
+
+Keys are saved **per provider** (#359). Each provider has its own endpoint and its own key, so Settings keeps one key per provider: switching providers switches which key is used, and switching back finds the earlier key still there. An installation that predates this kept a single key; it moves into the slot of the provider the saved config selects the first time a key is resolved.
 
 ### Why the env var seems to do nothing
 
-The stored key takes precedence, so once you save one in Settings, any `OPENAI_API_KEY` in your environment is ignored — including one in a stale shell profile. Settings shows an inline notice when the key currently in use came from the environment, so you can see which source is active.
+The selected provider's stored key takes precedence, so once you save one for that provider in Settings, any `AI_PROVIDER_API_KEY` / `OPENAI_API_KEY` in your environment is ignored for it — including one in a stale shell profile. Settings shows an inline notice when the key currently in use came from the environment, so you can see which source is active.
 
 ### Storage and security
 
-- The key is stored in the OS keychain (service `com.leuri17.jobhunter`, account `openai-api-key`) — encrypted at rest, scoped to your user account, inspectable with the OS's own credential tools. It never lives in `config.json`.
+- The keys are stored together in the OS keychain (service `com.leuri17.jobhunter`, account `openai-api-key`) — encrypted at rest, scoped to your user account, inspectable with the OS's own credential tools. They never live in `config.json`.
 - The Node sidecar cannot reach the keychain directly, so the Tauri shell owns all keychain access and serves it to the sidecar over a token-authenticated loopback connection. The webview never talks to that bridge.
-- The key is **never returned over the API**. `GET /api/secrets/api-key` reports whether a key is configured, which source won, which backend holds it (`keychain` or `file`), and a masked form (`sk-***…234`).
-- The stored key is not part of the operational config, so it does not affect the config hash and cannot appear in the settings diff.
-- If the stored key cannot be read (for example the keychain is locked or unavailable), the app falls back to `OPENAI_API_KEY` rather than failing.
+- The keys are **never returned over the API**. `GET /api/secrets/api-key?provider=…` reports whether that provider has a key, which source won, which backend holds it (`keychain` or `file`), and a masked form (`sk-***…234`).
+- The stored keys are not part of the operational config, so they do not affect the config hash and cannot appear in the settings diff.
+- If a stored key cannot be read (for example the keychain is locked or unavailable), the app falls back to the environment rather than failing.
 
 ### Machines without an OS keychain
 
@@ -88,7 +91,7 @@ $EDITOR .env   # only needed if you want to set OPENAI_API_KEY here
 
 `.env` is gitignored; never commit it.
 
-**You do not need a `.env` file to run the app.** Enter your OpenAI key in Settings → AI Provider instead; it is stored on your machine and takes precedence over `OPENAI_API_KEY`. A `.env` is only a convenience for development and CI.
+**You do not need a `.env` file to run the app.** Enter your provider's key in Settings → AI Provider instead; it is stored on your machine and takes precedence over the environment variables. A `.env` is only a convenience for development and CI.
 
 ### Production
 

@@ -20,7 +20,6 @@ import { SectionDivider } from '@/components/shared/features/settings/search-con
 import { ProfileExtractionSection } from '@/components/shared/features/settings/ai-provider/profile-extraction-section';
 import { JobScoringSection } from '@/components/shared/features/settings/ai-provider/job-scoring-section';
 import { ProviderSection } from '@/components/shared/features/settings/ai-provider/provider-section';
-import { ApiKeySection } from '@/components/shared/features/settings/api-key/api-key-section';
 import { OutputSection } from '@/components/shared/features/settings/output/output-section';
 import { AdvancedSection } from '@/components/shared/features/settings/advanced/advanced-section';
 
@@ -102,8 +101,6 @@ function RouteComponent() {
           </TabsContent>
           <TabsContent value="ai">
             <Card>
-              <ApiKeySection />
-              <SectionDivider />
               <ProviderSection form={form} />
               <SectionDivider />
               <ProfileExtractionSection form={form} />

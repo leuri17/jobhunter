@@ -10,27 +10,64 @@ import {
 } from '@/components/ui/combobox';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { api } from '@/lib/api';
+import { AI_PROVIDER_CHOICES, type AiProviderId } from '@jobhunter/core/config/schemas';
+import { apiKeyQueryOptions } from './api-key-query';
 import type { AnyFieldApi } from './types';
 
+/** Providers whose model catalog is public, so the list loads without a key. */
+const PUBLIC_MODEL_LIST_IDS: ReadonlySet<AiProviderId> = new Set(['openrouter']);
+
+export function modelsQueryKey(provider: AiProviderId, baseUrl?: string): readonly unknown[] {
+  return baseUrl !== undefined && baseUrl.length > 0
+    ? ['ai-provider', 'models', provider, baseUrl]
+    : ['ai-provider', 'models', provider];
+}
+
+interface ModelFieldProps {
+  readonly field: AnyFieldApi;
+  /** The provider selected in the form — saved or not — whose models to list. */
+  readonly provider: AiProviderId;
+  /** Needed to list a `custom` provider; empty until the user types it. */
+  readonly baseUrl: string | undefined;
+}
+
+function keyHint(provider: AiProviderId): string | null {
+  if (provider === 'custom') return "Add a key above to list this endpoint's models.";
+  const choice = AI_PROVIDER_CHOICES.find((item) => item.value === provider);
+  return choice === undefined ? null : `Add a ${choice.label} key to list its models.`;
+}
+
 /**
- * AiProvider model id field: a free-text input that additionally suggests the
- * model ids the effective API key can access. Suggestions come from a
- * single per-session query shared by both model fields; with no key
- * configured, an empty list, or a failed fetch, it stays a plain text
- * input so custom model ids are never locked out.
+ * AiProvider model id field: a free-text input that lists the model ids
+ * the selected provider's key can access. The list follows the provider
+ * chosen in the form (#359); with no key, an empty list, or a failed
+ * fetch, it stays a plain text input so custom model ids are never
+ * locked out.
  */
-export function ModelField({ field }: { field: AnyFieldApi }) {
+export function ModelField({ field, provider, baseUrl }: ModelFieldProps) {
   const [open, setOpen] = useState(false);
+  const customMissingUrl = provider === 'custom' && (baseUrl === undefined || baseUrl === '');
   const models = useQuery({
-    queryKey: ['ai-provider', 'models'],
-    queryFn: api.listAiProviderModels,
+    queryKey: modelsQueryKey(provider, baseUrl),
+    queryFn: () =>
+      api.listAiProviderModels(
+        provider === 'custom' && baseUrl !== undefined ? { provider, baseUrl } : { provider },
+      ),
     staleTime: Infinity,
+    enabled: !customMissingUrl,
   });
+  const keyStatus = useQuery(apiKeyQueryOptions(provider));
 
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
   const name = field.name;
   const value = field.state.value as string;
   const available = models.data?.configured === true ? models.data.models : [];
+  const hint =
+    available.length === 0 &&
+    keyStatus.data?.configured === false &&
+    !PUBLIC_MODEL_LIST_IDS.has(provider)
+      ? keyHint(provider)
+      : null;
 
   return (
     <Field data-invalid={isInvalid}>
@@ -57,6 +94,7 @@ export function ModelField({ field }: { field: AnyFieldApi }) {
           placeholder="e.g. gpt-5.6-sol"
           autoComplete="off"
           aria-invalid={isInvalid}
+          onFocus={() => setOpen(true)}
           onBlur={field.handleBlur}
         />
         <ComboboxContent>
@@ -69,6 +107,7 @@ export function ModelField({ field }: { field: AnyFieldApi }) {
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
+      {hint !== null && <p className="text-xs text-muted-foreground">{hint}</p>}
       <FieldError errors={field.state.meta.errors} />
     </Field>
   );

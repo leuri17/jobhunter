@@ -7,12 +7,22 @@ import {
   loadConfig,
   resolveAiProviderApiKey,
   resolveAiProviderBaseUrl as resolveConfiguredProviderBaseUrl,
+  resolveProviderEndpoint,
+  type AiProviderId,
+  type LoadedConfig,
   type SecretsStore,
 } from '@jobhunter/core/config';
 import type { PlatformPaths } from '@jobhunter/core/platform';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { getSecretsBackend } from '../secrets-backend.js';
 import { sidecarFileSystem } from './fs-adapter.js';
+
+function loadOperationalConfig(paths?: PlatformPaths): Promise<LoadedConfig> {
+  return loadConfig(
+    paths ?? resolvePlatformPaths(createDefaultPlatformAdapter()),
+    sidecarFileSystem,
+  );
+}
 
 /**
  * Resolve the configured provider endpoint. Reads the operational
@@ -23,11 +33,24 @@ import { sidecarFileSystem } from './fs-adapter.js';
  * load-time transform).
  */
 export async function resolveAiProviderBaseUrl(paths?: PlatformPaths): Promise<string> {
-  const loaded = await loadConfig(
-    paths ?? resolvePlatformPaths(createDefaultPlatformAdapter()),
-    sidecarFileSystem,
-  );
+  const loaded = await loadOperationalConfig(paths);
   return resolveConfiguredProviderBaseUrl(loaded.config.aiProvider);
+}
+
+/** The provider the saved operational config selects. */
+export async function resolveConfiguredProvider(): Promise<AiProviderId> {
+  const loaded = await loadOperationalConfig();
+  return loaded.config.aiProvider.provider;
+}
+
+/** The provider-scoped key for the saved config's provider (#359). */
+export async function resolveAiProviderApiKeyForConfig(): Promise<string | null> {
+  const loaded = await loadOperationalConfig();
+  return resolveAiProviderApiKey({
+    store: (await getSecretsBackend()).store,
+    env: process.env,
+    provider: loaded.config.aiProvider.provider,
+  });
 }
 
 export async function resolveAiProviderClientOrNull(
@@ -36,12 +59,17 @@ export async function resolveAiProviderClientOrNull(
   timeoutMs?: number,
   maxRetries?: number,
 ): Promise<AiProviderClient | null> {
+  const loaded = await loadOperationalConfig();
   const resolved = store ?? (await getSecretsBackend()).store;
-  const key = await resolveAiProviderApiKey({ store: resolved, env: process.env });
+  const key = await resolveAiProviderApiKey({
+    store: resolved,
+    env: process.env,
+    provider: loaded.config.aiProvider.provider,
+  });
   if (key === null) return null;
   return createDefaultAiProviderClient({
     apiKey: key,
-    baseUrl: await resolveAiProviderBaseUrl(),
+    baseUrl: resolveConfiguredProviderBaseUrl(loaded.config.aiProvider),
     ...(refusal !== undefined ? { refusal } : {}),
     ...(timeoutMs !== undefined ? { timeoutMs } : {}),
     ...(maxRetries !== undefined ? { maxRetries } : {}),
@@ -49,14 +77,20 @@ export async function resolveAiProviderClientOrNull(
 }
 
 /**
- * Client used by the api-key route to probe a CANDIDATE key. Must hit
- * the configured provider endpoint — validating an OpenRouter key
+ * Client used by the api-key route to probe a CANDIDATE key for one
+ * provider — the selected one, even before Settings are saved. Must
+ * hit that provider's endpoint — validating an OpenRouter key
  * against the OpenAI endpoint would false-fail with a 401.
  */
-export async function createApiKeyValidationClient(apiKey: string): Promise<AiProviderClient> {
+export async function createApiKeyValidationClient(
+  apiKey: string,
+  provider?: AiProviderId,
+  baseUrl?: string,
+): Promise<AiProviderClient> {
+  const resolvedProvider = provider ?? (await resolveConfiguredProvider());
   return createDefaultAiProviderClient({
     apiKey,
     timeoutMs: 10_000,
-    baseUrl: await resolveAiProviderBaseUrl(),
+    baseUrl: resolveProviderEndpoint(resolvedProvider, baseUrl),
   });
 }

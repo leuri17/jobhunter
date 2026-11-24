@@ -10,13 +10,18 @@ single source of truth for `OperationalConfig` (search targets, OpenAI models,
 scraper timeouts, output limits, logging, and diagnostics toggles).
 
 Also owns the **secrets** surface, which is deliberately kept out of
-`OperationalConfig`: `secrets.ts` declares the `SecretsStore` port and the
-interim `FileSecretsStore` backend (`secrets.json` at mode `0600`, written
-atomically via temp file + rename), and `api-key.ts` holds
-`resolveOpenAiApiKey` — the single seam through which every consumer
-obtains the effective OpenAI key (stored value wins, `OPENAI_API_KEY` is the
-fallback). Because the key is not in the operational config, it never
-affects `hashOperationalConfig` and cannot appear in the config diff. See
+`OperationalConfig`: `secrets.ts` declares the `SecretsStore` port, the
+`Secrets` shape, and the interim `FileSecretsStore` backend
+(`secrets.json` at mode `0600`, written atomically via temp file + rename).
+Keys are stored **per provider** (#359) in `aiProviderApiKeys`; the
+earlier single slot (`aiProviderApiKey`, and before it `openaiApiKey`)
+still reads, and moves into the saved config's provider slot the first
+time that provider's key is resolved. `api-key.ts` holds
+`resolveAiProviderApiKey` / `resolveApiKeySource` — the single seam
+through which every consumer obtains the key for one provider (stored
+slot wins, `AI_PROVIDER_API_KEY` / `OPENAI_API_KEY` is the fallback).
+Because keys are not in the operational config, they never affect
+`hashOperationalConfig` and cannot appear in the config diff. See
 [#211](https://github.com/leuri17/jobhunter/issues/211) for the planned move
 to the OS keychain; `SecretsStore` is the seam that replacement targets.
 
@@ -81,12 +86,16 @@ throw removes the temp file and raises `config_write_failed` → returns
 
 - Public exports (`index.ts`): `FileSystem`, `createDefaultFileSystem`,
   `OperationalConfigSchema`, `DEFAULT_OPERATIONAL_CONFIG`, `OperationalConfig`,
-  `loadConfig`/`LoadedConfig`, and `updateConfig` with `ConfigPatch`,
-  `UpdateOptions`, `ConfigPreview`, `UpdateResult`. From the secrets
-  surface: `FileSecretsStore`, `KeychainSecretsStore`,
-  `SocketKeychainTransport`, `parseBridgeEnv`, `maskSecret`,
-  `resolveSecretsPath`, `resolveOpenAiApiKey`, `resolveApiKeySource`, and
-  their option/type surface. `hash.ts` is internal.
+  the provider catalog (`AI_PROVIDER_IDS`, `AI_PROVIDER_ENDPOINTS`,
+  `AI_PROVIDER_CHOICES`, `AI_PROVIDER_REASONING_EFFORT_IDS`,
+  `AiProviderIdSchema`) with `resolveAiProviderBaseUrl` /
+  `resolveProviderEndpoint`, `loadConfig`/`LoadedConfig`, and
+  `updateConfig` with `ConfigPatch`, `UpdateOptions`, `ConfigPreview`,
+  `UpdateResult`. From the secrets surface: `FileSecretsStore`,
+  `KeychainSecretsStore`, `SocketKeychainTransport`, `parseBridgeEnv`,
+  `maskSecret`, `resolveSecretsPath`, `resolveAiProviderApiKey`,
+  `resolveApiKeySource`, and their option/type surface. `hash.ts` is
+  internal.
 - `src/init/init-service.ts` imports `loadConfig`, `updateConfig`,
   `OperationalConfigSchema`, and the `FileSystem` type: it loads config during
   onboarding, materializes `config.json` via a no-op `updateConfig(paths, {},

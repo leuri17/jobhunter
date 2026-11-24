@@ -18,13 +18,21 @@ import {
   maskSecret,
   resolveApiKeySource,
   resolveSecretsPath,
+  AiProviderIdSchema,
+  type AiProviderId,
+  type Secrets,
 } from '@jobhunter/core/config';
 import { getSecretsBackend, type ResolvedSecretsBackend } from '../secrets-backend.js';
 import { sidecarFileSystem } from './fs-adapter.js';
-import { createApiKeyValidationClient } from './ai-provider-resolve.js';
+import { createApiKeyValidationClient, resolveConfiguredProvider } from './ai-provider-resolve.js';
 
 export interface ConfigRouteDeps {
-  readonly validateApiKey?: (apiKey: string) => Promise<void>;
+  /** Receives the candidate provider (+ its custom URL) so validation hits the right endpoint. */
+  readonly validateApiKey?: (
+    apiKey: string,
+    provider?: AiProviderId,
+    baseUrl?: string,
+  ) => Promise<void>;
   /**
    * Test/alternative seam for the resolved secrets backend. Defaults to
    * the process-wide memoized resolver.
@@ -32,11 +40,29 @@ export interface ConfigRouteDeps {
   readonly secretsBackend?: () => Promise<ResolvedSecretsBackend>;
 }
 
-const defaultValidateApiKey = async (apiKey: string): Promise<void> => {
-  // Probes the configured provider endpoint — an OpenRouter key must
+const defaultValidateApiKey = async (
+  apiKey: string,
+  provider?: AiProviderId,
+  baseUrl?: string,
+): Promise<void> => {
+  // Probes the candidate provider's endpoint — an OpenRouter key must
   // not be validated against the OpenAI endpoint (false 401s).
-  await (await createApiKeyValidationClient(apiKey)).validate();
+  await (await createApiKeyValidationClient(apiKey, provider, baseUrl)).validate();
 };
+
+/** Parse a provider id param: the id, `'invalid'`, or undefined when absent. */
+function parseProviderParam(raw: string | undefined): AiProviderId | 'invalid' | undefined {
+  if (raw === undefined || raw.length === 0) return undefined;
+  const parsed = AiProviderIdSchema.safeParse(raw);
+  return parsed.success ? parsed.data : 'invalid';
+}
+
+function invalidProviderReply(reply: FastifyReply, raw: string): unknown {
+  return reply.code(400).send({
+    schemaVersion: 1,
+    error: { code: 'invalid_provider', message: `Unknown provider id: ${raw}`, details: null },
+  });
+}
 
 const resolveBackend = (deps: ConfigRouteDeps): (() => Promise<ResolvedSecretsBackend>) =>
   deps.secretsBackend ?? getSecretsBackend;
@@ -117,70 +143,93 @@ export async function registerConfigRoutes(
     return { schemaVersion: 1, valid: true };
   });
 
-  app.get('/api/secrets/api-key', async () => {
+  app.get<{ Querystring: { provider?: string } }>('/api/secrets/api-key', async (req, reply) => {
     const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
+    const parsedProvider = parseProviderParam(req.query.provider);
+    if (parsedProvider === 'invalid') {
+      return invalidProviderReply(reply, req.query.provider ?? '');
+    }
+    const provider = parsedProvider ?? (await resolveConfiguredProvider());
     const resolved = await resolveBackend(deps)();
-    const [secrets, source] = await Promise.all([
-      resolved.store.read(),
-      resolveApiKeySource({
-        store: resolved.store,
-        env: process.env,
-      }),
-    ]);
+    // Resolve the source first: on a legacy install that is what moves the
+    // single-slot key into this provider's slot, so the read below sees it.
+    const source = await resolveApiKeySource({
+      store: resolved.store,
+      env: process.env,
+      provider,
+    });
+    const secrets = await resolved.store.read();
     return {
       schemaVersion: 1,
       configured: source !== 'none',
       source,
+      provider,
       // Masked only — the plaintext key is never returned over the wire.
-      masked: maskSecret(source === 'stored' ? secrets.aiProviderApiKey : undefined),
+      masked: maskSecret(source === 'stored' ? secrets.aiProviderApiKeys?.[provider] : undefined),
       ...backendFields(resolved),
       legacyFilePresent: await sidecarFileSystem.pathExists(resolveSecretsPath(paths)),
     };
   });
 
-  app.put<{ Body: { apiKey?: string; allowPlaintextFallback?: boolean } }>(
-    '/api/secrets/api-key',
-    async (req, reply) => {
-      const resolved = await resolveBackend(deps)();
-      const validateApiKey = deps.validateApiKey ?? defaultValidateApiKey;
-      const apiKey = req.body.apiKey?.trim() ?? '';
-      if (apiKey.length === 0) {
-        try {
-          await resolved.store.clear();
-        } catch (error) {
-          return backendUnavailable(reply, error);
-        }
-        return {
-          schemaVersion: 1,
-          status: 'validated',
-          configured: false,
-          source: 'none',
-          masked: '',
-          ...backendFields(resolved),
-        };
-      }
+  app.put<{
+    Body: {
+      apiKey?: string;
+      allowPlaintextFallback?: boolean;
+      provider?: string;
+      baseUrl?: string;
+    };
+    Querystring: { provider?: string };
+  }>('/api/secrets/api-key', async (req, reply) => {
+    const rawProvider = req.body.provider ?? req.query.provider;
+    const parsedProvider = parseProviderParam(rawProvider);
+    if (parsedProvider === 'invalid') {
+      return invalidProviderReply(reply, rawProvider ?? '');
+    }
+    const provider = parsedProvider ?? (await resolveConfiguredProvider());
+    const resolved = await resolveBackend(deps)();
+    const validateApiKey = deps.validateApiKey ?? defaultValidateApiKey;
+    const apiKey = req.body.apiKey?.trim() ?? '';
+    if (apiKey.length === 0) {
       try {
-        await validateApiKey(apiKey);
+        await removeProviderSlot(resolved.store, provider);
       } catch (error) {
-        // 401/503 are this route's own semantics; `statusFor` would map the
-        // typed error's CLI exit code instead.
-        const { httpStatus, code, message } = classifyKeyValidationFailure(error);
-        return reply.code(httpStatus).send({
-          schemaVersion: 1,
-          error: { code, message, details: null },
-        });
+        return backendUnavailable(reply, error);
       }
+      return {
+        schemaVersion: 1,
+        status: 'validated',
+        configured: false,
+        source: 'none',
+        provider,
+        masked: '',
+        ...backendFields(resolved),
+      };
+    }
+    try {
+      await validateApiKey(apiKey, provider, req.body.baseUrl);
+    } catch (error) {
+      // 401/503 are this route's own semantics; `statusFor` would map the
+      // typed error's CLI exit code instead.
+      const { httpStatus, code, message } = classifyKeyValidationFailure(error);
+      return reply.code(httpStatus).send({
+        schemaVersion: 1,
+        error: { code, message, details: null },
+      });
+    }
 
+    // Persist into the per-provider map, preserving other providers'
+    // keys. A `file` backend caused by an unreachable keychain only
+    // writes with the caller's explicit plaintext consent; the
+    // standalone (`bridge_not_configured`) file backend writes directly.
+    const persist = async (): Promise<void> => {
+      const current = await resolved.store.read();
+      const map = { ...(current.aiProviderApiKeys ?? {}), [provider]: apiKey };
+      await resolved.store.write({ aiProviderApiKeys: map });
+    };
+    try {
       if (resolved.backend === 'keychain') {
-        try {
-          await resolved.store.write({ aiProviderApiKey: apiKey });
-        } catch (error) {
-          return backendUnavailable(reply, error);
-        }
+        await persist();
       } else {
-        // A `file` backend caused by an unreachable keychain only writes
-        // with the caller's explicit plaintext consent; the standalone
-        // (`bridge_not_configured`) file backend writes directly.
         if (
           resolved.reason === 'keychain_unavailable' &&
           req.body.allowPlaintextFallback !== true
@@ -195,23 +244,31 @@ export async function registerConfigRoutes(
             },
           });
         }
-        await resolved.store.write({ aiProviderApiKey: apiKey });
+        await persist();
       }
-      return {
-        schemaVersion: 1,
-        status: 'validated',
-        configured: true,
-        source: 'stored',
-        masked: maskSecret(apiKey),
-        ...backendFields(resolved),
-      };
-    },
-  );
+    } catch (error) {
+      return backendUnavailable(reply, error);
+    }
+    return {
+      schemaVersion: 1,
+      status: 'validated',
+      configured: true,
+      source: 'stored',
+      provider,
+      masked: maskSecret(apiKey),
+      ...backendFields(resolved),
+    };
+  });
 
-  app.delete('/api/secrets/api-key', async (_req, reply) => {
+  app.delete<{ Querystring: { provider?: string } }>('/api/secrets/api-key', async (req, reply) => {
+    const parsedProvider = parseProviderParam(req.query.provider);
+    if (parsedProvider === 'invalid') {
+      return invalidProviderReply(reply, req.query.provider ?? '');
+    }
+    const provider = parsedProvider ?? (await resolveConfiguredProvider());
     const resolved = await resolveBackend(deps)();
     try {
-      await resolved.store.clear();
+      await removeProviderSlot(resolved.store, provider);
     } catch (error) {
       return backendUnavailable(reply, error);
     }
@@ -219,10 +276,35 @@ export async function registerConfigRoutes(
       schemaVersion: 1,
       configured: false,
       source: 'none',
+      provider,
       masked: '',
       ...backendFields(resolved),
     };
   });
+
+  /** Remove one provider's key slot; other providers' keys survive (#359). */
+  async function removeProviderSlot(
+    store: {
+      read(): Promise<Secrets>;
+      write(secrets: Secrets): Promise<void>;
+      clear(): Promise<void>;
+    },
+    provider: AiProviderId,
+  ): Promise<void> {
+    const current = await store.read();
+    const map = { ...(current.aiProviderApiKeys ?? {}) };
+    delete map[provider];
+    if (Object.keys(map).length === 0 && current.aiProviderApiKey === undefined) {
+      await store.clear();
+      return;
+    }
+    await store.write({
+      ...(current.aiProviderApiKey !== undefined
+        ? { aiProviderApiKey: current.aiProviderApiKey }
+        : {}),
+      ...(Object.keys(map).length > 0 ? { aiProviderApiKeys: map } : {}),
+    });
+  }
 
   /**
    * Move the legacy `secrets.json` key into the OS keychain. The file is
@@ -234,7 +316,12 @@ export async function registerConfigRoutes(
       paths: resolvePlatformPaths(createDefaultPlatformAdapter()),
     });
     const legacySecrets = await legacy.read();
-    if (legacySecrets.aiProviderApiKey === undefined) {
+    const configProvider = await resolveConfiguredProvider();
+    const legacyMap: Record<string, string> = { ...(legacySecrets.aiProviderApiKeys ?? {}) };
+    if (legacySecrets.aiProviderApiKey !== undefined) {
+      legacyMap[configProvider] ??= legacySecrets.aiProviderApiKey;
+    }
+    if (Object.keys(legacyMap).length === 0) {
       return { schemaVersion: 1, migrated: false, reason: 'nothing_to_migrate' };
     }
 
@@ -255,7 +342,12 @@ export async function registerConfigRoutes(
 
     try {
       const existing = await resolved.store.read();
-      if (existing.aiProviderApiKey !== undefined) {
+      // A legacy single-slot keychain key resolves for the config's
+      // provider too, so either shape counts as "already occupied".
+      const occupied =
+        existing.aiProviderApiKeys?.[configProvider] !== undefined ||
+        existing.aiProviderApiKey !== undefined;
+      if (occupied) {
         return reply.code(409).send({
           schemaVersion: 1,
           error: {
@@ -266,9 +358,10 @@ export async function registerConfigRoutes(
           },
         });
       }
-      await resolved.store.write({ aiProviderApiKey: legacySecrets.aiProviderApiKey });
+      const merged = { ...(existing.aiProviderApiKeys ?? {}), ...legacyMap };
+      await resolved.store.write({ aiProviderApiKeys: merged });
       const verified = await resolved.store.read();
-      if (verified.aiProviderApiKey !== legacySecrets.aiProviderApiKey) {
+      if (verified.aiProviderApiKeys?.[configProvider] !== legacyMap[configProvider]) {
         return reply.code(500).send({
           schemaVersion: 1,
           error: {
@@ -289,7 +382,7 @@ export async function registerConfigRoutes(
       migrated: true,
       source: 'stored',
       backend: 'keychain',
-      masked: maskSecret(legacySecrets.aiProviderApiKey),
+      masked: maskSecret(legacyMap[configProvider]),
     };
   });
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { PageHeader, PageHeaderTitle } from '@/components/shared/layout/page-header';
 import { SectionDivider } from '@/components/shared/features/settings/search-config/section';
+import { savedProviderApiKeyQueryOptions } from '@/components/shared/features/settings/ai-provider/api-key-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -111,7 +112,7 @@ function ProfileEditor({ workingCopy }: { workingCopy: EditableWorkingCopy }) {
     queryKey: ['profile', versionKey],
     queryFn: () => api.getProfile(versionKey),
   });
-  const apiKey = useQuery({ queryKey: ['api-key'], queryFn: api.getApiKeyStatus });
+  const apiKey = useQuery(savedProviderApiKeyQueryOptions());
 
   const form = useProfileForm({
     defaultValues: detail.data.profile,
@@ -368,7 +369,7 @@ function ProfileFirstRun({ profiles }: { profiles: readonly ProfileListEntry[] }
   const addSourceRef = useRef<(() => void) | null>(null);
 
   const sources = useQuery({ queryKey: ['profile-sources'], queryFn: api.listSources });
-  const apiKey = useQuery({ queryKey: ['api-key'], queryFn: api.getApiKeyStatus });
+  const apiKey = useQuery(savedProviderApiKeyQueryOptions());
 
   const extract = useMutation({
     mutationFn: () => api.extractProfile(),

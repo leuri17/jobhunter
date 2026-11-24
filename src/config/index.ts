@@ -20,8 +20,10 @@ export {
   AI_PROVIDER_IDS,
   AI_PROVIDER_ENDPOINTS,
   AI_PROVIDER_CHOICES,
+  AI_PROVIDER_REASONING_EFFORT_IDS,
   AiProviderIdSchema,
   resolveAiProviderBaseUrl,
+  resolveProviderEndpoint,
   type AiProviderId,
   type KnownAiProviderId,
 } from './schema.js';

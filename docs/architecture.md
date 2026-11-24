@@ -193,14 +193,23 @@ The UI exposes a configuration view backed by the sidecar's
 
 ## Secrets and the API key
 
-The AI-provider key is the one credential the app persists, and it lives
-in the OS keychain — the macOS Keychain, Windows Credential Manager,
+AI-provider keys are the one kind of credential the app persists, and
+they live in the OS keychain — the macOS Keychain, Windows Credential Manager,
 or the Linux Secret Service — behind the `SecretsStore` interface
 (`src/config/secrets.ts`). The Tauri shell owns all keychain access
 through the `keyring` crate and serves `get`/`set`/`delete` to the
 Node sidecar over a token-authenticated loopback bridge
 (`desktop/tauri/src/secrets.rs`); the webview never talks to it, and
 the token is regenerated per launch.
+
+Keys are stored **one per provider** (#359). Each provider has its own
+endpoint and its own key, so Settings keeps a key per provider and
+switching providers switches which key is used — a provider's key is
+never sent to another provider's endpoint, and switching back finds the
+earlier key still there. An installation that predates this kept a
+single key: the first time a key is resolved, that legacy key moves
+into the slot of the provider the saved config selects (it was working
+against that endpoint), and later resolutions find it there.
 
 At boot the sidecar resolves its backend once and logs it
 (`secrets.backend.resolved`). Without the bridge env (standalone dev
@@ -213,10 +222,11 @@ in the old file format is offered an explicit migration to the
 keychain; the file is deleted only after the migrated key is written
 and read back matching.
 
-Precedence is unchanged from #207: a stored key beats
-`OPENAI_API_KEY`, and an unreadable store falls through to the
-environment (`resolveOpenAiApiKey` in `src/config/api-key.ts` is the
-single seam).
+Precedence is unchanged from #207, applied per provider: the provider's
+stored key beats `AI_PROVIDER_API_KEY` / `OPENAI_API_KEY`, and an
+unreadable store falls through to the environment
+(`resolveAiProviderApiKey` in `src/config/api-key.ts` is the single
+seam).
 
 ## Reliability invariants
 

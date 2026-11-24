@@ -44,6 +44,83 @@ describe('api', () => {
     await expect(api.health()).rejects.toBeInstanceOf(ApiError);
   });
 
+  describe('provider-scoped calls (#359)', () => {
+    function lastCall(): [string, RequestInit] {
+      return (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+    }
+
+    function respond(body: unknown): void {
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        new Response(JSON.stringify(body), { status: 200 }),
+      );
+    }
+
+    it('api.getApiKeyStatus asks for one provider', async () => {
+      respond({ schemaVersion: 1, configured: false, source: 'none', provider: 'groq' });
+      await api.getApiKeyStatus('groq');
+      expect(lastCall()[0]).toMatch(/[?&]provider=groq(&|$)/);
+    });
+
+    it('api.getApiKeyStatus without a provider leaves the choice to the saved config', async () => {
+      respond({ schemaVersion: 1, configured: false, source: 'none', provider: 'openrouter' });
+      await api.getApiKeyStatus();
+      const url = lastCall()[0];
+      expect(url).toMatch(/\/api\/secrets\/api-key$/);
+      expect(url).not.toMatch(/provider=/);
+    });
+
+    it('api.setApiKey sends the provider with the key', async () => {
+      respond({ schemaVersion: 1, status: 'validated', configured: true, provider: 'groq' });
+      await api.setApiKey('sk-test-1', { provider: 'groq' });
+      const [url, init] = lastCall();
+      expect(url).toMatch(/\/api\/secrets\/api-key$/);
+      expect(JSON.parse(init.body as string)).toEqual({ apiKey: 'sk-test-1', provider: 'groq' });
+    });
+
+    it('api.setApiKey includes the custom base URL and the plaintext flag only when given', async () => {
+      respond({ schemaVersion: 1, status: 'validated', configured: true, provider: 'custom' });
+      await api.setApiKey('sk-test-1', {
+        provider: 'custom',
+        baseUrl: 'https://compat-proxy.example/v1',
+        allowPlaintextFallback: true,
+      });
+      const [, init] = lastCall();
+      expect(JSON.parse(init.body as string)).toEqual({
+        apiKey: 'sk-test-1',
+        provider: 'custom',
+        baseUrl: 'https://compat-proxy.example/v1',
+        allowPlaintextFallback: true,
+      });
+    });
+
+    it('api.clearApiKey removes one provider', async () => {
+      respond({ schemaVersion: 1, configured: false, source: 'none', provider: 'openai' });
+      await api.clearApiKey('openai');
+      const [url, init] = lastCall();
+      expect(url).toMatch(/[?&]provider=openai(&|$)/);
+      expect(init.method).toBe('DELETE');
+    });
+
+    it('api.listAiProviderModels asks for the selected provider', async () => {
+      respond({ schemaVersion: 1, configured: true, models: ['m'] });
+      await api.listAiProviderModels({ provider: 'groq' });
+      const [url] = lastCall();
+      expect(url).toMatch(/\/api\/ai-provider\/models\?provider=groq$/);
+    });
+
+    it('api.listAiProviderModels encodes a custom base URL', async () => {
+      respond({ schemaVersion: 1, configured: true, models: ['m'] });
+      await api.listAiProviderModels({
+        provider: 'custom',
+        baseUrl: 'https://compat-proxy.example/v1',
+      });
+      const [url] = lastCall();
+      expect(url).toMatch(
+        /\/api\/ai-provider\/models\?provider=custom&baseUrl=https%3A%2F%2Fcompat-proxy\.example%2Fv1$/,
+      );
+    });
+  });
+
   it('api.runPipeline posts the confirmation option as JSON', async () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       new Response(JSON.stringify({ schemaVersion: 1, runId: 'run-1' }), { status: 202 }),

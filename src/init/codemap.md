@@ -29,11 +29,11 @@ failed | not_started`. The orchestrator classifies first, then runs only
   (`askResume`, `askSourcePaths`, `askEditHandoff`, `confirmSummary`); the
   sidecar wires production adapters, tests inject `ScriptedInitPrompts` or
   `createFailingInitPrompts`.
-- **OpenAI resolution** — `ai-provider-resolve.ts` exports `resolveOpenAiClientOrNull`
-  and `emptySecretsStore`; the boundary helper resolves the key via
-  `resolveOpenAiApiKey`/`resolveApiKeySource` with store precedence (a stored
-  secret wins over `OPENAI_API_KEY` from `process.env`); absence is
-  treated as skip-not-fail.
+- **AI provider resolution** — `ai-provider-resolve.ts` exports `resolveAiProviderClientOrNull`
+  and `emptySecretsStore`; the boundary helper resolves the key for one
+  provider (the `provider` argument, `openrouter` when omitted) via
+  `resolveAiProviderApiKey` with store precedence (a stored secret wins
+  over the environment); absence is treated as skip-not-fail.
 - **Logging seam** — `InitLogger` (`log.ts`) with `stepStart/Complete/Fail/Skip`
   events; production wraps `pinoInitLogger`, tests use `noopInitLogger`.
 - **Typed errors** — `errors.ts` subclasses `InitLifecycleError` (extends

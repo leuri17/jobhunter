@@ -10,6 +10,8 @@ export const SECRETS_FILENAME = 'secrets.json';
 const AI_PROVIDER_API_KEY = 'aiProviderApiKey';
 /** Pre-rename slot name; read for one release so stored keys survive (#340). */
 const LEGACY_OPENAI_API_KEY = 'openaiApiKey';
+/** Per-provider key map (#359); replaces the single-slot key over time. */
+const AI_PROVIDER_API_KEYS = 'aiProviderApiKeys';
 
 /**
  * Read/write access to secrets that must not live in the operational
@@ -24,6 +26,8 @@ export interface SecretsStore {
 
 export interface Secrets {
   readonly aiProviderApiKey?: string;
+  /** One key per provider id; the single-slot key migrates into it (#359). */
+  readonly aiProviderApiKeys?: Readonly<Record<string, string>>;
 }
 
 export interface FileSecretsStoreOptions {
@@ -33,6 +37,15 @@ export interface FileSecretsStoreOptions {
 
 export function resolveSecretsPath(paths: PlatformPaths): string {
   return paths.config.file(SECRETS_FILENAME);
+}
+
+/** Keeps only non-empty string entries; returns undefined when none survive. */
+function sanitizeKeyMap(raw: unknown): Readonly<Record<string, string>> | undefined {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return undefined;
+  const entries = Object.entries(raw as Record<string, unknown>).filter(
+    (entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0,
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 /**
@@ -76,18 +89,26 @@ export class FileSecretsStore implements SecretsStore {
 
     if (typeof parsed !== 'object' || parsed === null) return {};
     const record = parsed as Record<string, unknown>;
-    const value =
+    const single =
       record[AI_PROVIDER_API_KEY] !== undefined
         ? record[AI_PROVIDER_API_KEY]
         : record[LEGACY_OPENAI_API_KEY];
-    return typeof value === 'string' && value.length > 0 ? { aiProviderApiKey: value } : {};
+    const map = sanitizeKeyMap(record[AI_PROVIDER_API_KEYS]);
+    return {
+      ...(typeof single === 'string' && single.length > 0 ? { aiProviderApiKey: single } : {}),
+      ...(map !== undefined ? { aiProviderApiKeys: map } : {}),
+    };
   }
 
   async write(secrets: Secrets): Promise<void> {
-    const payload =
-      secrets.aiProviderApiKey === undefined
-        ? {}
-        : { [AI_PROVIDER_API_KEY]: secrets.aiProviderApiKey };
+    const payload: Record<string, unknown> = {
+      ...(secrets.aiProviderApiKey !== undefined
+        ? { [AI_PROVIDER_API_KEY]: secrets.aiProviderApiKey }
+        : {}),
+      ...(secrets.aiProviderApiKeys !== undefined
+        ? { [AI_PROVIDER_API_KEYS]: secrets.aiProviderApiKeys }
+        : {}),
+    };
     const text = `${JSON.stringify(payload, null, 2)}\n`;
     const tempPath = `${this.path}.${randomUUID()}.tmp`;
 
