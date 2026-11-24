@@ -3,24 +3,31 @@ import {
   type DefaultAiProviderClientRefusalOptions,
   type AiProviderClient,
 } from '@jobhunter/core/profile';
-import { loadConfig, resolveAiProviderApiKey, type SecretsStore } from '@jobhunter/core/config';
+import {
+  loadConfig,
+  resolveAiProviderApiKey,
+  resolveAiProviderBaseUrl as resolveConfiguredProviderBaseUrl,
+  type SecretsStore,
+} from '@jobhunter/core/config';
 import type { PlatformPaths } from '@jobhunter/core/platform';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { getSecretsBackend } from '../secrets-backend.js';
 import { sidecarFileSystem } from './fs-adapter.js';
 
 /**
- * Resolve the configured provider endpoint (`aiProvider.baseUrl`).
- * Reads the operational config; a missing file falls back to the
- * default (OpenRouter for fresh installs, the OpenAI endpoint for
- * legacy `openai`-section files via the load-time transform).
+ * Resolve the configured provider endpoint. Reads the operational
+ * config and maps the `aiProvider.provider` enum onto its catalog
+ * entry (or the explicit `baseUrl` for `custom` providers); a
+ * missing file falls back to the default (OpenRouter for fresh
+ * installs, `openai` for legacy `openai`-section files via the
+ * load-time transform).
  */
 export async function resolveAiProviderBaseUrl(paths?: PlatformPaths): Promise<string> {
   const loaded = await loadConfig(
     paths ?? resolvePlatformPaths(createDefaultPlatformAdapter()),
     sidecarFileSystem,
   );
-  return loaded.config.aiProvider.baseUrl;
+  return resolveConfiguredProviderBaseUrl(loaded.config.aiProvider);
 }
 
 export async function resolveAiProviderClientOrNull(

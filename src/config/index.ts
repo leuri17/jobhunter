@@ -17,6 +17,16 @@ export {
 } from './schema.js';
 
 export {
+  AI_PROVIDER_IDS,
+  AI_PROVIDER_ENDPOINTS,
+  AI_PROVIDER_CHOICES,
+  AiProviderIdSchema,
+  resolveAiProviderBaseUrl,
+  type AiProviderId,
+  type KnownAiProviderId,
+} from './schema.js';
+
+export {
   REASONING_EFFORT_CHOICES,
   REASONING_EFFORT_VALUES,
   ReasoningEffortSchema,

@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  AI_PROVIDER_CHOICES,
+  AI_PROVIDER_ENDPOINTS,
+  AI_PROVIDER_IDS,
   DEFAULT_OPERATIONAL_CONFIG,
   OperationalConfigFileSchema,
   OperationalConfigSchema,
+  resolveAiProviderBaseUrl,
   type OperationalConfig,
 } from '../../src/config/schema.js';
 
@@ -152,20 +156,21 @@ describe('OperationalConfigSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('defaults aiProvider.baseUrl to the OpenAI endpoint for legacy configs missing the key', () => {
-    const { baseUrl: _omit, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
+  it('maps legacy configs missing provider and baseUrl to the OpenAI provider', () => {
+    const { provider: _drop, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
     const result = OperationalConfigFileSchema.safeParse({
       ...DEFAULT_OPERATIONAL_CONFIG,
       aiProvider: legacyAiProvider,
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.aiProvider.baseUrl).toBe('https://api.openai.com/v1');
+      expect(result.data.aiProvider.provider).toBe('openai');
+      expect('baseUrl' in result.data.aiProvider).toBe(false);
     }
   });
 
-  it('keeps the canonical schema strict: missing aiProvider.baseUrl is a validation error', () => {
-    const { baseUrl: _omit, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
+  it('keeps the canonical schema strict: missing aiProvider.provider is a validation error', () => {
+    const { provider: _omit, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
     const result = OperationalConfigSchema.safeParse({
       ...DEFAULT_OPERATIONAL_CONFIG,
       aiProvider: legacyAiProvider,
@@ -174,15 +179,15 @@ describe('OperationalConfigSchema', () => {
   });
 
   it('renames a legacy openai section to aiProvider at load time', () => {
-    const { baseUrl: _omit, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
-    const { aiProvider: _drop, ...rest } = DEFAULT_OPERATIONAL_CONFIG;
+    const { provider: _drop, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
+    const { aiProvider: _drop2, ...rest } = DEFAULT_OPERATIONAL_CONFIG;
     const result = OperationalConfigFileSchema.safeParse({
       ...rest,
       openai: legacyAiProvider,
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.aiProvider.baseUrl).toBe('https://api.openai.com/v1');
+      expect(result.data.aiProvider.provider).toBe('openai');
       expect(result.data.aiProvider.jobScoring.concurrency).toBe(
         DEFAULT_OPERATIONAL_CONFIG.aiProvider.jobScoring.concurrency,
       );
@@ -198,10 +203,124 @@ describe('OperationalConfigSchema', () => {
   });
 
   it('defaults a fresh install to OpenRouter with qualified model ids', () => {
-    expect(DEFAULT_OPERATIONAL_CONFIG.aiProvider.baseUrl).toBe('https://openrouter.ai/api/v1');
+    expect(DEFAULT_OPERATIONAL_CONFIG.aiProvider.provider).toBe('openrouter');
+    expect('baseUrl' in DEFAULT_OPERATIONAL_CONFIG.aiProvider).toBe(false);
     expect(DEFAULT_OPERATIONAL_CONFIG.aiProvider.profileExtraction.model).toBe(
       'openai/gpt-5.6-sol',
     );
     expect(DEFAULT_OPERATIONAL_CONFIG.aiProvider.jobScoring.model).toBe('openai/gpt-5.6-sol');
+  });
+
+  it('rejects baseUrl alongside a known provider', () => {
+    const result = OperationalConfigSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      aiProvider: {
+        ...DEFAULT_OPERATIONAL_CONFIG.aiProvider,
+        baseUrl: 'https://openrouter.ai/api/v1',
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts custom with a valid baseUrl', () => {
+    const result = OperationalConfigSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      aiProvider: {
+        ...DEFAULT_OPERATIONAL_CONFIG.aiProvider,
+        provider: 'custom',
+        baseUrl: 'https://compat-proxy.example/v1',
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects custom without a baseUrl', () => {
+    const result = OperationalConfigSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      aiProvider: { ...DEFAULT_OPERATIONAL_CONFIG.aiProvider, provider: 'custom' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects an unknown provider id', () => {
+    const result = OperationalConfigSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      aiProvider: { ...DEFAULT_OPERATIONAL_CONFIG.aiProvider, provider: 'anthropic' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('infers the provider from a known baseUrl in legacy config files', () => {
+    const { provider: _drop, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
+    const result = OperationalConfigFileSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      aiProvider: { ...legacyAiProvider, baseUrl: 'https://openrouter.ai/api/v1' },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.aiProvider.provider).toBe('openrouter');
+      expect('baseUrl' in result.data.aiProvider).toBe(false);
+    }
+  });
+
+  it('keeps an unknown baseUrl as a custom provider in legacy config files', () => {
+    const { provider: _drop, ...legacyAiProvider } = DEFAULT_OPERATIONAL_CONFIG.aiProvider;
+    const result = OperationalConfigFileSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      aiProvider: { ...legacyAiProvider, baseUrl: 'https://compat-proxy.example/v1' },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.aiProvider.provider).toBe('custom');
+      expect(result.data.aiProvider.baseUrl).toBe('https://compat-proxy.example/v1');
+    }
+  });
+
+  it('lets an explicit provider win over a stale baseUrl in config files', () => {
+    const result = OperationalConfigFileSchema.safeParse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      aiProvider: {
+        ...DEFAULT_OPERATIONAL_CONFIG.aiProvider,
+        baseUrl: 'https://openrouter.ai/api/v1',
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.aiProvider.provider).toBe('openrouter');
+      expect('baseUrl' in result.data.aiProvider).toBe(false);
+    }
+  });
+});
+
+describe('resolveAiProviderBaseUrl', () => {
+  it('returns the catalog endpoint for each known provider', () => {
+    for (const [id, baseUrl] of Object.entries(AI_PROVIDER_ENDPOINTS)) {
+      const result = OperationalConfigSchema.safeParse({
+        ...DEFAULT_OPERATIONAL_CONFIG,
+        aiProvider: { ...DEFAULT_OPERATIONAL_CONFIG.aiProvider, provider: id },
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(resolveAiProviderBaseUrl(result.data.aiProvider)).toBe(baseUrl);
+      }
+    }
+  });
+
+  it('returns the configured URL for a custom provider', () => {
+    const parsed = OperationalConfigSchema.parse({
+      ...DEFAULT_OPERATIONAL_CONFIG,
+      aiProvider: {
+        ...DEFAULT_OPERATIONAL_CONFIG.aiProvider,
+        provider: 'custom',
+        baseUrl: 'https://compat-proxy.example/v1',
+      },
+    });
+    expect(resolveAiProviderBaseUrl(parsed.aiProvider)).toBe('https://compat-proxy.example/v1');
+  });
+});
+
+describe('AI_PROVIDER_CHOICES', () => {
+  it('covers every provider id exactly once', () => {
+    expect(AI_PROVIDER_CHOICES.map((choice) => choice.value)).toEqual([...AI_PROVIDER_IDS]);
   });
 });
