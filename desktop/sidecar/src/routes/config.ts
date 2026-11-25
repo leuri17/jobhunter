@@ -7,7 +7,7 @@ import {
   type UpdateOptions,
 } from '@jobhunter/core/config';
 import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
-import { ApplicationError, ValidationError } from '@jobhunter/core/errors';
+import { ApplicationError, UnknownConfigError, ValidationError } from '@jobhunter/core/errors';
 import {
   AiProviderAuthenticationError,
   AiProviderBillingError,
@@ -114,6 +114,47 @@ export function classifyKeyValidationFailure(error: unknown): {
   };
 }
 
+const CONFIG_KEYS: ReadonlySet<string> = new Set(Object.keys(OperationalConfigSchema.shape));
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Narrow a request body to the patch `updateConfig` accepts. Screens the
+ * keys only: an object under `patch`, no key outside the config's top-level
+ * keys, and `version` equal to `1` when it is sent. Section values are left
+ * to `updateConfig`, which validates them.
+ */
+function parseConfigPatch(body: unknown): ConfigPatch {
+  const patch = isPlainObject(body) ? body.patch : undefined;
+  if (!isPlainObject(patch)) {
+    throw new ValidationError('zod_failed', 'Configuration patch request failed validation.', {
+      issues: [{ path: ['patch'], message: 'Expected an object.' }],
+    });
+  }
+
+  const unknownKeys = Object.keys(patch).filter((key) => !CONFIG_KEYS.has(key));
+  if (unknownKeys.length > 0) {
+    throw new UnknownConfigError(
+      'unknown_keys',
+      `Unknown configuration keys: ${unknownKeys.join(', ')}`,
+      {
+        keys: [...unknownKeys],
+        issues: unknownKeys.map((key) => ({ path: [key], message: 'Unknown configuration key.' })),
+      },
+    );
+  }
+
+  if (patch.version !== undefined && patch.version !== 1) {
+    throw new ValidationError('zod_failed', 'Configuration patch request failed validation.', {
+      issues: [{ path: ['version'], message: 'Expected 1.' }],
+    });
+  }
+
+  return patch as ConfigPatch;
+}
+
 export async function registerConfigRoutes(
   app: FastifyInstance,
   deps: ConfigRouteDeps = {},
@@ -124,10 +165,11 @@ export async function registerConfigRoutes(
     return { schemaVersion: 1, config: loaded.config };
   });
 
-  app.patch<{ Body: { patch: ConfigPatch } }>('/api/config', async (req) => {
+  app.patch<{ Body: unknown }>('/api/config', async (req) => {
     const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
     const options: UpdateOptions = { confirm: async () => true };
-    const result = await updateConfig(paths, req.body.patch, options, sidecarFileSystem);
+    const patch = parseConfigPatch(req.body);
+    const result = await updateConfig(paths, patch, options, sidecarFileSystem);
     return { schemaVersion: 1, config: result.config };
   });
 

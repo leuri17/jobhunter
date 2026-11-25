@@ -8,9 +8,12 @@ import { OperationalConfigSchema, type OperationalConfig } from './schema.js';
 import { ConfigError, ValidationError } from '../errors/application-error.js';
 
 /**
- * Section replacements, keyed by their `OperationalConfig` section name. The
- * Settings form submits its whole value as the patch, so a key that does not
- * match a config section is dropped without an error.
+ * Section replacements, keyed by their `OperationalConfig` section name.
+ * `updateConfig` copies these six sections onto the saved config and reads
+ * no other key of the patch. The Settings form submits its whole value,
+ * `version` included, so the sidecar's `PATCH /api/config` route screens
+ * the keys and rejects unknown ones with `unknown_keys` before calling
+ * `updateConfig`.
  */
 export interface ConfigPatch {
   readonly search?: OperationalConfig['search'];

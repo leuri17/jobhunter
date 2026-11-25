@@ -94,8 +94,17 @@ edit_via_http_not_supported` (interactive TUI prompts are out-of-band
 - **Runs**: `runsListHandler` (limit default 20) and `runsShowHandler`
   wrap `RunsListService` / `RunsShowService`.
 - **Config**: `configGetHandler` loads via `loadConfig(paths,
-sidecarFileSystem)`; `configPatchHandler` applies `ConfigPatch` through
-  `updateConfig` with an auto-confirming `options.confirm`; `configValidateHandler`
+sidecarFileSystem)`; `configPatchHandler` screens the request body before
+  touching the config (#370): a body that is not an object, or whose `patch`
+  is missing or not an object, answers `400 zod_failed` with the issue path
+  `patch`; a `version` other than `1` answers the same with the path
+  `version`; a key of `patch` that is not a key of
+  `OperationalConfigSchema.shape` answers `400 unknown_keys` with `keys` and
+  one `issues` entry per key (paths relative to the config). Nothing is
+  saved in any of these cases. A valid request is applied as `ConfigPatch`
+  through `updateConfig` with an auto-confirming `options.confirm`, which
+  still validates the section values; `version` is accepted and left alone
+  because the Settings form submits the whole config. `configValidateHandler`
   re-parses with `OperationalConfigSchema.safeParse`, throwing
   `ValidationError` on failure. The secrets api-key surface is scoped to
   one provider (#359): GET/PUT/DELETE take `provider` (query; PUT also
