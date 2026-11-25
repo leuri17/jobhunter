@@ -38,6 +38,7 @@ import type { ScoreOneInput } from '../scoring/service.js';
 import type { ScoringOutcome, ScoringPlan } from '../scoring/state.js';
 import type { BuildScoringPlanInput } from '../scoring/plan.js';
 import type { ScoreResultRow } from '../persistence/repositories/score-results.js';
+import type { OperationalConfig } from '../config/schema.js';
 import { ApplicationError } from '../errors/index.js';
 import { PipelinePrerequisiteError } from '../pipeline/errors.js';
 import type { PipelinePrompts } from '../pipeline/prompts.js';
@@ -54,19 +55,6 @@ import { computeFilterFingerprintForJob, computeScoreFingerprintForJob } from '.
 import { ReevaluationValidationError } from './errors.js';
 import { noopReevaluationLogger, type ReevaluationLogger } from './log.js';
 import { formatError } from '../logging/format-error.js';
-
-/**
- * The model + reasoning-effort strings used by the scoring fingerprint
- * These match the MVP defaults from
- * `DEFAULT_OPERATIONAL_CONFIG.aiProvider.jobScoring`. The service does
- * NOT take a `ScoringService` dependency on the model/reasoning
- * settings — the reevaluation fingerprint must stay byte-for-byte
- * compatible with the score fingerprint the pipeline produces. A
- * future task can plumb the active `OperationalConfig` through if the
- * model parameters become user-configurable.
- */
-const REEVALUATION_SCORING_MODEL = 'gpt-5.6-sol';
-const REEVALUATION_SCORING_REASONING_EFFORT = 'medium';
 
 /**
  * The minimum surface the reevaluation service needs from the
@@ -96,6 +84,18 @@ export interface ReevaluationServiceOptions {
   readonly scoringService: ReevaluationScoringService;
   readonly prompts: PipelinePrompts;
   readonly scoringConcurrency: number;
+  /**
+   * Model + reasoning effort hashed into the score fingerprint the
+   * freshness probe compares against the stored one. Pass the pair the
+   * pipeline scored with — the saved config's
+   * `aiProvider.jobScoring` — and the same pair `scoringService` was
+   * built with: any other pair makes a current score look stale, so
+   * the job is scored again (#373).
+   */
+  readonly jobScoring: Pick<
+    OperationalConfig['aiProvider']['jobScoring'],
+    'model' | 'reasoningEffort'
+  >;
   readonly now?: () => Date;
   readonly logger?: ReevaluationLogger;
 }
@@ -139,6 +139,10 @@ export class ReevaluationService {
   private readonly scoringService: ReevaluationScoringService;
   private readonly prompts: PipelinePrompts;
   private readonly scoringConcurrency: number;
+  private readonly jobScoring: Pick<
+    OperationalConfig['aiProvider']['jobScoring'],
+    'model' | 'reasoningEffort'
+  >;
   private readonly now: () => Date;
   private readonly logger: ReevaluationLogger;
 
@@ -148,6 +152,7 @@ export class ReevaluationService {
     this.scoringService = options.scoringService;
     this.prompts = options.prompts;
     this.scoringConcurrency = options.scoringConcurrency;
+    this.jobScoring = options.jobScoring;
     this.now = options.now ?? ((): Date => new Date());
     this.logger = options.logger ?? noopReevaluationLogger();
   }
@@ -371,8 +376,8 @@ export class ReevaluationService {
                   profileRow.id,
                   profileRow.contentHash,
                   {},
-                  REEVALUATION_SCORING_MODEL,
-                  REEVALUATION_SCORING_REASONING_EFFORT,
+                  this.jobScoring.model,
+                  this.jobScoring.reasoningEffort,
                 ),
               },
             ];

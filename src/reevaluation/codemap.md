@@ -81,8 +81,12 @@ single orchestrator:
 ## Integration
 
 - **Host integration** — the sidecar's reevaluation HTTP route parses scope flags
-  and `jobId` from the request, then calls `ReevaluationService.execute`. Tests
-  invoke the same orchestrator directly.
+  and `jobId` from the request, then calls `ReevaluationService.execute`.
+  The host must supply the required `jobScoring` option (model +
+  reasoning effort) with the saved config's `aiProvider.jobScoring` — the
+  pair the pipeline scored with — because the freshness probe hashes it
+  into the score fingerprint; any other pair makes every stored score
+  look stale (issue #373). Tests invoke the same orchestrator directly.
 - **Consumes**:
   - `src/filter/service.js` — `FilterApplyService.apply`;
     `src/filter/{fingerprint,schema,version,content-hash}.js` for the

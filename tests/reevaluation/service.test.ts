@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { DEFAULT_OPERATIONAL_CONFIG } from '../../src/config/index.js';
 import {
   createDatabaseConnection,
   type DatabaseConnection,
@@ -13,8 +14,14 @@ import { createRepositories, type Repositories } from '../../src/persistence/rep
 import { ScriptedPipelinePrompts } from '../../src/pipeline/prompts.js';
 import { PipelinePrerequisiteError } from '../../src/pipeline/errors.js';
 import { ReevaluationValidationError } from '../../src/reevaluation/errors.js';
-import { ReevaluationService } from '../../src/reevaluation/service.js';
-import { computeFilterFingerprintForJob } from '../../src/reevaluation/fingerprint.js';
+import {
+  ReevaluationService,
+  type ReevaluationServiceOptions,
+} from '../../src/reevaluation/service.js';
+import {
+  computeFilterFingerprintForJob,
+  computeScoreFingerprintForJob,
+} from '../../src/reevaluation/fingerprint.js';
 
 import {
   insertActiveFilterForReeval,
@@ -103,6 +110,7 @@ describe('ReevaluationService', () => {
   function makeService(
     options: {
       prompts?: ScriptedPipelinePrompts;
+      jobScoring?: ReevaluationServiceOptions['jobScoring'];
     } = {},
   ): ReevaluationService {
     return new ReevaluationService({
@@ -111,6 +119,7 @@ describe('ReevaluationService', () => {
       scoringService: fakeScoring.asService(),
       prompts: options.prompts ?? new ScriptedPipelinePrompts([]),
       scoringConcurrency: 1,
+      jobScoring: options.jobScoring ?? DEFAULT_OPERATIONAL_CONFIG.aiProvider.jobScoring,
     });
   }
 
@@ -127,6 +136,60 @@ describe('ReevaluationService', () => {
     if (cfg === null) throw new Error('no active filter config');
     const prof = await repositories.profileVersions.findActiveApproved();
     return computeFilterFingerprintForJob(jobRow, cfg.configJson, prof?.profileJson ?? null);
+  }
+
+  /**
+   * Leave the job exactly as a pipeline run would: a fresh accepted
+   * filter result plus an active score whose fingerprint comes from
+   * the formula `ScoringService.scoreOne` hashes, with the model +
+   * reasoning effort that run was configured with (#373). Returns the
+   * job's id.
+   */
+  async function insertJobScoredWith(
+    jobScoring: ReevaluationServiceOptions['jobScoring'],
+  ): Promise<number> {
+    const jobId = await insertCompleteJobForReeval(
+      repositories,
+      '111',
+      pipelineRunId,
+      searchExecutionId,
+    );
+    const filterResultId = await insertActiveFilterResultForReeval(repositories, {
+      jobId,
+      fingerprint: await computeFilterFpForJob(jobId),
+      overallOutcome: 'accepted',
+      filterConfigVersionId: filterConfigId,
+      profileVersionId,
+    });
+    const jobRow = await repositories.jobs.findById(jobId);
+    if (jobRow === null) throw new Error(`job ${jobId} not found`);
+    const profileRow = await repositories.profileVersions.findActiveApproved();
+    if (profileRow === null) throw new Error('no active approved profile');
+
+    await repositories.scoreResults.activateResult({
+      jobId,
+      pipelineRunId,
+      filterResultId,
+      fingerprint: computeScoreFingerprintForJob(
+        jobRow,
+        profileRow.id,
+        profileRow.contentHash,
+        {},
+        jobScoring.model,
+        jobScoring.reasoningEffort,
+      ),
+      timestamp: '2026-08-20T00:00:00.000Z',
+      promptVersion: 'v1',
+      rubricVersion: '1',
+      model: jobScoring.model,
+      reasoningEffort: jobScoring.reasoningEffort,
+      scorerImplementationVersion: '1',
+      categoryScores: [],
+      overallScore: 80,
+      explanation: 'score the pipeline stored',
+      success: true,
+    });
+    return jobId;
   }
 
   // -----------------------------------------------------------------
@@ -962,4 +1025,42 @@ describe('ReevaluationService', () => {
       }),
     ).rejects.toMatchObject({ code: 'job_not_found' });
   });
+
+  it('regression #373: treats a score stored with the configured model + effort as current and scores nothing', async () => {
+    const jobScoring = { model: 'openai/gpt-5.6-mini', reasoningEffort: 'high' } as const;
+    await insertJobScoredWith(jobScoring);
+
+    const outcome = await makeService({ jobScoring }).execute({
+      scope: 'default',
+      dryRun: false,
+      confirmScoring: false,
+      env: { OPENAI_API_KEY: 'test-key' },
+    });
+
+    expect(outcome.plan.jobsToScore).toHaveLength(0);
+    expect(fakeScoring.scoreOneCalls).toHaveLength(0);
+  });
+
+  it.each([
+    { field: 'model', jobScoring: { model: 'openai/gpt-5.6-sol', reasoningEffort: 'high' } },
+    {
+      field: 'reasoning effort',
+      jobScoring: { model: 'openai/gpt-5.6-mini', reasoningEffort: 'medium' },
+    },
+  ] as const)(
+    'regression #373: treats a score stored with another $field as stale and scores the job once',
+    async ({ jobScoring }) => {
+      await insertJobScoredWith({ model: 'openai/gpt-5.6-mini', reasoningEffort: 'high' });
+
+      const outcome = await makeService({ jobScoring }).execute({
+        scope: 'default',
+        dryRun: false,
+        confirmScoring: false,
+        env: { OPENAI_API_KEY: 'test-key' },
+      });
+
+      expect(outcome.plan.jobsToScore).toHaveLength(1);
+      expect(fakeScoring.scoreOneCalls).toHaveLength(1);
+    },
+  );
 });

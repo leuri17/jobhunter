@@ -6,7 +6,7 @@ The codebase reads eleven environment variables. Nine are real (build-time or ru
 | --- | --- | --- | --- | --- |
 | `AI_PROVIDER_API_KEY` | sidecar request | — | no | Fallback key for the selected AI provider, used for profile extraction and job scoring when that provider has no saved key. **Prefer entering the key in Settings → AI Provider**, which stores it in your OS keychain and takes precedence over this variable. See [OpenAI API key precedence](#openai-api-key-precedence). |
 | `OPENAI_API_KEY` | sidecar request | — | no | Legacy name for `AI_PROVIDER_API_KEY`, read only when it is unset. Same precedence and caveats. |
-| `OPENAI_MODEL` | sidecar boot | `gpt-5` | no | The model used for both profile extraction and job scoring. |
+| `OPENAI_MODEL` | sidecar request | `gpt-5` | no | The model used for profile extraction only. Job scoring (pipeline runs and re-evaluation) always uses the model saved in **Settings → AI Provider**, so this variable has no effect on it. |
 | `LOG_LEVEL` | sidecar boot | `info` | no | `trace` \| `debug` \| `info` \| `warn` \| `error` \| `fatal` \| `silent`. **Only used when no `config.json` exists.** `config.logging.level` always wins once the operational config is present — see [Log level precedence](#log-level-precedence). |
 | `JOBHUNTER_SIDECAR_PORT` | sidecar boot | `0` (OS-assigned) | no | The port the sidecar binds to. Only set explicitly for non-Tauri / non-supervised runs. |
 | `JOBHUNTER_SECRETS_BRIDGE_PORT` | sidecar boot | — | no | Port of the Tauri shell's keychain bridge. Set by the shell on the sidecar child process; never set by hand. Absent when the sidecar runs standalone (dev/tests), which selects the file secrets backend. |
