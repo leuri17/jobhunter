@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@fastify/cors": "^11.4.3",
-    "@fastify/multipart": "^10.1.8",
+    "@fastify/multipart": "^10.1.9",
     "@jobhunter/core": "workspace:*",
     "fastify": "^5.12.8",
     "pino-pretty": "13.2.0",
