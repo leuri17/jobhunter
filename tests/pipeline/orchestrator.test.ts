@@ -235,6 +235,9 @@ describe('PipelineOrchestrator', () => {
         schemaVersion: 1,
       },
       prompts: { askScoringConfirmation: async () => true },
+      confirmScoring: false,
+      env: { OPENAI_API_KEY: 'test-key' },
+      applicationVersion: '0.1.0',
     });
     const perJobs = [
       {

@@ -173,6 +173,9 @@ function makeFixturePage(html: string, url: string): FakePage {
       return 0;
     },
     click: async () => undefined,
+    scrollIntoViewIfNeeded: async () => undefined,
+    isVisible: async () => false,
+    evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> => pageFunction([]),
     all: async () => [],
     elementHandle: async () => ({
       getAttribute: (name: string) => {

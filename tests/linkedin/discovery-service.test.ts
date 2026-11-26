@@ -86,7 +86,10 @@ function pageWithCards(
       all: async () => [makeCardLocator(id)],
       first: () => makeCardLocator(id),
       elementHandle: async () => makeCardNode(id),
+      evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> => pageFunction([]),
       click: async () => undefined,
+      scrollIntoViewIfNeeded: async () => undefined,
+      isVisible: async () => false,
       waitFor: async () => undefined,
     };
   }
@@ -123,6 +126,8 @@ function pageWithCards(
           first: () => makeCardLocator(cardIds[0] ?? ''),
           elementHandle: async () => makeCardNode(cardIds[0] ?? ''),
           click: async () => undefined,
+          scrollIntoViewIfNeeded: async () => undefined,
+          isVisible: async () => false,
           waitFor: async () => undefined,
           evaluateAll: async <R, _E>(pageFunction: (nodes: Element[]) => R): Promise<R> => {
             // Mirror production: build card-shaped nodes whose
@@ -395,6 +400,8 @@ describe('LinkedInDiscoveryService (integration)', () => {
             },
           }),
           click: async () => undefined,
+          scrollIntoViewIfNeeded: async () => undefined,
+          isVisible: async () => false,
           waitFor: async () => undefined,
           evaluateAll: async <R, _E>(pageFunction: (nodes: Element[]) => R): Promise<R> => {
             // Production walks each node, calls node.querySelector('a'),
@@ -808,7 +815,7 @@ describe('LinkedInDiscoveryService (integration)', () => {
       scrollIntoViewIfNeeded: async () => undefined,
       isVisible: async () => false,
       waitFor: async () => undefined,
-      evaluateAll: async () => [],
+      evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> => pageFunction([]),
     };
 
     let fakePage: FakePage | null = null;

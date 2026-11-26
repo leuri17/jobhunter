@@ -81,6 +81,9 @@ function minimalProfile(): ProfessionalProfile {
     contentHash: 'a'.repeat(64),
     sourceIds: ['source-1'],
     basics: {
+      fullName: null,
+      email: null,
+      phone: null,
       headline: null,
       professionalSummary: null,
       currentLocation: null,
@@ -138,6 +141,9 @@ function sampleProfile(): ProfessionalProfile {
     contentHash: 'b'.repeat(64),
     sourceIds: ['source-1', 'source-2'],
     basics: {
+      fullName: 'Alex Vance',
+      email: 'alex@example.com',
+      phone: '+49 30 123456',
       headline: 'Senior Backend Engineer',
       professionalSummary: 'A seasoned professional.',
       currentLocation: 'Amsterdam, NL',

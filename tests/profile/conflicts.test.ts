@@ -11,6 +11,9 @@ function ref(sourceId: string): SourceReference {
 function baseProfile(): ExtractedProfile {
   return {
     basics: {
+      fullName: null,
+      email: null,
+      phone: null,
       headline: null,
       professionalSummary: null,
       currentLocation: null,

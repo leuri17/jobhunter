@@ -22,6 +22,8 @@ type RuleEval = {
   readonly reason: string;
 };
 
+const DEFAULT_FILTER_CONFIG_HASH = 'reeval-filter-content-hash';
+
 /**
  * A configurable fake `FilterApplyService` that returns a scripted
  * `FilterApplyResult` per call (or falls back to the default
@@ -53,15 +55,17 @@ export class FakeFilterApplyService {
 
   /** Queue one scripted response. Each call consumes one script entry. */
   queueResult(
-    result: Omit<ReadResult, 'ruleEvaluations' | 'rejectionReasons'> & {
+    result: Omit<ReadResult, 'ruleEvaluations' | 'rejectionReasons' | 'filterConfigHash'> & {
       ruleEvaluations?: readonly RuleEval[];
       rejectionReasons?: readonly string[];
+      filterConfigHash?: string;
     },
   ): void {
     this.scripts.push({
       outcome: result.outcome,
       filterResultId: result.filterResultId,
       fingerprint: result.fingerprint,
+      filterConfigHash: result.filterConfigHash ?? DEFAULT_FILTER_CONFIG_HASH,
       reused: result.reused,
       ruleEvaluations: result.ruleEvaluations ?? [],
       rejectionReasons: result.rejectionReasons ?? [],
@@ -85,6 +89,7 @@ export class FakeFilterApplyService {
       outcome: this.options.defaultOutcome ?? 'accepted',
       filterResultId: jobId * 1000,
       fingerprint: `fake-filter-fp-${jobId}-${this.cursor}`,
+      filterConfigHash: DEFAULT_FILTER_CONFIG_HASH,
       ruleEvaluations: [],
       rejectionReasons: [],
       reused: this.options.defaultReused ?? false,
@@ -96,6 +101,7 @@ interface ReadResult {
   outcome: FilterOutcome;
   filterResultId: number;
   fingerprint: string;
+  filterConfigHash: string;
   reused: boolean;
   ruleEvaluations: readonly RuleEval[];
   rejectionReasons: readonly string[];

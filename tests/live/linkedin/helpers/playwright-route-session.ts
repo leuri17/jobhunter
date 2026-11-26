@@ -1,7 +1,7 @@
 import type { Browser, BrowserContext } from 'playwright';
 
-import { PlaywrightBrowserSession } from '../../../src/linkedin/playwright-session.js';
-import { loadFixture, type FixtureName } from '../fixtures/loadFixture.js';
+import { PlaywrightBrowserSession } from '../../../../src/linkedin/playwright-session.js';
+import { loadFixture, type FixtureName } from '../../../linkedin/fixtures/loadFixture.js';
 
 /**
  * Options for `PlaywrightRouteSession`. Mirrors the production

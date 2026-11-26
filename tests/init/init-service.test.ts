@@ -58,6 +58,9 @@ function minimalProfileJson(id: string): ProfessionalProfile {
     contentHash: hashString(`init-${id}`),
     sourceIds: [],
     basics: {
+      fullName: null,
+      email: null,
+      phone: null,
       headline: null,
       professionalSummary: null,
       currentLocation: null,

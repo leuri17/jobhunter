@@ -1,6 +1,6 @@
 /**
- * Derive `DefaultAiProviderClientRefusalOptions` from a possibly-null
- * loaded `OperationalConfig`.
+ * Derive `DefaultAiProviderClientRefusalOptions` from a loaded
+ * `OperationalConfig` that may be `null` or `undefined`.
  *
  * Audit B2-M8 follow-up (#52): when a fresh model variant emits a
  * refusal phrase the static `DEFAULT_REFUSAL_MARKERS` miss, operators
@@ -22,7 +22,7 @@ import type { LoadedConfig } from './loader.js';
 import type { DefaultAiProviderClientRefusalOptions } from '../profile/ai-provider/client.js';
 
 export function resolveRefusalDetection(
-  loaded: LoadedConfig | null,
+  loaded: LoadedConfig | null | undefined,
 ): DefaultAiProviderClientRefusalOptions {
   const cfg =
     loaded?.config.aiProvider.refusalDetection ??
