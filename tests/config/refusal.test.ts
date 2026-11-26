@@ -64,7 +64,7 @@ describe('resolveRefusalDetection', () => {
     // The static default is a non-empty marker list — never an
     // empty array — so the detector still scans for at least one
     // marker even with a missing or broken `config.json`.
-    expect(resolved.refusalMarkers.length).toBeGreaterThan(0);
+    expect(resolved.refusalMarkers?.length).toBeGreaterThan(0);
   });
 
   it('falls back to DEFAULT_OPERATIONAL_CONFIG.aiProvider.refusalDetection when loaded is undefined', () => {

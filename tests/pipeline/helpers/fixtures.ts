@@ -18,6 +18,9 @@ export const EVAL_PROFILE_VERSION_1: ProfessionalProfile = {
   contentHash: 'a'.repeat(64),
   sourceIds: ['source_1'],
   basics: {
+    fullName: null,
+    email: null,
+    phone: null,
     headline: null,
     professionalSummary: null,
     currentLocation: null,
@@ -144,6 +147,7 @@ export function makeFakePageWithCard(sourceJobId: string): FakePage {
     evaluateAll: async <R>(pageFunction: (nodes: Element[]) => R): Promise<R> => pageFunction([]),
     click: async () => undefined,
     scrollIntoViewIfNeeded: async () => undefined,
+    isVisible: async () => false,
     waitFor: async () => undefined,
   };
   return new FakePage({

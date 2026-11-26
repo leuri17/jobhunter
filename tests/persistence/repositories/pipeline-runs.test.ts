@@ -75,7 +75,7 @@ describe('PipelineRunRepository', () => {
     async function seedRun(status?: 'running' | 'completed') {
       return repo.createRunWithSearches(
         {
-          status,
+          ...(status !== undefined ? { status } : {}),
           startTimestamp: '2026-11-10T00:07:00.000Z',
           configSnapshotJson: { version: 1 },
           configSchemaVersion: 1,

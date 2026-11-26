@@ -12,6 +12,9 @@ function minimalProfile(): ProfessionalProfile {
     contentHash: 'a'.repeat(64),
     sourceIds: ['source-1'],
     basics: {
+      fullName: null,
+      email: null,
+      phone: null,
       headline: null,
       professionalSummary: null,
       currentLocation: null,

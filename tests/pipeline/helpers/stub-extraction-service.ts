@@ -1,7 +1,7 @@
 import type {
   ExtractBatchInput,
   ExtractionBatchOutcome,
-} from '../../../../src/linkedin/extraction/index.js';
+} from '../../../src/linkedin/extraction/index.js';
 
 /**
  * Extraction stub for pipeline-level tests: marks every discovered job

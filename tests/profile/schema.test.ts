@@ -82,6 +82,9 @@ describe('ProfessionalProfileSchema', () => {
     const profile: ProfessionalProfile = {
       ...minimalProfile(),
       basics: {
+        fullName: 'Alex Vance',
+        email: 'alex@example.com',
+        phone: '+49 30 123456',
         headline: 'Senior Backend Engineer',
         professionalSummary: 'Ten years of Node.js work.',
         currentLocation: 'Lisbon, Portugal',

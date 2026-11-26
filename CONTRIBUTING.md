@@ -34,8 +34,10 @@ toolchain (for `cargo tauri dev` and the desktop shell build).
 ```bash
 pnpm install --frozen-lockfile
 
-# Core tests only — the `tests/` tree (no sidecar or UI).
+# Typecheck — the root configs (`src/` and `tests/`), then every workspace.
 pnpm typecheck
+
+# Core tests only — the `tests/` tree (no sidecar or UI).
 pnpm test
 
 # Sidecar HTTP-shape tests.
@@ -79,9 +81,9 @@ see the `desktop/` workspace and the Tauri build docs for that pipeline.
 Live LinkedIn tests require `pnpm exec playwright install chromium` and
 the `LINKEDIN_LIVE=1` opt-in. They are not part of normal CI.
 
-Run `tsc -p tsconfig.json --noEmit` from repo root to manually check
-the root config (covers `tests/` and the catch-all tsconfig). The
-`pnpm typecheck` script does not exercise the root config today.
+`pnpm typecheck` runs both root configs first (`tsconfig.json` and
+`tsconfig.test.json`, which cover `tests/`), then the three package
+configs.
 
 ## Pull requests
 

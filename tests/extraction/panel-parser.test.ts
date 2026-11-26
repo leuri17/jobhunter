@@ -123,7 +123,11 @@ function makeFakePage(args: FakePageArgs): {
       },
       // Attribute read — used for the panel title anchor href.
       getAttribute: async (name: string, options?: { timeout?: number }) => {
-        callLog.push({ op: `getAttribute(${name})`, selector, timeout: options?.timeout });
+        callLog.push({
+          op: `getAttribute(${name})`,
+          selector,
+          ...(options?.timeout !== undefined ? { timeout: options.timeout } : {}),
+        });
         const node = pickNode(doc, selector);
         return node?.getAttribute(name) ?? null;
       },

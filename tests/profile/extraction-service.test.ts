@@ -93,6 +93,9 @@ function buildProfileJsonString(sourceId: number): string {
     contentHash: hashString(`seed-${sourceId}`),
     sourceIds: [`source_${sourceId}`],
     basics: {
+      fullName: null,
+      email: null,
+      phone: null,
       headline: 'Seeded Profile',
       professionalSummary: null,
       currentLocation: null,
@@ -707,6 +710,9 @@ describe('ProfileExtractionService', () => {
       contentHash: 'e'.repeat(64),
       sourceIds: [`source_${sourceA}`],
       basics: {
+        fullName: null,
+        email: null,
+        phone: null,
         headline: 'Approved Headline',
         professionalSummary: null,
         currentLocation: null,

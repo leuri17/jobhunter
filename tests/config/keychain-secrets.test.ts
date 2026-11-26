@@ -218,7 +218,11 @@ describe('resolveAiProviderApiKey precedence with an unreadable store', () => {
     };
 
     expect(
-      await resolveAiProviderApiKey({ store: broken, env: { OPENAI_API_KEY: 'sk-env' } }),
+      await resolveAiProviderApiKey({
+        store: broken,
+        env: { OPENAI_API_KEY: 'sk-env' },
+        provider: 'openai',
+      }),
     ).toBe('sk-env');
   });
 });

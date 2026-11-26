@@ -11,11 +11,11 @@ import type { PlatformPaths } from '../../src/platform/paths.js';
 function pathsFor(root: string): PlatformPaths {
   const slot = () => ({ directory: root, file: (f: string) => path.join(root, f) });
   return {
-    config: slot('config'),
-    data: slot('data'),
-    logs: slot('logs'),
-    diagnostics: slot('diagnostics'),
-    profileSources: slot('profile-sources'),
+    config: slot(),
+    data: slot(),
+    logs: slot(),
+    diagnostics: slot(),
+    profileSources: slot(),
   } as PlatformPaths;
 }
 
