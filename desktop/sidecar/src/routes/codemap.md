@@ -90,7 +90,14 @@ edit_via_http_not_supported` (interactive TUI prompts are out-of-band
   calls `JobsShowService.show`. `jobsReevaluateHandler` (`POST`) wires
   `ReevaluationService.execute` with `FilterApplyService` + `ScoringService`,
   defaulting `confirmScoring` to `false` so HTTP clients cannot trigger a
-  scoring batch without explicit opt-in.
+  scoring batch without explicit opt-in. It loads the saved config per
+  request via `loadConfig(paths, sidecarFileSystem)` and feeds the one
+  `aiProvider.jobScoring` model + reasoning-effort pair to both the
+  `ScoringService` config and `ReevaluationService`'s required
+  `jobScoring` option, so the freshness probe and the scorer hash the
+  same fingerprint the pipeline does (issue #373). Every handler opens
+  the database through the injectable `jobsDbOpener` seam on
+  `JobsRouteOptions`, defaulting to `db-helper.ts`.
 - **Runs**: `runsListHandler` (limit default 20) and `runsShowHandler`
   wrap `RunsListService` / `RunsShowService`.
 - **Config**: `configGetHandler` loads via `loadConfig(paths,

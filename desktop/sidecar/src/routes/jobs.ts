@@ -14,7 +14,11 @@ import {
   type AiProviderClient,
 } from '@jobhunter/core/profile';
 import { pinoReevaluationLogger } from '@jobhunter/core/logging';
+import { type DatabaseConnection } from '@jobhunter/core/persistence';
+import { loadConfig } from '@jobhunter/core/config';
+import { resolvePlatformPaths, createDefaultPlatformAdapter } from '@jobhunter/core/platform';
 import { openDbHandle, createRepositories } from './db-helper.js';
+import { sidecarFileSystem } from './fs-adapter.js';
 import {
   resolveAiProviderClientOrNull,
   resolveAiProviderApiKeyForConfig,
@@ -24,6 +28,8 @@ export interface JobsRouteOptions {
   readonly aiProviderClient?: AiProviderClient;
   readonly rootLogger?: PinoLogger;
   readonly refusal?: DefaultAiProviderClientRefusalOptions;
+  /** Opens the SQLite handle. */
+  readonly jobsDbOpener?: () => Promise<DatabaseConnection>;
 }
 
 /**
@@ -53,6 +59,7 @@ export async function registerJobsRoutes(
   // Resolve once per registration. Silent fallback matches the server's
   // own silent fallback for tests that build a server without a logger.
   const rootLogger: PinoLogger = opts.rootLogger ?? pino({ level: 'silent' });
+  const openDb = opts.jobsDbOpener ?? openDbHandle;
 
   app.get<{
     Querystring: {
@@ -64,7 +71,7 @@ export async function registerJobsRoutes(
       run?: string;
     };
   }>('/api/jobs', async (req) => {
-    const handle = await openDbHandle();
+    const handle = await openDb();
     try {
       const repos = createRepositories(handle);
       const service = new JobsListService(repos);
@@ -92,7 +99,7 @@ export async function registerJobsRoutes(
   });
 
   app.get<{ Params: { id: string } }>('/api/jobs/:id', async (req) => {
-    const handle = await openDbHandle();
+    const handle = await openDb();
     try {
       const repos = createRepositories(handle);
       const service = new JobsShowService(repos);
@@ -104,9 +111,12 @@ export async function registerJobsRoutes(
   });
 
   app.post<{ Body: ReevaluateBody }>('/api/jobs/reevaluate', async (req) => {
-    const handle = await openDbHandle();
+    const paths = resolvePlatformPaths(createDefaultPlatformAdapter());
+    const handle = await openDb();
     try {
       const repos = createRepositories(handle);
+      const loaded = await loadConfig(paths, sidecarFileSystem);
+      const jobScoring = loaded.config.aiProvider.jobScoring;
       const filterApplyService = new FilterApplyService({ repositories: repos });
       const client =
         opts.aiProviderClient ??
@@ -117,8 +127,8 @@ export async function registerJobsRoutes(
         aiProviderClient: client,
         logger: pinoScoringLogger(rootLogger),
         config: {
-          model: process.env['AI_PROVIDER_MODEL'] ?? process.env['OPENAI_MODEL'] ?? 'gpt-5',
-          reasoningEffort: 'medium',
+          model: jobScoring.model,
+          reasoningEffort: jobScoring.reasoningEffort,
           concurrency: 1,
         },
       });
@@ -128,6 +138,7 @@ export async function registerJobsRoutes(
         scoringService,
         prompts: { askScoringConfirmation: async () => req.body.confirmScoring ?? false },
         scoringConcurrency: 1,
+        jobScoring,
         logger: pinoReevaluationLogger(rootLogger),
       });
       const input: ReevaluationExecuteInput = {
