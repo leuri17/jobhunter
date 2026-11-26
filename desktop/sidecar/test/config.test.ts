@@ -42,6 +42,11 @@ describe('config endpoints', () => {
   });
 });
 
+interface ConfigErrorDetails {
+  readonly keys?: readonly string[];
+  readonly issues?: readonly { readonly path: readonly string[]; readonly message: string }[];
+}
+
 describe('PATCH /api/config', () => {
   let configHome: string;
   let server: Awaited<ReturnType<typeof buildServer>>;
@@ -102,6 +107,106 @@ describe('PATCH /api/config', () => {
       config: OperationalConfig;
     };
     expect(refetched.config.aiProvider.provider).toBe('groq');
+  });
+
+  function seedConfig(config: OperationalConfig): string {
+    const raw = JSON.stringify(config, null, 2);
+    mkdirSync(dirname(configPath()), { recursive: true });
+    writeFileSync(configPath(), raw);
+    return raw;
+  }
+
+  function patchConfig(body: unknown): Promise<Response> {
+    return fetch(`${baseUrl}/api/config`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  async function errorOf(res: Response): Promise<{ code: string; details: ConfigErrorDetails }> {
+    const body = (await res.json()) as ErrorEnvelope;
+    return { code: body.error.code, details: body.error.details as ConfigErrorDetails };
+  }
+
+  it('rejects a patch whose only key is unknown and leaves config.json untouched (#370)', async () => {
+    const seeded = seedConfig({ ...DEFAULT_OPERATIONAL_CONFIG, output: { runTopN: 7 } });
+
+    const res = await patchConfig({ patch: { outpt: { runTopN: 5 } } });
+
+    expect(res.status).toBe(400);
+    const { code, details } = await errorOf(res);
+    expect(code).toBe('unknown_keys');
+    expect(details.keys).toEqual(['outpt']);
+    expect(details.issues).toEqual([{ path: ['outpt'], message: expect.any(String) }]);
+    expect(readFileSync(configPath(), 'utf8')).toBe(seeded);
+  });
+
+  it('rejects an unknown key next to a valid section, so the valid section is not saved either (#370)', async () => {
+    const logging = { level: 'warn', prettyTerminal: true } as const;
+    seedConfig({ ...DEFAULT_OPERATIONAL_CONFIG, logging });
+
+    const res = await patchConfig({
+      patch: { logging: { level: 'debug', prettyTerminal: false }, nope: {} },
+    });
+
+    expect(res.status).toBe(400);
+    const { code, details } = await errorOf(res);
+    expect(code).toBe('unknown_keys');
+    expect(details.keys).toEqual(['nope']);
+    expect(details.issues).toEqual([{ path: ['nope'], message: expect.any(String) }]);
+    expect(JSON.parse(readFileSync(configPath(), 'utf8')).logging).toEqual(logging);
+  });
+
+  it('rejects the pre-rename openai key as unknown instead of answering 200 (#370)', async () => {
+    const res = await patchConfig({ patch: { openai: {} } });
+
+    expect(res.status).toBe(400);
+    const { code, details } = await errorOf(res);
+    expect(code).toBe('unknown_keys');
+    expect(details.keys).toEqual(['openai']);
+  });
+
+  it('rejects a body without the patch wrapper with 400 instead of 500 (#370)', async () => {
+    const res = await patchConfig({ output: { runTopN: 5 } });
+
+    expect(res.status).toBe(400);
+    const { code, details } = await errorOf(res);
+    expect(code).toBe('zod_failed');
+    expect(details.issues).toEqual([{ path: ['patch'], message: expect.any(String) }]);
+    expect(existsSync(configPath())).toBe(false);
+  });
+
+  it.each<[string, unknown]>([
+    ['an array body', []],
+    ['a null patch', { patch: null }],
+  ])('rejects %s with the issue path patch (#370)', async (_case, body) => {
+    const res = await patchConfig(body);
+
+    expect(res.status).toBe(400);
+    const { code, details } = await errorOf(res);
+    expect(code).toBe('zod_failed');
+    expect(details.issues).toEqual([{ path: ['patch'], message: expect.any(String) }]);
+  });
+
+  it('rejects a patch whose version is not 1 with the issue path version (#370)', async () => {
+    const res = await patchConfig({ patch: { version: 2 } });
+
+    expect(res.status).toBe(400);
+    const { code, details } = await errorOf(res);
+    expect(code).toBe('zod_failed');
+    expect(details.issues).toEqual([{ path: ['version'], message: expect.any(String) }]);
+  });
+
+  it('still saves the whole config the Settings form submits, version included', async () => {
+    seedConfig({ ...DEFAULT_OPERATIONAL_CONFIG, output: { runTopN: 7 } });
+
+    const res = await patchConfig({
+      patch: { ...DEFAULT_OPERATIONAL_CONFIG, output: { runTopN: 5 } },
+    });
+
+    expect(res.status).toBe(200);
+    expect(JSON.parse(readFileSync(configPath(), 'utf8')).output.runTopN).toBe(5);
   });
 });
 
