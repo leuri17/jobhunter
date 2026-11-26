@@ -9,7 +9,7 @@
   },
   "packageManager": "pnpm@12.14.0",
   "scripts": {
-    "typecheck": "pnpm -r run typecheck",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit && pnpm -r run typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
